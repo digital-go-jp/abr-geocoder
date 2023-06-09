@@ -13,7 +13,7 @@
 ## Usage
 
 ```
-npm install -g @digital-go-jp/abr-geocoder
+yarn global add digital-go-jp/abr-geocoder
 abr-geocoder download # アドレスデータをダウンロードし、データベース作成を行う
 echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
 ```
