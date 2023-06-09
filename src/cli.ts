@@ -130,7 +130,7 @@ program
 
     if (options.format === 'table') {
       const table = new Table({
-        head: ['正規化レベル', '都道府県', '市区町村', '町丁目', '街区符号', '住居番号', '以降', '緯度', '経度']
+        head: ['マッチングレベル', '都道府県', '市区町村', '町字', '街区符号', '住居番号', '以降', '緯度', '経度']
       });
       for (const r of allResults) {
         table.push([
