@@ -137,7 +137,7 @@ $ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾�
 }
 ```
 
-### About Matching Levels
+### Matching Levels
 
 If you use JSON / GeoJSON output, it is in the level property.
 
