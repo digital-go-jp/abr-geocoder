@@ -4,7 +4,6 @@
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
   "main": "index.js",
   "license": "MIT",
-  "private": true,
   "engines": {
     "node": ">=16"
   },
