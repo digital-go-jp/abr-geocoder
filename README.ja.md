@@ -7,7 +7,7 @@
 ## Requirement
 
 ```
-"node": ">=16"
+"node": ">=18"
 ```
 
 ## Usage

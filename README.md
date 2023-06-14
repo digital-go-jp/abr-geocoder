@@ -10,7 +10,7 @@ Address Base Registry Geocoder by Japan Digital Agency
 ## Requirement
 
 ```
-"node": ">=16"
+"node": ">=18"
 ```
 
 ## Usage
