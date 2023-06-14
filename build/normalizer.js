@@ -31,6 +31,9 @@ const node_path_1 = __importDefault(require("node:path"));
 const NJANormalize = __importStar(require("./engine/normalize"));
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 class Normalize {
+    dataDir;
+    sourceId;
+    _db;
     constructor(dataDir, sourceId) {
         this.dataDir = dataDir;
         this.sourceId = sourceId;

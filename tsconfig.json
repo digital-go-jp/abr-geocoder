@@ -1,5 +1,5 @@
 {
-  "extends": "@tsconfig/node16/tsconfig.json",
+  "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
     "outDir": "./build",                        /* Redirect output structure to the directory. */
     "lib": ["dom"],
@@ -12,8 +12,6 @@
     "src/**/*.ts"
   ],
   "exclude": [
-    "node_modules/**/*",
-    "src/vendor/normalize-japanese-addresses/test/**/*",
-    "src/vendor/normalize-japanese-addresses/*",
+    "node_modules/**/*"
   ]
 }
