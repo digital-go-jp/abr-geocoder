@@ -1,5 +1,5 @@
 {
-  "name": "abr-geocoder",
+  "name": "@digital-go-jp/abr-geocoder",
   "version": "1.0.0",
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
   "main": "index.js",
