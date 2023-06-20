@@ -4,14 +4,12 @@
 
 Address Base Registry Geocoder by Japan Digital Agency
 - Assigns a town ID.
-- Normalize address strings.
-- Output latitude/longitude and matching level.
+- Normalizes address strings.
+- Outputs latitude and longitude pair with matched level.
 
 ## Requirement
 
-```
-"node": ">=18"
-```
+This command requires **node.js version 18 or above**.
 
 ## Usage
 
@@ -23,49 +21,79 @@ $ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾
 
 ### `download`
 
-Download the latest data.
+Obtains the latest data from server.
 
 ```
 $ abr-geocoder download
 ```
 
-Download the address base registry ["全アドレスデータ"](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) to the `$HOME/.abr-geocoder` directory, Extract it into a SQLite database file.
+Downloads the public data from the address base registry ["全アドレスデータ"](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) into the `$HOME/.abr-geocoder` directory,
+then creates a local database using SQLite.
 
-To update a database that has already been created, run `abr-geocoder download` again and it will be updated. If there are no updates, the update will be skipped.
+To update the local database, runs `abr-geocoder download`.
 
 ### `update-check`
 
-Check that the local data is up-to-date.
+Checks the local database is the latest data set.
 
 ```
 $ abr-geocoder update-check
 ```
-Rturns `0` if the data is up-to-date and exits normally. If there is new data in CKAN (including the case where the local data could not be checked), returns `1` and exits aborted.
 
-If there is new data, update it with the `download` subcommand.
+Retues `0` if the local database is the latest then exits.
+
+If there is a new data in CKAN, or there is no local database, returns `1` and exits. In that case, runs `download` command.
 
 ### `normalize`
 
-Geocode the address.
+Geocodes Japanese addresses.
 
 ```
-$ abr-geocoder normalize --help
-Usage: abr-geocoder normalize [options] <inputFile>
-
-入力されたアドレスをジオコーディングする。 <inputFile> にアドレスが改行で分けられたファイルを指定してください。標準入力で渡したい場合は、 '-' を指定してください。
-
-Options:
-  -f|--format <outputFormat>  出力フォーマットを指定する。デフォルトは `table`。対応オプション: table, ndjson, json, ndgeojson, geojson (default: "table")
-  -h, --help                  display help for command
+$ abr-geocoder normalize [options] <inputFile>
 ```
 
-`--format` option defaults to table and is displayed as a table type on the CLI. For samples of JSON output and GeoJSON output, see "Output Format" below.
+Batch geocoding from the `<inputFile>`. The input file must have Japanese address each line.
 
-Note that formats beginning with a letter other than nd are buffer type and output results after all rows are processed. Formats beginning with nd are streaming type and output results one line at a time.
+For example:
+
+```sample.txt
+東京都千代田区紀尾井町1-3
+東京都千代田区永田町1-10-1
+...
+東京都千代田区永田町一丁目7番1号
+```
+
+You can also pass the input query through `pipe` command. `-` denotes `stdin`.
+
+```
+echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
+```
+
+#### Available options
+
+- `-f`, `--format`
+
+   Specifies output format. Default is `table` which displayes `table` format on CLI.
+   You can specify `json` and `geojson`, also.
+
+- `--fuzzy`
+
+   Allows `?` characters for wildcard matching.
+  
+- `-h`, `--help`
+
+   Displays this command usage.
+
+
+#### `nd` prefix
+
+If specifying a prefix `nd` with format name, i.e. `ndjson`, outputs geocoding results for each query Japanese address.
+
+Without the `nd` prefix, the command outputs the results after all processes are done.
 
 ### Fuzzy Match
 
-Use the `?` wildcard can be used for fuzzy matching. `--fuzzy` option.
+You can include `?` character for wildcard matching with `--fuzzy` option.
 
 ```
 $ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --format=ndjson -
@@ -75,7 +103,7 @@ $ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾�
 {"pref":"東京都","city":"千代田区","lg_code":"131016","town":"紀尾井町","town_id":"0056000","other":"東京ガーデンテラス紀尾井町 19階、20階","lat":35.679107172,"lon":139.736394597,"level":8,"addr1":"3","blk":"1","blk_id":"001","addr1_id":"003","addr2":"","addr2_id":""}
 ```
 
-## Output Format
+## Output Formats
 
 ### `json`
 
@@ -139,13 +167,13 @@ $ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾�
 
 ### Matching Levels
 
-If you use JSON / GeoJSON output, it is in the level property.
+The `level` property denotes the address maching level. Only in the `json` or `geojson` formats are available.
 
-```
-0 - 都道府県も判別できなかった。
-1 - 都道府県まで判別できた。
-2 - 市区町村まで判別できた。
-3 - 町字まで判別できた。
-7 - 住居表示の街区までの判別ができた。
-8 - 住居表示の街区符号・住居番号までの判別ができた。
-```
+| level | description |
+|-------|-------------|
+| 0 | Could not detect at all. |
+| 1 | Could detect only prefecture level. |
+| 2 | Could detect prefecture and city levels. |
+| 3 | Could detect prefecture, city, and a town ID. |
+| 7 | Could detect prefecture, city, a town ID, and street name level. |
+| 8 | Could detect prefecture, city, a town ID, street name, and extra information, such as suite number. |
