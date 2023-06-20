@@ -2,9 +2,17 @@
   "name": "@digital-go-jp/abr-geocoder",
   "version": "1.0.0",
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
+  "author": "Japan Digital Agency (デジタル庁)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digital-go-jp/abr-geocoder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/digital-go-jp/abr-geocoder/issues"
+  },
+  "homepage": "https://github.com/digital-go-jp/abr-geocoder",
   "main": "index.js",
   "license": "MIT",
-  "private": true,
   "engines": {
     "node": ">=18"
   },
