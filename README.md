@@ -73,7 +73,7 @@ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾�
 
 - `-f`, `--format`
 
-   Specifies output format. Default is `table` which displayes `table` format on CLI.
+   Specifies output format. Default is `table` which draws an output table on CLI.
    You can also specify `json` or `geojson`.
 
 - `--fuzzy`
