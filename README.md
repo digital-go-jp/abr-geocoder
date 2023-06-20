@@ -34,15 +34,15 @@ To update the local database, runs `abr-geocoder download`.
 
 ### `update-check`
 
-Checks the local database is the latest data set.
+Checks the new update data.
 
 ```
 $ abr-geocoder update-check
 ```
 
-Retues `0` if the local database is the latest then exits.
+Returns `0` if the local database is the latest.
 
-If there is a new data in CKAN, or there is no local database, returns `1` and exits. In that case, runs `download` command.
+Returns `1` if new data in CKAN is available. there is no local database, returns `1` and exits. In that case, runs `download` command.
 
 ### `normalize`
 
@@ -52,7 +52,7 @@ Geocodes Japanese addresses.
 $ abr-geocoder normalize [options] <inputFile>
 ```
 
-Batch geocoding from the `<inputFile>`. The input file must have Japanese address each line.
+Geocodes from the `<inputFile>`. The input file must have Japanese address each line.
 
 For example:
 
@@ -74,7 +74,7 @@ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾�
 - `-f`, `--format`
 
    Specifies output format. Default is `table` which displayes `table` format on CLI.
-   You can specify `json` and `geojson`, also.
+   You can also specify `json` or `geojson`.
 
 - `--fuzzy`
 
@@ -87,7 +87,7 @@ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾�
 
 #### `nd` prefix
 
-If specifying a prefix `nd` with format name, i.e. `ndjson`, outputs geocoding results for each query Japanese address.
+If you specify format with prefix `nd`, i.e. `ndjson`, outputs geocoding results for each query Japanese address.
 
 Without the `nd` prefix, the command outputs the results after all processes are done.
 
