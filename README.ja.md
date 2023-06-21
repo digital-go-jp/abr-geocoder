@@ -30,7 +30,7 @@ $ abr-geocoder download
 
 ### `update-check`
 
-データのアップデートの有無を確認する
+データのアップデートの有無を確認する。
 
 ```
 $ abr-geocoder update-check
