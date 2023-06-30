@@ -7,16 +7,58 @@ Address Base Registry Geocoder by Japan Digital Agency
 - Normalizes address strings.
 - Outputs latitude and longitude pair with matched level.
 
+## Index
+- [Requirement](./#requirement)
+- [Build and Installation](./#build-and-installation)
+- [Usage](./#usage)
+  - [download](./#usage)
+  - [update-check](./#update-check)
+  - [normalize](./#normalize)
+    - [normalize available options](./#available-options)
+- [`nd` prefix](./#nd-prefix)
+- [Fuzzy Match](./#fuzzy-match)
+- [Output Formats](./#output-formats)
+  - [json](./#json)
+  - [geojson](./#geojson)
+- [Matching Levels](./#matching-levels)
+
+-------
+
 ## Requirement
 
 This command requires **node.js version 18 or above**.
 
+## Build and Installation
+
+Since we are still working on, no `npm` package is available at this moment.
+To install, build from source code on your PC.
+
+```
+$ git clone git@github.com:digital-go-jp/abr-geocoder.git
+$ cd abr-geocoder
+$ npm i
+$ npm run build
+```
+
+Then you need to install globally,
+
+```
+(global install)
+$ npm -g install .
+$ abrg --version
+```
+
+or use with `npx`.
+```
+(local usage)
+$ npx abrg --version
+```
+
 ## Usage
 
 ```
-$ yarn global add digital-go-jp/abr-geocoder
-$ abr-geocoder download # Download data from the address base registry and create a database.
-$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
+$ abrg download # Download data from the address base registry and create a database.
+$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
 ```
 
 ### `download`
@@ -24,20 +66,20 @@ $ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾
 Obtains the latest data from server.
 
 ```
-$ abr-geocoder download
+$ abrg download
 ```
 
 Downloads the public data from the address base registry ["全アドレスデータ"](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) into the `$HOME/.abr-geocoder` directory,
 then creates a local database using SQLite.
 
-To update the local database, runs `abr-geocoder download`.
+To update the local database, runs `abrg download`.
 
 ### `update-check`
 
 Checks the new update data.
 
 ```
-$ abr-geocoder update-check
+$ abrg update-check
 ```
 
 Returns `0` if the local database is the latest.
@@ -49,7 +91,7 @@ Returns `1` if new data in CKAN is available. there is no local database, return
 Geocodes Japanese addresses.
 
 ```
-$ abr-geocoder normalize [options] <inputFile>
+$ abrg normalize [options] <inputFile>
 ```
 
 Geocodes from the `<inputFile>`. The input file must have Japanese address each line.
@@ -66,7 +108,7 @@ For example:
 You can also pass the input query through `pipe` command. `-` denotes `stdin`.
 
 ```
-echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
+echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
 ```
 
 #### Available options
@@ -96,10 +138,10 @@ Without the `nd` prefix, the command outputs the results after all processes are
 You can include `?` character for wildcard matching with `--fuzzy` option.
 
 ```
-$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --format=ndjson -
+$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abrg normalize --format=ndjson -
 {"pref":"東京都","city":"","town":"","other":"千代?区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階","lat":null,"lon":null,"level":1}
 
-$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --fuzzy --format=ndjson -
+$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abrg normalize --fuzzy --format=ndjson -
 {"pref":"東京都","city":"千代田区","lg_code":"131016","town":"紀尾井町","town_id":"0056000","other":"東京ガーデンテラス紀尾井町 19階、20階","lat":35.679107172,"lon":139.736394597,"level":8,"addr1":"3","blk":"1","blk_id":"001","addr1_id":"003","addr2":"","addr2_id":""}
 ```
 
