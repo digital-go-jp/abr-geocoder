@@ -16,7 +16,7 @@
     "node": ">=18"
   },
   "bin": {
-    "abr-geocoder": "build/cli.js"
+    "abrg": "build/cli.js"
   },
   "scripts": {
     "start": "ts-node src/cli.ts",

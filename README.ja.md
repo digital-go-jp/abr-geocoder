@@ -43,20 +43,20 @@ $ npm run build
 ```
 (global install)
 $ npm -g install .
-$ abr-geocoder --version
+$ abrg --version
 ```
 
 または `npx` コマンドを併用する場合
 ```
 (local usage)
-$ npx abr-geocoder --version
+$ npx abrg --version
 ```
 
 ## 使い方
 
 ```
-$ abr-geocoder download # アドレス・ベース・レジストリのデータをダウンロードし、データベース作成を行う
-$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
+$ abrg download # アドレス・ベース・レジストリのデータをダウンロードし、データベース作成を行う
+$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
 ```
 
 ### `download`
@@ -64,19 +64,19 @@ $ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾
 サーバーから最新データを取得します。
 
 ```
-$ abr-geocoder download
+$ abrg download
 ```
 
 アドレス・ベース・レジストリの[「全アドレスデータ」](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) を `$HOME/.abr-geocoder` ディレクトリにダウンロードし、SQLiteを使ってデータベースを構築します。
 
-作成済みのデータベースを更新するには、`abr-geocoder download` を実行します。
+作成済みのデータベースを更新するには、`abrg download` を実行します。
 
 ### `update-check`
 
 データのアップデートの有無を確認する。
 
 ```
-$ abr-geocoder update-check
+$ abrg update-check
 ```
 
 最新である場合は戻り値 `0` を返し、正常終了します。
@@ -89,7 +89,7 @@ CKANに新しいデータが存在する場合（ローカルのデータを確�
 アドレスをジオコーディングする。
 
 ```
-$ abr-geocoder normalize [options] <inputFile>
+$ abrg normalize [options] <inputFile>
 ```
 
 `<inputFile>` で指定されたテキストファイルをジオコーディングします。
@@ -105,7 +105,7 @@ $ abr-geocoder normalize [options] <inputFile>
 
 標準入力からデータを渡したい場合は、 '-' を指定することができます。
 ```
-echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
+echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
 ```
 
 
@@ -138,10 +138,10 @@ JSONの出力や、GeoJSONの出力のサンプルは下記「出力結果のフ
 `?` のワイルドカードを利用して曖昧一致させることができます。 `--fuzzy` オプションを利用してください。
 
 ```
-$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --format=ndjson -
+$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abrg normalize --format=ndjson -
 {"pref":"東京都","city":"","town":"","other":"千代?区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階","lat":null,"lon":null,"level":1}
 
-$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --fuzzy --format=ndjson -
+$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abrg normalize --fuzzy --format=ndjson -
 {"pref":"東京都","city":"千代田区","lg_code":"131016","town":"紀尾井町","town_id":"0056000","other":"東京ガーデンテラス紀尾井町 19階、20階","lat":35.679107172,"lon":139.736394597,"level":8,"addr1":"3","blk":"1","blk_id":"001","addr1_id":"003","addr2":"","addr2_id":""}
 ```
 
