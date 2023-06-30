@@ -7,14 +7,58 @@ Address Base Registry Geocoder by Japan Digital Agency
 - Normalizes address strings.
 - Outputs latitude and longitude pair with matched level.
 
+## Index
+- [abr-geocoder](#abr-geocoder)
+  - [Index](#index)
+  - [Requirement](#requirement)
+  - [Build and Installation](#build-and-installation)
+  - [Usage](#usage)
+    - [`download`](#download)
+    - [`update-check`](#update-check)
+    - [`normalize`](#normalize)
+      - [Available options](#available-options)
+      - [`nd` prefix](#nd-prefix)
+    - [Fuzzy Match](#fuzzy-match)
+  - [Output Formats](#output-formats)
+    - [`json`](#json)
+    - [`geojson`](#geojson)
+    - [Matching Levels](#matching-levels)
+
+-------
+
 ## Requirement
 
 This command requires **node.js version 18 or above**.
 
+## Build and Installation
+
+Since we are still working on, no `npm` package is available at this moment.
+To install, build from source code on your PC.
+
+```
+$ git clone git@github.com:digital-go-jp/abr-geocoder.git
+$ cd abr-geocoder
+$ npm i
+$ npm run build
+```
+
+Then you need to install globally,
+
+```
+(global install)
+$ npm -g install .
+$ abr-geocoder --version
+```
+
+or use with `npx`.
+```
+(local usage)
+$ npx abr-geocoder --version
+```
+
 ## Usage
 
 ```
-$ yarn global add digital-go-jp/abr-geocoder
 $ abr-geocoder download # Download data from the address base registry and create a database.
 $ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
 ```

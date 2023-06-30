@@ -4,14 +4,57 @@
 - アドレス（住所・所在地）文字列を正規化する
 - 緯度経度とマッチングレベルを出力する
 
-## Requirement
+## インデックス
+- [abr-geocoder](#abr-geocoder)
+  - [インデックス](#インデックス)
+  - [使用環境](#使用環境)
+  - [ビルドとインストール](#ビルドとインストール)
+  - [使い方](#使い方)
+    - [`download`](#download)
+    - [`update-check`](#update-check)
+    - [`normalize`](#normalize)
+      - [利用可能なオプション](#利用可能なオプション)
+    - [`nd`接頭辞](#nd接頭辞)
+    - [曖昧一致](#曖昧一致)
+  - [出力結果のフォーマット](#出力結果のフォーマット)
+    - [`json`](#json)
+    - [`geojson`](#geojson)
+    - [マッチングレベルについて](#マッチングレベルについて)
+
+-------
+
+## 使用環境
 
 コマンドを実行するためには **node.js version 18以上** が必要です。
+
+## ビルドとインストール
+
+まだ開発中なため、現時点では `npm`パッケージを提供していません。
+インストールするためには、あなたのPC上でソースコードからビルドする必要があります。
+
+```
+$ git clone git@github.com:digital-go-jp/abr-geocoder.git
+$ cd abr-geocoder
+$ npm i
+$ npm run build
+```
+
+グローバルにインストールする場合
+```
+(global install)
+$ npm -g install .
+$ abr-geocoder --version
+```
+
+または `npx` コマンドを併用する場合
+```
+(local usage)
+$ npx abr-geocoder --version
+```
 
 ## 使い方
 
 ```
-$ yarn global add digital-go-jp/abr-geocoder
 $ abr-geocoder download # アドレス・ベース・レジストリのデータをダウンロードし、データベース作成を行う
 $ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
 ```

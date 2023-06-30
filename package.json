@@ -11,7 +11,6 @@
     "url": "https://github.com/digital-go-jp/abr-geocoder/issues"
   },
   "homepage": "https://github.com/digital-go-jp/abr-geocoder",
-  "main": "index.js",
   "license": "MIT",
   "engines": {
     "node": ">=18"
