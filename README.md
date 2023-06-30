@@ -47,20 +47,20 @@ Then you need to install globally,
 ```
 (global install)
 $ npm -g install .
-$ abrg --version
+$ abr-geocoder --version
 ```
 
 or use with `npx`.
 ```
 (local usage)
-$ npx abrg --version
+$ npx abr-geocoder --version
 ```
 
 ## Usage
 
 ```
-$ abrg download # Download data from the address base registry and create a database.
-$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
+$ abr-geocoder download # Download data from the address base registry and create a database.
+$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
 ```
 
 ### `download`
@@ -68,20 +68,20 @@ $ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾
 Obtains the latest data from server.
 
 ```
-$ abrg download
+$ abr-geocoder download
 ```
 
 Downloads the public data from the address base registry ["全アドレスデータ"](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) into the `$HOME/.abr-geocoder` directory,
 then creates a local database using SQLite.
 
-To update the local database, runs `abrg download`.
+To update the local database, runs `abr-geocoder download`.
 
 ### `update-check`
 
 Checks the new update data.
 
 ```
-$ abrg update-check
+$ abr-geocoder update-check
 ```
 
 Returns `0` if the local database is the latest.
@@ -93,7 +93,7 @@ Returns `1` if new data in CKAN is available. there is no local database, return
 Geocodes Japanese addresses.
 
 ```
-$ abrg normalize [options] <inputFile>
+$ abr-geocoder normalize [options] <inputFile>
 ```
 
 Geocodes from the `<inputFile>`. The input file must have Japanese address each line.
@@ -110,7 +110,7 @@ For example:
 You can also pass the input query through `pipe` command. `-` denotes `stdin`.
 
 ```
-echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
+echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
 ```
 
 #### Available options
@@ -140,10 +140,10 @@ Without the `nd` prefix, the command outputs the results after all processes are
 You can include `?` character for wildcard matching with `--fuzzy` option.
 
 ```
-$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abrg normalize --format=ndjson -
+$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --format=ndjson -
 {"pref":"東京都","city":"","town":"","other":"千代?区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階","lat":null,"lon":null,"level":1}
 
-$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abrg normalize --fuzzy --format=ndjson -
+$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --fuzzy --format=ndjson -
 {"pref":"東京都","city":"千代田区","lg_code":"131016","town":"紀尾井町","town_id":"0056000","other":"東京ガーデンテラス紀尾井町 19階、20階","lat":35.679107172,"lon":139.736394597,"level":8,"addr1":"3","blk":"1","blk_id":"001","addr1_id":"003","addr2":"","addr2_id":""}
 ```
 
