@@ -8,19 +8,21 @@ Address Base Registry Geocoder by Japan Digital Agency
 - Outputs latitude and longitude pair with matched level.
 
 ## Index
-- [Requirement](./#requirement)
-- [Build and Installation](./#build-and-installation)
-- [Usage](./#usage)
-  - [download](./#usage)
-  - [update-check](./#update-check)
-  - [normalize](./#normalize)
-    - [normalize available options](./#available-options)
-- [`nd` prefix](./#nd-prefix)
-- [Fuzzy Match](./#fuzzy-match)
-- [Output Formats](./#output-formats)
-  - [json](./#json)
-  - [geojson](./#geojson)
-- [Matching Levels](./#matching-levels)
+- [abr-geocoder](#abr-geocoder)
+  - [Index](#index)
+  - [Requirement](#requirement)
+  - [Build and Installation](#build-and-installation)
+  - [Usage](#usage)
+    - [`download`](#download)
+    - [`update-check`](#update-check)
+    - [`normalize`](#normalize)
+      - [Available options](#available-options)
+      - [`nd` prefix](#nd-prefix)
+    - [Fuzzy Match](#fuzzy-match)
+  - [Output Formats](#output-formats)
+    - [`json`](#json)
+    - [`geojson`](#geojson)
+    - [Matching Levels](#matching-levels)
 
 -------
 
