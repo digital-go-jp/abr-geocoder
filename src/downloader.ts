@@ -89,7 +89,7 @@ async function getArchiveMetadata(archive: string): Promise<ArchiveMetadata | un
 
   const out: ArchiveMetadata = {};
   for (const row of allMetadata) {
-    out[row.key as keyof ArchiveMetadata] = row.value;
+    out[(row as any).key as keyof ArchiveMetadata] = (row as any).value;
   }
   return out;
 }

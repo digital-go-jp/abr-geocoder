@@ -106,7 +106,10 @@ export class Normalize {
       if (requestPath.length === 1) {
         // a request to `.json`
         // prefectures
-        const prefs = _prefectureStmt.all();
+        const prefs: {
+          todofuken_name: string;
+          towns: string;
+        }[] = _prefectureStmt.all() as any;
         return { json: async () => {
           const out: { [key: string]: string[] } = {};
           for (const { todofuken_name, towns } of prefs) {
