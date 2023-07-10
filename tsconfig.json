@@ -7,6 +7,10 @@
     /* Strict Type-Checking Options */
     "strict": true,                           /* Enable all strict type-checking options. */
     "esModuleInterop": true,                  /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+    "sourceMap": true,
+    "typeRoots": [
+        "../node_modules/@types"
+    ]
   },
   "include": [
     "src/**/*.ts"
