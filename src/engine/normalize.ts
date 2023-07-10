@@ -193,7 +193,7 @@ async function normalizeResidentialPart(
   const match = inputOther.match(/^([1-9][0-9]*)(?:-([1-9][0-9]*))?(?:-([1-9][0-9]*))?/)
   if (match) {
     const matchedString = match[0];
-    const other = inputOther.substring(matchedString.length).trim()
+    const other = inputOther.substring(matchedString.length);
 
     const blk = match[1]
     const addr1 = match[2]
@@ -211,10 +211,10 @@ async function normalizeResidentialPart(
         addr1_id: residentialWithAddr2.addr1_id,
         addr2: addr2 || "",
         addr2_id: residentialWithAddr2.addr2_id,
-        other,
+        other: other.trim(),
         lat: residentialWithAddr2.lat,
         lon: residentialWithAddr2.lon,
-      }
+      };
     }
 
     if (addr2) {
@@ -225,6 +225,7 @@ async function normalizeResidentialPart(
       )
 
       if (residential) {
+        const otherResult = ((addr2 ? `-${addr2}` : '') + other.replace(/\s+/g, " ")).trim();
         return {
           blk,
           blk_id: residential.blk_id,
@@ -232,7 +233,7 @@ async function normalizeResidentialPart(
           addr1_id: residential.addr1_id,
           addr2: "",
           addr2_id: "",
-          other: (addr2 ? `-${addr2}` : '') + other,
+          other: otherResult,
           lat: residential.lat,
           lon: residential.lon,
         }
