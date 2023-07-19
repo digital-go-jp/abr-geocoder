@@ -21,7 +21,7 @@
     - [`json`](#json)
     - [`geojson`](#geojson)
     - [マッチングレベルについて](#マッチングレベルについて)
-
+  
 ## ドキュメント
 - [このプロジェクトへの参加について](docs/CONTRIBUTING.ja.md)
 
