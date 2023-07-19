@@ -1,39 +1,40 @@
-# Contributing to this project
+# Contributing to abr-geocoder
 
-We would love for you to contribute to abr-geocoder and help make it even better than it is today! We are really appreciate for your big help! 
+We would be delighted if you would contribute to abr-geocoder and help make it even better than it is today. We appreciate your help!
 
-As a contributor, we would like you to follow our guidelines before making a pull request.
+As a contributor, please follow our guidelines before submitting a pull request.
 
 ## Have a new idea, or found an issue?
 
-We would like you to search similar issue reports or similar ideas, we have already discussed, in the [issue](https://github.com/digital-go-jp/abr-geocoder/issues?q=). You could be find out similar subjects or bug reports that have already been discussed.
+Please search the [issue page](https://github.com/digital-go-jp/abr-geocoder/issues?q=)  for similar issue reports or ideas that we have already discussed. You may find similar subjects or bug reports that have already been discussed.
 
-Even if you can't find anything relavant, please post a new issue by clicking the [New issue] button in the [issue page](https://github.com/digital-go-jp/abr-geocoder/issues).
+If you cannot find anything relevant, please post a new issue by clicking the [New issue] button in the [issue page](https://github.com/digital-go-jp/abr-geocoder/issues).
 
 # Creating a pull request
 
-If you would like to submit a pull request to improve or fix a problem, we would ask you to make a discussion on the [issueページ](https://github.com/digital-go-jp/abr-geocoder/issues) page even it's a hot fix.
+If you would like to submit a pull request to improve or fix a problem, please create a discussion on the [issue page](https://github.com/digital-go-jp/abr-geocoder/issues) first. This is even important for hot fixes.
 
-If there are already similar discussions, you can join them, and it can help save your time in preparing your Pull Request.
+If there are already similar disucssions, you can join them. This can help you save time when preparing your pull request.
 
-Submitting your Pull Request without prior discussion may lead to further discussions, which could take longer time for the acceptance process.
+Submitting a pull request without prior discussion may lead to further discussions, which could delay the acceptance process.
+
 
 ## git flow
 
-In this repository, we adopt the `Git flow` development style, which each branch has a different purpose.
+In this repository, we use the `Git flow` development style, which defines a set of branches with specific purposes.
 
 - `main`
-  We place the code for the release version, and tag it with a format such as "version x.x.x".
+  The `main` branch contains the code for the released version. It is tagged with a version number, such as "version x.x.x".
   
 - `develop`
-  We place the code for the upcomming version under development.
+  The `develop` branch contains the code for the upcoming version. This is where new features and bug fixes are developed.
 
 - `features/issue_**`
-  Forks a branch from the `develop` branch and make the necessary changes. Once we have completed the changes, we create a Pull Request to merge the code back into the 'develop' branch.
+  The `features/issue_**` branches are used to develop new features. These branches are forked from the `develop` branch and merged back into the `develop` when the feature is complete.
 
 ## Development flow
 
-Here are the steps to follow when creating a Pull Request.
+Here are the steps you can follow to create a pull request:
 
 ```mermaid
 sequenceDiagram
@@ -52,9 +53,9 @@ sequenceDiagram
     Note over M: New release
 ```
 
-### :one: Sets this repository as the `upstream`
+### :one: Setting this repository as the `upstream`
 
-Forks this repository from the github, then runs the following statements:
+Fork this repository from Github, then run the following commands:
 
 ```
 $ git remote -v
@@ -71,9 +72,9 @@ $ git remote -v
 ```
 
 
-### :two: Synchronizes the `develop` from the `upstream`.
+### :two: Syncing the `develop` from the `upstream`.
 
-Sinc the forked repository (your repository) does not have the `develop` branch, imports it from the `upstream`.
+The forked repository (your repository) does not have the `develop` branch, so you need to import it from the `upstream`.
 
 ```
 $ git branch
@@ -99,10 +100,10 @@ $ git branch
 ```
 
 
-### :three: Creates a `features/issue_**`
+### :three: Creating a `features/issue_**`
 
-Forks a branch named `features/issue_**` from the `develop` branch for working your issue ticket.
-Please replaces `**` with the issue number.
+Forks a branch named `features/issue_**` from the `develop` branch to work on your issue ticket.
+Replace `**` with the issue number.
 
 ```
 $ git switch -c features/issue_1
@@ -114,27 +115,26 @@ $ git branch
 >   main
 ```
 
-### :four: Rebase to `upstream/develop`
+### :four: Rebasing to `upstream/develop`
 
-If you take longer time to make your pull requrst,
-there may be a difference between the code in the local git repository and the code in the upstream repository.
+If you take a long time to make your pull request,
+the code in your local repository may diverge from the code in the upstream repository.
 
-Before sending a pull request, we would like you to rebase the code in your local git repository to synchorize it with the code in the upstream repository.
+To ensure that your pull request is compatible with the upstream code, please rebase your local repository before submitting the pull request.
 
 ```
 $ git rebase upstream/develop
 ```
 
-### :five: Submitting your Pull Request 
+### :five: Submitting your pull request 
 
-You can make a pull request from your `features/issue_**` branch to the `upstream/develop` branch.
+You can submit a pull request from your `features/issue_**` branch to the `upstream/develop` branch.
 
-Please include the breif descriptions below:
-- Related issue link
-- Brief description of your pull request
-  - how does work your code, etc.
-- What you would like us to do code review on.
-- Screenshots, etc
+Please include the following information in your pull request:
+- A link to the related issue
+- A brief descrption of your pull request, including how your code works.
+- Any specific areas that you would like us to review.
+- Any screenshorts or other supporting documentation.
 
-Please refer the [(Github blog) How to write the perfect pull request](https://github.blog/2015-01-21-how-to-write-the-perfect-pull-request/)
+Please read the [(Github blog) How to write the perfect pull request](https://github.blog/2015-01-21-how-to-write-the-perfect-pull-request/)
 
