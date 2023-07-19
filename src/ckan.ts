@@ -1,7 +1,7 @@
 export const CKAN_BASE_REGISTRY_URL =
   'https://catalog.registries.digital.go.jp/rc';
 
-export type CKANResponse<T = any> =
+export type CKANResponse<T> =
   | {
       success: false;
     }

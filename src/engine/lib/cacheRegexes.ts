@@ -92,8 +92,8 @@ export const getPrefectureRegexPatterns = (prefs: string[]) => {
   }
 
   cachedPrefecturePatterns = prefs.map(pref => {
-    const _pref = pref.replace(/(都|道|府|県)$/, ''); // `東京` の様に末尾の `都府県` が抜けた住所に対応
-    const pattern = `^${_pref}(都|道|府|県)?`;
+    const prefecturePrefix = pref.replace(/(都|道|府|県)$/, ''); // `東京` の様に末尾の `都府県` が抜けた住所に対応
+    const pattern = `^${prefecturePrefix}(都|道|府|県)?`;
     return [pref, pattern];
   });
 
@@ -277,10 +277,10 @@ export const getTownRegexPatterns = async (pref: string, city: string) => {
             }
 
             // 以下の正規表現は、上のよく似た正規表現とは違うことに注意！
-            const _pattern = `(${patterns.join(
+            const resultPattern = `(${patterns.join(
               '|'
             )})((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━])`;
-            return _pattern; // デバッグのときにめんどくさいので変数に入れる。
+            return resultPattern; // デバッグのときにめんどくさいので変数に入れる。
           }
         )
     );
@@ -316,7 +316,7 @@ export const getSameNamedPrefectureCityRegexPatterns = (
     return cachedSameNamedPrefectureCityRegexPatterns;
   }
 
-  const _prefs = prefs.map(pref => {
+  const prefecturePrefixes = prefs.map(pref => {
     return pref.replace(/[都|道|府|県]$/, '');
   });
 
@@ -326,8 +326,8 @@ export const getSameNamedPrefectureCityRegexPatterns = (
       const city = prefList[pref][i];
 
       // 「福島県石川郡石川町」のように、市の名前が別の都道府県名から始まっているケースも考慮する。
-      for (let j = 0; j < _prefs.length; j++) {
-        if (city.name.indexOf(_prefs[j]) === 0) {
+      for (let j = 0; j < prefecturePrefixes.length; j++) {
+        if (city.name.indexOf(prefecturePrefixes[j]) === 0) {
           cachedSameNamedPrefectureCityRegexPatterns.push([
             `${pref}${city}`,
             `^${city}`,

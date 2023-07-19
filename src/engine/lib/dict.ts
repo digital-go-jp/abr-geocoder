@@ -14,21 +14,24 @@ const JIS_KANJI_REGEX_PATTERNS = JIS_OLD_KANJI.map((old, i) => {
 });
 
 export const jisKanji = (str: string) => {
-  let _str = str;
+  let result = str;
 
   for (let i = 0; i < JIS_KANJI_REGEX_PATTERNS.length; i++) {
     const [pattern, oldKanji, newKanji] = JIS_KANJI_REGEX_PATTERNS[i];
-    _str = _str.replace(new RegExp(pattern, 'g'), `(${oldKanji}|${newKanji})`);
+    result = result.replace(
+      new RegExp(pattern, 'g'),
+      `(${oldKanji}|${newKanji})`
+    );
   }
 
-  return _str;
+  return result;
 };
 
 export const toRegexPattern = (string: string) => {
-  let _str = string;
+  let result = string;
 
   // 以下なるべく文字数が多いものほど上にすること
-  _str = _str
+  result = result
     .replace(/三栄町|四谷三栄町/g, '(三栄町|四谷三栄町)')
     .replace(/鬮野川|くじ野川|くじの川/g, '(鬮野川|くじ野川|くじの川)')
     .replace(/通り|とおり/g, '(通り|とおり)')
@@ -56,9 +59,9 @@ export const toRegexPattern = (string: string) => {
     .replace(/莵|菟/g, '(莵|菟)')
     .replace(/市|巿/g, '(市|巿)');
 
-  _str = jisKanji(_str);
+  result = jisKanji(result);
 
-  return _str;
+  return result;
 };
 
 export const insertWildcardMatching = (string: string) => {

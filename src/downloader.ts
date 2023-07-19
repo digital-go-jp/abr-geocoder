@@ -178,11 +178,11 @@ async function downloadDataset(meta: DatasetMetadata, outputFile: string) {
       'user-agent': USER_AGENT,
     },
   });
-  await new Promise<void>((resolve, _reject) => {
+  await new Promise<void>(resolve => {
     const outputStream = fs.createWriteStream(outputFile);
     const filteredRawHeaders = Object.fromEntries(
       Object.entries(resp.headers).filter(
-        ([_key, value]) => typeof value !== 'undefined'
+        ([, value]) => typeof value !== 'undefined'
       ) as [string, string | string[]][]
     );
     const headers = new Headers(filteredRawHeaders);

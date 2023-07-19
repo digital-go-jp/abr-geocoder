@@ -116,7 +116,7 @@ const defaultOption = {
  */
 export const __internals: {fetch: FetchLike} = {
   // default fetch
-  fetch: async (input: string) => {
+  fetch: async () => {
     return {
       json: async () => ({}),
     };
@@ -281,8 +281,8 @@ export const normalize: Normalizer = async (
    */
   let other = address
     .normalize('NFC')
-    .replace(/　/g, ' ')
-    .replace(/ +/g, ' ')
+    .replace(/\u3000/g, ' ') // \u3000 which is an invisible space in Zenkaku
+    .replace(/\s+/g, ' ')
     .replace(/([０-９Ａ-Ｚａ-ｚ]+)/g, match => {
       // 全角のアラビア数字は問答無用で半角にする
       return zen2han(match);
@@ -349,20 +349,20 @@ export const normalize: Normalizer = async (
   if (!pref) {
     // 都道府県名が省略されている
     const matched: {pref: string; city: SingleCity; other: string}[] = [];
-    for (const _pref in prefectures) {
-      const cities = prefectures[_pref];
-      const cityPatterns = getCityRegexPatterns(_pref, cities);
+    for (const prefectureName in prefectures) {
+      const cities = prefectures[prefectureName];
+      const cityPatterns = getCityRegexPatterns(prefectureName, cities);
 
       other = other.trim();
       for (let i = 0; i < cityPatterns.length; i++) {
-        const [_city, pattern] = cityPatterns[i];
+        const [cityName, pattern] = cityPatterns[i];
         const match = other.match(
           option.fuzzy ? insertWildcardMatching(pattern) : pattern
         );
         if (match) {
           matched.push({
-            pref: _pref,
-            city: _city,
+            pref: prefectureName,
+            city: cityName,
             other: other.substring(match[0].length),
           });
         }
