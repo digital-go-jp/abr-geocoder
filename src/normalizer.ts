@@ -120,7 +120,7 @@ export class Normalize {
       } else if (requestPath.length === 3) {
         // a request to `/{pref}/{city}.json`
         const pref = requestPath[1],
-              city = requestPath[2];
+          city = requestPath[2];
         const towns = _townsStmt.all(pref, city);
         return { json: async () => {
           return towns;
@@ -128,8 +128,8 @@ export class Normalize {
       } else if (requestPath.length === 4) {
         // a request to `/{pref}/{city}/{town}.json`
         const pref = requestPath[1],
-              city = requestPath[2],
-              town = requestPath[3];
+          city = requestPath[2],
+          town = requestPath[3];
         const blks = _blksStmt.all(town, pref, city);
         return { json: async () => {
           return blks;
@@ -137,8 +137,8 @@ export class Normalize {
       } else if (requestPath.length === 5 && requestPath[4] === '住居表示') {
         // a request to `/{pref}/{city}/{town}/住居表示.json`
         const pref = requestPath[1],
-              city = requestPath[2],
-              town = requestPath[3];
+          city = requestPath[2],
+          town = requestPath[3];
         const rsdts = _rsdtStmt.all(town, pref, city);
         return { json: async () => {
           return rsdts;

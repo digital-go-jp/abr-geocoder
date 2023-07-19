@@ -13,6 +13,7 @@ import { getDataDir } from './config';
 import { Normalize } from './normalizer';
 import { NormalizeResult } from './engine/normalize';
 import { formatResidentialSection } from './engine/formatting';
+import * as Formatters from './formatters';
 
 const packageJsonPath = path.join(__dirname, '../package.json')
 const { description, version } = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
@@ -25,33 +26,6 @@ type DownloadPgmOpts = {
   data: string | undefined
   source: string
 }
-
-const FORMATTERS: { [key: string]: (r: NormalizeResult) => any } = {
-  'json': (r) => r,
-  'geojson': (r) => ({
-    type: "Feature",
-    geometry: {
-      type: "Point",
-      coordinates: [r.lon, r.lat]
-    },
-    properties: {
-      title: `${r.pref}${r.city}${r.town}${formatResidentialSection(r)}`,
-      level: r.level,
-      pref: r.pref,
-      city: r.city,
-      lg_code: r.lg_code,
-      town: r.town,
-      town_id: r.town_id,
-      blk: r.blk,
-      blk_id: r.blk_id,
-      addr1: r.addr1,
-      addr1_id: r.addr1_id,
-      addr2: r.addr2,
-      addr2_id: r.addr2_id,
-      other: r.other,
-    }
-  }),
-};
 
 program
   .command('download')
@@ -122,9 +96,9 @@ program
       if (!options.format.startsWith('nd')) {
         allResults.push(r);
       } else if (options.format === 'ndjson') {
-        console.log(JSON.stringify(FORMATTERS.json(r)));
+        console.log(JSON.stringify(Formatters.json(r)));
       } else if (options.format === 'ndgeojson') {
-        console.log(JSON.stringify(FORMATTERS.geojson(r)));
+        console.log(JSON.stringify(Formatters.geoJson(r)));
       }
     }
 
@@ -148,13 +122,13 @@ program
       console.log(table.toString());
     } else if (options.format === 'json') {
       console.log(
-        JSON.stringify(allResults.map(FORMATTERS.json)),
+        JSON.stringify(allResults.map(Formatters.json)),
       );
     } else if (options.format === 'geojson') {
       console.log(
         JSON.stringify({
           "type": "FeatureCollection",
-          "features": allResults.map(FORMATTERS.geojson),
+          "features": allResults.map(Formatters.geoJson),
         }),
       );
     }
