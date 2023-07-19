@@ -67,6 +67,9 @@ program
       console.error(
         'ローカルのデータが更新できます。 abr-geocoder download で更新してください。'
       );
+
+      // TODO: 不要な形に書き換える
+      // eslint-disable-next-line no-process-exit
       process.exit(1);
     }
 

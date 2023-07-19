@@ -1,8 +1,8 @@
-import path from "node:path";
+import path from 'node:path';
 import * as NJANormalize from './engine/normalize';
 
-import type BetterSqlite3 from "better-sqlite3";
-import Database, {Statement} from "better-sqlite3";
+import type BetterSqlite3 from 'better-sqlite3';
+import Database from 'better-sqlite3';
 
 /*
  * Roles of this module:
@@ -23,14 +23,13 @@ export type Prefecture = {
 };
 
 export class Normalize {
-
-  private const db: BetterSqlite3.Database;
+  private db: BetterSqlite3.Database;
 
   constructor(dataDir: string, sourceId: string) {
     this.db = new Database(path.join(dataDir, `${sourceId}.sqlite`), {
       readonly: true,
     });
-    
+
     const prefectureStmt = this.db.prepare(`
       SELECT
         "都道府県名" AS "todofuken_name",
@@ -41,7 +40,7 @@ export class Normalize {
       FROM city
       GROUP BY "都道府県名"
     `);
-    const _townsStmt = this.db.prepare(`
+    const townsStmt = this.db.prepare(`
       select
         "town"."code",
         "town"."town_id",
@@ -57,7 +56,7 @@ export class Normalize {
         AND "city"."郡名" || "city"."市区町村名" || "city"."政令市区名" = ?
         AND "町字区分コード" <> 3;
     `);
-    const _blksStmt = this.db.prepare(`
+    const blksStmt = this.db.prepare(`
       select
         "blk"."code",
         "blk"."town_id",
@@ -77,7 +76,7 @@ export class Normalize {
         AND "city"."郡名" || "city"."市区町村名" || "city"."政令市区名" = ?
         and blk."街区符号" is not null
     `);
-    const _rsdtStmt = this.db.prepare(`
+    const rsdtStmt = this.db.prepare(`
       select
         "rsdt"."code",
         "rsdt"."town_id",
@@ -120,7 +119,7 @@ export class Normalize {
         // a request to `/{pref}/{city}.json`
         const pref = requestPath[1],
           city = requestPath[2];
-        const towns = _townsStmt.all(pref, city);
+        const towns = townsStmt.all(pref, city);
         return {
           json: async () => {
             return towns;
@@ -131,7 +130,7 @@ export class Normalize {
         const pref = requestPath[1],
           city = requestPath[2],
           town = requestPath[3];
-        const blks = _blksStmt.all(town, pref, city);
+        const blks = blksStmt.all(town, pref, city);
         return {
           json: async () => {
             return blks;
@@ -142,7 +141,7 @@ export class Normalize {
         const pref = requestPath[1],
           city = requestPath[2],
           town = requestPath[3];
-        const rsdts = _rsdtStmt.all(town, pref, city);
+        const rsdts = rsdtStmt.all(town, pref, city);
         return {
           json: async () => {
             return rsdts;
