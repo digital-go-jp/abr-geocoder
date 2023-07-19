@@ -4,38 +4,83 @@
 - アドレス（住所・所在地）文字列を正規化する
 - 緯度経度とマッチングレベルを出力する
 
-## Requirement
+## インデックス
+- [abr-geocoder](#abr-geocoder)
+  - [インデックス](#インデックス)
+  - [ドキュメント](#ドキュメント)
+  - [使用環境](#使用環境)
+  - [ビルドとインストール](#ビルドとインストール)
+  - [使い方](#使い方)
+    - [`download`](#download)
+    - [`update-check`](#update-check)
+    - [`normalize`](#normalize)
+      - [利用可能なオプション](#利用可能なオプション)
+    - [`nd`接頭辞](#nd接頭辞)
+    - [曖昧一致](#曖昧一致)
+  - [出力結果のフォーマット](#出力結果のフォーマット)
+    - [`json`](#json)
+    - [`geojson`](#geojson)
+    - [マッチングレベルについて](#マッチングレベルについて)
+  
+## ドキュメント
+- [このプロジェクトへの参加について](docs/CONTRIBUTING.ja.md)
+
+-------
+
+## 使用環境
+
+コマンドを実行するためには **node.js version 18以上** が必要です。
+
+## ビルドとインストール
+
+まだ開発中なため、現時点では `npm`パッケージを提供していません。
+インストールするためには、あなたのPC上でソースコードからビルドする必要があります。
 
 ```
-"node": ">=18"
+$ git clone git@github.com:digital-go-jp/abr-geocoder.git
+$ cd abr-geocoder
+$ npm i
+$ npm run build
 ```
 
-## Usage
+グローバルにインストールする場合
+```
+(global install)
+$ npm -g install .
+$ abrg --version
+```
+
+または `npx` コマンドを併用する場合
+```
+(local usage)
+$ npx abrg --version
+```
+
+## 使い方
 
 ```
-$ yarn global add digital-go-jp/abr-geocoder
-$ abr-geocoder download # アドレス・ベース・レジストリのデータをダウンロードし、データベース作成を行う
-$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
+$ abrg download # アドレス・ベース・レジストリのデータをダウンロードし、データベース作成を行う
+$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
 ```
 
 ### `download`
 
-最新データをダウンロードする。
+サーバーから最新データを取得します。
 
 ```
-$ abr-geocoder download
+$ abrg download
 ```
 
-アドレス・ベース・レジストリの[「全アドレスデータ」](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) を `$HOME/.abr-geocoder` ディレクトリにダウンロードし、SQLiteのデータベースファイルに展開します。
+アドレス・ベース・レジストリの[「全アドレスデータ」](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) を `$HOME/.abr-geocoder` ディレクトリにダウンロードし、SQLiteを使ってデータベースを構築します。
 
-作成済みのデータベースを更新するには、再度 `abr-geocoder download` を実行すると更新されます。更新がない場合は、更新をスキップします。
+作成済みのデータベースを更新するには、`abrg download` を実行します。
 
 ### `update-check`
 
-ローカルのデータが最新であることを確認する。
+データのアップデートの有無を確認する。
 
 ```
-$ abr-geocoder update-check
+$ abrg update-check
 ```
 
 最新である場合は戻り値 `0` を返し、正常終了します。
@@ -48,30 +93,59 @@ CKANに新しいデータが存在する場合（ローカルのデータを確�
 アドレスをジオコーディングする。
 
 ```
-$ abr-geocoder normalize --help
-Usage: abr-geocoder normalize [options] <inputFile>
-
-入力されたアドレスをジオコーディングする。 <inputFile> にアドレスが改行で分けられたファイルを指定してください。標準入力で渡したい場合は、 '-' を指定してください。
-
-Options:
-  -f|--format <outputFormat>  出力フォーマットを指定する。デフォルトは `table`。対応オプション: table, ndjson, json, ndgeojson, geojson (default: "table")
-  -h, --help                  display help for command
+$ abrg normalize [options] <inputFile>
 ```
+
+`<inputFile>` で指定されたテキストファイルをジオコーディングします。
+１行単位（１行につき１つのアドレス）で記入してください。
+
+例：
+```sample.txt
+東京都千代田区紀尾井町1-3
+東京都千代田区永田町1-10-1
+...
+東京都千代田区永田町一丁目7番1号
+```
+
+標準入力からデータを渡したい場合は、 '-' を指定することができます。
+```
+echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
+```
+
+
+#### 利用可能なオプション
+
+- `-f`, `--format`
+
+   出力書式を指定します。デフォルトは `table`で、CLI上に表を出力します。
+   `json` や `geojson`を指定することも出来ます。
+
+- `--fuzzy`
+
+   アドレスの中に`?`を含むことを許可します。
+  
+- `-h`, `--help`
+
+   コマンドの使い方を表示します。
 
 主なオプションは `--format` となります。デフォルトは `table` に設定し、CLI上に表型に表示されます。
 JSONの出力や、GeoJSONの出力のサンプルは下記「出力結果のフォーマット」をご確認ください。
 
-なお、 `nd` 以外で始まるフォーマットは、バッファ型で全行処理後に結果を出力します。 `nd` から始まるフォーマットはストリーミング型で、一行ずつ結果を出力します。
+### `nd`接頭辞
+
+`nd`接頭辞を付けて出力書式を指定する（例：`ndjson`) と、1つのアドレスを処理する毎に結果を出力します。
+
+`nd`を付けない場合は、全行処理後に結果を出力します。
 
 ### 曖昧一致
 
 `?` のワイルドカードを利用して曖昧一致させることができます。 `--fuzzy` オプションを利用してください。
 
 ```
-$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --format=ndjson -
+$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abrg normalize --format=ndjson -
 {"pref":"東京都","city":"","town":"","other":"千代?区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階","lat":null,"lon":null,"level":1}
 
-$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --fuzzy --format=ndjson -
+$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abrg normalize --fuzzy --format=ndjson -
 {"pref":"東京都","city":"千代田区","lg_code":"131016","town":"紀尾井町","town_id":"0056000","other":"東京ガーデンテラス紀尾井町 19階、20階","lat":35.679107172,"lon":139.736394597,"level":8,"addr1":"3","blk":"1","blk_id":"001","addr1_id":"003","addr2":"","addr2_id":""}
 ```
 
@@ -141,11 +215,13 @@ $ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾�
 
 JSON / GeoJSON 出力を利用する場合は `level` プロパティに入ってます。
 
-```
-0 - 都道府県も判別できなかった。
-1 - 都道府県まで判別できた。
-2 - 市区町村まで判別できた。
-3 - 町字まで判別できた。
-7 - 住居表示の街区までの判別ができた。
-8 - 住居表示の街区符号・住居番号までの判別ができた。
-```
+`level` プロパティは、マッチしたアドレスの精度を示しています。`json`または`geojson`を出力書式に指定した場合のみ利用可能です。
+
+| level | description |
+|-------|-------------|
+| 0 | 全く判定できなかった |
+| 1 | 都道府県レベルまで判別できた |
+| 2 | 市区町村まで判別できた |
+| 3 | 町字まで判別できた |
+| 7 | 住居表示の街区までの判別ができた |
+| 8 | 住居表示の街区符号・住居番号までの判別ができた |
