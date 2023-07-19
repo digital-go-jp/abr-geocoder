@@ -23,7 +23,8 @@
     "build": "tsc",
     "clean": "tsc --build --clean",
     "test": "jest",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "lint-and-fix": "eslint . --ext .ts --fix"
   },
   "devDependencies": {
     "@tsconfig/node18": "^2.0.1",
