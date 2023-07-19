@@ -10,6 +10,7 @@ Address Base Registry Geocoder by Japan Digital Agency
 ## Index
 - [abr-geocoder](#abr-geocoder)
   - [Index](#index)
+  - [Documents](#documents)
   - [Requirement](#requirement)
   - [Build and Installation](#build-and-installation)
   - [Usage](#usage)
@@ -23,6 +24,9 @@ Address Base Registry Geocoder by Japan Digital Agency
     - [`json`](#json)
     - [`geojson`](#geojson)
     - [Matching Levels](#matching-levels)
+
+## Documents
+- [Contributing this project](docs/CONTRIBUTING.md)
 
 -------
 
