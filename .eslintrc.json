@@ -37,6 +37,9 @@
           "object": "it",
           "property": "only"
         }
+      ],
+      "no-underscore-dangle": [
+        "error"
       ]
     },
     "overrides": [
