@@ -4,7 +4,6 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import {program} from 'commander';
-
 import byline from 'byline';
 import Table from "cli-table3";
 import { checkForUpdates, loadDataset } from './downloader';
