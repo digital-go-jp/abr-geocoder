@@ -19,23 +19,35 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: install pnpm
-        run: npm install -g pnpm
+      - uses: actions/cache@v2
+        id: yarn-cache
+        with:
+          path: |
+            **/node_modules
+            **/.eslintcache
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: install yarn
+        run: npm install --global yarn
 
       - name: install 
-        run: pnpm i
+        run: yarn install --frozen-lockfile
 
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          filters: |
-            target:
-              - 'src/**'
-              - '.eslintrc*'
+      # - uses: dorny/paths-filter@v2
+      #   id: filter
+      #   with:
+      #     filters: |
+      #       target:
+      #         - 'src/**'
+      #         - '.eslintrc*'
 
       # run eslint on all files if eslintrc changes
       - name: Run eslint on changed files
-        if: steps.filter.outputs.target == 'false'
+        #if: steps.filter.outputs.target == 'false'
         uses: sibiraj-s/action-eslint@v2
         with:
           all-files: ${{ steps.filter.outputs.target == 'true' }}
