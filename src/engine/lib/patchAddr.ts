@@ -20,21 +20,25 @@ const addrPatches = [
     pattern: '^字?東三分1',
     result: '東三分一',
   },
-]
+];
 
 export const patchAddr = (
-  pref: string,
+  prefecture: string,
   city: string,
   town: string,
-  addr: string,
+  address: string
 ): string => {
-  let _addr = addr
+  let result = address;
   for (let i = 0; i < addrPatches.length; i++) {
-    const patch = addrPatches[i]
-    if (patch.pref === pref && patch.city === city && patch.town === town) {
-      _addr = _addr.replace(new RegExp(patch.pattern), patch.result)
+    const patch = addrPatches[i];
+    if (
+      patch.pref === prefecture &&
+      patch.city === city &&
+      patch.town === town
+    ) {
+      result = result.replace(new RegExp(patch.pattern), patch.result);
     }
   }
 
-  return _addr
-}
+  return result;
+};

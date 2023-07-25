@@ -1,9 +1,8 @@
-import path from "node:path";
+import path from 'node:path';
+import * as NJANormalize from './engine/normalize';
 
-import * as NJANormalize from './engine/normalize'
-
-import type BetterSqlite3 from "better-sqlite3";
-import Database from "better-sqlite3";
+import type BetterSqlite3 from 'better-sqlite3';
+import Database from 'better-sqlite3';
 
 /*
  * Roles of this module:
@@ -12,26 +11,26 @@ import Database from "better-sqlite3";
  */
 
 export type GeocodingResult = {
-  input: string
-  level: number
-}
+  input: string;
+  level: number;
+};
 
 export type NormalizeOptions = NJANormalize.Option;
 
-export class Normalize {
-  dataDir: string
-  sourceId: string
+export type Prefecture = {
+  todofuken_name: string;
+  towns: string;
+};
 
-  _db: BetterSqlite3.Database
+export class Normalize {
+  private db: BetterSqlite3.Database;
 
   constructor(dataDir: string, sourceId: string) {
-    this.dataDir = dataDir;
-    this.sourceId = sourceId;
-    this._db = new Database(path.join(dataDir, `${sourceId}.sqlite`), {
+    this.db = new Database(path.join(dataDir, `${sourceId}.sqlite`), {
       readonly: true,
     });
 
-    const _prefectureStmt = this._db.prepare(`
+    const prefectureStmt = this.db.prepare(`
       SELECT
         "都道府県名" AS "todofuken_name",
         json_group_array(json_object(
@@ -41,7 +40,7 @@ export class Normalize {
       FROM city
       GROUP BY "都道府県名"
     `);
-    const _townsStmt = this._db.prepare(`
+    const townsStmt = this.db.prepare(`
       select
         "town"."code",
         "town"."town_id",
@@ -57,7 +56,7 @@ export class Normalize {
         AND "city"."郡名" || "city"."市区町村名" || "city"."政令市区名" = ?
         AND "町字区分コード" <> 3;
     `);
-    const _blksStmt = this._db.prepare(`
+    const blksStmt = this.db.prepare(`
       select
         "blk"."code",
         "blk"."town_id",
@@ -77,7 +76,7 @@ export class Normalize {
         AND "city"."郡名" || "city"."市区町村名" || "city"."政令市区名" = ?
         and blk."街区符号" is not null
     `);
-    const _rsdtStmt = this._db.prepare(`
+    const rsdtStmt = this.db.prepare(`
       select
         "rsdt"."code",
         "rsdt"."town_id",
@@ -100,62 +99,72 @@ export class Normalize {
         and (rsdt."住居番号" is not null or rsdt."住居番号2" is not null)
     `);
 
-    NJANormalize.__internals.fetch = async (path: string) => {
+    NJANormalize.internals.fetch = async (path: string) => {
       const decoded = decodeURIComponent(path).replace(/\.json$/, '');
       const requestPath = decoded.split('/');
       if (requestPath.length === 1) {
         // a request to `.json`
         // prefectures
-        const prefs: {
-          todofuken_name: string;
-          towns: string;
-        }[] = _prefectureStmt.all() as any;
-        return { json: async () => {
-          const out: { [key: string]: string[] } = {};
-          for (const { todofuken_name, towns } of prefs) {
-            out[todofuken_name] = JSON.parse(towns);
-          }
-          return out;
-        }}
+        const prefs: Prefecture[] = prefectureStmt.all() as Prefecture[];
+        return {
+          json: async () => {
+            const out: {[key: string]: string[]} = {};
+            for (const {todofuken_name, towns} of prefs) {
+              out[todofuken_name] = JSON.parse(towns);
+            }
+            return out;
+          },
+        };
       } else if (requestPath.length === 3) {
         // a request to `/{pref}/{city}.json`
         const pref = requestPath[1],
-              city = requestPath[2];
-        const towns = _townsStmt.all(pref, city);
-        return { json: async () => {
-          return towns;
-        }};
+          city = requestPath[2];
+        const towns = townsStmt.all(pref, city);
+        return {
+          json: async () => {
+            return towns;
+          },
+        };
       } else if (requestPath.length === 4) {
         // a request to `/{pref}/{city}/{town}.json`
         const pref = requestPath[1],
-              city = requestPath[2],
-              town = requestPath[3];
-        const blks = _blksStmt.all(town, pref, city);
-        return { json: async () => {
-          return blks;
-        }};
+          city = requestPath[2],
+          town = requestPath[3];
+        const blks = blksStmt.all(town, pref, city);
+        return {
+          json: async () => {
+            return blks;
+          },
+        };
       } else if (requestPath.length === 5 && requestPath[4] === '住居表示') {
         // a request to `/{pref}/{city}/{town}/住居表示.json`
         const pref = requestPath[1],
-              city = requestPath[2],
-              town = requestPath[3];
-        const rsdts = _rsdtStmt.all(town, pref, city);
-        return { json: async () => {
-          return rsdts;
-        }};
+          city = requestPath[2],
+          town = requestPath[3];
+        const rsdts = rsdtStmt.all(town, pref, city);
+        return {
+          json: async () => {
+            return rsdts;
+          },
+        };
       } else {
-        return { json: async () => {
-          return {};
-        } }
+        return {
+          json: async () => {
+            return {};
+          },
+        };
       }
     };
   }
 
   close() {
-    this._db.close();
+    this.db.close();
   }
 
-  normalizeAddress(string: string, options?: NormalizeOptions): Promise<NJANormalize.NormalizeResult> {
+  normalizeAddress(
+    string: string,
+    options?: NormalizeOptions
+  ): Promise<NJANormalize.NormalizeResult> {
     return NJANormalize.normalize(string, {
       level: 8,
       ...(options || {}),

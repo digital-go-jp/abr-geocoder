@@ -3,17 +3,16 @@ import path from 'node:path';
 
 import csvParse from 'csv-parse';
 import StreamZip from 'node-stream-zip';
-import {Client, fetch, Headers, request} from 'undici';
+import {Client, fetch} from 'undici';
 import prettyBytes from 'pretty-bytes';
 import cliProgress from 'cli-progress';
 import {CKANPackageShow, CKANResponse, CKAN_BASE_REGISTRY_URL} from './ckan';
 import type BetterSqlite3 from 'better-sqlite3';
 import Database from 'better-sqlite3';
 import {walkDir} from './utils';
-import { Writable } from 'stream'
+import {Writable} from 'stream';
 
 import proj4 from 'proj4';
-import { pipeline } from 'node:stream';
 proj4.defs('EPSG:4612', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 proj4.defs('EPSG:6668', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 
@@ -71,17 +70,17 @@ export async function loadDataset(ckanId: string, dataDir: string) {
     dataDir
   );
 
-  // if (!updateAvailable) {
-  //   console.log('現状データが最新です。更新を中断します。');
-  //   return;
-  // }
+  if (!updateAvailable) {
+    console.log('現状データが最新です。更新を中断します。');
+    return;
+  }
 
   const outZip = path.join(dataDir, `${ckanId}.zip`);
   await downloadDataset(upstreamMeta, outZip);
   // keep the main archive for later usage
-  // const unzippedDir = await unzipArchive(outZip);
-  // await createSqliteArchive(upstreamMeta, unzippedDir, localFile);
-  // await fs.promises.rm(unzippedDir, {recursive: true});
+  const unzippedDir = await unzipArchive(outZip);
+  await createSqliteArchive(upstreamMeta, unzippedDir, localFile);
+  await fs.promises.rm(unzippedDir, {recursive: true});
 }
 
 async function getArchiveMetadata(
@@ -176,39 +175,41 @@ async function downloadDataset(meta: DatasetMetadata, outputFile: string) {
 
   const requestUrl = new URL(meta.fileUrl);
   const client = new Client(requestUrl.origin);
-  await client.stream({
-    path: requestUrl.pathname,
-    method: 'GET',
-    headers: {
-      'user-agent': USER_AGENT,
+  await client.stream(
+    {
+      path: requestUrl.pathname,
+      method: 'GET',
+      headers: {
+        'user-agent': USER_AGENT,
+      },
     },
-  }, ({statusCode, headers}) => {
-    const contentLength  = parseInt(
-      headers['content-length'].toString(),
-      10,
-    );
-
-    progress.start(contentLength, 0);
-    const writerStream = fs.createWriteStream(outputFile);
-
-    const result = new Writable({
-      write (chunk, encoding, callback) {
-        if (chunk.length > 0) {
-          progress.increment(chunk.length);
-          progress.updateETA();
-        }
-        writerStream.write(chunk);
-        callback()
+    ({statusCode, headers}) => {
+      if (statusCode !== 200) {
+        throw new Error('アクセスできませんでした');
       }
-    });
+      const contentLength = parseInt(headers['content-length']!.toString(), 10);
 
-    result.on('end', () => {
-      writerStream.end();
-      progress.stop();
-    })
-    return result;
-    
-  });
+      progress.start(contentLength, 0);
+      const writerStream = fs.createWriteStream(outputFile);
+
+      const result = new Writable({
+        write(chunk, encoding, callback) {
+          if (chunk.length > 0) {
+            progress.increment(chunk.length);
+            progress.updateETA();
+          }
+          writerStream.write(chunk);
+          callback();
+        },
+      });
+
+      result.on('end', () => {
+        writerStream.end();
+        progress.stop();
+      });
+      return result;
+    }
+  );
 }
 
 async function unzipArchive(archivePath: string): Promise<string> {

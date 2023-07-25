@@ -1,0 +1,74 @@
+## This workflow has been disabled for now, because the CKAN API is blocking our requests.
+## Re-enable when we can package test data inside this repository.
+
+name: "Linter"
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Set up concurrency so the SQLite cache can be reused between nodejs matrix versions
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - uses: pnpm/action-setup@v2
+        name: Install pnpm
+        id: pnpm-install
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            target:
+              - 'src/**'
+              - '.eslintrc*'
+
+      # run eslint on all files if eslintrc changes
+      - name: Run eslint on changed files
+        if: steps.filter.outputs.target == 'false'
+        uses: sibiraj-s/action-eslint@v3
+        with:
+          eslint-args: '--ignore-path=.gitignore --quiet'
+          extensions: 'ts'
+          annotations: true
+          ignore-path: .eslintignore
+          ignore-patterns: |
+            build/
+      
+      - name: build test
+        shell: bash
+        run: |
+          pnpm run build
