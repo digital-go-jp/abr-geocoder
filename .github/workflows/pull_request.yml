@@ -37,4 +37,5 @@ jobs:
       - name: Run eslint on changed files
         if: steps.filter.outputs.target == 'false'
         uses: sibiraj-s/action-eslint@v2
-        all-files: ${{ steps.filter.outputs.target == 'true' }}
+        with:
+          all-files: ${{ steps.filter.outputs.target == 'true' }}
