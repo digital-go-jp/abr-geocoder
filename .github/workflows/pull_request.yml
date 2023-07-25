@@ -19,37 +19,46 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/cache@v3
-        id: yarn-cache
+      - name: Install Node.js
+        uses: actions/setup-node@v3
         with:
-          path: |
-            **/node_modules
-            **/.eslintcache
-            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          node-version: 16
 
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+      - uses: pnpm/action-setup@v2
+        name: Install pnpm
+        id: pnpm-install
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-pnpm-store-
 
-      - name: install yarn
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: npm install --global yarn
+      - name: Install dependencies
+        run: pnpm install
 
-      - name: install 
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile
-
-      # - uses: dorny/paths-filter@v2
-      #   id: filter
-      #   with:
-      #     filters: |
-      #       target:
-      #         - 'src/**'
-      #         - '.eslintrc*'
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            target:
+              - 'src/**'
+              - '.eslintrc*'
 
       # run eslint on all files if eslintrc changes
       - name: Run eslint on changed files
-        #if: steps.filter.outputs.target == 'false'
+        if: steps.filter.outputs.target == 'false'
         uses: sibiraj-s/action-eslint@v3
         with:
           eslint-args: '--ignore-path=.gitignore --quiet'
