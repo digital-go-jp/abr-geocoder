@@ -41,7 +41,7 @@ jobs:
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
@@ -67,3 +67,8 @@ jobs:
           ignore-path: .eslintignore
           ignore-patterns: |
             build/
+      
+      - name: build test
+        shell: bash
+        run: |
+          pnpm run build
