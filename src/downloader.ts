@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import csvParse from 'csv-parse';
 import StreamZip from 'node-stream-zip';
-import {Client, fetch, Headers, request} from 'undici';
+import {Client, fetch} from 'undici';
 import prettyBytes from 'pretty-bytes';
 import cliProgress from 'cli-progress';
 import {CKANPackageShow, CKANResponse, CKAN_BASE_REGISTRY_URL} from './ckan';
@@ -13,7 +13,6 @@ import {walkDir} from './utils';
 import {Writable} from 'stream';
 
 import proj4 from 'proj4';
-import {pipeline} from 'node:stream';
 proj4.defs('EPSG:4612', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 proj4.defs('EPSG:6668', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 
@@ -71,17 +70,17 @@ export async function loadDataset(ckanId: string, dataDir: string) {
     dataDir
   );
 
-  // if (!updateAvailable) {
-  //   console.log('現状データが最新です。更新を中断します。');
-  //   return;
-  // }
+  if (!updateAvailable) {
+    console.log('現状データが最新です。更新を中断します。');
+    return;
+  }
 
   const outZip = path.join(dataDir, `${ckanId}.zip`);
   await downloadDataset(upstreamMeta, outZip);
   // keep the main archive for later usage
-  // const unzippedDir = await unzipArchive(outZip);
-  // await createSqliteArchive(upstreamMeta, unzippedDir, localFile);
-  // await fs.promises.rm(unzippedDir, {recursive: true});
+  const unzippedDir = await unzipArchive(outZip);
+  await createSqliteArchive(upstreamMeta, unzippedDir, localFile);
+  await fs.promises.rm(unzippedDir, {recursive: true});
 }
 
 async function getArchiveMetadata(
@@ -185,6 +184,9 @@ async function downloadDataset(meta: DatasetMetadata, outputFile: string) {
       },
     },
     ({statusCode, headers}) => {
+      if (statusCode !== 200) {
+        throw new Error('アクセスできませんでした');
+      }
       const contentLength = parseInt(headers['content-length'].toString(), 10);
 
       progress.start(contentLength, 0);
@@ -206,7 +208,7 @@ async function downloadDataset(meta: DatasetMetadata, outputFile: string) {
         progress.stop();
       });
       return result;
-
+    }
   );
 }
 
