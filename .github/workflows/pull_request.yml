@@ -19,6 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: install pnpm
+        run: npm install -g pnpm
+
+      - name: install 
+        run: pnpm i
+
       - uses: dorny/paths-filter@v2
         id: filter
         with:
@@ -29,5 +35,6 @@ jobs:
 
       # run eslint on all files if eslintrc changes
       - name: Run eslint on changed files
-        if: steps.filter.outputs.target == 'true'
+        if: steps.filter.outputs.target == 'false'
         uses: sibiraj-s/action-eslint@v2
+        all-files: ${{ steps.filter.outputs.target == 'true' }}
