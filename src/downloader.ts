@@ -187,7 +187,7 @@ async function downloadDataset(meta: DatasetMetadata, outputFile: string) {
       if (statusCode !== 200) {
         throw new Error('アクセスできませんでした');
       }
-      const contentLength = parseInt(headers['content-length'].toString(), 10);
+      const contentLength = parseInt(headers['content-length']!.toString(), 10);
 
       progress.start(contentLength, 0);
       const writerStream = fs.createWriteStream(outputFile);
