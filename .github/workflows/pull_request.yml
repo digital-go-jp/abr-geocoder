@@ -32,9 +32,11 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: install yarn
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
         run: npm install --global yarn
 
       - name: install 
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile
 
       # - uses: dorny/paths-filter@v2
@@ -50,4 +52,9 @@ jobs:
         #if: steps.filter.outputs.target == 'false'
         uses: sibiraj-s/action-eslint@v3
         with:
-          all-files: ${{ steps.filter.outputs.target == 'true' }}
+          eslint-args: '--ignore-path=.gitignore --quiet'
+          extensions: 'ts'
+          annotations: true
+          ignore-path: .eslintignore
+          ignore-pattern: |
+            build/
