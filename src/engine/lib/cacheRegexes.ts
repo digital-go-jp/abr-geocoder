@@ -2,7 +2,7 @@ import {toRegexPattern} from './dict';
 import {kan2num} from './kan2num';
 import LRU from 'lru-cache';
 import {currentConfig} from '../config';
-import {__internals} from '../normalize';
+import {internals} from '../normalize';
 import {findKanjiNumbers} from '@geolonia/japanese-numeral';
 import {formatResidentialSection} from '../formatting';
 
@@ -77,7 +77,7 @@ export const getPrefectures = async () => {
     return cachedPrefectures;
   }
 
-  const prefsResp = await __internals.fetch('.json'); // ja.json
+  const prefsResp = await internals.fetch('.json'); // ja.json
   const data = (await prefsResp.json()) as PrefectureList;
   return cachePrefectures(data);
 };
@@ -130,7 +130,7 @@ export const getTowns = async (pref: string, city: string) => {
     return cachedTown;
   }
 
-  const townsResp = await __internals.fetch(
+  const townsResp = await internals.fetch(
     ['', encodeURI(pref), encodeURI(city) + '.json'].join('/')
   );
   const towns = (await townsResp.json()) as TownList;
@@ -143,7 +143,7 @@ export const getBlkList = async (pref: string, city: string, town: string) => {
   if (typeof cache !== 'undefined') {
     return cache;
   }
-  const blkResp = await __internals.fetch(
+  const blkResp = await internals.fetch(
     ['', encodeURI(pref), encodeURI(city), encodeURI(town + '.json')].join('/')
   );
   let singleBlk: SingleBlk[];
@@ -162,7 +162,7 @@ export const getRsdtList = async (pref: string, city: string, town: string) => {
     return cache;
   }
 
-  const rsdtListResp = await __internals.fetch(
+  const rsdtListResp = await internals.fetch(
     [
       '',
       encodeURI(pref),

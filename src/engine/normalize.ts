@@ -114,7 +114,7 @@ const defaultOption = {
 /**
  * @internal
  */
-export const __internals: {fetch: FetchLike} = {
+export const internals: {fetch: FetchLike} = {
   // default fetch
   fetch: async () => {
     return {

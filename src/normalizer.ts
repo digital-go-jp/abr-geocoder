@@ -99,7 +99,7 @@ export class Normalize {
         and (rsdt."住居番号" is not null or rsdt."住居番号2" is not null)
     `);
 
-    NJANormalize.__internals.fetch = async (path: string) => {
+    NJANormalize.internals.fetch = async (path: string) => {
       const decoded = decodeURIComponent(path).replace(/\.json$/, '');
       const requestPath = decoded.split('/');
       if (requestPath.length === 1) {
