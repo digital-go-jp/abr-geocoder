@@ -1,0 +1,33 @@
+## This workflow has been disabled for now, because the CKAN API is blocking our requests.
+## Re-enable when we can package test data inside this repository.
+
+name: "Linter"
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Set up concurrency so the SQLite cache can be reused between nodejs matrix versions
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            target:
+              - 'src/**'
+              - '.eslintrc*'
+
+      # run eslint on all files if eslintrc changes
+      - name: Run eslint on changed files
+        if: steps.filter.outputs.target == 'true'
+        uses: sibiraj-s/action-eslint@v2
