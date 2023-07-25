@@ -1,16 +1,16 @@
-import { formatResidentialSection } from "./engine/formatting";
-import { NormalizeResult } from "./engine/normalize";
+import {formatResidentialSection} from './engine/formatting';
+import {NormalizeResult} from './engine/normalize';
 
 export function json(r: NormalizeResult): NormalizeResult {
   return r;
-};
+}
 
 export interface GeoJsonResult {
   type: string;
   geometry: {
     type: string;
-    coordinates: number[]
-  },
+    coordinates: number[];
+  };
   properties: {
     title: string;
     level: number;
@@ -27,14 +27,14 @@ export interface GeoJsonResult {
     addr2_id?: string;
     other?: string;
   };
-};
+}
 
 export function geoJson(r: NormalizeResult): GeoJsonResult {
   return {
-    type: "Feature",
+    type: 'Feature',
     geometry: {
-      type: "Point",
-      coordinates: [r.lon!, r.lat!]
+      type: 'Point',
+      coordinates: [r.lon!, r.lat!],
     },
     properties: {
       title: `${r.pref}${r.city}${r.town}${formatResidentialSection(r)}`,
@@ -51,6 +51,6 @@ export function geoJson(r: NormalizeResult): GeoJsonResult {
       addr2: r.addr2,
       addr2_id: r.addr2_id,
       other: r.other,
-    }
+    },
   };
 }

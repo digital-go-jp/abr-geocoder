@@ -10,10 +10,10 @@ import {CKANPackageShow, CKANResponse, CKAN_BASE_REGISTRY_URL} from './ckan';
 import type BetterSqlite3 from 'better-sqlite3';
 import Database from 'better-sqlite3';
 import {walkDir} from './utils';
-import { Writable } from 'stream'
+import {Writable} from 'stream';
 
 import proj4 from 'proj4';
-import { pipeline } from 'node:stream';
+import {pipeline} from 'node:stream';
 proj4.defs('EPSG:4612', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 proj4.defs('EPSG:6668', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 
@@ -176,39 +176,38 @@ async function downloadDataset(meta: DatasetMetadata, outputFile: string) {
 
   const requestUrl = new URL(meta.fileUrl);
   const client = new Client(requestUrl.origin);
-  await client.stream({
-    path: requestUrl.pathname,
-    method: 'GET',
-    headers: {
-      'user-agent': USER_AGENT,
+  await client.stream(
+    {
+      path: requestUrl.pathname,
+      method: 'GET',
+      headers: {
+        'user-agent': USER_AGENT,
+      },
     },
-  }, ({statusCode, headers}) => {
-    const contentLength  = parseInt(
-      headers['content-length'].toString(),
-      10,
-    );
+    ({statusCode, headers}) => {
+      const contentLength = parseInt(headers['content-length'].toString(), 10);
 
-    progress.start(contentLength, 0);
-    const writerStream = fs.createWriteStream(outputFile);
+      progress.start(contentLength, 0);
+      const writerStream = fs.createWriteStream(outputFile);
 
-    const result = new Writable({
-      write (chunk, encoding, callback) {
-        if (chunk.length > 0) {
-          progress.increment(chunk.length);
-          progress.updateETA();
-        }
-        writerStream.write(chunk);
-        callback()
-      }
-    });
+      const result = new Writable({
+        write(chunk, encoding, callback) {
+          if (chunk.length > 0) {
+            progress.increment(chunk.length);
+            progress.updateETA();
+          }
+          writerStream.write(chunk);
+          callback();
+        },
+      });
 
-    result.on('end', () => {
-      writerStream.end();
-      progress.stop();
-    })
-    return result;
-    
-  });
+      result.on('end', () => {
+        writerStream.end();
+        progress.stop();
+      });
+      return result;
+
+  );
 }
 
 async function unzipArchive(archivePath: string): Promise<string> {

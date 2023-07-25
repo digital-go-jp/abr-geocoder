@@ -5,12 +5,12 @@ import fs from 'node:fs';
 
 import {program} from 'commander';
 import byline from 'byline';
-import Table from "cli-table3";
-import { checkForUpdates, loadDataset } from './downloader';
-import { getDataDir } from './config';
-import { Normalize } from './normalizer';
-import { NormalizeResult } from './engine/normalize';
-import { formatResidentialSection } from './engine/formatting';
+import Table from 'cli-table3';
+import {checkForUpdates, loadDataset} from './downloader';
+import {getDataDir} from './config';
+import {Normalize} from './normalizer';
+import {NormalizeResult} from './engine/normalize';
+import {formatResidentialSection} from './engine/formatting';
 import * as Formatters from './formatters';
 
 const packageJsonPath = path.join(__dirname, '../package.json');
@@ -177,15 +177,13 @@ program
       }
       console.log(table.toString());
     } else if (options.format === 'json') {
-      console.log(
-        JSON.stringify(allResults.map(Formatters.json)),
-      );
+      console.log(JSON.stringify(allResults.map(Formatters.json)));
     } else if (options.format === 'geojson') {
       console.log(
         JSON.stringify({
-          "type": "FeatureCollection",
-          "features": allResults.map(Formatters.geoJson),
-        }),
+          type: 'FeatureCollection',
+          features: allResults.map(Formatters.geoJson),
+        })
       );
     }
   });
