@@ -162,26 +162,32 @@ async function downloadDataset(meta: DatasetMetadata, outputFile: string) {
     headers: {
       'user-agent': USER_AGENT,
     },
-  });
-  await new Promise<void>((resolve, _reject) => {
-    const outputStream = fs.createWriteStream(outputFile);
-    const filteredRawHeaders =
-      Object.fromEntries(
-        Object.entries(resp.headers)
-          .filter(([_key, value]) => typeof value !== 'undefined') as ([string, string | string[]][])
-      );
-    const headers = new Headers(filteredRawHeaders);
-    const contentLength = headers.get('content-length') || '-1';
-    progress.start(parseInt(contentLength, 10), 0);
+  }, ({statusCode, headers}) => {
+    const contentLength  = parseInt(
+      headers['content-length'].toString(),
+      10,
+    );
 
-    resp.body.on('data', (chunk) => {
-      progress.increment(chunk.length);
+    progress.start(contentLength, 0);
+    const writerStream = fs.createWriteStream(outputFile);
+
+    const result = new Writable({
+      write (chunk, encoding, callback) {
+        if (chunk.length > 0) {
+          progress.increment(chunk.length);
+          progress.updateETA();
+        }
+        writerStream.write(chunk);
+        callback()
+      }
     });
-    resp.body.on('end', () => {
+
+    result.on('end', () => {
+      writerStream.end();
       progress.stop();
-      resolve();
     })
-    resp.body.pipe(outputStream);
+    return result;
+    
   });
 }
 
