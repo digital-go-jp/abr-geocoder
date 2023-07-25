@@ -56,5 +56,5 @@ jobs:
           extensions: 'ts'
           annotations: true
           ignore-path: .eslintignore
-          ignore-pattern: |
+          ignore-patterns: |
             build/
