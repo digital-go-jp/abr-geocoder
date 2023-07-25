@@ -7,15 +7,14 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
+      "name": "download command",
       "runtimeArgs": [
           "-r",
           "ts-node/register"
       ],
       "args": [
         "${workspaceFolder}/src/cli.ts",
-        "normalize",
-        "./test/issue_17.test.ts"
+        "download"
       ]
     }
   ]
