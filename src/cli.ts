@@ -12,6 +12,8 @@ import {Normalize} from './normalizer';
 import {NormalizeResult} from './engine/normalize';
 import {formatResidentialSection} from './engine/formatting';
 import * as Formatters from './formatters';
+import { Downloader } from './downloader';
+import {CKANPackageShow, CKANResponse, CKAN_BASE_REGISTRY_URL} from './ckan';
 
 const packageJsonPath = path.join(__dirname, '../package.json');
 const {description, version} = JSON.parse(
@@ -42,7 +44,15 @@ program
   .action(async (options: DownloadPgmOpts) => {
     console.log('download開始。。');
     const dataDir = await getDataDir(options.data);
-    await loadDataset(options.source, dataDir);
+
+    const downloader = new Downloader({
+      ckanId: options.source,
+      sqliteDirPath: dataDir,
+      ckanBaseUrl: CKAN_BASE_REGISTRY_URL,
+      userAgent: 'curl/7.81.0',
+    });
+
+    // await loadDataset(options.source, dataDir);
   });
 
 program

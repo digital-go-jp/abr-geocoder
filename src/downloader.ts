@@ -6,7 +6,6 @@ import StreamZip from 'node-stream-zip';
 import {Client, fetch} from 'undici';
 import prettyBytes from 'pretty-bytes';
 import cliProgress from 'cli-progress';
-import {CKANPackageShow, CKANResponse, CKAN_BASE_REGISTRY_URL} from './ckan';
 import type BetterSqlite3 from 'better-sqlite3';
 import Database from 'better-sqlite3';
 import {walkDir} from './utils';
@@ -26,20 +25,6 @@ const USER_AGENT = 'curl/7.81.0';
  * * load dataset in to sqlite
  */
 
-type CheckForUpdatesOutput = {
-  updateAvailable: boolean;
-  upstreamMeta: DatasetMetadata;
-  localFile: string;
-};
-
-type ArchiveMetadata = {
-  last_modified?: string;
-};
-
-type DatasetMetadata = {
-  fileUrl: string;
-  lastModified: string;
-};
 
 export async function checkForUpdates(
   ckanId: string,
@@ -99,44 +84,6 @@ async function getArchiveMetadata(
   return out;
 }
 
-async function getDatasetMetadata(ckanId: string): Promise<DatasetMetadata> {
-  const metaResp = await fetch(
-    `${CKAN_BASE_REGISTRY_URL}/api/3/action/package_show?id=${ckanId}`,
-    {
-      headers: {
-        'user-agent': USER_AGENT,
-      },
-    }
-  );
-  if (!metaResp.ok) {
-    const body = await metaResp.text();
-    console.error(`Body: ${body}`);
-    throw new Error(
-      `${ckanId} を読み込むときに失敗しました。もう一度お試してください。 (HTTP: ${metaResp.status} ${metaResp.statusText})`
-    );
-  }
-  const metaWrapper = (await metaResp.json()) as CKANResponse<CKANPackageShow>;
-  if (metaWrapper.success === false) {
-    throw new Error(
-      `${ckanId} を読み込むときに失敗しました。もう一度お試してください。`
-    );
-  }
-  const meta = metaWrapper.result;
-
-  const csvResource = meta.resources.find(x =>
-    x.format.toLowerCase().startsWith('csv')
-  );
-  if (!csvResource) {
-    throw new Error(
-      `${ckanId} に該当のCSVリソースが見つかりませんでした。ご確認ください: ${CKAN_BASE_REGISTRY_URL}/dataset/${ckanId}`
-    );
-  }
-
-  return {
-    fileUrl: csvResource.url,
-    lastModified: csvResource.last_modified,
-  };
-}
 
 async function downloadDataset(meta: DatasetMetadata, outputFile: string) {
   // perform the download
