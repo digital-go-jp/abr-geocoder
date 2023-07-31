@@ -1,7 +1,6 @@
 export type CheckForUpdatesOutput = {
   updateAvailable: boolean;
   upstreamMeta: DatasetMetadata;
-  localFile: string;
 };
 
 export type ArchiveMetadata = {

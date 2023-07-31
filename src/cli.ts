@@ -1,19 +1,18 @@
 #!/usr/bin/env node
 
-import path from 'node:path';
 import fs from 'node:fs';
+import path from 'node:path';
 
-import {program} from 'commander';
 import byline from 'byline';
 import Table from 'cli-table3';
-import {checkForUpdates, loadDataset} from './downloader';
+import {program} from 'commander';
 import {getDataDir} from './config';
-import {Normalize} from './normalizer';
-import {NormalizeResult} from './engine/normalize';
+import {onDownloadAction} from './download';
 import {formatResidentialSection} from './engine/formatting';
+import {NormalizeResult} from './engine/normalize';
 import * as Formatters from './formatters';
-import { Downloader } from './downloader';
-import {CKANPackageShow, CKANResponse, CKAN_BASE_REGISTRY_URL} from './ckan';
+import {Normalize} from './normalizer';
+import {onUpdateCheckAction} from './updateCheck';
 
 const packageJsonPath = path.join(__dirname, '../package.json');
 const {description, version} = JSON.parse(
@@ -21,11 +20,6 @@ const {description, version} = JSON.parse(
 );
 
 program.name('abr-geocoder').description(description).version(version);
-
-type DownloadPgmOpts = {
-  data: string | undefined;
-  source: string;
-};
 
 program
   .command('download')
@@ -41,19 +35,7 @@ program
     'アドレス・ベース・レジストリのデータソースID。全国データは `ba000001` をお使いください。',
     'ba000001'
   )
-  .action(async (options: DownloadPgmOpts) => {
-    console.log('download開始。。');
-    const dataDir = await getDataDir(options.data);
-
-    const downloader = new Downloader({
-      ckanId: options.source,
-      sqliteDirPath: dataDir,
-      ckanBaseUrl: CKAN_BASE_REGISTRY_URL,
-      userAgent: 'curl/7.81.0',
-    });
-
-    // await loadDataset(options.source, dataDir);
-  });
+  .action(onDownloadAction);
 
 program
   .command('update-check')
@@ -69,21 +51,7 @@ program
     'アドレス・ベース・レジストリのデータソースID。全国データは `ba000001` をお使いください。',
     'ba000001'
   )
-  .action(async (options: DownloadPgmOpts) => {
-    const dataDir = await getDataDir(options.data);
-    const {updateAvailable} = await checkForUpdates(options.source, dataDir);
-    if (updateAvailable) {
-      console.error(
-        'ローカルのデータが更新できます。 abr-geocoder download で更新してください。'
-      );
-
-      // TODO: 不要な形に書き換える
-      // eslint-disable-next-line no-process-exit
-      process.exit(1);
-    }
-
-    console.error('ローカルのデータは最新です。');
-  });
+  .action(onUpdateCheckAction);
 
 type NormalizePgmOpts = {
   data: string | undefined;

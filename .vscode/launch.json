@@ -16,6 +16,20 @@
         "${workspaceFolder}/src/cli.ts",
         "download"
       ]
+    },
+
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "update-check",
+      "runtimeArgs": [
+          "-r",
+          "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli.ts",
+        "update-check"
+      ]
     }
   ]
 }
