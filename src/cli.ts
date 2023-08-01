@@ -7,12 +7,10 @@ import byline from 'byline';
 import Table from 'cli-table3';
 import {program} from 'commander';
 import {getDataDir} from './config';
-import {onDownloadAction} from './download';
 import {formatResidentialSection} from './engine/formatting';
 import {NormalizeResult} from './engine/normalize';
 import * as Formatters from './formatters';
 import {Normalize} from './normalizer';
-import {onUpdateCheckAction} from './updateCheck';
 
 const packageJsonPath = path.join(__dirname, '../package.json');
 const {description, version} = JSON.parse(
@@ -21,37 +19,6 @@ const {description, version} = JSON.parse(
 
 program.name('abr-geocoder').description(description).version(version);
 
-program
-  .command('download')
-  .description(
-    'アドレス・ベース・レジストリの最新データをCKANからダウンロードする'
-  )
-  .option(
-    '-d|--data <dataPath>',
-    'アドレス・ベース・レジストリのデータを格納するディレクトリを指定する。指定されていない場合はデフォルトのディレクトリを参照します。'
-  )
-  .option(
-    '-s|--source <sourceId>',
-    'アドレス・ベース・レジストリのデータソースID。全国データは `ba000001` をお使いください。',
-    'ba000001'
-  )
-  .action(onDownloadAction);
-
-program
-  .command('update-check')
-  .description(
-    'アドレス・ベース・レジストリのデータが最新であることを確認します'
-  )
-  .option(
-    '-d|--data <dataPath>',
-    'アドレス・ベース・レジストリのデータを格納するディレクトリを指定する。指定されていない場合はデフォルトのディレクトリを参照します。'
-  )
-  .option(
-    '-s|--source <sourceId>',
-    'アドレス・ベース・レジストリのデータソースID。全国データは `ba000001` をお使いください。',
-    'ba000001'
-  )
-  .action(onUpdateCheckAction);
 
 type NormalizePgmOpts = {
   data: string | undefined;

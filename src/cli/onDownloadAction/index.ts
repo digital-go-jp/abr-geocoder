@@ -1,12 +1,14 @@
 import path from 'node:path';
-import {CKAN_BASE_REGISTRY_URL} from '../ckan';
-import {USER_AGENT, getDataDir} from '../config';
-import {CkanDownloader} from './CkanDownloader';
+import {getDataDir} from '../../config';
+import {CkanDownloader} from '../class/CkanDownloader';
 import {unzipArchive} from './unzipArchive';
 import {createSqliteArchive} from './createSqliteArchive';
 import {saveArchiveMeta} from './saveArchiveMeta';
 import fs from 'node:fs';
-import { createDatabase } from '../common';
+import {container} from "tsyringe";
+import { Database } from 'better-sqlite3';
+import { noralInitialize } from '../config/normal';
+import { Logger } from 'winston';
 
 export type DownloadPgmOpts = {
   data: string | undefined;
@@ -16,30 +18,30 @@ export type DownloadPgmOpts = {
 export const onDownloadAction = async (
   options: DownloadPgmOpts,
 ) => {
+
   const dataDir = await getDataDir(options.data);
   const ckanId = options.source;
-
-  const sqlitePath = path.join(dataDir, `${ckanId}.sqlite`);
-  const schemaPath = path.join(__dirname, '../../schema.sql');
-  const db = await createDatabase({
-    sqlitePath,
-    schemaPath,
-  });
-
-  const downloader = new CkanDownloader({
+  await noralInitialize({
+    dataDir,
     ckanId,
-    db,
-    ckanBaseUrl: CKAN_BASE_REGISTRY_URL,
-    userAgent: USER_AGENT,
-    silent: false,
   });
 
-  const {updateAvailable, upstreamMeta} = await downloader.updateCheck();
+  const logger = container.resolve<Logger>('Logger');
+  const db = container.resolve<Database>('Database');
+  const downloader = container.resolve<CkanDownloader>('Downloader');
+
+  logger.info('Checking update...');
+
+  const {updateAvailable, upstreamMeta} = await downloader.updateCheck({
+    ckanId,
+  });
 
   if (!updateAvailable) {
-    return Promise.reject('現状データが最新です。更新を中断します。');
+    logger.info('The current dataset is the latest. No need to update');
+    return;
   }
 
+  logger.info('Start downloading the new dataset');
   const downloadFilePath = path.join(dataDir, `${ckanId}.zip`);
   const requestUrl = new URL(upstreamMeta.fileUrl);
 
@@ -48,7 +50,7 @@ export const onDownloadAction = async (
     outputFile: downloadFilePath,
   });
   if (!result) {
-    return Promise.reject();
+    return;
   }
 
   // keep the main archive for future usage
@@ -57,11 +59,13 @@ export const onDownloadAction = async (
     path.dirname(archivePath),
     path.basename(archivePath, '.zip')
   );
+  logger.info('Extracting the data...');
   const unzippedDir = await unzipArchive({
     srcZip: downloadFilePath,
     dstPath,
   });
 
+  logger.info('Loading into the database...');
   await createSqliteArchive({
     db,
     inputDir: unzippedDir,

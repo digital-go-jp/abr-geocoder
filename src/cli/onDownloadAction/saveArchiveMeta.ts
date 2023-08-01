@@ -1,5 +1,5 @@
 import {Database} from 'better-sqlite3';
-import {DatasetMetadata} from '../types';
+import {DatasetMetadata} from '../../types';
 
 export const saveArchiveMeta = ({
   db,

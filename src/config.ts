@@ -13,4 +13,3 @@ export async function getDataDir(overrideDataDir?: string) {
   return dataDir;
 }
 
-export const USER_AGENT = 'curl/7.81.0';

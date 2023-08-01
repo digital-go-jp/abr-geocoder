@@ -10,7 +10,11 @@
     "sourceMap": true,
     "typeRoots": [
         "../node_modules/@types"
-    ]
+    ],
+
+    /* For tsyringe */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": [
     "src/**/*.ts"

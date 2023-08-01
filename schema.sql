@@ -134,7 +134,9 @@ CREATE TABLE IF NOT EXISTS "rsdtdsp_rsdt" (
   "代表点_緯度" REAL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_rsdt_code" ON "rsdtdsp_rsdt" ("code", "town_id", "blk_id", "addr_id", "addr2_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_rsdt_code" ON "rsdtdsp_rsdt" (
+  "code", "town_id", "blk_id", "addr_id", "addr2_id"
+);
 
 CREATE TABLE IF NOT EXISTS "metadata" (
   "key" TEXT,

@@ -4,16 +4,44 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+    // {
+    //   "type": "node",
+    //   "request": "launch",
+    //   "name": "download command",
+    //   "runtimeArgs": [
+    //       "-r",
+    //       "ts-node/register"
+    //   ],
+    //   "args": [
+    //     "${workspaceFolder}/src/cli.ts",
+    //     "download"
+    //   ]
+    // },
+
+    // {
+    //   "type": "node",
+    //   "request": "launch",
+    //   "name": "update-check",
+    //   "runtimeArgs": [
+    //       "-r",
+    //       "ts-node/register"
+    //   ],
+    //   "args": [
+    //     "${workspaceFolder}/src/cli.ts",
+    //     "update-check"
+    //   ]
+    // },
+
     {
       "type": "node",
       "request": "launch",
       "name": "download command",
       "runtimeArgs": [
-          "-r",
-          "ts-node/register"
+        "--require",
+        "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli.ts",
+        "${workspaceFolder}/src/cli/index.ts",
         "download"
       ]
     },
@@ -23,11 +51,11 @@
       "request": "launch",
       "name": "update-check",
       "runtimeArgs": [
-          "-r",
-          "ts-node/register"
+        "--require",
+        "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli.ts",
+        "${workspaceFolder}/src/cli/index.ts",
         "update-check"
       ]
     }
