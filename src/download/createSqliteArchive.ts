@@ -1,7 +1,7 @@
-import {DatasetMetadata} from '../types';
+
 import fs from 'node:fs';
 import path from 'node:path';
-import Database from 'better-sqlite3';
+import {Database} from 'better-sqlite3';
 import type BetterSqlite3 from 'better-sqlite3';
 import {walkDir} from '../utils';
 import StreamZip from 'node-stream-zip';
@@ -25,29 +25,13 @@ const parseFilename = (
 };
 
 export interface createSqliteArchiveOptions {
-  meta: DatasetMetadata;
+  db: Database;
   inputDir: string;
-  outputPath: string;
 }
 export const createSqliteArchive = async ({
-  meta,
+  db,
   inputDir,
-  outputPath,
 }: createSqliteArchiveOptions): Promise<void> => {
-  const db = new Database(outputPath);
-  const schemaPath = path.join(__dirname, '../../schema.sql');
-
-  // We use these dangerous settings to improve performance, because if data is corrupted,
-  // we can always just regenerate the database.
-  // ref: https://qastack.jp/programming/1711631/improve-insert-per-second-performance-of-sqlite
-  db.pragma('journal_mode = MEMORY');
-  db.pragma('synchronous = OFF');
-
-  db.exec(await fs.promises.readFile(schemaPath, 'utf8'));
-
-  const metaStmt = db.prepare(
-    'INSERT OR REPLACE INTO "metadata" ("key", "value") VALUES (?, ?)'
-  );
 
   const settings: {
     [key: string]: {
@@ -277,9 +261,4 @@ export const createSqliteArchive = async ({
     await fs.promises.rm(p);
   }
 
-  // Insert metadata at the end of the run
-  metaStmt.run('last_modified', meta.lastModified);
-  metaStmt.run('original_file_url', meta.fileUrl);
-
-  db.close();
 };

@@ -1,28 +1,36 @@
 import path from 'node:path';
 import {CKAN_BASE_REGISTRY_URL} from '../ckan';
-import {getDataDir} from '../config';
+import {USER_AGENT, getDataDir} from '../config';
 import {CkanDownloader} from './CkanDownloader';
 import {unzipArchive} from './unzipArchive';
 import {createSqliteArchive} from './createSqliteArchive';
+import {saveArchiveMeta} from './saveArchiveMeta';
 import fs from 'node:fs';
+import { createDatabase } from '../common';
 
 export type DownloadPgmOpts = {
   data: string | undefined;
   source: string;
 };
 
-export const onDownloadAction = async (options: DownloadPgmOpts) => {
-  console.log('download開始。。');
+export const onDownloadAction = async (
+  options: DownloadPgmOpts,
+) => {
   const dataDir = await getDataDir(options.data);
   const ckanId = options.source;
 
   const sqlitePath = path.join(dataDir, `${ckanId}.sqlite`);
+  const schemaPath = path.join(__dirname, '../../schema.sql');
+  const db = await createDatabase({
+    sqlitePath,
+    schemaPath,
+  });
 
   const downloader = new CkanDownloader({
     ckanId,
-    sqlitePath: dataDir,
+    db,
     ckanBaseUrl: CKAN_BASE_REGISTRY_URL,
-    userAgent: 'curl/7.81.0',
+    userAgent: USER_AGENT,
     silent: false,
   });
 
@@ -33,8 +41,10 @@ export const onDownloadAction = async (options: DownloadPgmOpts) => {
   }
 
   const downloadFilePath = path.join(dataDir, `${ckanId}.zip`);
+  const requestUrl = new URL(upstreamMeta.fileUrl);
+
   const result = await downloader.download({
-    upstreamMeta,
+    requestUrl,
     outputFile: downloadFilePath,
   });
   if (!result) {
@@ -53,10 +63,14 @@ export const onDownloadAction = async (options: DownloadPgmOpts) => {
   });
 
   await createSqliteArchive({
-    meta: upstreamMeta,
+    db,
     inputDir: unzippedDir,
-    outputPath: sqlitePath,
   });
+  saveArchiveMeta({
+    db,
+    meta: upstreamMeta,
+  })
+
+  db.close();
   await fs.promises.rm(unzippedDir, {recursive: true});
-  return Promise.resolve();
 };

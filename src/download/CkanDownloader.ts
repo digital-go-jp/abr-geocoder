@@ -7,8 +7,7 @@ import {
   DatasetMetadata,
   IArchiveMeta,
 } from '../types';
-import type BetterSqlite3 from 'better-sqlite3';
-import Database from 'better-sqlite3';
+import {Database} from 'better-sqlite3';
 import {SingleBar} from 'cli-progress';
 import prettyBytes from 'pretty-bytes';
 import {Client, Dispatcher} from 'undici';
@@ -16,7 +15,7 @@ import {Writable} from 'node:stream';
 
 export interface CkanDownloaderOptions {
   ckanId: string;
-  sqlitePath: string;
+  db: Database;
   ckanBaseUrl: string;
   userAgent: string;
   silent: boolean;
@@ -26,11 +25,11 @@ export class CkanDownloader {
   private readonly ckanId: string;
   private readonly ckanBaseUrl: string;
   private readonly userAgent: string;
-  private readonly db: BetterSqlite3.Database;
+  private readonly db: Database;
   private readonly silent: boolean;
   constructor({
     ckanId,
-    sqlitePath,
+    db,
     ckanBaseUrl,
     userAgent,
     silent = false,
@@ -39,8 +38,7 @@ export class CkanDownloader {
     this.ckanBaseUrl = ckanBaseUrl;
     this.userAgent = userAgent;
     this.silent = silent;
-
-    this.db = new Database(sqlitePath);
+    this.db = db;
   }
 
   private getDatasetUrl(): string {
@@ -167,13 +165,12 @@ export class CkanDownloader {
   }
 
   async download({
-    upstreamMeta,
+    requestUrl,
     outputFile,
   }: {
-    upstreamMeta: DatasetMetadata;
+    requestUrl: URL;
     outputFile: string;
   }): Promise<Boolean> {
-    const requestUrl = new URL(upstreamMeta.fileUrl);
 
     // perform the download
     this.print(`ダウンロード開始: ${requestUrl.toString()} → ${outputFile}`);

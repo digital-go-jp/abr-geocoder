@@ -12,3 +12,5 @@ export async function getDataDir(overrideDataDir?: string) {
   await fs.promises.mkdir(dataDir, {recursive: true});
   return dataDir;
 }
+
+export const USER_AGENT = 'curl/7.81.0';
