@@ -1,9 +1,11 @@
 import path from 'node:path';
 import { container, instanceCachingFactory } from "tsyringe";
-import { CkanDownloader } from "../domain/CkanDownloader";
+import { CkanDownloader } from "../domain/";
 import { provideDatabase } from './provideDatabase';
 import { provideLogger } from './provideLogger';
 import { provideDownloadProgressBar } from './provideDownloadProgressBar';
+import StrResourceFunc, {MESSAGE} from '../usecase/strResource';
+export type StrResource = (messageId: MESSAGE) => string;
 
 export const setupContainer = async ({
   dataDir,
@@ -13,6 +15,13 @@ export const setupContainer = async ({
   ckanId: string;
 }) => {
 
+
+  container.register(
+    'strResource',
+    {
+      useValue: StrResourceFunc(),
+    },
+  );
   container.register(
     'USER_AGENT',
     {

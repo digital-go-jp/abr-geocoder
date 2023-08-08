@@ -1,4 +1,4 @@
-import { MESSAGE } from ".";
+import { MESSAGE } from "./index";
 
 const messages: Record<MESSAGE, string> = {
   [MESSAGE.CLI_COMMON_DATADIR_OPTION]: "アドレス・ベース・レジストリのデータを格納するディレクトリを指定する。指定されていない場合はデフォルトのディレクトリを参照します。",
@@ -15,6 +15,10 @@ const messages: Record<MESSAGE, string> = {
   [MESSAGE.START_DOWNLOADING_NEW_DATASET]: "ダウンロード開始",
   [MESSAGE.EXTRACTING_THE_DATA]: 'ファイルを展開中...',
   [MESSAGE.LOADING_INTO_DATABASE]: 'データベースに登録中...',
-  [MESSAGE.NEW_DATASET_IS_AVAILABLE]: "ローカルのデータが更新できます。 abrg download で更新してください"
+  [MESSAGE.NEW_DATASET_IS_AVAILABLE]: "ローカルのデータが更新できます。 abrg download で更新してください",
+  [MESSAGE.DATA_DOWNLOAD_ERROR]: "データの取得に失敗しました",
+  [MESSAGE.CANNOT_FIND_THE_SPECIFIED_RESOURCE]: "指定されたリソースが見つかりませんでした",
+  [MESSAGE.DOWNLOADED_DATA_DOES_NOT_CONTAIN_THE_RESOURCE_CSV]: "指定されたリソースには、CSVファイルが含まれていませんでした",
+  [MESSAGE.START_DOWNLOADING]: "ダウンロード開始",
 };
 export default messages;

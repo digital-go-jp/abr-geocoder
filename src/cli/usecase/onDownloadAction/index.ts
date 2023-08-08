@@ -3,13 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { container } from "tsyringe";
 import { Logger } from 'winston';
-import { setupContainer } from '../../config/setupContainer';
+import { StrResource, setupContainer } from '../../config/setupContainer';
 import { AbrgError, AbrgErrorLevel, CkanDownloader } from '../../domain';
 import { getDataDir } from '../../infrastructure';
 import { createSqliteArchive } from './createSqliteArchive';
 import { saveArchiveMeta } from './saveArchiveMeta';
 import { unzipArchive } from './unzipArchive';
-import StrResource, {MESSAGE} from '../../usecase/strResource';
+import {MESSAGE} from '../../usecase/strResource';
 
 export type DownloadPgmOpts = {
   dataDir: string | undefined;
@@ -19,7 +19,6 @@ export type DownloadPgmOpts = {
 export const onDownloadAction = async (
   options: DownloadPgmOpts,
 ) => {
-  const strResource = StrResource();
   const dataDir = await getDataDir(options.dataDir);
   const ckanId = options.resourceId;
   await setupContainer({
@@ -27,6 +26,7 @@ export const onDownloadAction = async (
     ckanId,
   });
 
+  const strResource = container.resolve<StrResource>('strResource');
   const logger = container.resolve<Logger>('Logger');
   const db = container.resolve<Database>('Database');
   const downloader = container.resolve<CkanDownloader>('Downloader');

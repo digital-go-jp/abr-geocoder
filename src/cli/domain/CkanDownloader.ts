@@ -13,6 +13,8 @@ import {request, Client, Dispatcher} from 'undici';
 import {Writable} from 'node:stream';
 import {inject, injectable} from 'tsyringe';
 import {Logger} from 'winston';
+import { AbrgError, AbrgErrorLevel } from './AbrgError';
+import { MESSAGE } from '../usecase';
 
 export interface CkanDownloaderOptions {
   db: Database;
@@ -28,8 +30,9 @@ export class CkanDownloader {
     @inject('USER_AGENT') private readonly userAgent: string,
     @inject('getDatasetUrl')
     private readonly getDatasetUrl: (ckanId: string) => string,
-    @inject('Logger') private readonly logger?: Logger,
-    @inject('DownloadProgressBar') private readonly progressBar?: SingleBar
+    @inject('Logger') private readonly logger: Logger,
+    @inject('strResource') private readonly strResource: (resourceId: MESSAGE) => string,
+    @inject('DownloadProgressBar') private readonly progressBar?: SingleBar,
   ) {
     Object.freeze(this);
   }
@@ -62,13 +65,19 @@ export class CkanDownloader {
     const HTTP_OK = 200;
 
     if (statusCode !== HTTP_OK) {
-      this.logger?.error(await body.text());
-      throw new Error(`データの取得に失敗しました (statusCode: ${statusCode})`);
+      this.logger.debug(await body.text());
+      throw new AbrgError({
+        messageId: MESSAGE.DATA_DOWNLOAD_ERROR,
+        level: AbrgErrorLevel.ERROR,
+      });
     }
 
     const metaWrapper = (await body.json()) as CKANResponse<CKANPackageShow>;
     if (metaWrapper.success === false) {
-      throw new Error(`指定されたリソースが見つかりませんでした ${requestUrl}`);
+      throw new AbrgError({
+        messageId: MESSAGE.CANNOT_FIND_THE_SPECIFIED_RESOURCE,
+        level: AbrgErrorLevel.ERROR,
+      });
     }
 
     const meta = metaWrapper.result;
@@ -77,9 +86,10 @@ export class CkanDownloader {
     );
 
     if (!csvResource) {
-      throw new Error(
-        `${ckanId} に該当のCSVリソースが見つかりませんでした。${requestUrl} をご確認ください`
-      );
+      throw new AbrgError({
+        messageId: MESSAGE.DOWNLOADED_DATA_DOES_NOT_CONTAIN_THE_RESOURCE_CSV,
+        level: AbrgErrorLevel.ERROR,
+      });
     }
 
     return {
@@ -105,7 +115,7 @@ export class CkanDownloader {
 
       return result;
     } catch (e: unknown) {
-      this.logger?.debug(e);
+      this.logger.debug(e);
       return undefined;
     }
   }
@@ -141,15 +151,19 @@ export class CkanDownloader {
     outputFile: string;
   }): Promise<Boolean> {
     // perform the download
-    this.logger?.info(
-      `ダウンロード開始: ${requestUrl.toString()} → ${outputFile}`
+    this.logger.info(
+      `${this.strResource(MESSAGE.START_DOWNLOADING)}: ${requestUrl.toString()} -> ${outputFile}`,
     );
     const client = new Client(requestUrl.origin);
     const wrapProgressBar = this.progressBar;
 
     const streamFactory: Dispatcher.StreamFactory = ({statusCode, headers}) => {
       if (statusCode !== 200) {
-        throw new Error('アクセスできませんでした');
+        this.logger.debug(`download error: status code = ${statusCode}`);
+        throw new AbrgError({
+          messageId: MESSAGE.DATA_DOWNLOAD_ERROR,
+          level: AbrgErrorLevel.ERROR,
+        });
       }
       const decimal = 10;
       const contentLength = parseInt(

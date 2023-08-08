@@ -1,4 +1,4 @@
-import { MESSAGE } from ".";
+import { MESSAGE } from "./index";
 
 const messages: Record<MESSAGE, string> = {
   [MESSAGE.CLI_COMMON_DATADIR_OPTION]: "The data directory where the dataset is stored. Default is under the (home)/.abr-geocoder/",
@@ -15,6 +15,10 @@ const messages: Record<MESSAGE, string> = {
   [MESSAGE.START_DOWNLOADING_NEW_DATASET]: 'Start downloading the new dataset',
   [MESSAGE.EXTRACTING_THE_DATA]: 'Extracting the data...',
   [MESSAGE.LOADING_INTO_DATABASE]: 'Loading into the database...',
-  [MESSAGE.NEW_DATASET_IS_AVAILABLE]: "New dataset has been found. Please update the local dataset using `abrg download`."
+  [MESSAGE.NEW_DATASET_IS_AVAILABLE]: "New dataset has been found. Please update the local dataset using `abrg download`.",
+  [MESSAGE.DATA_DOWNLOAD_ERROR]: "Failed to download the dataset",
+  [MESSAGE.CANNOT_FIND_THE_SPECIFIED_RESOURCE]: "Can not find the specified resource",
+  [MESSAGE.DOWNLOADED_DATA_DOES_NOT_CONTAIN_THE_RESOURCE_CSV]: "Specified resource does not contain the data csv file",
+  [MESSAGE.START_DOWNLOADING]: "Download start",
 };
 export default messages;
