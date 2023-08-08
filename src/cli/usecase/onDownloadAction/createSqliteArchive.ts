@@ -44,35 +44,35 @@ export const createSqliteArchive = async ({
       indexCols: 1,
       validDateCol: 4,
       stmt: db.prepare(
-        'INSERT OR REPLACE INTO "pref" ("code", "都道府県名", "都道府県名_カナ", "都道府県名_英字", "効力発生日", "廃止日", "備考") VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT OR REPLACE INTO "pref" ("code", pref_name, pref_name_kana, pref_name_roma, efct_date, ablt_date, remarks) VALUES (?, ?, ?, ?, ?, ?, ?)'
       ),
     },
     city: {
       indexCols: 1,
       validDateCol: 14,
       stmt: db.prepare(
-        'INSERT OR REPLACE INTO "city" ("code", "都道府県名", "都道府県名_カナ", "都道府県名_英字", "郡名", "郡名_カナ", "郡名_英字", "市区町村名", "市区町村名_カナ", "市区町村名_英字", "政令市区名", "政令市区名_カナ", "政令市区名_英字", "効力発生日", "廃止日", "備考") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT OR REPLACE INTO "city" ("code", pref_name, pref_name_kana, pref_name_roma, country_name, country_name_kana, country_name_roma, city_name, city_name_kana, city_name_roma, od_city_name, od_city_name_kana, od_city_name_roma, efct_date, ablt_date, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ),
     },
     town: {
       indexCols: 2,
       validDateCol: 32,
       stmt: db.prepare(
-        'INSERT OR REPLACE INTO "town" ("code", "town_id", "町字区分コード", "都道府県名", "都道府県名_カナ", "都道府県名_英字", "郡名", "郡名_カナ", "郡名_英字", "市区町村名", "市区町村名_カナ", "市区町村名_英字", "政令市区名", "政令市区名_カナ", "政令市区名_英字", "大字・町名", "大字・町名_カナ", "大字・町名_英字", "丁目名", "丁目名_カナ", "丁目名_数字", "小字名", "小字名_カナ", "小字名_英字", "住居表示フラグ", "住居表示方式コード", "大字・町名_通称フラグ", "小字名_通称フラグ", "大字・町名_電子国土基本図外字", "小字名_電子国土基本図外字", "状態フラグ", "起番フラグ", "効力発生日", "廃止日", "原典資料コード", "郵便番号", "備考") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT OR REPLACE INTO "town" ("code", "town_id", town_code, pref_name, pref_name_kana, pref_name_roma, country_name, country_name_kana, country_name_roma, city_name, city_name_kana, city_name_roma, od_city_name, od_city_name_kana, od_city_name_roma, oaza_town_name, oaza_town_name_kana, oaza_town_name_roma, chome_name, chome_name_kana, chome_name_number, koaza_name, koaza_name_kana, koaza_name_roma, rsdt_addr_flg, rsdt_addr_mtd_code, oaza_town_alt_name_flg, koaza_alt_name_flg, oaza_frn_ltrs_flg, koaza_frn_ltrs_flg, status_flg, wake_num_flg, efct_date, ablt_date, src_code, post_code, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ),
     },
     rsdtdsp_blk: {
       indexCols: 3,
       validDateCol: 14,
       stmt: db.prepare(
-        'INSERT OR REPLACE INTO "rsdtdsp_blk" ("code", "town_id", "blk_id", "市区町村名", "政令市区名", "大字・町名", "丁目名", "小字名", "街区符号", "住居表示フラグ", "住居表示方式コード", "大字・町名_電子国土基本図外字", "小字名_電子国土基本図外字", "状態フラグ", "効力発生日", "廃止日", "原典資料コード", "備考") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT OR REPLACE INTO "rsdtdsp_blk" ("code", "town_id", "blk_id", city_name, od_city_name, oaza_town_name, chome_name, koaza_name, blk_num, rsdt_addr_flg, rsdt_addr_mtd_code, oaza_frn_ltrs_flg, koaza_frn_ltrs_flg, status_flg, efct_date, ablt_date, src_code, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ),
     },
     rsdtdsp_rsdt: {
       indexCols: 5,
       validDateCol: 19,
       stmt: db.prepare(
-        'INSERT OR REPLACE INTO "rsdtdsp_rsdt" ("code", "town_id", "blk_id", "addr_id", "addr2_id", "市区町村名", "政令市区名", "大字・町名", "丁目名", "小字名", "街区符号", "住居番号", "住居番号2", "基礎番号・住居番号区分", "住居表示フラグ", "住居表示方式コード", "大字・町名_電子国土基本図外字", "小字名_電子国土基本図外字", "状態フラグ", "効力発生日", "廃止日", "原典資料コード", "備考") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT OR REPLACE INTO "rsdtdsp_rsdt" ("code", "town_id", "blk_id", "addr_id", "addr2_id", city_name, od_city_name, oaza_town_name, chome_name, koaza_name, blk_num, rsdt_num, rsdt_num2, basic_rsdt_div, rsdt_addr_flg, rsdt_addr_mtd_code, oaza_frn_ltrs_flg, koaza_frn_ltrs_flg, status_flg, efct_date, ablt_date, src_code, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ),
     },
   };
@@ -86,19 +86,19 @@ export const createSqliteArchive = async ({
     town_pos: {
       indexCols: 2,
       stmt: db.prepare(
-        'UPDATE "town" SET "代表点_経度" = ?, "代表点_緯度" = ? WHERE "code" = ? AND "town_id" = ?'
+        'UPDATE "town" SET rep_pnt_lon = ?, rep_pnt_lat = ? WHERE "code" = ? AND "town_id" = ?'
       ),
     },
     rsdtdsp_blk_pos: {
       indexCols: 3,
       stmt: db.prepare(
-        'UPDATE "rsdtdsp_blk" SET "代表点_経度" = ?, "代表点_緯度" = ? WHERE "code" = ? AND "town_id" = ? AND "blk_id" = ?'
+        'UPDATE "rsdtdsp_blk" SET rep_pnt_lon = ?, rep_pnt_lat = ? WHERE "code" = ? AND "town_id" = ? AND "blk_id" = ?'
       ),
     },
     rsdtdsp_rsdt_pos: {
       indexCols: 5,
       stmt: db.prepare(
-        'UPDATE "rsdtdsp_rsdt" SET "代表点_経度" = ?, "代表点_緯度" = ? WHERE "code" = ? AND "town_id" = ? AND "blk_id" = ? AND "addr_id" = ? AND "addr2_id" = ?'
+        'UPDATE "rsdtdsp_rsdt" SET rep_pnt_lon = ?, rep_pnt_lat = ? WHERE "code" = ? AND "town_id" = ? AND "blk_id" = ? AND "addr_id" = ? AND "addr2_id" = ?'
       ),
     },
   };
@@ -228,8 +228,8 @@ export const createSqliteArchive = async ({
     for await (const line of parser) {
       if (index === 0) {
         const header = line as string[];
-        longitudeIdx = header.indexOf('代表点_経度');
-        latitudeIdx = header.indexOf('代表点_緯度');
+        longitudeIdx = header.indexOf('rep_pnt_lon');
+        latitudeIdx = header.indexOf('rep_pnt_lat');
         crsIdx = header.indexOf('代表点_座標参照系');
         index += 1;
         continue;

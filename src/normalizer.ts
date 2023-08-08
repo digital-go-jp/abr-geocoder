@@ -32,49 +32,49 @@ export class Normalize {
 
     const prefectureStmt = this.db.prepare(`
       SELECT
-        "都道府県名" AS "todofuken_name",
+        pref_name AS "todofuken_name",
         json_group_array(json_object(
-          'name', "郡名" || "市区町村名" || "政令市区名",
+          'name', country_name || city_name || od_city_name,
           'code', "code"
         )) AS "towns"
       FROM city
-      GROUP BY "都道府県名"
+      GROUP BY pref_name
     `);
     const townsStmt = this.db.prepare(`
       select
         "town"."code",
         "town"."town_id",
-        "大字・町名" || "丁目名" as "town",
-        "小字名" as "koaza",
-        "代表点_緯度" as "lat",
-        "代表点_経度" as "lon"
+        oaza_town_name || chome_name as "town",
+        koaza_name as "koaza",
+        rep_pnt_lat as "lat",
+        rep_pnt_lon as "lon"
       from
         "city"
         left join "town" on town.code = city.code
       where
-        "city"."都道府県名" = ?
-        AND "city"."郡名" || "city"."市区町村名" || "city"."政令市区名" = ?
-        AND "町字区分コード" <> 3;
+        "city".pref_name = ?
+        AND "city".country_name || "city".city_name || "city".od_city_name = ?
+        AND town_code <> 3;
     `);
     const blksStmt = this.db.prepare(`
       select
         "blk"."code",
         "blk"."town_id",
         "blk"."blk_id",
-        city."都道府県名" as "pref",
-        city."郡名" || city."市区町村名" || city."政令市区名" as "city",
-        town."大字・町名" || town."丁目名" as "town",
-        blk."街区符号" as "blk",
-        blk."代表点_緯度" as "lat",
-        blk."代表点_経度" as "lon"
+        city.pref_name as "pref",
+        city.country_name || city.city_name || city.od_city_name as "city",
+        town.oaza_town_name || town.chome_name as "town",
+        blk.blk_num as "blk",
+        blk.rep_pnt_lat as "lat",
+        blk.rep_pnt_lon as "lon"
       from
         "city"
-        left join "town" on town.code = city.code and (town."大字・町名" || town."丁目名" = ?)
+        left join "town" on town.code = city.code and (town.oaza_town_name || town.chome_name = ?)
         left join "rsdtdsp_blk" "blk" on blk.code = city.code and blk.town_id = town.town_id
       where
-        city."都道府県名" = ?
-        AND "city"."郡名" || "city"."市区町村名" || "city"."政令市区名" = ?
-        and blk."街区符号" is not null
+        city.pref_name = ?
+        AND "city".country_name || "city".city_name || "city".od_city_name = ?
+        and blk.blk_num is not null
     `);
     const rsdtStmt = this.db.prepare(`
       select
@@ -83,20 +83,20 @@ export class Normalize {
         "rsdt"."blk_id",
         "rsdt"."addr_id" as "addr1_id",
         "rsdt"."addr2_id",
-        blk."街区符号" as "blk",
-        rsdt."住居番号" as "addr1",
-        rsdt."住居番号2" as "addr2",
-        rsdt."代表点_緯度" as "lat",
-        rsdt."代表点_経度" as "lon"
+        blk.blk_num as "blk",
+        rsdt.rsdt_num as "addr1",
+        rsdt.rsdt_num2 as "addr2",
+        rsdt.rep_pnt_lat as "lat",
+        rsdt.rep_pnt_lon as "lon"
       from "city"
-      left join "town" on town.code = city.code and (town."大字・町名" || town."丁目名" = ?)
+      left join "town" on town.code = city.code and (town.oaza_town_name || town.chome_name = ?)
       left join "rsdtdsp_blk" "blk" on blk.code = city.code and blk.town_id = town.town_id
       left join "rsdtdsp_rsdt" "rsdt" on rsdt.code = city.code and rsdt.town_id = town.town_id and rsdt.blk_id = blk.blk_id
       where
-        city."都道府県名" = ?
-        AND "city"."郡名" || "city"."市区町村名" || "city"."政令市区名" = ?
-        and blk."街区符号" is not null
-        and (rsdt."住居番号" is not null or rsdt."住居番号2" is not null)
+        city.pref_name = ?
+        AND "city".country_name || "city".city_name || "city".od_city_name = ?
+        and blk.blk_num is not null
+        and (rsdt.rsdt_num is not null or rsdt.rsdt_num2 is not null)
     `);
 
     NJANormalize.internals.fetch = async (path: string) => {
