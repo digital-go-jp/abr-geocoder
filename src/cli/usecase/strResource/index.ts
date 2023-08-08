@@ -13,10 +13,10 @@ i18next.init({
   fallbackLng: 'en',
   resources: {
     en: {
-      translation: require('./locales/en.ts'),
+      translation: require('./locales/en.ts').default,
     },
     ja: {
-      translation: require('./locales/ja.ts'),
+      translation: require('./locales/ja.ts').default,
     }
   }
 })
