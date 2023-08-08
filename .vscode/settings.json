@@ -1,0 +1,6 @@
+{
+  "i18n-ally.localesPaths": [
+    "src/cli/i18n",
+    "src/cli/i18n/locales"
+  ]
+}

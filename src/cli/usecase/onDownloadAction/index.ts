@@ -1,27 +1,28 @@
-import path from 'node:path';
-import {getDataDir} from '../../config';
-import {CkanDownloader} from '../class/CkanDownloader';
-import {unzipArchive} from './unzipArchive';
-import {createSqliteArchive} from './createSqliteArchive';
-import {saveArchiveMeta} from './saveArchiveMeta';
-import fs from 'node:fs';
-import {container} from "tsyringe";
 import { Database } from 'better-sqlite3';
-import { noralInitialize } from '../config/normal';
+import fs from 'node:fs';
+import path from 'node:path';
+import { container } from "tsyringe";
 import { Logger } from 'winston';
+import { setupContainer } from '../../config/setupContainer';
+import { AbrgError, AbrgErrorLevel, CkanDownloader } from '../../domain';
+import { getDataDir } from '../../infrastructure';
+import { createSqliteArchive } from './createSqliteArchive';
+import { saveArchiveMeta } from './saveArchiveMeta';
+import { unzipArchive } from './unzipArchive';
+import StrResource, {MESSAGE} from '../../usecase/strResource';
 
 export type DownloadPgmOpts = {
-  data: string | undefined;
-  source: string;
+  dataDir: string | undefined;
+  resourceId: string;
 };
 
 export const onDownloadAction = async (
   options: DownloadPgmOpts,
 ) => {
-
-  const dataDir = await getDataDir(options.data);
-  const ckanId = options.source;
-  await noralInitialize({
+  const strResource = StrResource();
+  const dataDir = await getDataDir(options.dataDir);
+  const ckanId = options.resourceId;
+  await setupContainer({
     dataDir,
     ckanId,
   });
@@ -30,18 +31,26 @@ export const onDownloadAction = async (
   const db = container.resolve<Database>('Database');
   const downloader = container.resolve<CkanDownloader>('Downloader');
 
-  logger.info('Checking update...');
+  logger.info(
+    strResource(MESSAGE.CHECKING_UPDATE),
+  );
 
   const {updateAvailable, upstreamMeta} = await downloader.updateCheck({
     ckanId,
   });
 
   if (!updateAvailable) {
-    logger.info('The current dataset is the latest. No need to update');
-    return;
+    return Promise.reject(
+      new AbrgError({
+        messageId: MESSAGE.ERROR_NO_UPDATE_IS_AVAILABLE,
+        level: AbrgErrorLevel.INFO,
+      })
+    );
   }
 
-  logger.info('Start downloading the new dataset');
+  logger.info(
+    strResource(MESSAGE.START_DOWNLOADING_NEW_DATASET),
+  );
   const downloadFilePath = path.join(dataDir, `${ckanId}.zip`);
   const requestUrl = new URL(upstreamMeta.fileUrl);
 
@@ -59,13 +68,21 @@ export const onDownloadAction = async (
     path.dirname(archivePath),
     path.basename(archivePath, '.zip')
   );
-  logger.info('Extracting the data...');
+  logger.info(
+    strResource(
+      MESSAGE.EXTRACTING_THE_DATA,
+    ),
+  );
   const unzippedDir = await unzipArchive({
     srcZip: downloadFilePath,
     dstPath,
   });
 
-  logger.info('Loading into the database...');
+  logger.info(
+    strResource(
+      MESSAGE.LOADING_INTO_DATABASE,
+    ),
+  );
   await createSqliteArchive({
     db,
     inputDir: unzippedDir,

@@ -35,6 +35,19 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "geocoding",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/index2.ts",
+        "${workspaceFolder}/test/sample-data.txt",
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "download command",
       "runtimeArgs": [
         "--require",

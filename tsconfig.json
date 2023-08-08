@@ -14,7 +14,8 @@
 
     /* For tsyringe */
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "types": ["node"]
   },
   "include": [
     "src/**/*.ts"
