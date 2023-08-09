@@ -67,7 +67,7 @@ yargs(hideBin(process.argv))
     async (argv) => {
       await onDownloadAction({
         dataDir: argv.dataDir,
-        resourceId: argv.resource,
+        ckanId: argv.resource,
       })
       .catch((error: Error) => {
         console.error(error);

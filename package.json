@@ -49,20 +49,6 @@
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
   },
-  "jest": {
-    "moduleFileExtensions": [
-      "ts",
-      "js"
-    ],
-    "transform": {
-      "^.+\\.ts$": [
-        "ts-jest",
-        {
-          "tsconfig": "tsconfig.spec.json"
-        }
-      ]
-    }
-  },
   "dependencies": {
     "@geolonia/japanese-numeral": "^0.1.16",
     "better-sqlite3": "^8.5.0",

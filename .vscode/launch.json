@@ -35,13 +35,40 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "temporally",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/domain/AbrgMessage/__tests__/test.ts",
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Jest Tests",
+      "runtimeArgs": [
+        "${workspaceRoot}/node_modules/.bin/jest",
+        "--runInBand",
+        "--coverage=false",
+        "--watch",
+        "--no-cache",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "sourceMaps": true,
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "geocoding",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/index2.ts",
+        "${workspaceFolder}/src/cli/interface-adapters/index.ts",
         "${workspaceFolder}/test/sample-data.txt",
       ]
     },
@@ -54,7 +81,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/index.ts",
+        "${workspaceFolder}/src/cli/interface-adapters/index.ts",
         "download"
       ]
     },
@@ -68,7 +95,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/index.ts",
+        "${workspaceFolder}/src/cli/interface-adapters/index.ts",
         "update-check"
       ]
     }

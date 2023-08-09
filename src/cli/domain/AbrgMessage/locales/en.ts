@@ -1,4 +1,4 @@
-import { AbrgMessage } from "../index";
+import { AbrgMessage } from "./index";
 
 const messages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_COMMON_DATADIR_OPTION]: "The data directory where the dataset is stored. Default is under the (home)/.abr-geocoder/",

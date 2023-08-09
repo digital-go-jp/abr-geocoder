@@ -1,4 +1,4 @@
-import { AbrgMessage } from "../index";
+import { AbrgMessage } from "./index";
 
 const messages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_COMMON_DATADIR_OPTION]: "アドレス・ベース・レジストリのデータを格納するディレクトリを指定する。指定されていない場合はデフォルトのディレクトリを参照します。",
