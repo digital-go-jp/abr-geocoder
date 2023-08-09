@@ -1,13 +1,14 @@
 import {Database} from 'better-sqlite3';
-import {DatasetMetadata} from '../../../types';
+import {DatasetMetadata} from './types';
 
+export interface saveArchiveMetaParams {
+  db: Database;
+  meta: DatasetMetadata;
+}
 export const saveArchiveMeta = ({
   db,
   meta,
-}: {
-  db: Database;
-  meta: DatasetMetadata;
-}) => {
+}: saveArchiveMetaParams) => {
   const metaStmt = db.prepare(
     'INSERT OR REPLACE INTO "metadata" ("key", "value") VALUES (?, ?)'
   );

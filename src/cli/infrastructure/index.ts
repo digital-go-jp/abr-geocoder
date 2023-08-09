@@ -1,2 +1,5 @@
 export * from './packagejson';
-export * from './getConfigDir';
+export * from './providers';
+export * from './setupContainer';
+export * from './setupContainerForTest';
+export * from './setupContainerParams';

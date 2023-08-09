@@ -6,7 +6,7 @@
     "moduleResolution": "node"
   },
   "include": [
-    "src/**/*.ts",
+    "src/cli/**/*.ts",
     "test/*.ts"
   ]
 }

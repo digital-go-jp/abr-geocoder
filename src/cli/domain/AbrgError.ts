@@ -1,4 +1,4 @@
-import StrResource, { MESSAGE } from '../usecase/strResource';
+import { AbrgMessage } from './AbrgMessage';
 
 export enum AbrgErrorLevel {
   DEBUG = 'debug',
@@ -9,18 +9,16 @@ export enum AbrgErrorLevel {
 
 export class AbrgError extends Error {
   public readonly level: AbrgErrorLevel;
-  public readonly messageId: MESSAGE;
+  public readonly messageId: AbrgMessage;
   constructor({
     messageId,
     level,
   }: {
-    messageId: MESSAGE,
+    messageId: AbrgMessage,
     level: AbrgErrorLevel,
   }) {
-
-    const strResource = StrResource();
     super(
-      strResource(messageId),
+      AbrgMessage.toString(messageId),
     );
     this.messageId = messageId;
     this.level = level;

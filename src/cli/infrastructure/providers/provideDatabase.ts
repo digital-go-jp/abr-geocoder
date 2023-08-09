@@ -20,10 +20,3 @@ export const provideDatabase = async ({
   db.exec(schemaSQL);
   return db;
 }
-
-function provideDownloadProgressBar() {
-  throw new Error('Function not implemented.');
-}
-function provideLogger() {
-  throw new Error('Function not implemented.');
-}

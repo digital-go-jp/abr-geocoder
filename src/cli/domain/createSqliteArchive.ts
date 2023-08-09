@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {Database} from 'better-sqlite3';
 import type BetterSqlite3 from 'better-sqlite3';
-import {walkDir} from '../../../utils';
+import {walkDir} from '../../utils';
 import StreamZip from 'node-stream-zip';
 import csvParse from 'csv-parse';
 import proj4 from 'proj4';
@@ -24,14 +24,14 @@ const parseFilename = (
   return {type, fileArea};
 };
 
-export interface createSqliteArchiveOptions {
+export interface createSqliteArchiveParams {
   db: Database;
   inputDir: string;
 }
 export const createSqliteArchive = async ({
   db,
   inputDir,
-}: createSqliteArchiveOptions): Promise<void> => {
+}: createSqliteArchiveParams): Promise<void> => {
 
   const settings: {
     [key: string]: {
