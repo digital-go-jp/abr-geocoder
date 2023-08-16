@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS "pref" (
   "pref_name_roma" TEXT,
   "efct_date" TEXT,
   "ablt_date" TEXT,
-  "remark" TEXT
+  "remarks" TEXT
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "pref_code" ON "pref" ("code");
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS "city" (
   "od_city_name_roma" TEXT,
   "efct_date" TEXT,
   "ablt_date" TEXT,
-  "remark" TEXT
+  "remarks" TEXT
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "city_code" ON "city" ("code");
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS "town" (
   "ablt_date" TEXT,
   "src_code" TEXT,
   "post_code" TEXT,
-  "remark" TEXT,
+  "remarks" TEXT,
 
   -- mt_town_pos_prefXX から結合
   "rep_pnt_lon" REAL DEFAULT null,
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS "rsdtdsp_blk" (
   "efct_date" TEXT,
   "ablt_date" TEXT,
   "src_code" TEXT,
-  "remark" TEXT,
+  "remarks" TEXT,
 
   -- mt_rsdtdsp_blk_pos_prefXX から結合
   "rep_pnt_lon" REAL,
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS "rsdtdsp_rsdt" (
   "efct_date" TEXT,
   "ablt_date" TEXT,
   "src_code" TEXT,
-  "remark" TEXT,
+  "remarks" TEXT,
 
   -- mt_rsdtdsp_rsdt_pos_prefXX から結合
   "rep_pnt_lon" REAL,
