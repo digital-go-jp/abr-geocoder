@@ -1,4 +1,5 @@
 import path from 'node:path';
+import fs from 'node:fs';
 import { container } from "tsyringe";
 import {
   provideDatabase,
@@ -24,6 +25,10 @@ export const setupContainerForTest = async ({
     },
   });
 
+  const existDataDir = fs.existsSync(dataDir);
+  if (!existDataDir) {
+    await fs.promises.mkdir(dataDir)
+  }
   const sqliteFilePath = path.join(dataDir, `${ckanId}.sqlite`);
   const schemaFilePath = path.join(__dirname, 'schema.sql');
   

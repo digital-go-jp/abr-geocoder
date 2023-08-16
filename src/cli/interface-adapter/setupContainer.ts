@@ -1,4 +1,5 @@
 import path from 'node:path';
+import fs from 'node:fs';
 import { container } from "tsyringe";
 import {
   provideDatabase,
@@ -23,6 +24,11 @@ export const setupContainer = async ({
       return `https://catalog.registries.digital.go.jp/rc/api/3/action/package_show?id=${ckanId}`;
     },
   });
+
+  const existDataDir = fs.existsSync(dataDir);
+  if (!existDataDir) {
+    await fs.promises.mkdir(dataDir)
+  }
 
   const sqliteFilePath = path.join(dataDir, `${ckanId}.sqlite`);
   const schemaFilePath = path.join(__dirname, 'schema.sql');
