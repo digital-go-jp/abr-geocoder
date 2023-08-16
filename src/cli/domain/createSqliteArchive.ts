@@ -230,7 +230,7 @@ export const createSqliteArchive = async ({
         const header = line as string[];
         longitudeIdx = header.indexOf('rep_pnt_lon');
         latitudeIdx = header.indexOf('rep_pnt_lat');
-        crsIdx = header.indexOf('代表点_座標参照系');
+        crsIdx = header.indexOf('rep_pnt_srid');
         index += 1;
         continue;
       }
