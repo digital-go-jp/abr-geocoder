@@ -7,17 +7,20 @@ import os from 'node:os';
 import path from 'node:path';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { parsePackageJson } from "../infrastructure";
-import { onDownloadAction } from "./onDownloadAction";
-import { onUpdateCheckAction } from "./onUpdateCheckAction";
-import { OutputFormat, onGeocodingAction } from "./onGeocodingAction";
-import { AbrgMessage } from '../domain';
+import { AbrgMessage } from './domain';
+import { parsePackageJson } from "./interface-adapter";
+import { 
+  OutputFormat,
+  onDownloadAction,
+  onGeocodingAction,
+  onUpdateCheckAction,
+} from "./usecase";
 
 const dataDir = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
 const {version} = parsePackageJson({
-  filePath: path.join(__dirname, '..', '..', 'package.json'),
+  filePath: path.join(__dirname, '..','..', 'package.json'),
 });
 
 yargs(hideBin(process.argv))
@@ -27,17 +30,20 @@ yargs(hideBin(process.argv))
   .command(
     'update-check',
     AbrgMessage.toString(AbrgMessage.CLI_UPDATE_CHECK_DESC),
-    {
-      dataDir: {
-        alias: 'd',
-        default: dataDir,
-        describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
-      },
-      resource: {
-        alias: 'r',
-        default: 'ba000001',
-        describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_RESOURCE_OPTION),
-      },
+    (yargs: yargs.Argv) => {
+      return yargs
+        .option("dataDir", {
+          alias: 'd',
+          type: 'string',
+          default: dataDir,
+          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
+        })
+        .option('resource', {
+          alias: 'r',
+          type: 'string',
+          default: 'ba000001',
+          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_RESOURCE_OPTION),
+        });
     },
     async (argv) => {
       await onUpdateCheckAction({
@@ -52,22 +58,31 @@ yargs(hideBin(process.argv))
   .command(
     'download',
     AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_DESC),
-    {
-      dataDir: {
-        alias: 'd',
-        default: dataDir,
-        describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
-      },
-      resource: {
-        alias: 'r',
-        default: 'ba000001',
-        describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_RESOURCE_OPTION),
-      },
+    (yargs: yargs.Argv) => {
+      return yargs
+        .option("dataDir", {
+          alias: 'd',
+          type: 'string',
+          default: dataDir,
+          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
+        })
+        .option('resource', {
+          alias: 'r',
+          type: 'string',
+          default: 'ba000001',
+          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_RESOURCE_OPTION),
+        })
+        .option("force", {
+          alias: 'f',
+          type: 'boolean',
+          describe: AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_FORCE_DESC),
+        });
     },
     async (argv) => {
       await onDownloadAction({
         dataDir: argv.dataDir,
         ckanId: argv.resource,
+        forceUpdate: argv.force === undefined ? false : true,
       })
       .catch((error: Error) => {
         console.error(error);
@@ -113,9 +128,8 @@ yargs(hideBin(process.argv))
         })
     },
     async (argv) => {
-      console.log(argv);
       await onGeocodingAction({
-        source: argv['<inputFile>'] || '-',
+        source: argv.inputFile as string || '-',
         destination: '',
         dataDir: argv.workDir || dataDir,
         resourceId: argv.resource || 'ba000001',

@@ -41,8 +41,11 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/domain/AbrgMessage/__tests__/test.ts",
-      ]
+        "${workspaceFolder}/src/cli/index.ts",
+        "test/sample-data.txt",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
     },
     {
       "type": "node",
@@ -68,7 +71,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/interface-adapters/index.ts",
+        "${workspaceFolder}/src/cli/index.ts",
         "${workspaceFolder}/test/sample-data.txt",
       ]
     },
@@ -81,8 +84,9 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/interface-adapters/index.ts",
-        "download"
+        "${workspaceFolder}/src/cli/index.ts",
+        "download",
+        "-f"
       ]
     },
 
@@ -95,7 +99,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/interface-adapters/index.ts",
+        "${workspaceFolder}/src/cli/index.ts",
         "update-check"
       ]
     }

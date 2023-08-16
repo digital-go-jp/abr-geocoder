@@ -13,17 +13,16 @@ import {
   CkanDownloader,
   CkanDownloaderEvent,
   createSqliteArchive,
-  getDataDir,
   saveArchiveMeta,
   unzipArchive,
 } from '../domain';
 
+import { SingleBar } from 'cli-progress';
 import {
   setupContainer,
   setupContainerForTest,
   setupContainerParams,
-} from '../infrastructure';
-import { SingleBar } from 'cli-progress';
+} from '../interface-adapter';
 
 
 export namespace downloadDataset {
@@ -45,7 +44,11 @@ export namespace downloadDataset {
     await setupContainerForTest(params);
   }
 
-  export async function start(params: setupContainerParams) {
+  export async function start({
+    dataDir,
+    ckanId,
+    forceUpdate = false,
+  }: setupContainerParams) {
     if (!initialized) {
       throw new Error('Must run init() or initForTest() before involving this function');
     }
@@ -60,13 +63,16 @@ export namespace downloadDataset {
       userAgent: container.resolve('USER_AGENT'),
       getDatasetUrl: container.resolve('getDatasetUrl'),
     });
+
     downloader.on(CkanDownloaderEvent.START, (data: {total: number}) => {
       progressBar.start(data.total, 0);
     });
+
     downloader.on(CkanDownloaderEvent.PROGRESS, (data: {incrementSize: number}) => {
       progressBar.increment(data.incrementSize);
       progressBar.updateETA();
     });
+
     downloader.on(CkanDownloaderEvent.END, () => {
       progressBar.stop();
     });
@@ -76,10 +82,10 @@ export namespace downloadDataset {
     );
   
     const {updateAvailable, upstreamMeta} = await downloader.updateCheck({
-      ckanId: params.ckanId,
+      ckanId,
     });
   
-    if (!updateAvailable) {
+    if (!forceUpdate && !updateAvailable) {
       return Promise.reject(
         new AbrgError({
           messageId: AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE,
@@ -91,7 +97,7 @@ export namespace downloadDataset {
     logger.info(
       AbrgMessage.toString(AbrgMessage.START_DOWNLOADING_NEW_DATASET),
     );
-    const downloadFilePath = path.join(params.dataDir, `${params.ckanId}.zip`);
+    const downloadFilePath = path.join(dataDir, `${ckanId}.zip`);
     const requestUrl = new URL(upstreamMeta.fileUrl);
   
     const result = await downloader.download({
@@ -103,7 +109,7 @@ export namespace downloadDataset {
     }
   
     // keep the main archive for future usage
-    const archivePath = path.join(params.dataDir, `${params.ckanId}.zip`);
+    const archivePath = path.join(dataDir, `${ckanId}.zip`);
     const dstPath = path.join(
       path.dirname(archivePath),
       path.basename(archivePath, '.zip')
@@ -140,8 +146,6 @@ export namespace downloadDataset {
 export const onDownloadAction = async (
   params: setupContainerParams,
 ) => {
-  const dataDir = await getDataDir(params.dataDir);
-  const ckanId = params.ckanId;
   await downloadDataset.init(params);
   await downloadDataset.start(params);
 };

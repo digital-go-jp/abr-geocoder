@@ -15,7 +15,7 @@ import {
   setupContainer,
   setupContainerForTest,
   setupContainerParams,
-} from '../infrastructure/';
+} from '../interface-adapter';
 
 export namespace updateCheck {
   let initialized = false;

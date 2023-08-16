@@ -1,6 +1,9 @@
 import fs from 'node:fs';
-import { AbrgError, AbrgErrorLevel } from '../../domain';
-import { AbrgMessage } from "../../domain/AbrgMessage";
+import {
+  AbrgError,
+  AbrgErrorLevel,
+  AbrgMessage,
+} from '../../domain';
 
 export const getReadStreamFromSource = (
   source: string,

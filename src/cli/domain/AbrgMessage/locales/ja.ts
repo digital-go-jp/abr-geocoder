@@ -4,6 +4,7 @@ const messages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_COMMON_DATADIR_OPTION]: "アドレス・ベース・レジストリのデータを格納するディレクトリを指定する。指定されていない場合はデフォルトのディレクトリを参照します。",
   [AbrgMessage.CLI_COMMON_RESOURCE_OPTION]: "アドレス・ベース・レジストリのデータソースID。全国データは `ba000001` をお使いください。",
   [AbrgMessage.CLI_DOWNLOAD_DESC]: "アドレス・ベース・レジストリの最新データをCKANからダウンロードする",
+  [AbrgMessage.CLI_DOWNLOAD_FORCE_DESC]: "アップデートを強制的に行います",
   [AbrgMessage.CLI_GEOCODE_DESC]: "指定されたファイルに含まれる日本の住所を緯度経度に変換します",
   [AbrgMessage.CLI_GEOCODE_FUZZY_OPTION]: "指定した1文字をワイルドカードとして処理します",
   [AbrgMessage.CLI_GEOCODE_INPUT_FILE]: "日本の住所を1行ごとに記入したテキストファイルへのパス。'-'を指定すると、標準入力から読み取ります",

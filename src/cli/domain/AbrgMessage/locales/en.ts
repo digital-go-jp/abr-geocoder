@@ -4,6 +4,7 @@ const messages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_COMMON_DATADIR_OPTION]: "The data directory where the dataset is stored. Default is under the (home)/.abr-geocoder/",
   [AbrgMessage.CLI_COMMON_RESOURCE_OPTION]: "The dataset ID of Address Base Repository. The default is `ba000001` which includes all dataset for overall Japan",
   [AbrgMessage.CLI_DOWNLOAD_DESC]: "Downloads the latest dataset from origin",
+  [AbrgMessage.CLI_DOWNLOAD_FORCE_DESC]: "Downloads the latest dataset from origin mandatory",
   [AbrgMessage.CLI_GEOCODE_DESC]: "Geocoding for the Japan addresses in the given file",
   [AbrgMessage.CLI_GEOCODE_FUZZY_OPTION]: "Treats a given character as wildcard matching",
   [AbrgMessage.CLI_GEOCODE_INPUT_FILE]: "The path for the file which formatted Japanese address each line. Reads from stdin when you give '-'.",

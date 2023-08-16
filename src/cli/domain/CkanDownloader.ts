@@ -40,7 +40,7 @@ export class CkanDownloader extends EventEmitter {
     this.db = db;
     this.userAgent = userAgent;
     this.getDatasetUrl = getDatasetUrl;
-    Object.freeze(this);
+    // Object.freeze(this);
   }
 
   /**
