@@ -23,6 +23,12 @@ export const getSameNamedPrefecturePatterns = ({
   }
   const prefKanji = Array.from(new Set(buffer.join(''))).join('');
   const firstFilter = new RegExp(`[${prefKanji}]`);
+  const regPrefPatterns: [string, RegExp][] = prefPatterns.map((pattern) => {
+    return [
+      pattern[0], // 都道府県名
+      new RegExp(pattern[1]),  // 都道府県名にマッチさせるための正規表現
+    ];
+  });
   
   const results: SpecialPattern[] = prefectures
     // 都道府県の漢字を含む市町村名のみを抽出する
@@ -45,16 +51,16 @@ export const getSameNamedPrefecturePatterns = ({
     // 例：
     // 「福島県石川郡石川町」 の「石川郡石川町」の部分で「石川」が「石川県」にマッチする
     .map(chunk => {
-      const matched = prefPatterns.filter(prefPatter => {
-        return prefPatter[1].test(chunk!.townName);
-      });
-      if (matched.length === 0) {
-        return;
+      for (const pattern of regPrefPatterns) {
+        if (!pattern[1].test(chunk!.townName)) {
+          continue;
+        }
+
+        return [
+          `${chunk!.prefName}${chunk!.townName}`,
+          `^${chunk!.townName}`
+        ];
       }
-      return [
-        `${chunk!.prefName}${chunk!.townName}`,
-        new RegExp(`^${chunk!.townName}`)
-      ];
     })
     // マッチしないデータを排除 
     .filter(x => x !== undefined) as SpecialPattern[];

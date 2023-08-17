@@ -133,7 +133,7 @@ export class Prefecture implements IPrefecture {
   }
 }
 
-export type SpecialPattern = [string, RegExp];
+export type SpecialPattern = [string, string];
 
 export interface PrefectureDB {
   todofuken_name: string;
@@ -153,5 +153,5 @@ export interface GeocodingParams {
   dataDir: string;
   resourceId: string;
   format: OutputFormat;
-  fuzzy: string;
+  fuzzy?: string;
 }
