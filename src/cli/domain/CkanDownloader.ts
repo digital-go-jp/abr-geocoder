@@ -1,14 +1,14 @@
-import { SingleBar } from 'cli-progress';
+import {SingleBar} from 'cli-progress';
 import fs from 'node:fs';
-import { Transform } from 'node:stream';
-import { Client, Dispatcher, request } from 'undici';
-import { AbrgError, AbrgErrorLevel } from './AbrgError';
-import { AbrgMessage } from './AbrgMessage';
+import {Transform} from 'node:stream';
+import {Client, Dispatcher, request} from 'undici';
+import {AbrgError, AbrgErrorLevel} from './AbrgError';
+import {AbrgMessage} from './AbrgMessage';
 import {
   CKANPackageShow,
   CKANResponse,
   CheckForUpdatesOutput,
-  DatasetMetadata
+  DatasetMetadata,
 } from './types';
 
 export interface CkanDownloaderParams {
@@ -37,17 +37,12 @@ export class CkanDownloader {
     Object.freeze(this);
   }
 
-
   async getDatasetMetadata(): Promise<DatasetMetadata> {
-
-    const { statusCode, body } = await request(
-      this.getDatasetUrl(this.ckanId),
-      {
-        headers: {
-          'user-agent': this.userAgent,
-        }
+    const {statusCode, body} = await request(this.getDatasetUrl(this.ckanId), {
+      headers: {
+        'user-agent': this.userAgent,
       },
-    );
+    });
 
     const HTTP_OK = 200;
 
@@ -74,7 +69,8 @@ export class CkanDownloader {
 
     if (!csvResource) {
       throw new AbrgError({
-        messageId: AbrgMessage.DOWNLOADED_DATA_DOES_NOT_CONTAIN_THE_RESOURCE_CSV,
+        messageId:
+          AbrgMessage.DOWNLOADED_DATA_DOES_NOT_CONTAIN_THE_RESOURCE_CSV,
         level: AbrgErrorLevel.ERROR,
       });
     }
@@ -122,8 +118,8 @@ export class CkanDownloader {
       progressBar?.stop();
       return downloadFilePath;
     }
-  
-    const streamFactory: Dispatcher.StreamFactory = ({ statusCode, headers }) => {
+
+    const streamFactory: Dispatcher.StreamFactory = ({statusCode, headers}) => {
       if (statusCode !== 200) {
         // this.logger.debug(`download error: status code = ${statusCode}`);
         throw new AbrgError({
@@ -137,7 +133,7 @@ export class CkanDownloader {
         decimal
       );
       progressBar?.start(contentLength, 0);
- 
+
       const writerStream = fs.createWriteStream(downloadFilePath);
       const writable = new Transform({
         transform(chunk, encoding, callback) {
@@ -153,7 +149,7 @@ export class CkanDownloader {
       writable.pipe(writerStream);
       return writable;
     };
-  
+
     await client.stream(
       {
         path: requestUrl.pathname,

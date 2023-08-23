@@ -1,6 +1,6 @@
-import { Transform } from "node:stream";
-import { TransformCallback } from "stream";
-import { SpecialPattern } from "./types";
+import {Transform} from 'node:stream';
+import {TransformCallback} from 'stream';
+import {SpecialPattern} from './types';
 
 /**
  * - コメント行 (# で始まる)は排除
@@ -9,7 +9,6 @@ import { SpecialPattern } from "./types";
  * - その他、処理をし易いように変換する
  */
 export class JPAddressNormalizer extends Transform {
-
   private readonly convertToHankaku: (query: string) => string;
   private readonly specialPatternsWithRegExp: [string, RegExp][] = [];
 
@@ -18,9 +17,9 @@ export class JPAddressNormalizer extends Transform {
     specialPatterns = [],
     fuzzy,
   }: {
-    convertToHankaku: (query: string) => string,
-    specialPatterns: SpecialPattern[],
-    fuzzy?: string,
+    convertToHankaku: (query: string) => string;
+    specialPatterns: SpecialPattern[];
+    fuzzy?: string;
   }) {
     super();
     this.convertToHankaku = convertToHankaku;
@@ -31,8 +30,10 @@ export class JPAddressNormalizer extends Transform {
         pattern[0],
 
         // 置き換えるための正規表現パターン
-        new RegExp(fuzzy ? this.insertWildcardMatching(pattern[1]) : pattern[1])
-      ]
+        new RegExp(
+          fuzzy ? this.insertWildcardMatching(pattern[1]) : pattern[1]
+        ),
+      ];
     });
   }
 
@@ -40,13 +41,16 @@ export class JPAddressNormalizer extends Transform {
    * string = "^愛知郡愛荘町" を  "^(愛|\\?)(知|\\?)(郡|\\?)(愛|\\?)(荘|\\?)(町|\\?)" にする
    */
   private insertWildcardMatching = (string: string) => {
-    return string.replace(/(?<!\[[^\]]*)([一-龯ぁ-んァ-ン])(?!\?)/g, '($1|\\?)');
+    return string.replace(
+      /(?<!\[[^\]]*)([一-龯ぁ-んァ-ン])(?!\?)/g,
+      '($1|\\?)'
+    );
   };
 
   _transform(
     line: string,
     encoding: BufferEncoding,
-    next: TransformCallback,
+    next: TransformCallback
   ): void {
     line = line.toString().trim();
 
@@ -56,7 +60,8 @@ export class JPAddressNormalizer extends Transform {
       return;
     }
 
-    let address = line.normalize('NFC')
+    let address = line
+      .normalize('NFC')
       .replace(/\u3000/g, ' ') // \u3000 which is an invisible space in Zenkaku
       .replace(/\s+/g, ' ')
       .replace(/([０-９Ａ-Ｚａ-ｚ]+)/g, match => {
@@ -78,7 +83,7 @@ export class JPAddressNormalizer extends Transform {
       .replace(/.+?[0-9一二三四五六七八九〇十百千]-/, match => {
         return match.replace(/\s/g, ''); // 1番はじめに出てくるアラビア数字以前のスペースを削除
       });
-    
+
     // 県名が省略されており、かつ市の名前がどこかの都道府県名と同じ場合(例.千葉県千葉市)、
     // あらかじめ県名を補完しておく。
     for (const [correctAddess, regExp] of this.specialPatternsWithRegExp) {
@@ -89,9 +94,7 @@ export class JPAddressNormalizer extends Transform {
       address = address.replace(match[0], correctAddess);
       break;
     }
-    
+
     next(null, address);
   }
-
-
 }

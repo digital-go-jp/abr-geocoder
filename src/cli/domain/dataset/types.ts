@@ -1,5 +1,3 @@
-import { Statement } from "better-sqlite3";
-
 export interface IDatasetFileMeta {
   fileArea: string;
   path: string;
@@ -9,16 +7,10 @@ export interface IDatasetFileMeta {
 
 export interface IDatasetFile extends IDatasetFileMeta {
   sql: string;
-  indexCols: number;
   inputStream: NodeJS.ReadableStream;
 }
 
 export type DatasetFileParams = IDatasetFile;
-
-export interface IDatasetWithDateParams extends IDatasetFile {
-  validDateCol: number;
-}
-export type DatasetWithDateParams = IDatasetWithDateParams;
 
 export interface CsvPrefRow {
   code: string;

@@ -5,10 +5,7 @@ export interface saveArchiveMetaParams {
   db: Database;
   meta: DatasetMetadata;
 }
-export const saveArchiveMeta = ({
-  db,
-  meta,
-}: saveArchiveMetaParams) => {
+export const saveArchiveMeta = ({db, meta}: saveArchiveMetaParams) => {
   const metaStmt = db.prepare(
     'INSERT OR REPLACE INTO "metadata" ("key", "value") VALUES (?, ?)'
   );

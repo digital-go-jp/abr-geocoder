@@ -1,13 +1,13 @@
-import type BetterSqlite3 from "better-sqlite3";
-import Database from "better-sqlite3";
+import type BetterSqlite3 from 'better-sqlite3';
+import Database from 'better-sqlite3';
 import fs from 'node:fs';
 
 export const provideDatabase = async ({
   sqliteFilePath,
   schemaFilePath,
 }: {
-  sqliteFilePath: string,
-  schemaFilePath: string,
+  sqliteFilePath: string;
+  schemaFilePath: string;
 }): Promise<BetterSqlite3.Database> => {
   const schemaSQL = await fs.promises.readFile(schemaFilePath, 'utf8');
   const db = new Database(sqliteFilePath);
@@ -19,4 +19,4 @@ export const provideDatabase = async ({
   db.pragma('synchronous = OFF');
   db.exec(schemaSQL);
   return db;
-}
+};

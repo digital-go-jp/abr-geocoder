@@ -1,18 +1,17 @@
-
-import { Database, Statement } from 'better-sqlite3';
+import {Database, Statement} from 'better-sqlite3';
 import {
   IPrefecture,
   ITown,
   Prefecture,
   PrefectureDB,
   PrefectureType,
-  Town
+  Town,
 } from './types';
 
 export const getPrefecturesFromDB = async ({
   db,
 }: {
-  db: Database,
+  db: Database;
 }): Promise<IPrefecture[]> => {
   const statement: Statement = db.prepare(`
     SELECT
@@ -28,13 +27,13 @@ export const getPrefecturesFromDB = async ({
   const prefectures = statement.all() as PrefectureDB[];
   return prefectures.map((value: PrefectureDB) => {
     const townRawValues: ITown[] = JSON.parse(value.towns);
-    const towns = townRawValues.map((value) => {
+    const towns = townRawValues.map(value => {
       return new Town(value);
     });
 
     return new Prefecture({
       todofuken_name: value.todofuken_name as PrefectureType,
       towns,
-    })
+    });
   });
-}
+};

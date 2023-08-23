@@ -19,7 +19,6 @@ const {description, version} = JSON.parse(
 
 program.name('abr-geocoder').description(description).version(version);
 
-
 type NormalizePgmOpts = {
   data: string | undefined;
   source: string;

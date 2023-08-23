@@ -16,4 +16,4 @@ export const parsePackageJson = ({
     description,
     version,
   };
-}
+};

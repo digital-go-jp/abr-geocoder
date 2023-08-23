@@ -1,4 +1,4 @@
-import { PrefectureName, SpecialPattern } from './types';
+import {PrefectureName, SpecialPattern} from './types';
 
 export const getPrefectureRegexPatterns = (): SpecialPattern[] => {
   return [
@@ -48,6 +48,6 @@ export const getPrefectureRegexPatterns = (): SpecialPattern[] => {
     [PrefectureName.KUMAMOTO, `^${PrefectureName.KUMAMOTO}?`],
     [PrefectureName.MIYAZAKI, `^${PrefectureName.MIYAZAKI}?`],
     [PrefectureName.KAGOSHIMA, `^${PrefectureName.KAGOSHIMA}?`],
-    [PrefectureName.OKINAWA, `^${PrefectureName.OKINAWA}?`]
+    [PrefectureName.OKINAWA, `^${PrefectureName.OKINAWA}?`],
   ];
 };

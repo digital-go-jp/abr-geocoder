@@ -13,20 +13,41 @@ import {
   RsdtdspRsdtPosFile,
   TownDatasetFile,
   TownPosDatasetFile,
-  parseFilename
+  parseFilename,
 } from '../../domain/';
 import { fsIteratorResult } from './fsIterator';
-import { provideProgressBar } from '../../interface-adapter';
 
-export const loadDatasetProcess = async({
+export const loadDatasetProcess = async ({
   db,
   csvFiles,
   multiProgressBar,
 }: {
   db: Database;
   csvFiles: fsIteratorResult[];
-  multiProgressBar: MultiBar,
+  multiProgressBar: MultiBar;
 }) => {
+  // _pos_ ファイルのSQL が updateになっているので、
+  // それ以外の基本的な情報を先に insert する必要がある。
+  // そのため _pos_ がファイル名に含まれている場合は、
+  // 後方の順番になるように並び替える
+  csvFiles = csvFiles.sort((a, b) => {
+    const isA_posFile = a.name.includes('_pos_');
+    const isB_posFile = b.name.includes('_pos_');
+    if (isA_posFile && !isB_posFile) {
+      return 1;
+    }
+
+    if (!isA_posFile && isB_posFile) {
+      return -1;
+    }
+    for (let i = 0; i < Math.min(a.name.length, b.name.length); i++) {
+      const diff = a.name.charCodeAt(i) - b.name.charCodeAt(i);
+      if (diff !== 0) {
+        return diff;
+      }
+    }
+    return a.name.length - b.name.length;
+  });
 
   // 各ファイルを処理する
   const filesStream = Stream.Readable.from(csvFiles, {
@@ -34,12 +55,12 @@ export const loadDatasetProcess = async({
   });
   filesStream.on('finish', () => {
     console.log('fileStream is finished');
-  })
+  });
 
   const fileParseProgresss = multiProgressBar.create(csvFiles.length, 0, {
     filename: 'analysis...',
   });
-  
+
   const fileParseStream = new Stream.Transform({
     objectMode: true,
     transform(chunk: fsIteratorResult, encoding, callback) {
@@ -56,7 +77,7 @@ export const loadDatasetProcess = async({
         return;
       }
 
-      switch(fileMeta.type) {
+      switch (fileMeta.type) {
         case 'pref':
           callback(null, PrefDatasetFile.create(fileMeta, chunk.stream));
           break;
@@ -99,30 +120,32 @@ export const loadDatasetProcess = async({
       // CSVファイルの読み込み
       const statement = db.prepare(datasetFile.sql);
 
-
       // DBに登録
-      let total = 0;
       db.exec('BEGIN');
       datasetFile.inputStream
-        .pipe(csvParser({
-          skipComments: true,
-        }))
-        .pipe(new Stream.Writable({
-          objectMode: true,
-          write(chunk, encoding, next) {
-            const processed = datasetFile.process(chunk);
-            statement.run(processed);
-            next(null);
-          },
-        }))
+        .pipe(
+          csvParser({
+            skipComments: true,
+          })
+        )
+        .pipe(
+          new Stream.Writable({
+            objectMode: true,
+            write(chunk, encoding, next) {
+              const processed = datasetFile.process(chunk);
+              statement.run(processed);
+              next(null);
+            },
+          })
+        )
         .on('finish', () => {
           db.exec('COMMIT');
-          
+
           loadDataProgress.increment();
           loadDataProgress.updateETA();
           callback(null);
         })
-        .on('error', (error) => {
+        .on('error', error => {
           if (db.inTransaction) {
             db.exec('ROLLBACK');
           }
@@ -131,12 +154,35 @@ export const loadDatasetProcess = async({
     },
   });
 
-  await pipeline(
-    filesStream,
-    fileParseStream,
-    loadDataStream,
-  )
+  await pipeline(filesStream, fileParseStream, loadDataStream);
 
   loadDataProgress.stop();
   multiProgressBar.remove(loadDataProgress);
-}
+};
+// const test = async () => {
+//   const downloadDir = '/Users/maskatsum/.abr-geocoder/download';
+//   const tmpDir = await fs.promises.mkdtemp(downloadDir);
+//   const fileLoadingProgress = new CLIInfinityProgress();
+//   fileLoadingProgress.setHeader('Finding dataset files...');
+//   fileLoadingProgress.start();
+//   const csvFiles = await fsIterator(
+//     tmpDir,
+//     downloadDir,
+//     '.csv',
+//     fileLoadingProgress
+//   );
+//   fileLoadingProgress.remove();
+
+//   const db = await provideDatabase({
+//     sqliteFilePath: '/Users/maskatsum/.abr-geocoder/download.sqlite',
+//     schemaFilePath:
+//       '/Volumes/digital/abr-geocoder/src/cli/interface-adapter/schema.sql',
+//   });
+
+//   await loadDatasetProcess({
+//     db,
+//     csvFiles,
+//     multiProgressBar: provideMultiProgressBar(),
+//   });
+// };
+// test();

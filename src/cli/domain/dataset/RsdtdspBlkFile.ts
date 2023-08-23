@@ -1,12 +1,11 @@
-import { DataField } from "./DataField";
-import { DataWithDateFile } from './DatasetFile';
-import {
-  DatasetWithDateParams,
-  IDatasetFileMeta,
-  IDatasetWithDateParams,
-} from './types';
+import {DataField} from './DataField';
+import {DataWithDateFile} from './DatasetFile';
+import {IDatasetFileMeta, DatasetFileParams} from './types';
 
-export class RsdtdspBlkFile extends DataWithDateFile implements IDatasetWithDateParams {
+export class RsdtdspBlkFile
+  extends DataWithDateFile
+  implements IDatasetFileMeta
+{
   get fields(): DataField[] {
     return [
       DataField.LG_CODE,
@@ -30,14 +29,16 @@ export class RsdtdspBlkFile extends DataWithDateFile implements IDatasetWithDate
     ];
   }
 
-  constructor(params: DatasetWithDateParams) {
-    super(params)
+  constructor(params: DatasetFileParams) {
+    super(params);
     Object.freeze(this);
   }
 
-  static create(params: IDatasetFileMeta, inputStream: NodeJS.ReadableStream): RsdtdspBlkFile {
-    const sql =
-      `INSERT OR REPLACE INTO
+  static create(
+    params: IDatasetFileMeta,
+    inputStream: NodeJS.ReadableStream
+  ): RsdtdspBlkFile {
+    const sql = `INSERT OR REPLACE INTO
       "rsdtdsp_blk"
       (
         ${DataField.LG_CODE.dbColumn},
@@ -82,8 +83,6 @@ export class RsdtdspBlkFile extends DataWithDateFile implements IDatasetWithDate
       )`;
     return new RsdtdspBlkFile({
       ...params,
-      indexCols: 3,
-      validDateCol: 14,
       sql,
       inputStream,
     });

@@ -1,19 +1,19 @@
 import path from 'node:path';
-import { IDatasetFileMeta } from './types';
+import {IDatasetFileMeta} from './types';
 
 /**
  * リソースCSVファイルから、情報を読取る
- * 
+ *
  * mt_rsdtdsp_blk_pref01.zip というファイル名から
  * 以下のように変換する
- * 
+ *
  * {
  *   type: 'rsdtdsp_blk',
  *   fileArea: 'pref_01'
  * }
- * 
- * @param filename 
- * @returns 
+ *
+ * @param filename
+ * @returns
  */
 export const parseFilename = ({
   filepath,
@@ -36,4 +36,4 @@ export const parseFilename = ({
     path: filepath,
     filename,
   };
-}
+};

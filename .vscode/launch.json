@@ -41,8 +41,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/index.ts",
-        "test/sample-data.txt",
+        "${workspaceFolder}/src/cli/usecase/onDownloadAction/loadDatasetProcess.ts",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

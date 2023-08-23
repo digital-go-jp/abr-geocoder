@@ -7,10 +7,7 @@ export type TownOptions = ITown;
 export class Town implements ITown {
   public readonly name: string;
   public readonly code: string;
-  constructor({
-    name,
-    code
-  }: TownOptions) {
+  constructor({name, code}: TownOptions) {
     this.name = name;
     this.code = code;
     Object.freeze(this);
@@ -67,52 +64,53 @@ export enum PrefectureName {
   OKINAWA = '沖縄県',
 }
 
-export type PrefectureType = PrefectureName.HOKKAIDO | 
-PrefectureName.AOMORI |
-PrefectureName.IWATE |
-PrefectureName.MIYAGI |
-PrefectureName.YAMAGATA |
-PrefectureName.FUKUSHIMA |
-PrefectureName.IBARAKI |
-PrefectureName.TOCHIGI |
-PrefectureName.GUMMA |
-PrefectureName.SAITAMA |
-PrefectureName.CHIBA |
-PrefectureName.TOKYO |
-PrefectureName.KANAGAWA |
-PrefectureName.YAMANASHI |
-PrefectureName.NAGANO |
-PrefectureName.NIIGATA |
-PrefectureName.TOYAMA |
-PrefectureName.ISHIKAWA |
-PrefectureName.FUKUI |
-PrefectureName.SHIZUOKA |
-PrefectureName.AICHI |
-PrefectureName.GIFU |
-PrefectureName.MIE |
-PrefectureName.SHIGA |
-PrefectureName.KYOTO |
-PrefectureName.OSAKA |
-PrefectureName.HYOGO |
-PrefectureName.NARA |
-PrefectureName.WAKAYAMA |
-PrefectureName.OKAYAMA |
-PrefectureName.HIROSHIMA |
-PrefectureName.TOTTORI |
-PrefectureName.SHIMANE |
-PrefectureName.YAMAGUCHI |
-PrefectureName.TOKUSHIMA |
-PrefectureName.KAGAWA |
-PrefectureName.EHIME |
-PrefectureName.KOCHI |
-PrefectureName.FUKUOKA |
-PrefectureName.SAGA |
-PrefectureName.NAGASAKI |
-PrefectureName.OITA |
-PrefectureName.KUMAMOTO |
-PrefectureName.MIYAZAKI |
-PrefectureName.KAGOSHIMA |
-PrefectureName.OKINAWA;
+export type PrefectureType =
+  | PrefectureName.HOKKAIDO
+  | PrefectureName.AOMORI
+  | PrefectureName.IWATE
+  | PrefectureName.MIYAGI
+  | PrefectureName.YAMAGATA
+  | PrefectureName.FUKUSHIMA
+  | PrefectureName.IBARAKI
+  | PrefectureName.TOCHIGI
+  | PrefectureName.GUMMA
+  | PrefectureName.SAITAMA
+  | PrefectureName.CHIBA
+  | PrefectureName.TOKYO
+  | PrefectureName.KANAGAWA
+  | PrefectureName.YAMANASHI
+  | PrefectureName.NAGANO
+  | PrefectureName.NIIGATA
+  | PrefectureName.TOYAMA
+  | PrefectureName.ISHIKAWA
+  | PrefectureName.FUKUI
+  | PrefectureName.SHIZUOKA
+  | PrefectureName.AICHI
+  | PrefectureName.GIFU
+  | PrefectureName.MIE
+  | PrefectureName.SHIGA
+  | PrefectureName.KYOTO
+  | PrefectureName.OSAKA
+  | PrefectureName.HYOGO
+  | PrefectureName.NARA
+  | PrefectureName.WAKAYAMA
+  | PrefectureName.OKAYAMA
+  | PrefectureName.HIROSHIMA
+  | PrefectureName.TOTTORI
+  | PrefectureName.SHIMANE
+  | PrefectureName.YAMAGUCHI
+  | PrefectureName.TOKUSHIMA
+  | PrefectureName.KAGAWA
+  | PrefectureName.EHIME
+  | PrefectureName.KOCHI
+  | PrefectureName.FUKUOKA
+  | PrefectureName.SAGA
+  | PrefectureName.NAGASAKI
+  | PrefectureName.OITA
+  | PrefectureName.KUMAMOTO
+  | PrefectureName.MIYAZAKI
+  | PrefectureName.KAGOSHIMA
+  | PrefectureName.OKINAWA;
 
 export interface IPrefecture {
   towns: ITown[];
@@ -123,10 +121,7 @@ export type PrefectureParams = IPrefecture;
 export class Prefecture implements IPrefecture {
   public readonly towns: ITown[];
   public readonly todofuken_name: PrefectureType;
-  constructor({
-    towns,
-    todofuken_name,
-  }: PrefectureParams) {
+  constructor({towns, todofuken_name}: PrefectureParams) {
     this.towns = towns;
     this.todofuken_name = todofuken_name;
     Object.freeze(this);
@@ -138,14 +133,14 @@ export type SpecialPattern = [string, string];
 export interface PrefectureDB {
   todofuken_name: string;
   towns: string;
-};
+}
 
 export enum OutputFormat {
   JSON = 'json',
   CSV = 'csv',
   GEOJSON = 'geojson',
   TABLE = 'table',
-};
+}
 
 export interface GeocodingParams {
   source: string;

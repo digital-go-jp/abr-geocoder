@@ -1,10 +1,6 @@
-import { DataForPosFile, DatasetFile } from './DatasetFile';
-import {
-  DatasetFileParams,
-  IDatasetFile,
-  IDatasetFileMeta
-} from './types';
-import { DataField } from "./DataField";
+import {DataField} from './DataField';
+import {DataForPosFile} from './DatasetFile';
+import {DatasetFileParams, IDatasetFile, IDatasetFileMeta} from './types';
 
 export class RsdtdspBlkPosFile extends DataForPosFile implements IDatasetFile {
   get fields(): DataField[] {
@@ -18,13 +14,15 @@ export class RsdtdspBlkPosFile extends DataForPosFile implements IDatasetFile {
   }
 
   constructor(params: DatasetFileParams) {
-    super(params)
+    super(params);
     Object.freeze(this);
   }
 
-  static create(params: IDatasetFileMeta, inputStream: NodeJS.ReadableStream): RsdtdspBlkPosFile {
-    const sql =
-      `UPDATE
+  static create(
+    params: IDatasetFileMeta,
+    inputStream: NodeJS.ReadableStream
+  ): RsdtdspBlkPosFile {
+    const sql = `UPDATE
         "rsdtdsp_blk"
       SET
         ${DataField.REP_PNT_LON.dbColumn} = @${DataField.REP_PNT_LON.dbColumn},
@@ -36,7 +34,6 @@ export class RsdtdspBlkPosFile extends DataForPosFile implements IDatasetFile {
       `;
     return new RsdtdspBlkPosFile({
       ...params,
-      indexCols: 3,
       sql,
       inputStream,
     });

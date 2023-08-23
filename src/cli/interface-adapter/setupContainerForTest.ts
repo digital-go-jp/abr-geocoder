@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { container } from "tsyringe";
+import {container} from 'tsyringe';
 import {
   provideDatabase,
   provideProgressBar,
@@ -13,13 +13,9 @@ export const setupContainerForTest = async ({
   dataDir,
   ckanId,
 }: setupContainerParams) => {
-
-  container.register(
-    'USER_AGENT',
-    {
-      useValue: 'curl/7.81.0',
-    },
-  );
+  container.register('USER_AGENT', {
+    useValue: 'curl/7.81.0',
+  });
   container.register('getDatasetUrl', {
     useValue: (ckanId: string) => {
       return `http://localhost:8080/${ckanId}.zip`;
@@ -28,15 +24,15 @@ export const setupContainerForTest = async ({
 
   const existDataDir = fs.existsSync(dataDir);
   if (!existDataDir) {
-    await fs.promises.mkdir(dataDir)
+    await fs.promises.mkdir(dataDir);
   }
   const sqliteFilePath = path.join(dataDir, `${ckanId}.sqlite`);
   const schemaFilePath = path.join(__dirname, 'schema.sql');
-  
+
   const db = await provideDatabase({
     schemaFilePath,
     sqliteFilePath,
-  })
+  });
   container.register('Database', {
     useValue: db,
   });
@@ -49,5 +45,3 @@ export const setupContainerForTest = async ({
   const progress2 = provideMultiProgressBar();
   container.registerInstance('MultiProgressBar', progress2);
 };
-
-

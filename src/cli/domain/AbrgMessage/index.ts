@@ -1,2 +1,2 @@
 export * from './getSystemLocale';
-export * from './locales'
+export * from './locales';

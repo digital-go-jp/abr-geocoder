@@ -1,14 +1,9 @@
 import fs from 'node:fs';
-import {
-  AbrgError,
-  AbrgErrorLevel,
-  AbrgMessage,
-} from '../../domain';
+import {AbrgError, AbrgErrorLevel, AbrgMessage} from '../../domain';
 
 export const getReadStreamFromSource = (
-  source: string,
+  source: string
 ): NodeJS.ReadStream | fs.ReadStream => {
-
   if (source === '-') {
     if (process.stdin.isTTY) {
       throw new AbrgError({
@@ -18,7 +13,7 @@ export const getReadStreamFromSource = (
     }
     return process.stdin;
   }
-  
+
   if (fs.existsSync(source)) {
     return fs.createReadStream(source);
   }
@@ -26,4 +21,4 @@ export const getReadStreamFromSource = (
     messageId: AbrgMessage.CANNOT_FIND_INPUT_FILE,
     level: AbrgErrorLevel.ERROR,
   });
-}
+};

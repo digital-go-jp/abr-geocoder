@@ -1,6 +1,3 @@
 export const getSystemLocale = () => {
-  return Intl
-    .DateTimeFormat()
-    .resolvedOptions()
-    .locale;
+  return Intl.DateTimeFormat().resolvedOptions().locale;
 };

@@ -11,5 +11,4 @@ export const getDataDir = async (overrideDataDir?: string) => {
   }
   await fs.promises.mkdir(dataDir, {recursive: true});
   return dataDir;
-}
-
+};

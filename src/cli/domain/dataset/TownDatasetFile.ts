@@ -1,12 +1,11 @@
-import { DataField } from "./DataField";
-import { DataWithDateFile } from './DatasetFile';
-import {
-  DatasetWithDateParams,
-  IDatasetFileMeta,
-  IDatasetWithDateParams,
-} from './types';
+import {DataField} from './DataField';
+import {DataWithDateFile} from './DatasetFile';
+import {DatasetFileParams, IDatasetFileMeta} from './types';
 
-export class TownDatasetFile extends DataWithDateFile implements IDatasetWithDateParams {
+export class TownDatasetFile
+  extends DataWithDateFile
+  implements IDatasetFileMeta
+{
   get fields(): DataField[] {
     return [
       DataField.LG_CODE,
@@ -46,17 +45,19 @@ export class TownDatasetFile extends DataWithDateFile implements IDatasetWithDat
       DataField.SRC_CODE,
       DataField.POST_CODE,
       DataField.REMARKS,
-    ]
+    ];
   }
 
-  constructor(params: DatasetWithDateParams) {
-    super(params)
+  constructor(params: DatasetFileParams) {
+    super(params);
     Object.freeze(this);
   }
 
-  static create(params: IDatasetFileMeta, inputStream: NodeJS.ReadableStream): TownDatasetFile {
-    const sql =
-      `INSERT OR REPLACE INTO "town"
+  static create(
+    params: IDatasetFileMeta,
+    inputStream: NodeJS.ReadableStream
+  ): TownDatasetFile {
+    const sql = `INSERT OR REPLACE INTO "town"
       (
         ${DataField.LG_CODE.dbColumn},
         ${DataField.TOWN_ID.dbColumn},
@@ -139,10 +140,8 @@ export class TownDatasetFile extends DataWithDateFile implements IDatasetWithDat
       `;
     return new TownDatasetFile({
       ...params,
-      indexCols: 2,
-      validDateCol: 32,
       sql,
       inputStream,
     });
-  };
+  }
 }

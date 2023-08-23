@@ -1,26 +1,26 @@
 #!/usr/bin/env node
 
 // reflect-metadata is necessary for DI
-import "reflect-metadata";
+import 'reflect-metadata';
 
 import os from 'node:os';
 import path from 'node:path';
 import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
-import { AbrgMessage } from './domain';
-import { parsePackageJson } from "./interface-adapter";
-import { 
+import {hideBin} from 'yargs/helpers';
+import {AbrgMessage} from './domain';
+import {parsePackageJson} from './interface-adapter';
+import {
   OutputFormat,
   onDownloadAction,
   onGeocodingAction,
   onUpdateCheckAction,
-} from "./usecase";
+} from './usecase';
 
 const dataDir = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
 const {version} = parsePackageJson({
-  filePath: path.join(__dirname, '..','..', 'package.json'),
+  filePath: path.join(__dirname, '..', '..', 'package.json'),
 });
 
 /**
@@ -40,7 +40,7 @@ yargs(hideBin(process.argv))
     AbrgMessage.toString(AbrgMessage.CLI_UPDATE_CHECK_DESC),
     (yargs: yargs.Argv) => {
       return yargs
-        .option("dataDir", {
+        .option('dataDir', {
           alias: 'd',
           type: 'string',
           default: dataDir,
@@ -50,15 +50,16 @@ yargs(hideBin(process.argv))
           alias: 'r',
           type: 'string',
           default: 'ba000001',
-          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_RESOURCE_OPTION),
+          describe: AbrgMessage.toString(
+            AbrgMessage.CLI_COMMON_RESOURCE_OPTION
+          ),
         });
     },
-    async (argv) => {
+    async argv => {
       await onUpdateCheckAction({
         dataDir: argv.dataDir,
         ckanId: argv.resource,
-      })
-      .catch((error: Error) => {
+      }).catch((error: Error) => {
         console.error(error);
       });
     }
@@ -73,7 +74,7 @@ yargs(hideBin(process.argv))
     AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_DESC),
     (yargs: yargs.Argv) => {
       return yargs
-        .option("dataDir", {
+        .option('dataDir', {
           alias: 'd',
           type: 'string',
           default: dataDir,
@@ -83,27 +84,28 @@ yargs(hideBin(process.argv))
           alias: 'r',
           type: 'string',
           default: 'ba000001',
-          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_RESOURCE_OPTION),
+          describe: AbrgMessage.toString(
+            AbrgMessage.CLI_COMMON_RESOURCE_OPTION
+          ),
         })
-        .option("force", {
+        .option('force', {
           alias: 'f',
           type: 'boolean',
           describe: AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_FORCE_DESC),
         });
     },
-    async (argv) => {
+    async argv => {
       await onDownloadAction({
         dataDir: argv.dataDir,
         ckanId: argv.resource,
-      })
-      .catch((error: Error) => {
+      }).catch((error: Error) => {
         console.error(error);
       });
     }
   )
 
   /**
-   * abrg 
+   * abrg
    * 入力されたファイル、または標準入力から与えられる住所をジオコーディングする
    */
   .command(
@@ -111,24 +113,26 @@ yargs(hideBin(process.argv))
     AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_DESC),
     (yargs: yargs.Argv) => {
       return yargs
-        .option("fuzzy", {
+        .option('fuzzy', {
           type: 'string',
           default: '?',
           describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_OPTION),
         })
-        .option("workDir", {
+        .option('workDir', {
           alias: 'w',
           type: 'string',
           default: dataDir,
           describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
         })
-        .option("resource", {
+        .option('resource', {
           alias: 'r',
           type: 'string',
           default: 'ba000001',
-          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_RESOURCE_OPTION),
+          describe: AbrgMessage.toString(
+            AbrgMessage.CLI_COMMON_RESOURCE_OPTION
+          ),
         })
-        .option("format", {
+        .option('format', {
           alias: 'f',
           type: 'string',
           default: 'table',
@@ -142,11 +146,11 @@ yargs(hideBin(process.argv))
         .positional('[<outputFile>]', {
           describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_OUTPUT_FILE),
           default: '',
-        })
+        });
     },
-    async (argv) => {
+    async argv => {
       await onGeocodingAction({
-        source: argv.inputFile as string || '-',
+        source: (argv.inputFile as string) || '-',
         destination: '',
         dataDir: argv.workDir || dataDir,
         resourceId: argv.resource || 'ba000001',

@@ -1,34 +1,29 @@
 // reflect-metadata is necessary for DI
-import "reflect-metadata";
+import 'reflect-metadata';
 
-import { Database } from 'better-sqlite3';
+import {Database} from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
-import { container } from "tsyringe";
-import { Logger } from 'winston';
-import {
-  AbrgMessage,
-  CkanDownloader
-} from '../../domain';
+import {container} from 'tsyringe';
+import {Logger} from 'winston';
+import {AbrgMessage, CkanDownloader} from '../../domain';
 
-import CLIInfinityProgress from "cli-infinity-progress";
-import { MultiBar, SingleBar } from 'cli-progress';
+import CLIInfinityProgress from 'cli-infinity-progress';
+import {MultiBar, SingleBar} from 'cli-progress';
 import {
-  provideProgressBar,
   setupContainer,
   setupContainerForTest,
   setupContainerParams,
 } from '../../interface-adapter';
-import { fsIterator } from "./fsIterator";
-import { loadDatasetProcess } from './loadDatasetProcess';
-
+import {fsIterator} from './fsIterator';
+import {loadDatasetProcess} from './loadDatasetProcess';
 
 export namespace downloadDataset {
   let initialized = false;
 
   /**
    * DIコンテナを初期化する
-   * @param params 
+   * @param params
    */
   export async function init(params: setupContainerParams) {
     if (initialized) {
@@ -40,7 +35,7 @@ export namespace downloadDataset {
 
   /**
    * ユニットテスト用にDIコンテナを初期化する
-   * @param params 
+   * @param params
    */
   export async function initForTest(params: setupContainerParams) {
     if (initialized) {
@@ -50,12 +45,11 @@ export namespace downloadDataset {
     await setupContainerForTest(params);
   }
 
-  export async function start({
-    dataDir,
-    ckanId,
-  }: setupContainerParams) {
+  export async function start({dataDir, ckanId}: setupContainerParams) {
     if (!initialized) {
-      throw new Error('Must run init() or initForTest() before involving this function');
+      throw new Error(
+        'Must run init() or initForTest() before involving this function'
+      );
     }
 
     const logger: Logger = container.resolve('Logger');
@@ -64,7 +58,8 @@ export namespace downloadDataset {
     const loadingProgressBar = container.resolve<MultiBar>('MultiProgressBar');
     const downloadDir = path.join(dataDir, 'download');
     const userAgent: string = container.resolve('USER_AGENT');
-    const getDatasetUrl: (ckanId: string) => string = container.resolve('getDatasetUrl');
+    const getDatasetUrl: (ckanId: string) => string =
+      container.resolve('getDatasetUrl');
 
     if (!fs.existsSync(downloadDir)) {
       await fs.promises.mkdir(downloadDir);
@@ -72,10 +67,14 @@ export namespace downloadDataset {
 
     const getLastDatasetModified = async (): Promise<string | undefined> => {
       const result = db
-        .prepare(`select value from metadata where key = 'last_modified' limit 1`)
-        .get() as {
-          value: string,
-        } | undefined;
+        .prepare(
+          "select value from metadata where key = 'last_modified' limit 1"
+        )
+        .get() as
+        | {
+            value: string;
+          }
+        | undefined;
       return result?.value;
     };
 
@@ -90,9 +89,7 @@ export namespace downloadDataset {
     // --------------------------------------
     // データの更新を確認する
     // --------------------------------------
-    logger.info(
-      AbrgMessage.toString(AbrgMessage.CHECKING_UPDATE),
-    );
+    logger.info(AbrgMessage.toString(AbrgMessage.CHECKING_UPDATE));
     const {updateAvailable, upstreamMeta} = await downloader.updateCheck();
 
     // 更新データがなければ終了
@@ -109,7 +106,7 @@ export namespace downloadDataset {
     // 最新データセットをダウンロードする
     // --------------------------------------
     logger.info(
-      AbrgMessage.toString(AbrgMessage.START_DOWNLOADING_NEW_DATASET),
+      AbrgMessage.toString(AbrgMessage.START_DOWNLOADING_NEW_DATASET)
     );
 
     const downloadedFilePath = await downloader.download({
@@ -120,11 +117,7 @@ export namespace downloadDataset {
     // --------------------------------------
     // ダウンロードしたzipファイルを全展開する
     // --------------------------------------
-    logger.info(
-      AbrgMessage.toString(
-        AbrgMessage.EXTRACTING_THE_DATA,
-      ),
-    );
+    logger.info(AbrgMessage.toString(AbrgMessage.EXTRACTING_THE_DATA));
 
     const tmpDir = await fs.promises.mkdtemp(path.dirname(downloadedFilePath));
     const fileLoadingProgress = new CLIInfinityProgress();
@@ -134,17 +127,12 @@ export namespace downloadDataset {
       tmpDir,
       downloadDir,
       '.csv',
-      fileLoadingProgress,
+      fileLoadingProgress
     );
     fileLoadingProgress.remove();
 
-
     // 各データセットのzipファイルを展開して、Databaseに登録する
-    logger.info(
-      AbrgMessage.toString(
-        AbrgMessage.LOADING_INTO_DATABASE,
-      ),
-    );
+    logger.info(AbrgMessage.toString(AbrgMessage.LOADING_INTO_DATABASE));
     await loadDatasetProcess({
       db,
       csvFiles,
@@ -156,21 +144,17 @@ export namespace downloadDataset {
     //   db,
     //   meta: upstreamMeta,
     // })ß
-  
+
     db.close();
 
     // 展開したzipファイルのディレクトリを削除
     await fs.promises.rm(tmpDir, {recursive: true});
   }
-
-  
 }
 /*
  * CLIからのエントリーポイント
  */
-export const onDownloadAction = async (
-  params: setupContainerParams,
-) => {
+export const onDownloadAction = async (params: setupContainerParams) => {
   await downloadDataset.init(params);
   await downloadDataset.start(params);
 };

@@ -1,3 +1,8 @@
 node_modules
 dist
 build
+**/*.spec.ts
+**/*.specs.ts
+**/*.test.ts
+**/__test__
+**/__tests__

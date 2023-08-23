@@ -1,13 +1,8 @@
-import { DataField } from "./DataField";
-import { DataForPosFile } from './DatasetFile';
-import {
-  DatasetFileParams,
-  IDatasetFile,
-  IDatasetFileMeta
-} from './types';
+import {DataField} from './DataField';
+import {DataForPosFile} from './DatasetFile';
+import {DatasetFileParams, IDatasetFile, IDatasetFileMeta} from './types';
 
 export class TownPosDatasetFile extends DataForPosFile implements IDatasetFile {
-
   get fields(): DataField[] {
     return [
       DataField.LG_CODE,
@@ -18,13 +13,15 @@ export class TownPosDatasetFile extends DataForPosFile implements IDatasetFile {
   }
 
   constructor(params: DatasetFileParams) {
-    super(params)
+    super(params);
     Object.freeze(this);
   }
 
-  static create(params: IDatasetFileMeta, inputStream: NodeJS.ReadableStream): TownPosDatasetFile {
-    const sql =
-      `UPDATE
+  static create(
+    params: IDatasetFileMeta,
+    inputStream: NodeJS.ReadableStream
+  ): TownPosDatasetFile {
+    const sql = `UPDATE
         "town"
       SET
         ${DataField.REP_PNT_LON.dbColumn} = @${DataField.REP_PNT_LON.dbColumn},
@@ -35,7 +32,6 @@ export class TownPosDatasetFile extends DataForPosFile implements IDatasetFile {
       `;
     return new TownPosDatasetFile({
       ...params,
-      indexCols: 2,
       sql,
       inputStream,
     });
