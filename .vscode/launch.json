@@ -87,7 +87,9 @@
         "${workspaceFolder}/src/cli/index.ts",
         "download",
         "-f"
-      ]
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
     },
 
     {

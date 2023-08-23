@@ -1,14 +1,11 @@
-import { createLogger, transports, format } from "winston";
+import winston from "winston";
 
 export const provideLogger = () => {
-  return createLogger({
-    transports: [new transports.Console()],
-    format: format.combine(
-      format.colorize(),
-      format.timestamp(),
-      format.printf(({ timestamp, level, message }) => {
-        return `[${timestamp}] ${level}: ${message}`;
+  return winston.createLogger({
+    transports: [
+      new winston.transports.Console({
+        format: winston.format.simple(),
       })
-    ),
+    ],
   });
 };

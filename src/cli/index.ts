@@ -23,10 +23,18 @@ const {version} = parsePackageJson({
   filePath: path.join(__dirname, '..','..', 'package.json'),
 });
 
+/**
+ * CLIパーサー (通常のプログラムのエントリーポイント)
+ */
 yargs(hideBin(process.argv))
   .version(version)
   .wrap(terminalWidth)
   .scriptName('abrg')
+
+  /**
+   * abrg update-check
+   * ローカルDBと比較して新しいデータセットの有無を調べる
+   */
   .command(
     'update-check',
     AbrgMessage.toString(AbrgMessage.CLI_UPDATE_CHECK_DESC),
@@ -55,6 +63,11 @@ yargs(hideBin(process.argv))
       });
     }
   )
+
+  /**
+   * abrg download
+   * データセットをダウンロードする
+   */
   .command(
     'download',
     AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_DESC),
@@ -82,13 +95,17 @@ yargs(hideBin(process.argv))
       await onDownloadAction({
         dataDir: argv.dataDir,
         ckanId: argv.resource,
-        forceUpdate: argv.force === undefined ? false : true,
       })
       .catch((error: Error) => {
         console.error(error);
       });
     }
   )
+
+  /**
+   * abrg 
+   * 入力されたファイル、または標準入力から与えられる住所をジオコーディングする
+   */
   .command(
     '$0 <inputFile> [<outputFile>]',
     AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_DESC),

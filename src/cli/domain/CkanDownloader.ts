@@ -1,72 +1,53 @@
-import { Database } from 'better-sqlite3';
-import EventEmitter from 'node:events';
+import { SingleBar } from 'cli-progress';
 import fs from 'node:fs';
 import { Transform } from 'node:stream';
 import { Client, Dispatcher, request } from 'undici';
 import { AbrgError, AbrgErrorLevel } from './AbrgError';
 import { AbrgMessage } from './AbrgMessage';
 import {
-  ArchiveMetadata,
   CKANPackageShow,
   CKANResponse,
   CheckForUpdatesOutput,
-  DatasetMetadata,
-  IArchiveMeta,
+  DatasetMetadata
 } from './types';
 
-export enum CkanDownloaderEvent {
-  START = 'start',
-  PROGRESS = 'progress',
-  END = 'end',
-}
-
 export interface CkanDownloaderParams {
-  db: Database;
+  ckanId: string;
   userAgent: string;
+  getLastDatasetModified: () => Promise<string | undefined>;
   getDatasetUrl: (ckanId: string) => string;
 }
 
-export class CkanDownloader extends EventEmitter {
-  private readonly db: Database;
+export class CkanDownloader {
+  private readonly getLastDatasetModified: () => Promise<string | undefined>;
   private readonly userAgent: string;
   private readonly getDatasetUrl: (ckanId: string) => string;
+  private readonly ckanId: string;
 
   constructor({
-    db,
+    ckanId,
     userAgent,
     getDatasetUrl,
+    getLastDatasetModified,
   }: CkanDownloaderParams) {
-    super();
-    this.db = db;
     this.userAgent = userAgent;
+    this.getLastDatasetModified = getLastDatasetModified;
     this.getDatasetUrl = getDatasetUrl;
-    // Object.freeze(this);
+    this.ckanId = ckanId;
+    Object.freeze(this);
   }
 
-  /**
-   * Find csv resouce for given ckanId.
-   * 
-   * Access to the CKAN api, then parse it.
-   * (i.e. https://catalog.registries.digital.go.jp/rc/api/3/action/package_show?id=ba000001)
-   * 
-   * @param ckanId 
-   * @returns {
-   *  fileUrl: download url for the csv resource.
-   *  lastModified: the timestamp last modified of the csv resource. (ISO8601)
-   * }
-   */
-  async getDatasetMetadata({
-    ckanId,
-  }: {
-    ckanId: string;
-  }): Promise<DatasetMetadata> {
-    const requestUrl = this.getDatasetUrl(ckanId);
 
-    const { statusCode, body } = await request(requestUrl, {
-      headers: {
-        'user-agent': this.userAgent,
-      }
-    });
+  async getDatasetMetadata(): Promise<DatasetMetadata> {
+
+    const { statusCode, body } = await request(
+      this.getDatasetUrl(this.ckanId),
+      {
+        headers: {
+          'user-agent': this.userAgent,
+        }
+      },
+    );
 
     const HTTP_OK = 200;
 
@@ -104,38 +85,15 @@ export class CkanDownloader extends EventEmitter {
     };
   }
 
-  /**
-   * Read the last modified timestamp from the database.
-   * @returns 
-   */
-  async getArchiveMetadata(): Promise<ArchiveMetadata | undefined> {
-    const allMetadata = this.db
-      .prepare('SELECT "key", "value" FROM "metadata"')
-      .all() as IArchiveMeta[];
-
-    const result: ArchiveMetadata = {};
-    allMetadata.forEach((row: IArchiveMeta) => {
-      result[row.key] = row.value;
-    });
-
-    return result;
-  }
-
-  async updateCheck({
-    ckanId,
-  }: {
-    ckanId: string;
-  }): Promise<CheckForUpdatesOutput> {
-    const upstreamMeta = await this.getDatasetMetadata({
-      ckanId,
-    });
-    const currentArchiveMeta = await this.getArchiveMetadata();
+  async updateCheck(): Promise<CheckForUpdatesOutput> {
+    const upstreamMeta = await this.getDatasetMetadata();
+    const lastModified = await this.getLastDatasetModified();
 
     const updateAvailable = (() => {
-      if (!currentArchiveMeta?.last_modified) {
+      if (!lastModified) {
         return true;
       }
-      return currentArchiveMeta.last_modified < upstreamMeta.lastModified;
+      return lastModified < upstreamMeta.lastModified;
     })();
 
     return {
@@ -145,21 +103,26 @@ export class CkanDownloader extends EventEmitter {
   }
 
   async download({
-    requestUrl,
-    outputFile,
+    progressBar,
+    downloadDir,
   }: {
-    requestUrl: URL;
-    outputFile: string;
-  }): Promise<Boolean> {
-    // perform the download
-
-    // this.logger.info(
-    //   `${AbrgMessage.toString(AbrgMessage.START_DOWNLOADING)}: ${requestUrl.toString()} -> ${outputFile}`,
-    // );
-
+    downloadDir: string;
+    progressBar?: SingleBar;
+  }): Promise<string> {
+    const upstreamMeta = await this.getDatasetMetadata();
+    const requestUrl = new URL(upstreamMeta.fileUrl);
     const client = new Client(requestUrl.origin);
-    const self: CkanDownloader = this;
+    const lastModifiedHash = upstreamMeta.lastModified.replace(/[^\d]+/g, '_');
+    const downloadFilePath = `${downloadDir}/${this.ckanId}_${lastModifiedHash}.zip`;
+    if (fs.existsSync(downloadFilePath)) {
+      const stats = await fs.promises.stat(downloadFilePath);
 
+      progressBar?.start(stats.size, 0);
+      progressBar?.update(stats.size);
+      progressBar?.stop();
+      return downloadFilePath;
+    }
+  
     const streamFactory: Dispatcher.StreamFactory = ({ statusCode, headers }) => {
       if (statusCode !== 200) {
         // this.logger.debug(`download error: status code = ${statusCode}`);
@@ -173,45 +136,24 @@ export class CkanDownloader extends EventEmitter {
         headers['content-length']!.toString(),
         decimal
       );
-      self.emit(CkanDownloaderEvent.START, {
-        total: contentLength,
-      });
-
-      const writerStream = fs.createWriteStream(outputFile);
+      progressBar?.start(contentLength, 0);
+ 
+      const writerStream = fs.createWriteStream(downloadFilePath);
       const writable = new Transform({
         transform(chunk, encoding, callback) {
-          self.emit(CkanDownloaderEvent.PROGRESS, {
-            incrementSize: chunk.length,
-          });
+          progressBar?.increment(chunk.length);
           callback(null, chunk);
         },
         destroy(error, callback) {
           writerStream.end();
-          self.emit(CkanDownloaderEvent.END);
+          progressBar?.stop();
           callback(null);
         },
       });
       writable.pipe(writerStream);
-
-
-      // const result = new Writable({
-      //   write(chunk, _, callback) {
-      //     if (chunk.length > 0) {
-      //       // wrapProgressBar?.increment(chunk.length);
-      //       // wrapProgressBar?.updateETA();
-      //     }
-      //     writerStream.write(chunk);
-      //     callback();
-      //   },
-      // });
-
-      // result.on('end', () => {
-      //   writerStream.end();
-      //   wrapProgressBar?.stop();
-      // });
       return writable;
     };
-
+  
     await client.stream(
       {
         path: requestUrl.pathname,
@@ -223,6 +165,6 @@ export class CkanDownloader extends EventEmitter {
       streamFactory
     );
 
-    return Promise.resolve(true);
+    return downloadFilePath;
   }
 }

@@ -1,12 +1,14 @@
-import path from 'node:path';
+import { MultiBar, SingleBar } from 'cli-progress';
 import fs from 'node:fs';
+import path from 'node:path';
 import { container } from "tsyringe";
 import {
   provideDatabase,
-  provideDownloadProgressBar,
   provideLogger,
+  provideMultiProgressBar,
+  provideProgressBar,
 } from './providers';
-import {setupContainerParams} from './setupContainerParams';
+import { setupContainerParams } from './setupContainerParams';
 
 export const setupContainer = async ({
   dataDir,
@@ -36,7 +38,7 @@ export const setupContainer = async ({
   const db = await provideDatabase({
     schemaFilePath,
     sqliteFilePath,
-  })
+  });
   container.register('Database', {
     useValue: db,
   });
@@ -44,8 +46,16 @@ export const setupContainer = async ({
   const logger = provideLogger();
   container.registerInstance('Logger', logger);
 
-  const progress = provideDownloadProgressBar();
-  container.registerInstance('DownloadProgressBar', progress);
+  container.register<SingleBar>('ProgressBar', {
+    useFactory: (c) => {
+      return provideProgressBar();
+    } 
+  });
+  container.register<MultiBar>('MultiProgressBar', {
+    useFactory: (c) => {
+      return provideMultiProgressBar();
+    } 
+  });
 };
 
 

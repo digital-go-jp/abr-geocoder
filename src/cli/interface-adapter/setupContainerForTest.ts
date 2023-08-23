@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import { container } from "tsyringe";
 import {
   provideDatabase,
-  provideDownloadProgressBar,
+  provideProgressBar,
   provideLogger,
+  provideMultiProgressBar,
 } from './providers';
 import {setupContainerParams} from './setupContainerParams';
 
@@ -43,8 +44,10 @@ export const setupContainerForTest = async ({
   const logger = provideLogger();
   container.registerInstance('Logger', logger);
 
-  const progress = provideDownloadProgressBar();
-  container.registerInstance('DownloadProgressBar', progress);
+  const progress = provideProgressBar();
+  container.registerInstance('ProgressBar', progress);
+  const progress2 = provideMultiProgressBar();
+  container.registerInstance('MultiProgressBar', progress2);
 };
 
 

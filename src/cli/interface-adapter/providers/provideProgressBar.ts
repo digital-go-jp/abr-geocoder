@@ -2,8 +2,10 @@
 import { SingleBar } from "cli-progress";
 import prettyBytes from "pretty-bytes";
 
-export const provideDownloadProgressBar = (): SingleBar => {
+export const provideProgressBar = (): SingleBar => {
   return new SingleBar({
+    // Since Visual Code does not display stdError for some reason, we use stdout instead.
+    stream: process.stdout,
     format: ' {bar} {percentage}% | ETA: {eta_formatted} | {value}/{total}',
     barCompleteChar: '\u2588',
     barIncompleteChar: '\u2591',

@@ -1,3 +1,4 @@
 export * from './provideDatabase';
-export * from './provideDownloadProgressBar';
+export * from './provideProgressBar';
 export * from './provideLogger';
+export * from './provideMultiProgressBar';

@@ -8,8 +8,7 @@ import {
   AbrgError,
   AbrgErrorLevel,
   AbrgMessage,
-  CkanDownloader,
-  getDataDir,
+  CkanDownloader
 } from '../domain';
 import {
   setupContainer,
@@ -41,16 +40,27 @@ export namespace updateCheck {
       throw new Error('Must run init() or initForTest() before involving this function');
     }
 
+    const db = container.resolve<Database>('Database');
+
+    const getLastDatasetModified = async (): Promise<string | undefined> => {
+      const result = db
+        .prepare(`select value from metadata where key = 'last_modified' limit 1`)
+        .get() as {
+          value: string,
+        } | undefined;
+      return result?.value;
+    };
+    
     const logger = container.resolve<Logger>('Logger');
+    const userAgent: string = container.resolve('USER_AGENT');
     const downloader = new CkanDownloader({
-      db: container.resolve<Database>('Database'),
-      userAgent: container.resolve('USER_AGENT'),
+      ckanId: params.ckanId,
+      userAgent,
       getDatasetUrl: container.resolve('getDatasetUrl'),
+      getLastDatasetModified,
     });
   
-    const {updateAvailable} = await downloader.updateCheck({
-      ckanId: params.ckanId,
-    });
+    const {updateAvailable} = await downloader.updateCheck();
   
     logger.info(
       AbrgMessage.toString(
