@@ -2,7 +2,6 @@ export class DataField {
   private constructor(
     public csv: string,
     public dbColumn: string,
-    private valueProp: string = ''
   ) {
     this.csv = this.csv.toLocaleLowerCase();
     this.dbColumn = this.dbColumn.toLocaleLowerCase();
@@ -36,14 +35,15 @@ export class DataField {
     '市区町村名_英字',
     'city_name_roma'
   );
-  static readonly COUNTRY_NAME = new DataField('郡名', 'country_name');
-  static readonly COUNTRY_NAME_KANA = new DataField(
+
+  static readonly COUNTY_NAME = new DataField('郡名', 'county_name');
+  static readonly COUNTY_NAME_KANA = new DataField(
     '郡名_カナ',
-    'country_name_kana'
+    'county_name_kana'
   );
-  static readonly COUNTRY_NAME_ROMA = new DataField(
+  static readonly COUNTY_NAME_ROMA = new DataField(
     '郡名_英字',
-    'country_name_roma'
+    'county_name_roma'
   );
   static readonly EFCT_DATE = new DataField('効力発生日', 'efct_date');
   static readonly KOAZA_ALT_NAME_FLG = new DataField(
@@ -64,10 +64,7 @@ export class DataField {
     'koaza_name_roma'
   );
 
-  // schema.sql の各テーブルにある code が lg_code に当たるようだが、
-  // 現時点では確証がないので、一旦 'code' にしておく
-  static readonly LG_CODE = new DataField('全国地方公共団体コード', 'code');
-  // static readonly LG_CODE = new DataField('全国地方公共団体コード', 'lg_code');
+  static readonly LG_CODE = new DataField('全国地方公共団体コード', 'lg_code');
 
   static readonly OAZA_FRN_LTRS_FLG = new DataField(
     '大字・町名_電子国土基本図外字',
@@ -145,9 +142,9 @@ export class DataField {
       市区町村名: DataField.CITY_NAME,
       市区町村名_カナ: DataField.CITY_NAME_KANA,
       市区町村名_英字: DataField.CITY_NAME_ROMA,
-      郡名: DataField.COUNTRY_NAME,
-      郡名_カナ: DataField.COUNTRY_NAME_KANA,
-      郡名_英字: DataField.COUNTRY_NAME_ROMA,
+      郡名: DataField.COUNTY_NAME,
+      郡名_カナ: DataField.COUNTY_NAME_KANA,
+      郡名_英字: DataField.COUNTY_NAME_ROMA,
       効力発生日: DataField.EFCT_DATE,
       小字名_通称フラグ: DataField.KOAZA_ALT_NAME_FLG,
       小字名_電子国土基本図外字: DataField.KOAZA_FRN_LTRS_FLG,

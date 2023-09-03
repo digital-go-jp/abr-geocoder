@@ -9,6 +9,7 @@ import {
   provideProgressBar,
 } from './providers';
 import {setupContainerParams} from './setupContainerParams';
+import { PrefectureName } from '../usecase';
 
 export const setupContainer = async ({
   dataDir,
@@ -51,5 +52,55 @@ export const setupContainer = async ({
     useFactory: () => {
       return provideMultiProgressBar();
     },
+  });
+  container.register<PrefectureName[]>('Prefectures', {
+    useValue: [
+      PrefectureName.HOKKAIDO,
+      PrefectureName.AOMORI,
+      PrefectureName.IWATE,
+      PrefectureName.MIYAGI,
+      PrefectureName.YAMAGATA,
+      PrefectureName.FUKUSHIMA,
+      PrefectureName.IBARAKI,
+      PrefectureName.TOCHIGI,
+      PrefectureName.GUMMA,
+      PrefectureName.SAITAMA,
+      PrefectureName.CHIBA,
+      PrefectureName.TOKYO,
+      PrefectureName.KANAGAWA,
+      PrefectureName.YAMANASHI,
+      PrefectureName.NAGANO,
+      PrefectureName.NIIGATA,
+      PrefectureName.TOYAMA,
+      PrefectureName.ISHIKAWA,
+      PrefectureName.FUKUI,
+      PrefectureName.SHIZUOKA,
+      PrefectureName.AICHI,
+      PrefectureName.GIFU,
+      PrefectureName.MIE,
+      PrefectureName.SHIGA,
+      PrefectureName.KYOTO,
+      PrefectureName.OSAKA,
+      PrefectureName.HYOGO,
+      PrefectureName.NARA,
+      PrefectureName.WAKAYAMA,
+      PrefectureName.OKAYAMA,
+      PrefectureName.HIROSHIMA,
+      PrefectureName.TOTTORI,
+      PrefectureName.SHIMANE,
+      PrefectureName.YAMAGUCHI,
+      PrefectureName.TOKUSHIMA,
+      PrefectureName.KAGAWA,
+      PrefectureName.EHIME,
+      PrefectureName.KOCHI,
+      PrefectureName.FUKUOKA,
+      PrefectureName.SAGA,
+      PrefectureName.NAGASAKI,
+      PrefectureName.OITA,
+      PrefectureName.KUMAMOTO,
+      PrefectureName.MIYAZAKI,
+      PrefectureName.KAGOSHIMA,
+      PrefectureName.OKINAWA,
+    ],
   });
 };

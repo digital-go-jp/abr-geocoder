@@ -1,15 +1,48 @@
+import { type } from "node:os";
+import { TransformCallback } from "node:stream";
+import { Query } from "./query.class";
+
+
+export interface ICity {
+  name: string;
+  lg_code: string;
+}
+
+export class City implements ICity {
+  public readonly name: string;
+  public readonly lg_code: string;
+
+  constructor(params: ICity) {
+    this.name = params.name;
+    this.lg_code = params.lg_code;
+    Object.freeze(this);
+  }
+}
 export interface ITown {
   name: string;
-  code: string;
+  lg_code: string;
+  town_id: string;
+  koaza: string;
+  lat: number;
+  lon: number;
+  originalName?: string;
 }
-export type TownOptions = ITown;
 
 export class Town implements ITown {
   public readonly name: string;
-  public readonly code: string;
-  constructor({name, code}: TownOptions) {
-    this.name = name;
-    this.code = code;
+  public readonly lg_code: string;
+  public readonly town_id: string;
+  public readonly koaza: string;
+  public readonly lat: number;
+  public readonly lon: number;
+
+  constructor(params: ITown) {
+    this.name = params.name;
+    this.lg_code = params.lg_code;
+    this.town_id = params.town_id;
+    this.koaza = params.koaza;
+    this.lat = params.lat;
+    this.lon = params.lon;
     Object.freeze(this);
   }
 }
@@ -64,75 +97,20 @@ export enum PrefectureName {
   OKINAWA = '沖縄県',
 }
 
-export type PrefectureType =
-  | PrefectureName.HOKKAIDO
-  | PrefectureName.AOMORI
-  | PrefectureName.IWATE
-  | PrefectureName.MIYAGI
-  | PrefectureName.YAMAGATA
-  | PrefectureName.FUKUSHIMA
-  | PrefectureName.IBARAKI
-  | PrefectureName.TOCHIGI
-  | PrefectureName.GUMMA
-  | PrefectureName.SAITAMA
-  | PrefectureName.CHIBA
-  | PrefectureName.TOKYO
-  | PrefectureName.KANAGAWA
-  | PrefectureName.YAMANASHI
-  | PrefectureName.NAGANO
-  | PrefectureName.NIIGATA
-  | PrefectureName.TOYAMA
-  | PrefectureName.ISHIKAWA
-  | PrefectureName.FUKUI
-  | PrefectureName.SHIZUOKA
-  | PrefectureName.AICHI
-  | PrefectureName.GIFU
-  | PrefectureName.MIE
-  | PrefectureName.SHIGA
-  | PrefectureName.KYOTO
-  | PrefectureName.OSAKA
-  | PrefectureName.HYOGO
-  | PrefectureName.NARA
-  | PrefectureName.WAKAYAMA
-  | PrefectureName.OKAYAMA
-  | PrefectureName.HIROSHIMA
-  | PrefectureName.TOTTORI
-  | PrefectureName.SHIMANE
-  | PrefectureName.YAMAGUCHI
-  | PrefectureName.TOKUSHIMA
-  | PrefectureName.KAGAWA
-  | PrefectureName.EHIME
-  | PrefectureName.KOCHI
-  | PrefectureName.FUKUOKA
-  | PrefectureName.SAGA
-  | PrefectureName.NAGASAKI
-  | PrefectureName.OITA
-  | PrefectureName.KUMAMOTO
-  | PrefectureName.MIYAZAKI
-  | PrefectureName.KAGOSHIMA
-  | PrefectureName.OKINAWA;
-
 export interface IPrefecture {
-  towns: ITown[];
-  todofuken_name: PrefectureType;
+  cities: ICity[];
+  name: PrefectureName;
 }
 export type PrefectureParams = IPrefecture;
 
 export class Prefecture implements IPrefecture {
-  public readonly towns: ITown[];
-  public readonly todofuken_name: PrefectureType;
-  constructor({towns, todofuken_name}: PrefectureParams) {
-    this.towns = towns;
-    this.todofuken_name = todofuken_name;
+  public readonly cities: ICity[];
+  public readonly name: PrefectureName;
+  constructor({cities, name}: PrefectureParams) {
+    this.cities = cities;
+    this.name = name;
     Object.freeze(this);
   }
-}
-
-export type SpecialPattern = [string, string];
-
-export interface PrefectureDB {
-  todofuken_name: string;
-  towns: string;
 }
 
 export enum OutputFormat {
@@ -150,3 +128,38 @@ export interface GeocodingParams {
   format: OutputFormat;
   fuzzy?: string;
 }
+
+export type InterpolatePattern = {
+  regExpPattern: string;
+  address: string;
+  prefectureName: PrefectureName;
+  cityName?: string;
+}
+export interface INormalizedCity {
+  result: string;
+}
+
+export interface getNormalizedCityParams {
+  address: string,
+  prefectureName: PrefectureName,
+  cityName: string;
+  wildcardHelper: (pattern: string) => string;
+}
+
+export type FromStep3Type = {
+  query: Query,
+
+  // move to step 4
+  callback: TransformCallback,
+};
+
+export type Step3aMatchedPatternType = {
+  prefecture: PrefectureName;
+  city: string;
+  input: string;
+};
+
+export type FromStep3aType = {
+  fromStep3: FromStep3Type;
+  matchedPatterns: Step3aMatchedPatternType[];
+};

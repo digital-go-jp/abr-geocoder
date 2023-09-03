@@ -8,6 +8,7 @@ import {
   provideMultiProgressBar,
 } from './providers';
 import {setupContainerParams} from './setupContainerParams';
+import { PrefectureName } from '../usecase';
 
 export const setupContainerForTest = async ({
   dataDir,
@@ -44,4 +45,11 @@ export const setupContainerForTest = async ({
   container.registerInstance('ProgressBar', progress);
   const progress2 = provideMultiProgressBar();
   container.registerInstance('MultiProgressBar', progress2);
+
+  container.register<PrefectureName[]>('Prefectures', {
+    useValue: [
+      PrefectureName.HOKKAIDO,
+      PrefectureName.AOMORI,
+    ],
+  });
 };

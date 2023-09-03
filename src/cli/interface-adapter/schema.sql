@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS "pref" (
-  "code" TEXT,
+  "lg_code" TEXT,
   "pref_name" TEXT,
   "pref_name_kana" TEXT,
   "pref_name_roma" TEXT,
@@ -8,16 +8,16 @@ CREATE TABLE IF NOT EXISTS "pref" (
   "remarks" TEXT
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "pref_code" ON "pref" ("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "pref_code" ON "pref" ("lg_code");
 
 CREATE TABLE IF NOT EXISTS "city" (
-  "code" TEXT,
+  "lg_code" TEXT,
   "pref_name" TEXT,
   "pref_name_kana" TEXT,
   "pref_name_roma" TEXT,
-  "country_name" TEXT,
-  "country_name_kana" TEXT,
-  "country_name_roma" TEXT,
+  "county_name" TEXT,
+  "county_name_kana" TEXT,
+  "county_name_roma" TEXT,
   "city_name" TEXT,
   "city_name_kana" TEXT,
   "city_name_roma" TEXT,
@@ -29,18 +29,18 @@ CREATE TABLE IF NOT EXISTS "city" (
   "remarks" TEXT
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "city_code" ON "city" ("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "city_code" ON "city" ("lg_code");
 
 CREATE TABLE IF NOT EXISTS "town" (
-  "code" TEXT,
+  "lg_code" TEXT,
   "town_id" TEXT,
   "town_code" TEXT,
   "pref_name" TEXT,
   "pref_name_kana" TEXT,
   "pref_name_roma" TEXT,
-  "country_name" TEXT,
-  "country_name_kana" TEXT,
-  "country_name_roma" TEXT,
+  "county_name" TEXT,
+  "county_name_kana" TEXT,
+  "county_name_roma" TEXT,
   "city_name" TEXT,
   "city_name_kana" TEXT,
   "city_name_roma" TEXT,
@@ -75,10 +75,10 @@ CREATE TABLE IF NOT EXISTS "town" (
   "rep_pnt_lat" REAL DEFAULT null
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "town_code" ON "town" ("code", "town_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "town_code" ON "town" ("lg_code", "town_id");
 
 CREATE TABLE IF NOT EXISTS "rsdtdsp_blk" (
-  "code" TEXT,
+  "lg_code" TEXT,
   "town_id" TEXT,
   "blk_id" TEXT,
   "city_name" TEXT,
@@ -102,10 +102,10 @@ CREATE TABLE IF NOT EXISTS "rsdtdsp_blk" (
   "rep_pnt_lat" REAL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_blk_code" ON "rsdtdsp_blk" ("code", "town_id", "blk_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_blk_code" ON "rsdtdsp_blk" ("lg_code", "town_id", "blk_id");
 
 CREATE TABLE IF NOT EXISTS "rsdtdsp_rsdt" (
-  "code" TEXT,
+  "lg_code" TEXT,
   "town_id" TEXT,
   "blk_id" TEXT,
   "addr_id" TEXT,
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS "rsdtdsp_rsdt" (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_rsdt_code" ON "rsdtdsp_rsdt" (
-  "code", "town_id", "blk_id", "addr_id", "addr2_id"
+  "lg_code", "town_id", "blk_id", "addr_id", "addr2_id"
 );
 
 CREATE TABLE IF NOT EXISTS "metadata" (

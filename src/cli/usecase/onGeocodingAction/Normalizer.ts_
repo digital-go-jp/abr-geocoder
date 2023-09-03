@@ -1,0 +1,164 @@
+import {Transform} from 'node:stream';
+import {TransformCallback} from 'stream';
+import {IPrefecture, ITown, InterpolatePattern, PrefectureName, getNormalizedCityParams} from './types';
+import { Query } from './query.class';
+import { getCityRegexPatterns } from './getCityRegexPatterns';
+import { ALPHA_NUMERIC_SYMBOLS, DASH_SYMBOLS, HANKAKU_DASH, HANKAKU_SPACE, NUMRIC_AND_KANJI_SYMBOLS, NUMRIC_SYMBOLS, SPACE_SYMBOLS } from '../../domain/constantValues';
+import { number2kanji } from '@geolonia/japanese-numeral';
+import { kan2num } from './kan2num';
+
+export interface INormalizerParams {
+  convertToHankaku: (query: string) => string;
+  sameNamedPrefPatterns: InterpolatePattern[];
+  prefPatterns: InterpolatePattern[];
+  cityPatternsForEachPrefecture: Map<PrefectureName, InterpolatePattern[]>;
+  getNormalizedCity: (params: getNormalizedCityParams) => Promise<ITown | undefined>;
+  wildcardHelper: (address: string) => string;
+  citiesByPrefectures: Record<string, IPrefecture>;
+}
+export type NormalizerParams = INormalizerParams;
+
+/**
+ * - コメント行 (# で始まる)は排除
+ * - 全角スペースを全て半角に変換
+ * - 全角英数字を全て半角に変換
+ * - その他、処理をし易いように変換する
+ */
+export class Normalizer extends Transform {
+  private readonly convertToHankaku: (query: string) => string;
+  private readonly sameNamedPrefPatterns: InterpolatePattern[] = [];
+  private readonly prefPatterns: InterpolatePattern[] = [];
+  private readonly cityPatternsForEachPrefecture: Map<PrefectureName, InterpolatePattern[]>;
+  private readonly getNormalizedCity: (params: getNormalizedCityParams) => Promise<ITown | undefined>;
+  private readonly wildcardHelper: (address: string) => string;
+  private readonly citiesByPrefectures: Record<string, IPrefecture>;
+
+  constructor(params: NormalizerParams) {
+    super();
+    this.convertToHankaku = params.convertToHankaku;
+    this.sameNamedPrefPatterns = params.sameNamedPrefPatterns;
+    this.prefPatterns = params.prefPatterns;
+    this.cityPatternsForEachPrefecture = params.cityPatternsForEachPrefecture;
+    this.getNormalizedCity = params.getNormalizedCity;
+    this.wildcardHelper = params.wildcardHelper;
+    this.citiesByPrefectures = params.citiesByPrefectures;
+    Object.freeze(this);
+  }
+
+  _transform(
+    query: Query,
+    encoding: BufferEncoding,
+    next: TransformCallback
+  ): void {
+    this.asyncProcess(query, (result: Query) => {
+      next(null, result);
+    });
+  }
+
+  async asyncProcess(query: Query, next: (result: Query) => void) {
+    
+
+    
+
+    
+
+    if (query.prefectureName) {
+      const prefecture = this.citiesByPrefectures[query.prefectureName];
+      const cityPatterns = getCityRegexPatterns({
+        prefecture,
+      });
+
+      for (const { regExpPattern, address, prefectureName } of cityPatterns) {
+        const match = query.tempAddress.match(
+          this.wildcardHelper(regExpPattern),
+        );
+        if (!match) {
+          continue;
+        }
+        query = query.copy({
+          city: address,
+
+          // 市区町村名以降の住所
+          tempAddress: query.tempAddress.substring(match[0].length),
+        });
+
+        break;
+      }
+    }
+
+    // 町丁目以降の正規化
+    if (query.city) {
+      const normalized = await this.getNormalizedCity({
+        address: query.tempAddress,
+        prefectureName: query.prefectureName!,
+        cityName: query.city,
+        wildcardHelper: this.wildcardHelper,
+      });
+      if (normalized) {
+        query = query.copy({
+          city: normalized.name,
+          townId: normalized.town_id,
+          tempAddress: query.tempAddress.replace(new RegExp(`^.+${normalized.name}`), ''),
+          lat: normalized.lat,
+          lon: normalized.lon,
+        });
+
+        // townが取得できた場合にのみ、addrに対する各種の変換処理を行う。
+        const newAddress = query.tempAddress
+          .replace(/^-/, '')
+          .replace(/([0-9]+)(丁目)/g, (match) => {
+            return match.replace(/([0-9]+)/g, (num) => {
+              return number2kanji(Number(num))
+            })
+          })
+          .replace(
+            new RegExp(`(([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号)[${SPACE_SYMBOLS}]*(.+)`),
+            '$1 $5',
+          )
+          .replace(
+            new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号?`),
+            '$1-$3',
+          )
+          .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)番地?`), '$1')
+          .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)の?`), '$1-')
+          .replace(
+            new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)[${DASH_SYMBOLS}]`, 'g'),
+            (match) => {
+              return kan2num(match).replace(new RegExp(`[${DASH_SYMBOLS}]`, 'g'), '-')
+            },
+          )
+          .replace(
+            new RegExp(`[${DASH_SYMBOLS}]([${NUMRIC_AND_KANJI_SYMBOLS}]+)`, 'g'),
+            (match) => {
+              return kan2num(match).replace(new RegExp(`[${DASH_SYMBOLS}]`, 'g'), '-')
+            },
+          )
+          .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)-`), (s) => {
+            // `1-` のようなケース
+            return kan2num(s)
+          })
+          .replace(new RegExp(`-([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), (s) => {
+            // `-1` のようなケース
+            return kan2num(s)
+          })
+          .replace(new RegExp(`-[^0-9]+([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), (s) => {
+            // `-あ1` のようなケース
+            return kan2num(s)
+          })
+          
+          .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), (s) => {
+            // `串本町串本１２３４` のようなケース
+            return kan2num(s)
+          })
+          .trim();
+        query = query.copy({
+          tempAddress: newAddress,
+        });
+
+
+      }
+    }
+
+    
+  }
+}

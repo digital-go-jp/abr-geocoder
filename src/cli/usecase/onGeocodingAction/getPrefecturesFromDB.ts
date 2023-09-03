@@ -1,12 +1,12 @@
 import {Database, Statement} from 'better-sqlite3';
 import {
   IPrefecture,
-  ITown,
+  ICity,
   Prefecture,
-  PrefectureDB,
-  PrefectureType,
-  Town,
+  PrefectureName,
+  City,
 } from './types';
+import { DataField } from '../../domain';
 
 export const getPrefecturesFromDB = async ({
   db,
@@ -15,25 +15,32 @@ export const getPrefecturesFromDB = async ({
 }): Promise<IPrefecture[]> => {
   const statement: Statement = db.prepare(`
     SELECT
-      pref_name AS "todofuken_name",
+      pref_name AS "name",
       json_group_array(json_object(
-        'name', country_name || city_name || od_city_name,
-        'code', "code"
-      )) AS "towns"
+        'name', (
+          "${DataField.COUNTY_NAME.dbColumn}" || 
+          "${DataField.CITY_NAME.dbColumn}" || 
+          "${DataField.OD_CITY_NAME.dbColumn}"
+        ),
+        'lg_code', "${DataField.LG_CODE.dbColumn}"
+      )) AS "cities"
     FROM city
     GROUP BY pref_name
   `);
 
-  const prefectures = statement.all() as PrefectureDB[];
-  return prefectures.map((value: PrefectureDB) => {
-    const townRawValues: ITown[] = JSON.parse(value.towns);
-    const towns = townRawValues.map(value => {
-      return new Town(value);
+  const prefectures = statement.all() as {
+    name: string;
+    cities: string;
+  }[];
+  return prefectures.map(value => {
+    const townRawValues: ICity[] = JSON.parse(value.cities);
+    const cities = townRawValues.map(value => {
+      return new City(value);
     });
 
     return new Prefecture({
-      todofuken_name: value.todofuken_name as PrefectureType,
-      towns,
+      name: value.name as PrefectureName,
+      cities,
     });
   });
 };

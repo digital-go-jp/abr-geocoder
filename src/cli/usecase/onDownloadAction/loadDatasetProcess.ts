@@ -97,10 +97,14 @@ export const loadDatasetProcess = async ({
           callback(null, TownPosDatasetFile.create(fileMeta, chunk.stream));
           break;
         case 'rsdtdsp_blk_pos':
-          callback(null, RsdtdspBlkPosFile.create(fileMeta, chunk.stream));
+          console.log(`---->skip ${fileMeta.filename}`);
+          callback(null);
+          // callback(null, RsdtdspBlkPosFile.create(fileMeta, chunk.stream));
           break;
         case 'rsdtdsp_rsdt_pos':
-          callback(null, RsdtdspRsdtPosFile.create(fileMeta, chunk.stream));
+          console.log(`---->skip ${fileMeta.filename}`);
+          callback(null);
+          // callback(null, RsdtdspRsdtPosFile.create(fileMeta, chunk.stream));
           break;
         default:
           console.log(`[error]--->${chunk.name}`);

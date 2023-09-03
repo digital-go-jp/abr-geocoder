@@ -6,3 +6,4 @@ export * from './types';
 export * from './saveArchiveMeta';
 export * from './unzipArchive';
 export * from './dataset';
+export * from './RegExpEx';

@@ -1,9 +1,10 @@
 {
   "extends": "./tsconfig.json",
+  "typeRoots": ["node_modules/@types", "node_modules/@jest"],
   "compilerOptions": {
-    "typeRoots": ["node_modules/@types"],
     "types": [ "node", "jest" ],
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "lib": ["ES2015"]
   },
   "include": [
     "src/cli/**/*.ts",

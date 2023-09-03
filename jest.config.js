@@ -1,4 +1,7 @@
+/** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
   "moduleFileExtensions": ["js", "ts"],
   "transform": {
     "^.+\\.ts$": [
@@ -8,7 +11,12 @@ module.exports = {
       }
     ]
   },
-  testRegex: "(/__tests__/.*|(\\.|/)(test|spec))\\.(js|ts)$",
+  "moduleDirectories": [
+    "node_modules",
+    "src"
+  ],
+  roots: ['./src'],
+  testRegex: './src/.*\\.(test|spec)?\\.(ts|ts)$',
   testPathIgnorePatterns: ["/lib/", "/node_modules/"],
   collectCoverage: true,
 };

@@ -1,53 +1,21 @@
-import {PrefectureName, SpecialPattern} from './types';
+import { IPrefecture, InterpolatePattern, Prefecture } from './types';
 
-export const getPrefectureRegexPatterns = (): SpecialPattern[] => {
-  return [
-    [PrefectureName.HOKKAIDO, `^${PrefectureName.HOKKAIDO}?`],
-    [PrefectureName.AOMORI, `^${PrefectureName.AOMORI}?`],
-    [PrefectureName.IWATE, `^${PrefectureName.IWATE}?`],
-    [PrefectureName.MIYAGI, `^${PrefectureName.MIYAGI}?`],
-    [PrefectureName.YAMAGATA, `^${PrefectureName.YAMAGATA}?`],
-    [PrefectureName.AKITA, `^${PrefectureName.AKITA}?`],
-    [PrefectureName.FUKUSHIMA, `^${PrefectureName.FUKUSHIMA}?`],
-    [PrefectureName.IBARAKI, `^${PrefectureName.IBARAKI}?`],
-    [PrefectureName.TOCHIGI, `^${PrefectureName.TOCHIGI}?`],
-    [PrefectureName.GUMMA, `^${PrefectureName.GUMMA}?`],
-    [PrefectureName.SAITAMA, `^${PrefectureName.SAITAMA}?`],
-    [PrefectureName.CHIBA, `^${PrefectureName.CHIBA}?`],
-    [PrefectureName.TOKYO, `^${PrefectureName.TOKYO}?`],
-    [PrefectureName.KANAGAWA, `^${PrefectureName.KANAGAWA}?`],
-    [PrefectureName.YAMANASHI, `^${PrefectureName.YAMANASHI}?`],
-    [PrefectureName.NAGANO, `^${PrefectureName.NAGANO}?`],
-    [PrefectureName.NIIGATA, `^${PrefectureName.NIIGATA}?`],
-    [PrefectureName.TOYAMA, `^${PrefectureName.TOYAMA}?`],
-    [PrefectureName.ISHIKAWA, `^${PrefectureName.ISHIKAWA}?`],
-    [PrefectureName.FUKUI, `^${PrefectureName.FUKUI}?`],
-    [PrefectureName.SHIZUOKA, `^${PrefectureName.SHIZUOKA}?`],
-    [PrefectureName.AICHI, `^${PrefectureName.AICHI}?`],
-    [PrefectureName.GIFU, `^${PrefectureName.GIFU}?`],
-    [PrefectureName.MIE, `^${PrefectureName.MIE}?`],
-    [PrefectureName.SHIGA, `^${PrefectureName.SHIGA}?`],
-    [PrefectureName.KYOTO, `^${PrefectureName.KYOTO}?`],
-    [PrefectureName.OSAKA, `^${PrefectureName.OSAKA}?`],
-    [PrefectureName.HYOGO, `^${PrefectureName.HYOGO}?`],
-    [PrefectureName.NARA, `^${PrefectureName.NARA}?`],
-    [PrefectureName.WAKAYAMA, `^${PrefectureName.WAKAYAMA}?`],
-    [PrefectureName.OKAYAMA, `^${PrefectureName.OKAYAMA}?`],
-    [PrefectureName.HIROSHIMA, `^${PrefectureName.HIROSHIMA}?`],
-    [PrefectureName.TOTTORI, `^${PrefectureName.TOTTORI}?`],
-    [PrefectureName.SHIMANE, `^${PrefectureName.SHIMANE}?`],
-    [PrefectureName.YAMAGUCHI, `^${PrefectureName.YAMAGUCHI}?`],
-    [PrefectureName.TOKUSHIMA, `^${PrefectureName.TOKUSHIMA}?`],
-    [PrefectureName.KAGAWA, `^${PrefectureName.KAGAWA}?`],
-    [PrefectureName.EHIME, `^${PrefectureName.EHIME}?`],
-    [PrefectureName.KOCHI, `^${PrefectureName.KOCHI}?`],
-    [PrefectureName.FUKUOKA, `^${PrefectureName.FUKUOKA}?`],
-    [PrefectureName.SAGA, `^${PrefectureName.SAGA}?`],
-    [PrefectureName.NAGASAKI, `^${PrefectureName.NAGASAKI}?`],
-    [PrefectureName.OITA, `^${PrefectureName.OITA}?`],
-    [PrefectureName.KUMAMOTO, `^${PrefectureName.KUMAMOTO}?`],
-    [PrefectureName.MIYAZAKI, `^${PrefectureName.MIYAZAKI}?`],
-    [PrefectureName.KAGOSHIMA, `^${PrefectureName.KAGOSHIMA}?`],
-    [PrefectureName.OKINAWA, `^${PrefectureName.OKINAWA}?`],
-  ];
+/**
+ *  オリジナルコード
+ *  https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/cacheRegexes.ts#L90-L102
+ */
+export const getPrefectureRegexPatterns = ({
+  prefectures,
+  wildcardHelper,
+}: {
+  prefectures: IPrefecture[],
+  wildcardHelper: (pattern: string) => string;
+}): InterpolatePattern[] => {
+  return prefectures.map<InterpolatePattern>(pref => {
+    return {
+      address: pref.name,
+      regExpPattern: wildcardHelper(`^${pref.name}?`),
+      prefectureName: pref.name,
+    };
+  });
 };

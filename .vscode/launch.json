@@ -4,48 +4,21 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
-    // {
-    //   "type": "node",
-    //   "request": "launch",
-    //   "name": "download command",
-    //   "runtimeArgs": [
-    //       "-r",
-    //       "ts-node/register"
-    //   ],
-    //   "args": [
-    //     "${workspaceFolder}/src/cli.ts",
-    //     "download"
-    //   ]
-    // },
 
     // {
     //   "type": "node",
     //   "request": "launch",
-    //   "name": "update-check",
+    //   "name": "temporally",
     //   "runtimeArgs": [
-    //       "-r",
-    //       "ts-node/register"
+    //     "--require",
+    //     "ts-node/register"
     //   ],
     //   "args": [
-    //     "${workspaceFolder}/src/cli.ts",
-    //     "update-check"
-    //   ]
+    //     "${workspaceFolder}/src/cli/usecase/onDownloadAction/loadDatasetProcess.ts",
+    //   ],
+    //   "console": "integratedTerminal",
+    //   "internalConsoleOptions": "neverOpen",
     // },
-
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "temporally",
-      "runtimeArgs": [
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/src/cli/usecase/onDownloadAction/loadDatasetProcess.ts",
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
     {
       "type": "node",
       "request": "launch",
@@ -72,7 +45,9 @@
       "args": [
         "${workspaceFolder}/src/cli/index.ts",
         "${workspaceFolder}/test/sample-data.txt",
-      ]
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
     },
     {
       "type": "node",
@@ -102,7 +77,9 @@
       "args": [
         "${workspaceFolder}/src/cli/index.ts",
         "update-check"
-      ]
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
     }
   ]
 }
