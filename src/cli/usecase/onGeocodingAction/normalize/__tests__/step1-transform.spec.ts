@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
 import Stream from "node:stream";
-import { DASH_ALT, SPACE } from "../../../../domain/";
+import { DASH_ALT, SPACE } from "../../../../domain/constantValues";
 import { Query } from "../../query.class";
 import { NormalizeStep1 } from '../step1-transform';
 import { WritableStreamToArray } from './stream-to-array';

@@ -46,6 +46,50 @@ export class AddressFinder {
     this.wildcardHelper = wildcardHelper;
 
     // getTownList() で使用するSQLをstatementにしておく
+    // this.getTownStatement = db.prepare(`
+    //   select
+    //     "town".${DataField.LG_CODE},
+    //     "town"."${DataField.TOWN_ID}",
+    //     "${DataField.OAZA_TOWN_NAME}" || "${DataField.CHOME_NAME}" as "name",
+    //     "${DataField.KOAZA_NAME}" as "koaza",
+    //     "${DataField.REP_PNT_LAT}" as "lat",
+    //     "${DataField.REP_PNT_LON}" as "lon"
+    //   from
+    //     "city"
+    //     left join "town" on town.${DataField.LG_CODE} = city.${DataField.LG_CODE}
+    //   where
+    //     "city"."${DataField.PREF_NAME}" = @prefecture AND
+    //     (
+    //       "city"."${DataField.COUNTY_NAME}" ||
+    //       "city"."${DataField.CITY_NAME}" ||
+    //       "city"."${DataField.OD_CITY_NAME}"
+    //     ) = @cityName AND
+    //     "${DataField.TOWN_CODE}" <> 3;
+    // `);
+
+
+    /*
+SELECT
+	town.lg_code,
+	town.town_id,
+	oaza_town_name || chome_name as "name",
+	koaza_name as "koaza",
+	rep_pnt_lat as "lat",
+	rep_pnt_lon as "lon"
+FROM
+	city left join "town" on town.lg_code = city.lg_code
+WHERE
+	city.pref_name = "東京都" AND
+	(
+		city.county_name || city.city_name || city.od_city_name
+	)  like "町田市%" AND
+	town_code <> 3
+	
+	*/
+
+
+    // = @cityName よりも like '@cityName%%' のがヒット件数が広いので、
+    // 試験的にこれにしてみる
     this.getTownStatement = db.prepare(`
       select
         "town".${DataField.LG_CODE},
@@ -63,10 +107,9 @@ export class AddressFinder {
           "city"."${DataField.COUNTY_NAME}" ||
           "city"."${DataField.CITY_NAME}" ||
           "city"."${DataField.OD_CITY_NAME}"
-        ) = @cityName AND
+        ) like '@cityName%' AND
         "${DataField.TOWN_CODE}" <> 3;
     `);
-
   }
 
   async find({
@@ -121,8 +164,9 @@ export class AddressFinder {
           originalName: town.originalName,
           town_id: town.town_id,
           koaza: town.koaza,
-          name: address.substring(match[0].length),
-        }
+          name: match[0],
+          tempAddress: address.substring(match[0].length),
+        };
       }
     }
 

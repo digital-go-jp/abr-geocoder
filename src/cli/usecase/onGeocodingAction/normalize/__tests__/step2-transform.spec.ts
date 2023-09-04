@@ -1,73 +1,166 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
 import Stream from "node:stream";
-import { DASH_ALT } from "../../../../domain";
+import { DASH_ALT } from '../../../../domain/constantValues';
 import { Query } from "../../query.class";
 import { InterpolatePattern, PrefectureName } from "../../types";
 import { NormalizeStep2 } from '../step2-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
+const sameNamedPrefPatterns: InterpolatePattern[] = [
+  {
+    address: `${PrefectureName.HIROSHIMA}広島市`,
+    regExpPattern: '^広島市',
+    prefectureName: PrefectureName.HIROSHIMA,
+    cityName: '広島市'
+  },
+  {
+    address: `${PrefectureName.HIROSHIMA}広島市佐伯区`,
+    regExpPattern: '^広島市佐伯区',
+    prefectureName: PrefectureName.HIROSHIMA,
+    cityName: '広島市佐伯区'
+  },
+  {
+    address: `${PrefectureName.KYOTO}京都市`,
+    regExpPattern: '^京都市',
+    prefectureName: PrefectureName.KYOTO,
+    cityName: '京都市'
+  },
+  {
+    address: `${PrefectureName.KYOTO}京都市北区`,
+    regExpPattern: '^京都市北区',
+    prefectureName: PrefectureName.KYOTO,
+    cityName: '京都市北区'
+  },
+  {
+    address: `${PrefectureName.KYOTO}京都市上京区`,
+    regExpPattern: '^京都市上京区',
+    prefectureName: PrefectureName.KYOTO,
+    cityName: '京都市上京区'
+  },
+  {
+    address: `${PrefectureName.NAGASAKI}長崎市`,
+    regExpPattern: '^長崎市',
+    prefectureName: PrefectureName.NAGASAKI,
+    cityName: '長崎市'
+  },
+  {
+    address: `${PrefectureName.KAGOSHIMA}県鹿児島市`,
+    regExpPattern: '^鹿児島市',
+    prefectureName: PrefectureName.KAGOSHIMA,
+    cityName: '鹿児島市'
+  },
+  {
+    address: `${PrefectureName.KAGOSHIMA}鹿児島郡三島村`,
+    regExpPattern: '^鹿児島郡三島村',
+    prefectureName: PrefectureName.KAGOSHIMA,
+    cityName: '鹿児島郡三島村'
+  },
+  {
+    address: `${PrefectureName.KAGOSHIMA}鹿児島郡十島村`,
+    regExpPattern: '^鹿児島郡十島村',
+    prefectureName: PrefectureName.KAGOSHIMA,
+    cityName: '鹿児島郡十島村'
+  },
+  {
+    address: `${PrefectureName.FUKUSHIMA}石川郡石川町`,
+    regExpPattern: '^石川郡石川町',
+    prefectureName: PrefectureName.FUKUSHIMA,
+    cityName: '石川郡石川町'
+  },
+  {
+    address: `${PrefectureName.FUKUSHIMA}石川郡玉川村`,
+    regExpPattern: '^石川郡玉川村',
+    prefectureName: PrefectureName.FUKUSHIMA,
+    cityName: '石川郡玉川村'
+  },
+  {
+    address: `${PrefectureName.FUKUSHIMA}石川郡平田村`,
+    regExpPattern: '^石川郡平田村',
+    prefectureName: PrefectureName.FUKUSHIMA,
+    cityName: '石川郡平田村'
+  },
+  {
+    address: `${PrefectureName.FUKUSHIMA}石川郡浅川町`,
+    regExpPattern: '^石川郡浅川町',
+    prefectureName: PrefectureName.FUKUSHIMA,
+    cityName: '石川郡浅川町'
+  },
+  {
+    address: `${PrefectureName.FUKUSHIMA}石川郡古殿町`,
+    regExpPattern: '^石川郡古殿町',
+    prefectureName: PrefectureName.FUKUSHIMA,
+    cityName: '石川郡古殿町'
+  }
+];
+/**
+ * step2は都道府県名と同一名称の市町村名に対しての処理のみ
+ */
 describe('step2transform', () => {
-  const testCases: { input: Query, expect: Query }[] = [
-    {
-      // 千葉県千葉市中央区祐光1-25-3 で、千葉県を省略したケース
-      input: Query.create(`千葉市中央区祐光1${DASH_ALT}25${DASH_ALT}3`),
-
-      expect: Query.create(`千葉市中央区祐光1${DASH_ALT}25${DASH_ALT}3`).copy({
-        prefectureName: '千葉県' as PrefectureName,
-        tempAddress: `中央区祐光1${DASH_ALT}25${DASH_ALT}3`,
-        city: '千葉市',
-      })
-    },
-
-    {
-      // 青森県青森市油川字船岡36 で、青森県を省略したケース
-      input: Query.create(`青森市油川字船岡36`),
-
-      expect: Query.create(`青森市油川字船岡36`).copy({
-        prefectureName: '青森県' as PrefectureName,
-        tempAddress: `油川字船岡36`,
-        city: '青森市',
-      })
-    }
-  ];
-  const sameNamedPrefPatterns: InterpolatePattern[] = [
-    {
-      address: '千葉県千葉市',
-      cityName: '千葉市',
-      regExpPattern: '^千葉市',
-      prefectureName: '千葉県' as PrefectureName,
-    },
-    {
-      address: '青森県青森市',
-      cityName: '青森市',
-      regExpPattern: '^青森市',
-      prefectureName: '青森県' as PrefectureName,
-    }
-  ];
-  const target = new NormalizeStep2(sameNamedPrefPatterns);
-  const outputWrite = new WritableStreamToArray<Query>();
-
-  beforeEach(() => {
-    outputWrite.reset();
-  });
   
-  it('都道府県が省略されていて、', async () => {
-    const inputs = testCases.map(x => x.input);
-    const source = Stream.Readable.from(inputs, {
+  const doProcess = async (input: Query, expectValues: Query[]) => {
+    const source = Stream.Readable.from([input], {
       objectMode: true,
     });
 
+    const target = new NormalizeStep2(sameNamedPrefPatterns);
+    const outputWrite = new WritableStreamToArray<Query>();
     await Stream.promises.pipeline(
       source,
       target,
       outputWrite,
     );
-    
-    const actualValues = outputWrite.toArray();
-    expect(actualValues.length).toBe(testCases.length);
-    testCases.forEach((testCaseQuery, i) => {
-      expect(actualValues[i]).toEqual(testCaseQuery.expect);
-    })
 
+    const actualValues = outputWrite.toArray();
+
+    expect(actualValues.length).toBe(expectValues.length);
+    expect(actualValues).toEqual(expectValues);
+  };
+  
+  it('"長崎" 県 "長崎" 市と同一名称を含むケース', async () => {
+    const input = Query.create(`長崎市魚の町4${DASH_ALT}1`);
+    const expectValues = [
+        Query.create(`長崎市魚の町4${DASH_ALT}1`).copy({
+        prefectureName: PrefectureName.NAGASAKI,
+        tempAddress: `魚の町4${DASH_ALT}1`,
+        city: '長崎市',
+      }),
+    ];
+    await doProcess(input, expectValues);
   });
+
+  it('他都道府県名を含む市町村名のケース', async () => {
+    const input = Query.create(`石川郡平田村大字永田字切田116番地`);
+    const expectValues = [
+      Query.create(`石川郡平田村大字永田字切田116番地`).copy({
+        prefectureName: PrefectureName.FUKUSHIMA,
+        tempAddress: `大字永田字切田116番地`,
+        city: '石川郡平田村',
+      }),
+    ];
+    await doProcess(input, expectValues);
+  });
+
+  it('step2ではマッチしないケース', async () => {
+    const input = Query.create(`東彼杵郡東彼杵町蔵本郷1850番地6`);
+    const expectValues = [
+      input,
+      // Query.create(`東彼杵郡東彼杵町蔵本郷1850番地6`).copy({
+      //   prefectureName: PrefectureName.NAGASAKI,
+      //   tempAddress: `蔵本郷1850番地6`,
+      //   city: '東彼杵郡東彼杵町',
+      // }),
+    ];
+    await doProcess(input, expectValues);
+  });
+
+  // it('「市」を市原市が含んでいるケース', async () => {
+  //   const input = Query.create(`市原市国分寺台中央1丁目1番地1`);
+  //   const expectValue = Query.create(`市原市国分寺台中央1丁目1番地1`).copy({
+  //     prefectureName: PrefectureName.CHIBA,
+  //     tempAddress: `国分寺台中央1丁目1番地1`,
+  //     city: '市原市',
+  //   });
+  //   await doProcess(input, expectValue);
+  // });
+
 });

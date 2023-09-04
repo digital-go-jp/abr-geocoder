@@ -1,17 +1,25 @@
-import {beforeAll, describe, expect, it, jest, xit} from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import Stream from "node:stream";
+import { pipeline } from 'node:stream/promises';
+import { AddressFinder, FindParameters } from '../../AddressFinder';
 import { Query } from "../../query.class";
-import { FromStep3Type, FromStep3aType, ITown, InterpolatePattern, PrefectureName, Step3aMatchedPatternType, getNormalizedCityParams } from "../../types";
+import { FromStep3Type, ITown, PrefectureName, Step3aMatchedPatternType } from "../../types";
 import { NormalizeStep3b } from '../step3b-transform';
 import { WritableStreamToArray } from './stream-to-array';
-import { pipeline } from 'node:stream/promises';
-import { dummyPrefectures } from './dummyPrefectures';
-import Database from 'better-sqlite3';
-import { AddressFinder, FindParameters } from '../../AddressFinder';
 
-jest.mock('better-sqlite3');
-jest.mock('../../AddressFinder');
-const AddressFinderMock = AddressFinder as jest.Mock;
+const mockedFinder = jest.createMockFromModule<AddressFinder>('../../AddressFinder');
+mockedFinder.find.mockImplementation((_params: FindParameters) => {
+  return Promise.resolve({
+    lg_code: '911029',
+    lat: 43,
+    lon: 141,
+    originalName: '',
+    town_id: '0002006',
+    koaza: '',
+    name: '2-31'
+  });
+})
+
 
 describe('step3b-transform', () => {
   
@@ -32,34 +40,8 @@ describe('step3b-transform', () => {
       }
     ];
 
-    // jest.mock() で Database クラスをモック化してある
-    const mockedDB = new Database(':memory:');
-    const wildcardHelper = (address: string) => {
-      return address;
-    };
-    AddressFinderMock.mockImplementation(() => {
-      return {
-        find: (params: FindParameters): Promise<ITown | null> => {
-          return Promise.resolve({
-            lg_code: '002-1',
-            lat: 0.0,
-            lon: 0.0,
-            originalName: '越後市',
-            town_id: '000',
-            koaza: 'something',
-            name: 'somewhere'
-          })
-        }
-      }
-    })
-
     // jest.mock() で AddressFinder クラスをモック化してある
-    const addressFinder = new AddressFinderMock({
-      db: mockedDB,
-      wildcardHelper,
-    });
-    
-    const target = new NormalizeStep3b(addressFinder as AddressFinder);
+    const target = new NormalizeStep3b(mockedFinder);
     const outputWrite = new WritableStreamToArray<Query>();
 
     const fromStep3: FromStep3Type = {

@@ -26,6 +26,7 @@ export interface ITown {
   lat: number;
   lon: number;
   originalName?: string;
+  tempAddress?: string;
 }
 
 export class Town implements ITown {

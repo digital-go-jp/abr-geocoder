@@ -1,6 +1,10 @@
 import { RegExpEx } from '../../domain';
-import { IPrefecture, InterpolatePattern } from './types';
+import { IPrefecture, InterpolatePattern, Prefecture, PrefectureName } from './types';
 
+class Trie {
+  children = new Map<string, Trie>();
+  eow = false;
+}
 /**
  * 「福島県石川郡石川町」のように、市の名前が別の都道府県名から始まっているケースのための
  * 正規表現パターンを生成する
@@ -16,29 +20,48 @@ export const getSameNamedPrefecturePatterns = ({
   wildcardHelper: (pattern: string) => string;
 }): InterpolatePattern[] => {
 
-  const results: InterpolatePattern[] = prefectures
-    // 都道府県名を市町村名の頭文字から含むものだけを抽出する
-    //
-    // 例：
-    // 「福島県石川郡石川町」 の「石川郡石川町」の部分で「石川」が「石川県」にマッチする
-    .flatMap(pref => {
-      const prefectureName = pref.name.replace(RegExpEx.create('[都道府県]$'), '');
-      return pref.cities.map<InterpolatePattern | undefined>(city => {
-        console.log(`${city.name} : ${prefectureName}`);
-        if (!city.name.startsWith(prefectureName)) {
+  // 都道府県名のトライ木を作る
+  const root = new Trie();
+  const removeSymbol = RegExpEx.create('[都道府県]$');
+  Object.values(PrefectureName).forEach(prefName => {
+    const prefectureName = prefName.replace(removeSymbol, '');
+    
+    let parent = root;
+    for (const char of [...prefectureName]) {
+      if (!parent.children.has(char)) {
+        parent.children.set(char, new Trie());
+      }
+      parent = parent.children.get(char)!;
+    }
+    parent.eow = true;
+  })
+
+  const results: InterpolatePattern[] = [];
+  // 都道府県名を市町村名の頭文字から含むものだけを抽出する
+  //
+  // 例：
+  // 「福島県石川郡石川町」 の「石川郡石川町」の部分で「石川」が「石川県」にマッチする
+  prefectures.forEach(pref => {
+    pref.cities.forEach(city => {
+      let parent = root;
+      for (const char of [...city.name]) {
+        if (!parent.children.has(char)) {
           return;
         }
-
-        return {
-          address: `${pref.name}${city.name}`,
-          regExpPattern: wildcardHelper(`^${city.name}`),
-          prefectureName: pref.name,
-          cityName: city.name,
-        };
-      })
-    })
-    // マッチしないデータを排除
-    .filter(x => x !== undefined) as InterpolatePattern[];
+        parent = parent.children.get(char)!;
+        if (parent.eow) {
+          break;
+        }
+      }
+      
+      results.push({
+        address: `${pref.name}${city.name}`,
+        regExpPattern: wildcardHelper(`^${city.name}`),
+        prefectureName: pref.name,
+        cityName: city.name,
+      });
+    });
+  });
 
   return results;
 };
