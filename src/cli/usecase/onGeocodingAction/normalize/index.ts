@@ -5,3 +5,5 @@ export * from './step3a-transform';
 export * from './step3b-transform';
 export * from './step3final-transform';
 export * from './step4-transform';
+export * from './step5-transform';
+export * from './step6-transform';

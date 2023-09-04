@@ -13,7 +13,8 @@ module.exports = {
   },
   "moduleDirectories": [
     "node_modules",
-    "src"
+    "src",
+    "settings"
   ],
   roots: ['./src'],
   testRegex: './src/.*\\.(test|spec)?\\.(ts|ts)$',

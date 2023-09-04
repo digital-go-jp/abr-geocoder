@@ -164,3 +164,11 @@ export type FromStep3aType = {
   fromStep3: FromStep3Type;
   matchedPatterns: Step3aMatchedPatternType[];
 };
+
+export interface IAddressPatch {
+  prefecture: PrefectureName;
+  city: string;
+  town: string;
+  regExpPattern: string;
+  result: string;
+}

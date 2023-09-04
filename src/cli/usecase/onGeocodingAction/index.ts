@@ -5,6 +5,7 @@ import { Database } from 'better-sqlite3';
 import byline from 'byline';
 import { Stream } from 'node:stream';
 import { container } from 'tsyringe';
+import { patchPatterns } from '../../../../settings/';
 import { RegExpEx } from '../../domain';
 import {
   setupContainer,
@@ -17,7 +18,17 @@ import { getPrefectureRegexPatterns } from './getPrefectureRegexPatterns';
 import { getPrefecturesFromDB } from './getPrefecturesFromDB';
 import { getReadStreamFromSource } from './getReadStreamFromSource';
 import { getSameNamedPrefecturePatterns } from './getSameNamedPrefecturePatterns';
-import { NormalizeStep1, NormalizeStep2, NormalizeStep3, NormalizeStep3Final, NormalizeStep3a, NormalizeStep3b, NormalizeStep4 } from './normalize';
+import {
+  NormalizeStep1,
+  NormalizeStep2,
+  NormalizeStep3,
+  NormalizeStep3Final,
+  NormalizeStep3a,
+  NormalizeStep3b,
+  NormalizeStep4,
+  NormalizeStep5,
+  NormalizeStep6,
+} from './normalize';
 import { Query } from './query.class';
 import { GeocodingParams, IPrefecture, InterpolatePattern } from './types';
 
@@ -135,10 +146,19 @@ export namespace geocodingAction {
       .pipe(step3b_stream)
       .pipe(step3final_stream)
     const normalizeStep3 = new NormalizeStep3(step3stream);
+
+    // 何をしているのか良くわからない
     const normalizeStep4 = new NormalizeStep4({
       cityPatternsForEachPrefecture,
       wildcardHelper,
     });
+
+    // もう一度データベースを探して、情報を追加
+    // (step3bを通過しないデータもあるから、このステップで追加しているように思う)
+    const normalizeStep5 = new NormalizeStep5(addressFinder);
+
+    // アドレスの補正処理らしいことをしている
+    const normalizeStep6 = new NormalizeStep6(patchPatterns);
 
     getReadStreamFromSource(source)
       .pipe(lineStream)
@@ -147,6 +167,7 @@ export namespace geocodingAction {
       .pipe(normalizeStep2)
       .pipe(normalizeStep3)
       .pipe(normalizeStep4)
+      .pipe(normalizeStep5)
       .pipe(new Stream.Writable({
         objectMode: true,
         write(chunk, encoding, callback) {
