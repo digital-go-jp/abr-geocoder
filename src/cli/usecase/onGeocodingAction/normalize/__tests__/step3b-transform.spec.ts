@@ -3,53 +3,70 @@ import Stream from "node:stream";
 import { pipeline } from 'node:stream/promises';
 import { AddressFinder, FindParameters } from '../../AddressFinder';
 import { Query } from "../../query.class";
-import { FromStep3Type, ITown, PrefectureName, Step3aMatchedPatternType } from "../../types";
+import { FromStep3Type, PrefectureName } from "../../types";
 import { NormalizeStep3b } from '../step3b-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
-const mockedFinder = jest.createMockFromModule<AddressFinder>('../../AddressFinder');
-mockedFinder.find.mockImplementation((_params: FindParameters) => {
-  return Promise.resolve({
-    lg_code: '911029',
-    lat: 43,
-    lon: 141,
-    originalName: '',
-    town_id: '0002006',
-    koaza: '',
-    name: '2-31'
-  });
-})
+jest.mock<AddressFinder>('../../AddressFinder');
 
+const MockedAddressFinder = AddressFinder as jest.Mock;
+MockedAddressFinder.mockImplementation(() => {
+  return {
+    find: (params: FindParameters) => {
+      switch(params.prefecture) {
+        case PrefectureName.TOKYO:
+          return Promise.resolve({
+            lg_code: '132063',
+            town_id: '0001002',
+            name: '本宿町2丁目',
+            koaza: '',
+            lat: 35.672654,
+            lon: 139.46089,
+            originalName: '',
+            tempAddress: '22番地の22',
+          });
+        case PrefectureName.HIROSHIMA:
+          return Promise.resolve(null);
+        
+        default:
+          throw new Error(`Unexpected prefecture was given: ${params.prefecture}`);
+      }
+    },
+  };
+});
 
 describe('step3b-transform', () => {
   
   it('複数の都道府県名にマッチする場合は、町名まで正規化して都道府県名を判別する', async () => {
-    // 越後県越後市 と 陸奥県越後市 にマッチする
-    const dummyData = Query.create(`越後市どこか`);
+    // 東京都府中市と にマッチする
     const dummyCallback = jest.fn();
-    const expectMatchedPatterns: Step3aMatchedPatternType[] = [
-      {
-        prefecture: '越後県' as PrefectureName,
-        city: '越後市',
-        input: '槙山村'
-      },
-      {
-        prefecture: '陸奥県' as PrefectureName,
-        city: '越後市',
-        input: '川袋村'
-      }
-    ];
 
     // jest.mock() で AddressFinder クラスをモック化してある
-    const target = new NormalizeStep3b(mockedFinder);
+    const finder = new MockedAddressFinder() as AddressFinder;
+    const target = new NormalizeStep3b(finder);
     const outputWrite = new WritableStreamToArray<Query>();
+    const matchedPatterns = [
+      {
+        prefecture: PrefectureName.HIROSHIMA,
+        city: '府中市',
+        input: '宮西町2丁目24番地',
+      },
+      {
+        prefecture: PrefectureName.TOKYO,
+        city: '府中市',
+        input: '宮西町2丁目24番地',
+      },
+    ];
 
     const fromStep3: FromStep3Type = {
-      query: dummyData,
+      query: Query.create(`府中市宮西町2丁目24番地`),
       callback: dummyCallback,
     };
     await pipeline(
-      Stream.Readable.from([fromStep3], {
+      Stream.Readable.from([{
+        fromStep3,
+        matchedPatterns,
+      }], {
         objectMode: true,
       }),
       target,
@@ -59,8 +76,11 @@ describe('step3b-transform', () => {
     const actualValues = outputWrite.toArray();
     expect(actualValues.length).toBe(1);
     expect(actualValues[0]).toEqual({
-      fromStep3,
-      matchedPatterns: expectMatchedPatterns
+      query: Query.create('府中市宮西町2丁目24番地').copy({
+        prefectureName: PrefectureName.TOKYO,
+        city: '府中市',
+      }),
+      callback: dummyCallback,
     })
 
   });
