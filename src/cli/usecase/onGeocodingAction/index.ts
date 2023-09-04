@@ -5,24 +5,21 @@ import { Database } from 'better-sqlite3';
 import byline from 'byline';
 import { Stream } from 'node:stream';
 import { container } from 'tsyringe';
+import { RegExpEx } from '../../domain';
 import {
   setupContainer,
   setupContainerForTest,
   setupContainerParams,
 } from '../../interface-adapter';
-import { getReadStreamFromSource } from './getReadStreamFromSource';
-import { FromStep3Type, GeocodingParams, INormalizedCity, IPrefecture, ITown, InterpolatePattern, Prefecture, PrefectureName, getNormalizedCityParams } from './types';
-import { getPrefecturesFromDB } from './getPrefecturesFromDB';
-import { getPrefectureRegexPatterns } from './getPrefectureRegexPatterns';
-import { getSameNamedPrefecturePatterns } from './getSameNamedPrefecturePatterns';
-import { DataField, RegExpEx } from '../../domain';
-import { findKanjiNumbers } from '@geolonia/japanese-numeral'
-import { toRegexPattern } from './toRegexPattern';
-import { NormalizeStep1, NormalizeStep2, NormalizeStep3, NormalizeStep3a, NormalizeStep3b } from './normalize';
-import { Query } from './query.class';
-import { DASH_SYMBOLS } from '../../domain/constantValues';
-import { getCityPatternsForEachPrefecture } from './getCityPatternsForEachPrefecture';
 import { AddressFinder } from './AddressFinder';
+import { getCityPatternsForEachPrefecture } from './getCityPatternsForEachPrefecture';
+import { getPrefectureRegexPatterns } from './getPrefectureRegexPatterns';
+import { getPrefecturesFromDB } from './getPrefecturesFromDB';
+import { getReadStreamFromSource } from './getReadStreamFromSource';
+import { getSameNamedPrefecturePatterns } from './getSameNamedPrefecturePatterns';
+import { NormalizeStep1, NormalizeStep2, NormalizeStep3, NormalizeStep3Final, NormalizeStep3a, NormalizeStep3b, NormalizeStep4 } from './normalize';
+import { Query } from './query.class';
+import { GeocodingParams, IPrefecture, InterpolatePattern } from './types';
 
 export namespace geocodingAction {
   let initialized = false;
@@ -116,35 +113,32 @@ export namespace geocodingAction {
      */
     const cityPatternsForEachPrefecture = getCityPatternsForEachPrefecture(prefectures);
 
-
-    const citiesByPrefectures: Record<string, IPrefecture> = {};
-    prefectures.forEach((pref) => {
-      citiesByPrefectures[pref.name] = pref;
-    });
-
+    // 住所の正規化処理 第一段階
     const normalizeStep1 = new NormalizeStep1();
+
+    // 特定のパターンから都道府県名が判別できるか試みる
     const normalizeStep2 = new NormalizeStep2(sameNamedPrefPatterns);
 
-    const step3stream = new Stream.Readable({
-      objectMode: true,
-    });
-    const step3astream = new NormalizeStep3a(cityPatternsForEachPrefecture);
-
+    // step3はデータベースを使って都道府県と市町村を特定するため、処理が複雑になる
+    // なので、さらに別のストリームで処理を行う
     const addressFinder = new AddressFinder({
       db,
       wildcardHelper,
     });
-
-    const step3bstream = new NormalizeStep3b(addressFinder);
-    step3stream.pipe(step3astream)
-      .pipe(new Stream.Writable({
-        objectMode: true,
-        write(chunk: FromStep3Type, encoding, callback) {
-          callback();
-          chunk.callback(null, chunk.query);
-        },
-      }))
+    const step3stream = new Stream.Readable({
+      objectMode: true,
+    });
+    const step3a_stream = new NormalizeStep3a(cityPatternsForEachPrefecture);
+    const step3b_stream = new NormalizeStep3b(addressFinder);
+    const step3final_stream = new NormalizeStep3Final();
+    step3stream.pipe(step3a_stream)
+      .pipe(step3b_stream)
+      .pipe(step3final_stream)
     const normalizeStep3 = new NormalizeStep3(step3stream);
+    const normalizeStep4 = new NormalizeStep4({
+      cityPatternsForEachPrefecture,
+      wildcardHelper,
+    });
 
     getReadStreamFromSource(source)
       .pipe(lineStream)
@@ -152,6 +146,7 @@ export namespace geocodingAction {
       .pipe(normalizeStep1)
       .pipe(normalizeStep2)
       .pipe(normalizeStep3)
+      .pipe(normalizeStep4)
       .pipe(new Stream.Writable({
         objectMode: true,
         write(chunk, encoding, callback) {

@@ -19,7 +19,7 @@ export class NormalizeStep2 extends Transform {
   ): void {
     //
     // 県名が省略されており、かつ、市町村名の名前がどこかの都道府県名と同じ場合(例.千葉県千葉市)、
-    // すでに判断してしまう
+    // すぐに判断してしまう
     //
     // オリジナルコード
     // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L316-L326

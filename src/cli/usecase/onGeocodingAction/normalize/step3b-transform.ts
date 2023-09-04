@@ -18,7 +18,7 @@ export class NormalizeStep3b extends Transform {
   ): void {
     //
     // オリジナルコード
-    // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L339-L379
+    // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L367-L378
     //
     this.internalProcess(fromStep3a, next);
   }
