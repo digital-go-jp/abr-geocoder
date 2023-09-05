@@ -135,9 +135,9 @@ yargs(hideBin(process.argv))
         .option('format', {
           alias: 'f',
           type: 'string',
-          default: 'table',
+          default: 'json',
           describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FORMAT_OPTION),
-          choices: ['csv', 'table', 'json', 'geojson'],
+          choices: ['csv', 'json', 'geojson'],
         })
         .positional('<inputFile>', {
           describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),

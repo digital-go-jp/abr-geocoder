@@ -8,3 +8,4 @@ export * from './step4-transform';
 export * from './step5-transform';
 export * from './step6-transform';
 export * from './step7-transform';
+export * from './step8-transform';

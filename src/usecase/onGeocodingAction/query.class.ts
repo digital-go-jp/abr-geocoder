@@ -1,3 +1,4 @@
+import { TransformCallback } from 'node:stream';
 import { PrefectureName } from './types';
 
 export interface IQuery {
@@ -33,10 +34,45 @@ export interface IQuery {
 
   addr2_id?: string;
   
-  latlon_acculate?: string;
+  next?: TransformCallback;
 }
 
 export type QueryParams = IQuery;
+
+export type QueryJson = {
+
+  // 入力された住所（最後まで変更しない）
+  input: string;
+
+  // ジオコードされなかった部分
+  other: string;
+
+  prefecture?: string;
+
+  city?: string;
+
+  town?: string;
+
+  town_id?: string;
+
+  lg_code?: string;
+
+  lat: number | null;
+
+  lon: number | null;
+
+  block?: string;
+
+  block_id?: string;
+
+  addr1?: string;
+
+  addr1_id?: string;
+
+  addr2?: string;
+
+  addr2_id?: string;
+}
 
 export class Query implements IQuery {
   public readonly input: string;
@@ -54,6 +90,7 @@ export class Query implements IQuery {
   public readonly addr1_id?: string;
   public readonly addr2?: string;
   public readonly addr2_id?: string;
+  public readonly next?: TransformCallback;
 
   private constructor(params: QueryParams) {
     this.input = params.input;
@@ -71,6 +108,7 @@ export class Query implements IQuery {
     this.addr1_id = params.addr1_id;
     this.addr2 = params.addr2;
     this.addr2_id = params.addr2_id;
+    this.next = params.next;
     Object.freeze(this);
   }
 
@@ -97,18 +135,23 @@ export class Query implements IQuery {
         newValues,
         {
           input: this.input,
+          next: this.next,
         }
       )
     );
   }
 
-  static create = (address: string): Query => {
+  static create = (
+    address: string,
+    next?: TransformCallback,
+  ): Query => {
     address = address.trim();
     return new Query({
       input: address,
       tempAddress: address,
       lat: null,
       lon: null,
+      next,
     });
   };
 }

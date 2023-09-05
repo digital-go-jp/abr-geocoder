@@ -3,36 +3,20 @@ export * from './types';
 
 import { Database } from 'better-sqlite3';
 import byline from 'byline';
-import { Stream } from 'node:stream';
+import { Writable } from 'node:stream';
 import { container } from 'tsyringe';
-import { RegExpEx } from '../../domain';
 import {
   setupContainer,
   setupContainerForTest,
   setupContainerParams,
 } from '../../interface-adapter';
-import PATCH_PATTERNS from '../../settings/patchPatterns';
-import { AddressFinderForStep3and5 } from './AddressFinderForStep3and5';
-import { AddressFinderForStep7 } from './AddressFinderForStep7';
-import { getCityPatternsForEachPrefecture } from './getCityPatternsForEachPrefecture';
-import { getPrefectureRegexPatterns } from './getPrefectureRegexPatterns';
-import { getPrefecturesFromDB } from './getPrefecturesFromDB';
 import { getReadStreamFromSource } from './getReadStreamFromSource';
-import { getSameNamedPrefecturePatterns } from './getSameNamedPrefecturePatterns';
-import { Query } from './query.class';
-import {
-  GeocodingStep1,
-  GeocodingStep2,
-  GeocodingStep3,
-  GeocodingStep3Final,
-  GeocodingStep3A,
-  GeocodingStep3B,
-  GeocodingStep4,
-  GeocodingStep5,
-  GeocodingStep6,
-  GeocodingStep7,
-} from './steps';
-import { GeocodingParams, IAddressPatch, IPrefecture, InterpolatePattern, PrefectureName } from './types';
+import { GeocodingParams, OutputFormat } from './types';
+import { StreamGeocoder } from './StreamGeocoder.class';
+import { CsvTransform, GeoJsonTransform, JsonTransform } from './formatters';
+import { GeocodeResultFields } from './GeocodeResult.class';
+import { AbrgError, AbrgErrorLevel, AbrgMessage } from '../../domain';
+import fs from 'node:fs';
 
 export namespace geocodingAction {
   let initialized = false;
@@ -58,265 +42,68 @@ export namespace geocodingAction {
     destination,
     dataDir,
     resourceId,
-    format,
+    format = OutputFormat.JSON,
     fuzzy,
   }: GeocodingParams) => {
-    const lineStream = byline.createStream();
 
     const db: Database = container.resolve('Database');
 
-    const convertToQuery = new Stream.Transform({
-      objectMode: true,
-      transform(line: Buffer, encoding, callback) {
-        const input = line.toString();
+    const geocoder = await StreamGeocoder.create(db, fuzzy);
 
-        // コメント行は無視する
-        if (input.startsWith('#') || input.startsWith('//')) {
-          callback();
-          return;
-        }
+    const lineStream = byline.createStream();
 
-        // 入力値を最後までキープするため、Queryクラスでラップする
-        callback(null, Query.create(input));
-      },
-    });
+    const formatter = ((format) => {
+      switch(format) {
+        case OutputFormat.CSV:
+          return new CsvTransform({
+            skipHeader: false,
+            columns: [
+              GeocodeResultFields.INPUT,
+              GeocodeResultFields.PREFECTURE,
+              GeocodeResultFields.CITY,
+              GeocodeResultFields.LG_CODE,
+              GeocodeResultFields.TOWN,
+              GeocodeResultFields.TOWN_ID,
+              GeocodeResultFields.BLOCK,
+              GeocodeResultFields.BLOCK_ID,
+              GeocodeResultFields.ADDR1,
+              GeocodeResultFields.ADDR1_ID,
+              GeocodeResultFields.ADDR2,
+              GeocodeResultFields.ADDR2_ID,
+              GeocodeResultFields.OTHER,
+              GeocodeResultFields.LATITUDE,
+              GeocodeResultFields.LONGITUDE,
+            ]
+          });
+        case OutputFormat.JSON:
+          return new JsonTransform();
+        
+        case OutputFormat.GEOJSON:
+          return new GeoJsonTransform();
+        
+        default:
+          throw new AbrgError({
+            messageId: AbrgMessage.UNSUPPORTED_OUTPUT_FORMAT,
+            level: AbrgErrorLevel.ERROR,
+          });
+      }
+    })(format);
 
-    /**
-     * 都道府県とそれに続く都市名を取得する
-     */
-    const prefectures: IPrefecture[] = await getPrefecturesFromDB({
-      db,
-    });
-
-    /**
-     * string = "^愛知郡愛荘町" を  "^(愛|\\?)(知|\\?)(郡|\\?)(愛|\\?)(荘|\\?)(町|\\?)" にする
-     */
-    const insertWildcardMatching = (string: string) => {
-      return string.replace(
-        RegExpEx.create('(?<!\\[[^\\]]*)([一-龯ぁ-んァ-ン])(?!\\?)', 'g'),
-        '($1|\\?)'
+    const outputStream: Writable = ((destination) => {
+      if (destination === '-' || destination === '') {
+        return process.stdout;
+      }
+      
+      return fs.createWriteStream(
+        fs.realpathSync(destination),
       );
-    };
-    const passThrough = (pattern: string) => pattern;
-    const wildcardHelper = fuzzy ? insertWildcardMatching : passThrough;
-
-    /**
-     * regexpPattern = ^東京都? を作成する
-     */
-    const prefPatterns: InterpolatePattern[] = getPrefectureRegexPatterns({
-      prefectures,
-      wildcardHelper,
-    });
-
-    /**
-     * 「福島県石川郡石川町」のように、市の名前が別の都道府県名から
-     *  始まっているケースのための正規表現パターンを生成する
-     */
-    const sameNamedPrefPatterns: InterpolatePattern[] =
-      getSameNamedPrefecturePatterns({
-        prefectures,
-        wildcardHelper,
-      });
-
-    /**
-     * 各都道府県別に市町村で始まるパターンを生成する
-     */
-    const cityPatternsForEachPrefecture =
-      getCityPatternsForEachPrefecture(prefectures);
-
-    // 住所の正規化処理
-    //
-    // 例：
-    //
-    // 東京都千代田区紀尾井町1ー3 東京ガーデンテラス紀尾井町 19階、20階
-    //  ↓
-    // 東京都千代田区紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階
-    //
-    const step1 = new GeocodingStep1();
-
-    // 特定のパターンから都道府県名が判別できるか試みる
-    //
-    // 以下のような形になる
-    // Query {
-    //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
-    //   tempAddress: '千代田区紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
-    //   prefecture: '東京都',
-    //   city: undefined,
-    //   town: undefined,
-    //   town_id: undefined,
-    //   lg_code: undefined,
-    //   lat: null,
-    //   lon: null,
-    //   block: undefined,
-    //   block_id: undefined,
-    //   addr1: undefined,
-    //   addr1_id: undefined,
-    //   addr2: undefined,
-    //   addr2_id: undefined
-    // }
-    const step2 = new GeocodingStep2({
-      prefPatterns,
-      sameNamedPrefPatterns,
-    });
-
-    // step3はデータベースを使って都道府県と市町村を特定するため、処理が複雑になる
-    // なので、さらに別のストリームで処理を行う
-    const addressFinderForStep5 = new AddressFinderForStep3and5({
-      db,
-      wildcardHelper,
-    });
-
-    const step3other_stream = new Stream.Readable({
-      read(size) {},
-      objectMode: true,
-    });
-    const step3a_stream = new GeocodingStep3A(cityPatternsForEachPrefecture);
-    const step3b_stream = new GeocodingStep3B(addressFinderForStep5);
-    const step3final_stream = new GeocodingStep3Final();
-    step3other_stream
-      .pipe(step3a_stream)
-      .pipe(step3b_stream)
-      .pipe(step3final_stream);
-
-    // 都道府県名がstep2で判別出来ない場合、step3が実行される
-    //
-    // 以下のような形になる
-    // Query {{
-    //   input: '千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
-    //   tempAddress: '紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
-    //   prefecture: '東京都',
-    //   city: '千代田区',
-    //   town: undefined,
-    //   town_id: undefined,
-    //   lg_code: undefined,
-    //   lat: null,
-    //   lon: null,
-    //   block: undefined,
-    //   block_id: undefined,
-    //   addr1: undefined,
-    //   addr1_id: undefined,
-    //   addr2: undefined,
-    //   addr2_id: undefined
-    // }
-    const step3 = new GeocodingStep3(step3other_stream);
-
-    // step2で都道府県名が判定できている場合、step3で判定しないので
-    // この時点で判定できていないケースの city を判定している
-    //
-    // 以下のような形になる
-    // Query {
-    //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
-    //   tempAddress: '紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
-    //   prefecture: '東京都',
-    //   city: '千代田区',
-    //   town: undefined,
-    //   town_id: undefined,
-    //   lg_code: undefined,
-    //   lat: null,
-    //   lon: null,
-    //   block: undefined,
-    //   block_id: undefined,
-    //   addr1: undefined,
-    //   addr1_id: undefined,
-    //   addr2: undefined,
-    //   addr2_id: undefined
-    // }
-    const step4 = new GeocodingStep4({
-      cityPatternsForEachPrefecture,
-      wildcardHelper,
-    });
-
-    // 詳細な情報を追加する。
-    // 以下のような形になる
-    //
-    // Query {
-    //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
-    //   tempAddress: '1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
-    //   prefecture: '東京都',
-    //   city: '千代田区',
-    //   town: '紀尾井町',
-    //   town_id: '0056000',
-    //   lg_code: '131016',
-    //   lat: 35.681411,
-    //   lon: 139.73495,
-    //   block: undefined,
-    //   block_id: undefined,
-    //   addr1: undefined,
-    //   addr1_id: undefined,
-    //   addr2: undefined,
-    //   addr2_id: undefined
-    // }
-    const step5 = new GeocodingStep5(addressFinderForStep5);
-
-    // TypeScript が prefecture の string型 を PrefectureName に変換できないので、
-    // ここで変換する
-    const prefectureSet = new Set<string>();
-    Object.values(PrefectureName).forEach(pref => {
-      prefectureSet.add(pref);
-    })
-    const patchValues = PATCH_PATTERNS
-      .filter(pref => prefectureSet.has(pref.prefecture))
-      .map<IAddressPatch>(patch => {
-        return {
-          ...patch,
-          prefecture: patch.prefecture as PrefectureName,
-        }
-      });
-    
-    // アドレスの補正処理
-    // うまく処理出来ないケースをここで修正している
-    const step6 = new GeocodingStep6(patchValues);
-
-    // 最終的なデータを取得する
-    //
-    // Query {
-    //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
-    //   tempAddress: '{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
-    //   prefecture: '東京都',
-    //   city: '千代田区',
-    //   town: '紀尾井町',
-    //   town_id: '0056000',
-    //   lg_code: '131016',
-    //   lat: 35.681411,  <-- blkの緯度経度が取れる場合は、そこから。
-    //   lon: 139.73495,  <-- 取れない場合はtownの緯度経度を使用する
-    //   block: '1',
-    //   block_id: '001',
-    //   addr1: '3',
-    //   addr1_id: '003',
-    //   addr2: '',
-    //   addr2_id: ''
-    // }
-    const addressFinderForStep7 = new AddressFinderForStep7(db);
-    const step7 = new GeocodingStep7(addressFinderForStep7);
+    })(destination);
 
     getReadStreamFromSource(source)
       .pipe(lineStream)
-      .pipe(convertToQuery)
-      .pipe(step1)
-      .pipe(step2)
-      .pipe(step3)
-      .pipe(step4)
-      .pipe(step5)
-      .pipe(step6)
-      .pipe(step7)
-      .pipe(
-        new Stream.Writable({
-          objectMode: true,
-          write(chunk, encoding, callback) {
-            console.debug('--->final', chunk);
-            callback();
-          },
-        })
-      )
-      //     .pipe(
-      //       new Stream.Writable({
-      //         objectMode: true,
-      //         write(chunk, encoding, callback) {
-      //           console.log(chunk.toString());
-      //           callback();
-      //         },
-      //       })
-      //     )
+      .pipe(geocoder)
+      .pipe(formatter)
+      .pipe(outputStream)
       .on('end', () => {
         db.close();
       });
