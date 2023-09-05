@@ -21,7 +21,7 @@ export class NormalizeStep3 extends Transform {
     //
 
     // すでに都道府県名が分かっている場合はスキップする
-    if (query.prefectureName) {
+    if (query.prefecture) {
       return callback(null, query);
     }
 

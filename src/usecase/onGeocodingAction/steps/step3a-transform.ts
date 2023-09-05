@@ -65,7 +65,7 @@ export class NormalizeStep3a extends Transform {
 
     if (matchedPatterns.length === 1) {
       fromStep3.query = fromStep3.query.copy({
-        prefectureName: matchedPatterns[0].prefecture,
+        prefecture: matchedPatterns[0].prefecture,
         city: matchedPatterns[0].city,
       });
 

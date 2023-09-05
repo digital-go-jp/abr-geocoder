@@ -86,7 +86,7 @@ describe('step3b-transform', () => {
     expect(actualValues.length).toBe(1);
     expect(actualValues[0]).toEqual({
       query: Query.create('府中市宮西町2丁目24番地').copy({
-        prefectureName: PrefectureName.TOKYO,
+        prefecture: PrefectureName.TOKYO,
         city: '府中市',
       }),
       callback: dummyCallback,

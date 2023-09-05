@@ -142,7 +142,7 @@ describe('step2transform', () => {
     const input = Query.create(`長崎市魚の町4${DASH_ALT}1`);
     const expectValues = [
       Query.create(`長崎市魚の町4${DASH_ALT}1`).copy({
-        prefectureName: PrefectureName.NAGASAKI,
+        prefecture: PrefectureName.NAGASAKI,
         tempAddress: `魚の町4${DASH_ALT}1`,
         city: '長崎市',
       }),
@@ -154,7 +154,7 @@ describe('step2transform', () => {
     const input = Query.create('石川郡平田村大字永田字切田116番地');
     const expectValues = [
       Query.create('石川郡平田村大字永田字切田116番地').copy({
-        prefectureName: PrefectureName.FUKUSHIMA,
+        prefecture: PrefectureName.FUKUSHIMA,
         tempAddress: '大字永田字切田116番地',
         city: '石川郡平田村',
       }),
@@ -176,7 +176,7 @@ describe('step2transform', () => {
       Query.create(
         '東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階'
       ).copy({
-        prefectureName: PrefectureName.TOKYO,
+        prefecture: PrefectureName.TOKYO,
         tempAddress:
           '千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階',
       }),

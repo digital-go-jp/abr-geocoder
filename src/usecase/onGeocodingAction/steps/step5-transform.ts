@@ -111,14 +111,14 @@ export class NormalizeStep5 extends Transform {
   private async findByCity(query: Query): Promise<Query> {
     const normalized = await this.addressFinder.find({
       address: query.tempAddress,
-      prefecture: query.prefectureName!,
+      prefecture: query.prefecture!,
       cityName: query.city!,
     });
     if (!normalized) {
       return query;
     }
     return query.copy({
-      townId: normalized.town_id,
+      town_id: normalized.town_id,
       town: normalized.name,
       tempAddress: normalized.tempAddress,
       lat: normalized.lat,

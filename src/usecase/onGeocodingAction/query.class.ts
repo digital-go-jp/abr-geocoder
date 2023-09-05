@@ -2,73 +2,73 @@ import { PrefectureName } from './types';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）
-  originalInput: string;
+  input: string;
 
   // 作業用の変数
   tempAddress: string;
 
-  prefectureName?: PrefectureName;
+  prefecture?: PrefectureName;
 
   city?: string;
 
   town?: string;
 
-  townId?: string;
+  town_id?: string;
 
   lg_code?: string;
 
-  lat: number;
+  lat: number | null;
 
-  lon: number;
+  lon: number | null;
 
   block?: string;
 
-  blockId?: string;
+  block_id?: string;
 
   addr1?: string;
 
-  addr1Id?: string;
+  addr1_id?: string;
 
   addr2?: string;
 
-  addr2Id?: string;
+  addr2_id?: string;
 }
 
 export type QueryParams = IQuery;
 
 export class Query implements IQuery {
-  public readonly originalInput: string;
+  public readonly input: string;
   public readonly tempAddress: string;
-  public readonly prefectureName?: PrefectureName;
+  public readonly prefecture?: PrefectureName;
   public readonly city?: string;
   public readonly town?: string;
-  public readonly townId?: string;
+  public readonly town_id?: string;
   public readonly lg_code?: string;
-  public readonly lat: number;
-  public readonly lon: number;
+  public readonly lat: number | null;
+  public readonly lon: number | null;
   public readonly block?: string;
-  public readonly blockId?: string;
+  public readonly block_id?: string;
   public readonly addr1?: string;
-  public readonly addr1Id?: string;
+  public readonly addr1_id?: string;
   public readonly addr2?: string;
-  public readonly addr2Id?: string;
+  public readonly addr2_id?: string;
 
   private constructor(params: QueryParams) {
-    this.originalInput = params.originalInput;
+    this.input = params.input;
     this.tempAddress = params.tempAddress;
-    this.prefectureName = params.prefectureName;
+    this.prefecture = params.prefecture;
     this.city = params.city;
     this.town = params.town;
-    this.townId = params.townId;
+    this.town_id = params.town_id;
     this.lg_code = params.lg_code;
     this.lat = params.lat;
     this.lon = params.lon;
     this.block = params.block;
-    this.blockId = params.blockId;
+    this.block_id = params.block_id;
     this.addr1 = params.addr1;
-    this.addr1Id = params.addr1Id;
+    this.addr1_id = params.addr1_id;
     this.addr2 = params.addr2;
-    this.addr2Id = params.addr2Id;
+    this.addr2_id = params.addr2_id;
     Object.freeze(this);
   }
 
@@ -77,24 +77,24 @@ export class Query implements IQuery {
     return new Query(
       Object.assign(
         {
-          prefectureName: this.prefectureName,
+          prefecture: this.prefecture,
           city: this.city,
           town: this.town,
-          townId: this.townId,
+          town_id: this.town_id,
           lg_code: this.lg_code,
           tempAddress: this.tempAddress,
           lat: this.lat,
           lon: this.lon,
           block: this.block,
-          blockId: this.blockId,
+          block_id: this.block_id,
           addr1: this.addr1,
-          addr1Id: this.addr1Id,
+          addr1_id: this.addr1_id,
           addr2: this.addr2,
-          addr2Id: this.addr2Id,
+          addr2_id: this.addr2_id,
         },
         newValues,
         {
-          originalInput: this.originalInput,
+          input: this.input,
         }
       )
     );
@@ -103,10 +103,10 @@ export class Query implements IQuery {
   static create = (address: string): Query => {
     address = address.trim();
     return new Query({
-      originalInput: address,
+      input: address,
       tempAddress: address,
-      lat: Number.NaN,
-      lon: Number.NaN,
+      lat: null,
+      lon: null,
     });
   };
 }

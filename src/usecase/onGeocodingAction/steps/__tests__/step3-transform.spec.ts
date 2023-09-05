@@ -39,7 +39,7 @@ describe('step3transform', () => {
 
   it('都道府県名が判別出来ている場合はスキップする', async () => {
     const dummyData = Query.create('千葉市どこか').copy({
-      prefectureName: PrefectureName.CHIBA,
+      prefecture: PrefectureName.CHIBA,
     });
 
     const dummyStream = new Stream.Readable({

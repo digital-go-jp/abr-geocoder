@@ -85,7 +85,7 @@ describe('step3a-transform', () => {
     expect(step3finish).toHaveBeenCalledWith(
       null,
       Query.create('八幡市八幡園内75').copy({
-        prefectureName: PrefectureName.KYOTO,
+        prefecture: PrefectureName.KYOTO,
         city: '八幡市',
         tempAddress: '八幡市八幡園内75',
       })

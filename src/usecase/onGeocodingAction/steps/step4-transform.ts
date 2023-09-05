@@ -36,7 +36,7 @@ export class NormalizeStep4 extends Transform {
     //
 
     // すでに都道府県名がこのステップで分かっていないデータはスキップする
-    if (!query.prefectureName) {
+    if (!query.prefecture) {
       return callback(null, query);
     }
     // cityが判別済みの場合はスキップ
@@ -45,7 +45,7 @@ export class NormalizeStep4 extends Transform {
     }
 
     const cityPatterns = this.cityPatternsForEachPrefecture.get(
-      query.prefectureName
+      query.prefecture
     )!;
 
     for (const { regExpPattern, address } of cityPatterns) {

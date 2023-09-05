@@ -41,7 +41,7 @@ export class NormalizeStep3b extends Transform {
 
       // 都道府県名が判別できた
       fromStep3a.fromStep3.query = fromStep3a.fromStep3.query.copy({
-        prefectureName: matchedCity.prefecture,
+        prefecture: matchedCity.prefecture,
         city: matchedCity.city,
       });
       break;

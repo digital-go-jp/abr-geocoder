@@ -25,7 +25,7 @@ export class NormalizeStep6 extends Transform {
     let address = query.tempAddress;
     this.addressPatches.forEach(patch => {
       if (
-        patch.prefecture !== query.prefectureName ||
+        patch.prefecture !== query.prefecture ||
         patch.city !== query.city ||
         patch.town !== query.town
       ) {
