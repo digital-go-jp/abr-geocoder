@@ -2,7 +2,6 @@ import { RegExpEx } from '../../domain';
 import {
   IPrefecture,
   InterpolatePattern,
-  Prefecture,
   PrefectureName,
 } from './types';
 

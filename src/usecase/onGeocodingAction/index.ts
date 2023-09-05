@@ -64,8 +64,6 @@ export namespace geocodingAction {
     const lineStream = byline.createStream();
 
     const db: Database = container.resolve('Database');
-    // const logger: Logger = container.resolve('Logger');
-    // const progressBar = container.resolve<SingleBar>('DownloadProgressBar');
 
     const convertToQuery = new Stream.Transform({
       objectMode: true,
@@ -130,7 +128,10 @@ export namespace geocodingAction {
     const normalizeStep1 = new NormalizeStep1();
 
     // 特定のパターンから都道府県名が判別できるか試みる
-    const normalizeStep2 = new NormalizeStep2(sameNamedPrefPatterns);
+    const normalizeStep2 = new NormalizeStep2({
+      prefPatterns,
+      sameNamedPrefPatterns,
+    });
 
     // step3はデータベースを使って都道府県と市町村を特定するため、処理が複雑になる
     // なので、さらに別のストリームで処理を行う

@@ -4,7 +4,10 @@ import { InterpolatePattern } from '../types';
 import { RegExpEx } from '../../../domain';
 
 export class NormalizeStep2 extends Transform {
-  constructor(private sameNamedPrefPatterns: InterpolatePattern[]) {
+  constructor(private readonly params: {
+    prefPatterns: InterpolatePattern[],
+    sameNamedPrefPatterns: InterpolatePattern[],
+  }) {
     super({
       objectMode: true,
     });
@@ -22,7 +25,7 @@ export class NormalizeStep2 extends Transform {
     // オリジナルコード
     // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L316-L326
     //
-    for (const pattern of this.sameNamedPrefPatterns) {
+    for (const pattern of this.params.sameNamedPrefPatterns) {
       const match = query.tempAddress.match(
         RegExpEx.create(pattern.regExpPattern)
       );
@@ -39,9 +42,32 @@ export class NormalizeStep2 extends Transform {
         // 市町村名より後方の住所のみを残す
         tempAddress: query.tempAddress.substring(match[0].length),
       });
-      break;
+      return next(null, query);
     }
 
-    next(null, query);
+    //
+    // 都道府県名でヒットできるか試みる
+    // オリジナルコード
+    // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L328-L337
+    //
+    for (const pattern of this.params.prefPatterns) {
+      const match = query.tempAddress.match(
+        RegExpEx.create(pattern.regExpPattern)
+      );
+      if (!match) {
+        continue;
+      }
+      query = query.copy({
+        // 都道府県は分かっている
+        prefectureName: pattern.prefectureName,
+
+        // 市町村名より後方の住所のみを残す
+        tempAddress: query.tempAddress.substring(match[0].length),
+      });
+      return next(null, query);
+    }
+
+    // どちらのパターンにもマッチしないケース
+    return next(null, query);
   }
 }

@@ -92,6 +92,30 @@ const sameNamedPrefPatterns: InterpolatePattern[] = [
     cityName: '石川郡古殿町'
   }
 ];
+
+const prefPatterns: InterpolatePattern[] = [
+  {
+    "address": "東京都",
+    "prefectureName": PrefectureName.TOKYO,
+    "regExpPattern": "^東京都?",
+  },
+  {
+    "address": "北海道",
+    "prefectureName": PrefectureName.HOKKAIDO,
+    "regExpPattern": "^北海道?",
+  },
+  {
+    "address": "広島県",
+    "prefectureName": PrefectureName.HIROSHIMA,
+    "regExpPattern": "^広島県?",
+  },
+  {
+    "address": "京都府",
+    "prefectureName": PrefectureName.KYOTO,
+    "regExpPattern": "^京都府?",
+  },
+];
+
 /**
  * step2は都道府県名と同一名称の市町村名に対しての処理のみ
  */
@@ -102,7 +126,10 @@ describe('step2transform', () => {
       objectMode: true,
     });
 
-    const target = new NormalizeStep2(sameNamedPrefPatterns);
+    const target = new NormalizeStep2({
+      prefPatterns,
+      sameNamedPrefPatterns,
+    });
     const outputWrite = new WritableStreamToArray<Query>();
     await Stream.promises.pipeline(
       source,
@@ -144,23 +171,18 @@ describe('step2transform', () => {
     const input = Query.create(`東彼杵郡東彼杵町蔵本郷1850番地6`);
     const expectValues = [
       input,
-      // Query.create(`東彼杵郡東彼杵町蔵本郷1850番地6`).copy({
-      //   prefectureName: PrefectureName.NAGASAKI,
-      //   tempAddress: `蔵本郷1850番地6`,
-      //   city: '東彼杵郡東彼杵町',
-      // }),
     ];
     await doProcess(input, expectValues);
   });
 
-  // it('「市」を市原市が含んでいるケース', async () => {
-  //   const input = Query.create(`市原市国分寺台中央1丁目1番地1`);
-  //   const expectValue = Query.create(`市原市国分寺台中央1丁目1番地1`).copy({
-  //     prefectureName: PrefectureName.CHIBA,
-  //     tempAddress: `国分寺台中央1丁目1番地1`,
-  //     city: '市原市',
-  //   });
-  //   await doProcess(input, expectValue);
-  // });
-
+  it('都道府県名を含むケース', async () => {
+    const input = Query.create(`東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階`);
+    const expectValues = [
+      Query.create(`東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階`).copy({
+        prefectureName: PrefectureName.TOKYO,
+        tempAddress: `千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階`,
+      }),
+    ];
+    await doProcess(input, expectValues);
+  });
 });
