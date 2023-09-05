@@ -153,7 +153,7 @@ export type FromStep3Type = {
 export type Step3aMatchedPatternType = {
   prefecture: PrefectureName;
   city: string;
-  input: string;
+  tempAddress: string;
 };
 
 export type FromStep3aType = {

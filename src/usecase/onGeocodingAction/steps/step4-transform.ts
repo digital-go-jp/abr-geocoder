@@ -29,8 +29,6 @@ export class NormalizeStep4 extends Transform {
     callback: TransformCallback
   ): void {
     //
-    // step3a で同じようなことをしているのに、する必要があるのか？
-    //
     // オリジナルコード
     // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L380-L397
     //

@@ -38,7 +38,6 @@ export class NormalizeStep5 extends Transform {
     this.findByCity(query)
       .then(this.normalization)
       .then((query: Query) => {
-        console.log(query);
         callback(null, query);
       });
   }

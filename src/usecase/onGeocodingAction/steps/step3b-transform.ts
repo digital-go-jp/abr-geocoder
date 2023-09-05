@@ -31,7 +31,7 @@ export class NormalizeStep3b extends Transform {
     //（例: 東京都府中市と広島県府中市など）
     for (const matchedCity of fromStep3a.matchedPatterns) {
       const normalized = await this.addressFinder.find({
-        address: matchedCity.input,
+        address: matchedCity.tempAddress,
         prefecture: matchedCity.prefecture,
         city: matchedCity.city,
       });
@@ -43,6 +43,7 @@ export class NormalizeStep3b extends Transform {
       fromStep3a.fromStep3.query = fromStep3a.fromStep3.query.copy({
         prefecture: matchedCity.prefecture,
         city: matchedCity.city,
+        tempAddress: matchedCity.tempAddress,
       });
       break;
     }

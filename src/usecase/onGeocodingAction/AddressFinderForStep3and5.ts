@@ -65,29 +65,6 @@ export class AddressFinderForStep3and5 {
         ) = @city AND
         "${DataField.TOWN_CODE.dbColumn}" <> 3;
     `);
-
-    // = @cityName よりも like '@cityName%%' のがヒット件数が広いので、
-    // 試験的にこれにしてみる
-    // this.getTownStatement = db.prepare(`
-    //   select
-    //     "town".${DataField.LG_CODE.dbColumn},
-    //     "town"."${DataField.TOWN_ID.dbColumn}",
-    //     "${DataField.OAZA_TOWN_NAME.dbColumn}" || "${DataField.CHOME_NAME.dbColumn}" as "name",
-    //     "${DataField.KOAZA_NAME.dbColumn}" as "koaza",
-    //     "${DataField.REP_PNT_LAT.dbColumn}" as "lat",
-    //     "${DataField.REP_PNT_LON.dbColumn}" as "lon"
-    //   from
-    //     "city"
-    //     left join "town" on town.${DataField.LG_CODE.dbColumn} = city.${DataField.LG_CODE.dbColumn}
-    //   where
-    //     "city"."${DataField.PREF_NAME.dbColumn}" = @prefecture AND
-    //     (
-    //       "city"."${DataField.COUNTY_NAME.dbColumn}" ||
-    //       "city"."${DataField.CITY_NAME.dbColumn}" ||
-    //       "city"."${DataField.OD_CITY_NAME.dbColumn}"
-    //     ) like '@city%' AND
-    //     "${DataField.TOWN_CODE.dbColumn}" <> 3;
-    // `);
   }
 
   async find({
@@ -348,6 +325,10 @@ export class AddressFinderForStep3and5 {
       prefecture,
       city,
     }) as TownRow[];
+
+    results.sort((a: TownRow, b: TownRow): number => {
+      return b.name.length - a.name.length;
+    })
 
     return Promise.resolve(results);
   }

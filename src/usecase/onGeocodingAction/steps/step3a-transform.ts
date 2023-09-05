@@ -58,7 +58,7 @@ export class NormalizeStep3a extends Transform {
         matchedPatterns.push({
           prefecture: prefectureName,
           city: cityPattern.city!,
-          input: fromStep3.query.tempAddress.substring(match[0].length),
+          tempAddress: fromStep3.query.tempAddress.substring(match[0].length),
         });
       }
     }
@@ -67,6 +67,7 @@ export class NormalizeStep3a extends Transform {
       fromStep3.query = fromStep3.query.copy({
         prefecture: matchedPatterns[0].prefecture,
         city: matchedPatterns[0].city,
+        tempAddress: matchedPatterns[0].tempAddress,
       });
 
       // 都道府県名が判別できたので、step4に進む

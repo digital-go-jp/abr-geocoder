@@ -178,14 +178,35 @@ export namespace geocodingAction {
       .pipe(step3b_stream)
       .pipe(step3final_stream);
 
+    // 都道府県名がstep2で判別出来ない場合、step3が実行される
+    //
+    // 以下のような形になる
+    // Query {{
+    //   input: '千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
+    //   tempAddress: '紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
+    //   prefecture: '東京都',
+    //   city: '千代田区',
+    //   town: undefined,
+    //   town_id: undefined,
+    //   lg_code: undefined,
+    //   lat: null,
+    //   lon: null,
+    //   block: undefined,
+    //   block_id: undefined,
+    //   addr1: undefined,
+    //   addr1_id: undefined,
+    //   addr2: undefined,
+    //   addr2_id: undefined
+    // }
     const normalizeStep3 = new NormalizeStep3(step3other_stream);
 
-    // step2でprefectureが判定できている場合はstep3で判定しないので
+    // step2で都道府県名が判定できている場合、step3で判定しないので
     // この時点で判定できていないケースの city を判定している
     //
+    // 以下のような形になる
     // Query {
     //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
-    //   tempAddress: '紀尾井町1@3 東京ガーデンテラス紀尾井町 19階、20階',
+    //   tempAddress: '紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
     //   prefecture: '東京都',
     //   city: '千代田区',
     //   town: undefined,
@@ -205,8 +226,26 @@ export namespace geocodingAction {
       wildcardHelper,
     });
 
-    // もう一度データベースを探して、情報を追加
-    // (step3bを通過しないデータもあるから、このステップで追加しているように思う)
+    // 詳細な情報を追加する。
+    // 以下のような形になる
+    //
+    // Query {
+    //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
+    //   tempAddress: '1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
+    //   prefecture: '東京都',
+    //   city: '千代田区',
+    //   town: '紀尾井町',
+    //   town_id: '0056000',
+    //   lg_code: '131016',
+    //   lat: 35.681411,
+    //   lon: 139.73495,
+    //   block: undefined,
+    //   block_id: undefined,
+    //   addr1: undefined,
+    //   addr1_id: undefined,
+    //   addr2: undefined,
+    //   addr2_id: undefined
+    // }
     const normalizeStep5 = new NormalizeStep5(addressFinderForStep5);
 
     // TypeScript が prefecture の string型 を PrefectureName に変換できないので、
