@@ -33,7 +33,7 @@ export class NormalizeStep3b extends Transform {
       const normalized = await this.addressFinder.find({
         address: matchedCity.input,
         prefecture: matchedCity.prefecture,
-        cityName: matchedCity.city,
+        city: matchedCity.city,
       });
       if (!normalized) {
         continue;

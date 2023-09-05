@@ -13,7 +13,6 @@ export const getPrefectureRegexPatterns = ({
 }): InterpolatePattern[] => {
   return prefectures.map<InterpolatePattern>(pref => {
     return {
-      address: pref.name,
       regExpPattern: wildcardHelper(`^${pref.name}?`),
       prefecture: pref.name,
     };

@@ -1,15 +1,15 @@
-import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../query.class';
-import { AddressFinderForStep3and5 } from '../AddressFinderForStep3and5';
 import { number2kanji } from '@geolonia/japanese-numeral';
-import {
-  NUMRIC_AND_KANJI_SYMBOLS,
-  SPACE_SYMBOLS,
-  DASH_SYMBOLS,
-  DASH,
-} from '../../../domain/constantValues';
-import { kan2num } from '../kan2num';
+import { Transform, TransformCallback } from 'node:stream';
 import { RegExpEx } from '../../../domain';
+import {
+  DASH,
+  J_DASH,
+  NUMRIC_AND_KANJI_SYMBOLS,
+  SPACE
+} from '../../../domain/constantValues';
+import { AddressFinderForStep3and5 } from '../AddressFinderForStep3and5';
+import { kan2num } from '../kan2num';
+import { Query } from '../query.class';
 
 export class NormalizeStep5 extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {
@@ -38,6 +38,7 @@ export class NormalizeStep5 extends Transform {
     this.findByCity(query)
       .then(this.normalization)
       .then((query: Query) => {
+        console.log(query);
         callback(null, query);
       });
   }
@@ -47,69 +48,91 @@ export class NormalizeStep5 extends Transform {
       return query;
     }
 
-    // townが取得できた場合にのみ、addrに対する各種の変換処理を行う。
-    const newAddress = query.tempAddress
-      .replace(RegExpEx.create(`^${DASH}`), '')
-      .replace(RegExpEx.create('[0-9]+)(丁目)', 'g'), match => {
+    // townが取得できた場合にのみ、addrに対する各種の変換処理を行う
+    let tempAddress = query.tempAddress;
+    tempAddress = tempAddress.replace(RegExpEx.create(`^${DASH}`), '');
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create('([0-9]+)(丁目)', 'g'),
+      match => {
         return match.replace(RegExpEx.create('([0-9]+)', 'g'), num => {
           return number2kanji(Number(num));
         });
-      })
-      .replace(
-        new RegExp(
-          `(([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号)[${SPACE_SYMBOLS}]*(.+)`
-        ),
-        '$1 $5'
-      )
-      .replace(
-        new RegExp(
-          `([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号?`
-        ),
-        `\$1${DASH}\$3`
-      )
-      .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)番地?`), '$1')
-      .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)の?`), `$1${DASH}`)
-      .replace(
-        new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)[${DASH_SYMBOLS}]`, 'g'),
-        match => {
-          return kan2num(match).replace(
-            new RegExp(`[${DASH_SYMBOLS}]`, 'g'),
-            DASH
-          );
-        }
-      )
-      .replace(
-        new RegExp(`[${DASH_SYMBOLS}]([${NUMRIC_AND_KANJI_SYMBOLS}]+)`, 'g'),
-        match => {
-          return kan2num(match).replace(
-            new RegExp(`[${DASH_SYMBOLS}]`, 'g'),
-            DASH
-          );
-        }
-      )
-      .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)${DASH}`), s => {
+      },
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(
+        `(([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号)[${SPACE}]*(.+)`,
+      ),
+      '$1' + SPACE + '$5',
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(
+        `([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号?`,
+      ),
+      '$1' + DASH + '$3',
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)番地?`),
+      '$1',
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)[${J_DASH}]`),
+      '$1' + DASH,
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)${DASH}`, 'g'),
+      match => {
+        return kan2num(match);
+      },
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`${DASH}([${NUMRIC_AND_KANJI_SYMBOLS}]+)`, 'g'),
+      match => {
+        return kan2num(match);
+      },
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)${DASH}`),
+      s => {
         // `1-` のようなケース
         return kan2num(s);
-      })
-      .replace(new RegExp(`${DASH}([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), s => {
+      },
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`${DASH}([${NUMRIC_AND_KANJI_SYMBOLS}]+)`),
+      s => {
         // `-1` のようなケース
         return kan2num(s);
-      })
-      .replace(
-        new RegExp(`${DASH}[^0-9]+([${NUMRIC_AND_KANJI_SYMBOLS}]+)`),
-        s => {
-          // `-あ1` のようなケース
-          return kan2num(s);
-        }
-      )
+      },
+    );
 
-      .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), s => {
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`${DASH}[^0-9]+([${NUMRIC_AND_KANJI_SYMBOLS}]+)`),
+      s => {
+        // `-あ1` のようなケース
+        return kan2num(s);
+      },
+    );
+
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)`),
+      s => {
         // `串本町串本１２３４` のようなケース
         return kan2num(s);
-      })
-      .trim();
+      },
+    )
+
     return query.copy({
-      tempAddress: newAddress,
+      tempAddress: tempAddress.trim(),
     });
   }
 
@@ -117,7 +140,7 @@ export class NormalizeStep5 extends Transform {
     const normalized = await this.addressFinder.find({
       address: query.tempAddress,
       prefecture: query.prefecture!,
-      cityName: query.city!,
+      city: query.city!,
     });
     if (!normalized) {
       return query;
@@ -128,6 +151,7 @@ export class NormalizeStep5 extends Transform {
       tempAddress: normalized.tempAddress,
       lat: normalized.lat,
       lon: normalized.lon,
+      lg_code: normalized.lg_code,
     });
   }
 }

@@ -41,7 +41,6 @@ export const getCityRegexPatterns = ({
       return {
         prefecture: prefecture.name,
         regExpPattern: pattern,
-        address: `${prefecture.name}${city.name}`,
         city: city.name,
       };
     });

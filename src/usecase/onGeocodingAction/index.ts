@@ -5,7 +5,7 @@ import { Database } from 'better-sqlite3';
 import byline from 'byline';
 import { Stream } from 'node:stream';
 import { container } from 'tsyringe';
-import { patchPatterns } from '../../settings';
+import PATCH_PATTERNS from '../../settings/patchPatterns';
 import { RegExpEx } from '../../domain';
 import {
   setupContainer,
@@ -32,7 +32,7 @@ import {
   NormalizeStep7,
 } from './steps';
 import { Query } from './query.class';
-import { GeocodingParams, IPrefecture, InterpolatePattern } from './types';
+import { GeocodingParams, IAddressPatch, IPrefecture, InterpolatePattern, PrefectureName } from './types';
 
 export namespace geocodingAction {
   let initialized = false;
@@ -198,8 +198,24 @@ export namespace geocodingAction {
     // (step3bを通過しないデータもあるから、このステップで追加しているように思う)
     const normalizeStep5 = new NormalizeStep5(addressFinderForStep5);
 
-    // アドレスの補正処理らしいことをしている
-    const normalizeStep6 = new NormalizeStep6(patchPatterns);
+    // TypeScript が prefecture の string型 を PrefectureName に変換できないので、
+    // ここで変換する
+    const prefectureSet = new Set<string>();
+    Object.values(PrefectureName).forEach(pref => {
+      prefectureSet.add(pref);
+    })
+    const patchValues = PATCH_PATTERNS
+      .filter(pref => prefectureSet.has(pref.prefecture))
+      .map<IAddressPatch>(patch => {
+        return {
+          ...patch,
+          prefecture: patch.prefecture as PrefectureName,
+        }
+      });
+    
+    // アドレスの補正処理
+    // おそらくうまく処理出来ないケースをここで修正している
+    const normalizeStep6 = new NormalizeStep6(patchValues);
 
     // アドレスの補正処理らしいことをしている
     const addressFinderForStep7 = new AddressFinderForStep7(db);

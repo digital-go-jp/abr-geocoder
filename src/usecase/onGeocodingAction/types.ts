@@ -129,7 +129,6 @@ export interface GeocodingParams {
 
 export type InterpolatePattern = {
   regExpPattern: string;
-  address: string;
   prefecture: PrefectureName;
   city?: string;
 };

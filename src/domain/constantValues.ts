@@ -29,7 +29,12 @@ export const NUMRIC_AND_KANJI_SYMBOLS: string = [
 ].join('');
 export const ALPHA_NUMERIC_SYMBOLS: string = ['０-９Ａ-Ｚａ-ｚ'].join('');
 
-export const SPACE: string = ' ';
+export const J_DASH: string = 'の|之|ノ';
+
+// 半角スペースに置き換えると
+// 問題を起こしやすいので、別の文字に置き換える
+// 基本的に住所には含まれていなはず
+export const SPACE: string = '␣';
 
 // 全角ハイフンを半角ハイフンに置き換えると、
 // 正規表現の範囲を示すために用いる半角ハイフンと被ってしまい

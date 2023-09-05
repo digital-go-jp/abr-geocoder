@@ -1,5 +1,5 @@
 import { Database, Statement } from 'better-sqlite3';
-import { DASH_SYMBOLS, KANJI_1to10_SYMBOLS } from '../../domain/constantValues';
+import { DASH, DASH_SYMBOLS, J_DASH, KANJI_1to10_SYMBOLS } from '../../domain/constantValues';
 import { DataField } from '../../domain/dataset';
 import { RegExpEx } from '../../domain/RegExpEx';
 import { isKanjiNumberFollewedByCho } from './isKanjiNumberFollewedByCho';
@@ -24,7 +24,7 @@ export type TownPattern = {
 export type FindParameters = {
   address: string;
   prefecture: PrefectureName;
-  cityName: string;
+  city: string;
 };
 
 /**
@@ -45,29 +45,6 @@ export class AddressFinderForStep3and5 {
     this.wildcardHelper = wildcardHelper;
 
     // getTownList() で使用するSQLをstatementにしておく
-    // this.getTownStatement = db.prepare(`
-    //   select
-    //     "town".${DataField.LG_CODE},
-    //     "town"."${DataField.TOWN_ID}",
-    //     "${DataField.OAZA_TOWN_NAME}" || "${DataField.CHOME_NAME}" as "name",
-    //     "${DataField.KOAZA_NAME}" as "koaza",
-    //     "${DataField.REP_PNT_LAT}" as "lat",
-    //     "${DataField.REP_PNT_LON}" as "lon"
-    //   from
-    //     "city"
-    //     left join "town" on town.${DataField.LG_CODE} = city.${DataField.LG_CODE}
-    //   where
-    //     "city"."${DataField.PREF_NAME}" = @prefecture AND
-    //     (
-    //       "city"."${DataField.COUNTY_NAME}" ||
-    //       "city"."${DataField.CITY_NAME}" ||
-    //       "city"."${DataField.OD_CITY_NAME}"
-    //     ) = @cityName AND
-    //     "${DataField.TOWN_CODE}" <> 3;
-    // `);
-
-    // = @cityName よりも like '@cityName%%' のがヒット件数が広いので、
-    // 試験的にこれにしてみる
     this.getTownStatement = db.prepare(`
       select
         "town".${DataField.LG_CODE.dbColumn},
@@ -85,27 +62,50 @@ export class AddressFinderForStep3and5 {
           "city"."${DataField.COUNTY_NAME.dbColumn}" ||
           "city"."${DataField.CITY_NAME.dbColumn}" ||
           "city"."${DataField.OD_CITY_NAME.dbColumn}"
-        ) like '@cityName%' AND
+        ) = @city AND
         "${DataField.TOWN_CODE.dbColumn}" <> 3;
     `);
+
+    // = @cityName よりも like '@cityName%%' のがヒット件数が広いので、
+    // 試験的にこれにしてみる
+    // this.getTownStatement = db.prepare(`
+    //   select
+    //     "town".${DataField.LG_CODE.dbColumn},
+    //     "town"."${DataField.TOWN_ID.dbColumn}",
+    //     "${DataField.OAZA_TOWN_NAME.dbColumn}" || "${DataField.CHOME_NAME.dbColumn}" as "name",
+    //     "${DataField.KOAZA_NAME.dbColumn}" as "koaza",
+    //     "${DataField.REP_PNT_LAT.dbColumn}" as "lat",
+    //     "${DataField.REP_PNT_LON.dbColumn}" as "lon"
+    //   from
+    //     "city"
+    //     left join "town" on town.${DataField.LG_CODE.dbColumn} = city.${DataField.LG_CODE.dbColumn}
+    //   where
+    //     "city"."${DataField.PREF_NAME.dbColumn}" = @prefecture AND
+    //     (
+    //       "city"."${DataField.COUNTY_NAME.dbColumn}" ||
+    //       "city"."${DataField.CITY_NAME.dbColumn}" ||
+    //       "city"."${DataField.OD_CITY_NAME.dbColumn}"
+    //     ) like '@city%' AND
+    //     "${DataField.TOWN_CODE.dbColumn}" <> 3;
+    // `);
   }
 
   async find({
     address,
     prefecture,
-    cityName,
+    city,
   }: FindParameters): Promise<ITown | null> {
     /*
      * オリジナルコード
      * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L133-L164
      */
     address = address.trim().replace(RegExpEx.create('^大字'), '');
-    const isKyotoCity = cityName.startsWith('京都市');
+    const isKyotoCity = city.startsWith('京都市');
 
     // 都道府県名と市町村名から、その地域に所属する町（小区分）のリストをDatabaseから取得する
     const towns = await this.getTownList({
       prefecture,
-      cityName,
+      city,
     });
 
     // データベースから取得したリストから、マッチしそうな正規表現パターンを作成する
@@ -243,13 +243,13 @@ export class AddressFinderForStep3and5 {
           // 横棒を含む場合（流通センター、など）に対応
           .replace(
             RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'),
-            `[${DASH_SYMBOLS}]`
+            DASH,
           )
           .replace(RegExpEx.create('大?字', 'g'), '(大?字)?')
           // 以下住所マスターの町丁目に含まれる数字を正規表現に変換する
           .replace(
             RegExpEx.create(
-              `([壱${KANJI_1to10_SYMBOLS}]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)`,
+              `([壱${KANJI_1to10_SYMBOLS}]+)(丁目?|番(町|丁)|条|軒|線|(${J_DASH})町|地割|号)`,
               'g'
             ),
             (match: string) => {
@@ -260,9 +260,9 @@ export class AddressFinderForStep3and5 {
                   .toString()
                   .replace(
                     RegExpEx.create(
-                      '(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)'
+                      `(丁目?|番(町|丁)|条|軒|線|(${J_DASH})町|地割|号)`,
                     ),
-                    ''
+                    '',
                   )
               );
 
@@ -281,7 +281,7 @@ export class AddressFinderForStep3and5 {
                   )
                   .replace(
                     RegExpEx.create(
-                      '(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)'
+                      `(丁目?|番(町|丁)|条|軒|線|(${J_DASH})町|地割|号)`
                     ),
                     ''
                   );
@@ -339,14 +339,14 @@ export class AddressFinderForStep3and5 {
    */
   private async getTownList({
     prefecture,
-    cityName,
+    city,
   }: {
     prefecture: PrefectureName;
-    cityName: string;
+    city: string;
   }): Promise<TownRow[]> {
     const results = this.getTownStatement.all({
       prefecture,
-      cityName,
+      city,
     }) as TownRow[];
 
     return Promise.resolve(results);

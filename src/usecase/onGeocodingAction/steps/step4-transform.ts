@@ -49,7 +49,9 @@ export class NormalizeStep4 extends Transform {
     )!;
 
     for (const { regExpPattern, city } of cityPatterns) {
-      const match = query.tempAddress.match(this.wildcardHelper(regExpPattern));
+      const match = query.tempAddress.match(
+        this.wildcardHelper(regExpPattern),
+      );
       if (!match) {
         continue;
       }
