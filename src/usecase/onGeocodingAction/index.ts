@@ -132,11 +132,12 @@ export namespace geocodingAction {
 
     // 特定のパターンから都道府県名が判別できるか試みる
     //
+    // 以下のような形になる (@ は constantValues.DASH の文字)
     // Query {
     //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
-    //   tempAddress: '紀尾井町1@3 東京ガーデンテラス紀尾井町 19階、20階',
+    //   tempAddress: '千代田区紀尾井町1@3 東京ガーデンテラス紀尾井町 19階、20階',
     //   prefecture: '東京都',
-    //   city: '東京都千代田区',
+    //   city: undefined,
     //   town: undefined,
     //   town_id: undefined,
     //   lg_code: undefined,
@@ -168,7 +169,26 @@ export namespace geocodingAction {
 
     const normalizeStep3 = new NormalizeStep3(step3a_stream);
 
-    // 何をしているのか良くわからない
+    // step2でprefectureが判定できている場合はstep3で判定しないので
+    // この時点で判定できていないケースの city を判定している
+    //
+    // Query {
+    //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
+    //   tempAddress: '紀尾井町1@3 東京ガーデンテラス紀尾井町 19階、20階',
+    //   prefecture: '東京都',
+    //   city: '千代田区',
+    //   town: undefined,
+    //   town_id: undefined,
+    //   lg_code: undefined,
+    //   lat: null,
+    //   lon: null,
+    //   block: undefined,
+    //   block_id: undefined,
+    //   addr1: undefined,
+    //   addr1_id: undefined,
+    //   addr2: undefined,
+    //   addr2_id: undefined
+    // }
     const normalizeStep4 = new NormalizeStep4({
       cityPatternsForEachPrefecture,
       wildcardHelper,
@@ -199,7 +219,7 @@ export namespace geocodingAction {
         new Stream.Writable({
           objectMode: true,
           write(chunk, encoding, callback) {
-            console.debug(chunk);
+            console.debug('--->final', chunk);
             callback();
           },
         })

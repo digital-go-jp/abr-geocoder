@@ -48,13 +48,13 @@ export class NormalizeStep4 extends Transform {
       query.prefecture
     )!;
 
-    for (const { regExpPattern, address } of cityPatterns) {
+    for (const { regExpPattern, city } of cityPatterns) {
       const match = query.tempAddress.match(this.wildcardHelper(regExpPattern));
       if (!match) {
         continue;
       }
       query = query.copy({
-        city: address,
+        city,
 
         // 市区町村名以降の住所
         tempAddress: query.tempAddress.substring(match[0].length),
