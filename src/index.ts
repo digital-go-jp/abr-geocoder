@@ -20,7 +20,7 @@ const dataDir = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
 const { version } = parsePackageJson({
-  filePath: path.join(__dirname, '..', '..', 'package.json'),
+  filePath: path.join(__dirname, '..', 'package.json'),
 });
 
 /**
