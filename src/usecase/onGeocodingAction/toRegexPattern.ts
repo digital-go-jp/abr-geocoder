@@ -4,11 +4,9 @@ import { jisKanji } from './jisKanji';
  * オリジナルコード
  * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/dict.ts#L25C1-L61C1
  */
-export const toRegexPattern = (string: string) => {
-  let _str = string;
-
+export const toRegexPattern = (address: string) => {
   // 以下なるべく文字数が多いものほど上にすること
-  _str = _str
+  address = address
     .replace(/三栄町|四谷三栄町/g, '(三栄町|四谷三栄町)')
     .replace(/鬮野川|くじ野川|くじの川/g, '(鬮野川|くじ野川|くじの川)')
     .replace(/通り|とおり/g, '(通り|とおり)')
@@ -36,7 +34,7 @@ export const toRegexPattern = (string: string) => {
     .replace(/莵|菟/g, '(莵|菟)')
     .replace(/市|巿/g, '(市|巿)');
 
-  _str = jisKanji(_str);
+  address = jisKanji(address);
 
-  return _str;
+  return address;
 };

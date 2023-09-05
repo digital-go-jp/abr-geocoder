@@ -1,4 +1,4 @@
-import { IPrefecture, PrefectureName } from './types';
+import { PrefectureName } from './types';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）

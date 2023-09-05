@@ -4,10 +4,12 @@ import { InterpolatePattern } from '../types';
 import { RegExpEx } from '../../../domain';
 
 export class NormalizeStep2 extends Transform {
-  constructor(private readonly params: {
-    prefPatterns: InterpolatePattern[],
-    sameNamedPrefPatterns: InterpolatePattern[],
-  }) {
+  constructor(
+    private readonly params: {
+      prefPatterns: InterpolatePattern[];
+      sameNamedPrefPatterns: InterpolatePattern[];
+    }
+  ) {
     super({
       objectMode: true,
     });

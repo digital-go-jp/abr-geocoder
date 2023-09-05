@@ -1,4 +1,5 @@
 import { Writable } from 'node:stream';
+import { FromStep3Type } from '../types';
 
 export class NormalizeStep3Final extends Writable {
   constructor() {
@@ -7,7 +8,7 @@ export class NormalizeStep3Final extends Writable {
     });
   }
   _write(
-    chunk: any,
+    chunk: FromStep3Type,
     encoding: BufferEncoding,
     callback: (error?: Error | null | undefined) => void
   ): void {

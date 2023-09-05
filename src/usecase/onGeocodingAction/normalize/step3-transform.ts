@@ -1,8 +1,5 @@
-import { Transform, TransformCallback } from 'node:stream';
+import Stream, { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../query.class';
-import { FromStep3Type, InterpolatePattern, PrefectureName } from '../types';
-import { RegExpEx } from '../../../domain';
-import Stream from 'node:stream';
 
 export class NormalizeStep3 extends Transform {
   constructor(private otherReadable: Stream.Readable) {

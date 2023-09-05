@@ -1,12 +1,10 @@
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../query.class';
 import {
   FromStep3Type,
   InterpolatePattern,
   PrefectureName,
   Step3aMatchedPatternType,
 } from '../types';
-import { RegExpEx } from '../../../domain';
 
 export class NormalizeStep3a extends Transform {
   constructor(

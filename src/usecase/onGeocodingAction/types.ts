@@ -1,4 +1,3 @@
-import { type } from 'node:os';
 import { TransformCallback } from 'node:stream';
 import { Query } from './query.class';
 

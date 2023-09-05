@@ -6,7 +6,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { container } from 'tsyringe';
 import { Logger } from 'winston';
-import { AbrgMessage, CkanDownloader } from '../../domain';
+import {
+  AbrgError,
+  AbrgErrorLevel,
+  AbrgMessage,
+  CkanDownloader,
+} from '../../domain';
 
 import CLIInfinityProgress from 'cli-infinity-progress';
 import { MultiBar, SingleBar } from 'cli-progress';
@@ -90,17 +95,17 @@ export namespace downloadDataset {
     // データの更新を確認する
     // --------------------------------------
     logger.info(AbrgMessage.toString(AbrgMessage.CHECKING_UPDATE));
-    const { updateAvailable, upstreamMeta } = await downloader.updateCheck();
+    const { updateAvailable } = await downloader.updateCheck();
 
     // 更新データがなければ終了
-    // if (!updateAvailable) {
-    //   return Promise.reject(
-    //     new AbrgError({
-    //       messageId: AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE,
-    //       level: AbrgErrorLevel.INFO,
-    //     })
-    //   );
-    // }
+    if (!updateAvailable) {
+      return Promise.reject(
+        new AbrgError({
+          messageId: AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE,
+          level: AbrgErrorLevel.INFO,
+        })
+      );
+    }
 
     // --------------------------------------
     // 最新データセットをダウンロードする
