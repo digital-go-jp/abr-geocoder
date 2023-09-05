@@ -22,7 +22,7 @@ describe('getPrefectureRegexPatterns', () => {
 
     // 期待値と戻り値を同じように比較するために、並び替える
     const comp = (a: InterpolatePattern, b: InterpolatePattern): number => {
-      return a.prefectureName.charCodeAt(0) - b.prefectureName.charCodeAt(0);
+      return a.prefecture.charCodeAt(0) - b.prefecture.charCodeAt(0);
     };
 
     // 期待値

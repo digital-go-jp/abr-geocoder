@@ -56,8 +56,8 @@ export const getSameNamedPrefecturePatterns = ({
       results.push({
         address: `${pref.name}${city.name}`,
         regExpPattern: wildcardHelper(`^${city.name}`),
-        prefectureName: pref.name,
-        cityName: city.name,
+        prefecture: pref.name,
+        city: city.name,
       });
     });
   });

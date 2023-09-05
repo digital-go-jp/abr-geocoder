@@ -36,10 +36,10 @@ export class NormalizeStep2 extends Transform {
       }
       query = query.copy({
         // 都道府県は分かっている
-        prefecture: pattern.prefectureName,
+        prefecture: pattern.prefecture,
 
         // 市町村名も分かっている
-        city: pattern.cityName,
+        city: pattern.city,
 
         // 市町村名より後方の住所のみを残す
         tempAddress: query.tempAddress.substring(match[0].length),
@@ -61,7 +61,7 @@ export class NormalizeStep2 extends Transform {
       }
       query = query.copy({
         // 都道府県は分かっている
-        prefecture: pattern.prefectureName,
+        prefecture: pattern.prefecture,
 
         // 市町村名より後方の住所のみを残す
         tempAddress: query.tempAddress.substring(match[0].length),

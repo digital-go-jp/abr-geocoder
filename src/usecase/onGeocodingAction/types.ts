@@ -131,8 +131,8 @@ export interface GeocodingParams {
 export type InterpolatePattern = {
   regExpPattern: string;
   address: string;
-  prefectureName: PrefectureName;
-  cityName?: string;
+  prefecture: PrefectureName;
+  city?: string;
 };
 export interface INormalizedCity {
   result: string;
@@ -140,8 +140,8 @@ export interface INormalizedCity {
 
 export interface getNormalizedCityParams {
   address: string;
-  prefectureName: PrefectureName;
-  cityName: string;
+  prefecture: PrefectureName;
+  city: string;
   wildcardHelper: (pattern: string) => string;
 }
 

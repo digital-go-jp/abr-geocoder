@@ -15,7 +15,7 @@ export const getPrefectureRegexPatterns = ({
     return {
       address: pref.name,
       regExpPattern: wildcardHelper(`^${pref.name}?`),
-      prefectureName: pref.name,
+      prefecture: pref.name,
     };
   });
 };

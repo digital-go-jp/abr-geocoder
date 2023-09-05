@@ -57,7 +57,7 @@ export class NormalizeStep3a extends Transform {
 
         matchedPatterns.push({
           prefecture: prefectureName,
-          city: cityPattern.cityName!,
+          city: cityPattern.city!,
           input: fromStep3.query.tempAddress.substring(match[0].length),
         });
       }
