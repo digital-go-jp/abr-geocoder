@@ -1,5 +1,3 @@
-import {jest, describe, it} from '@jest/globals';
+import { jest, describe, it } from '@jest/globals';
 
-describe('AddressFinderForStep7', () => {
-  
-})
+describe('AddressFinderForStep7', () => {});

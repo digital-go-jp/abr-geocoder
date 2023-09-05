@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import streamEqual from 'stream-equal';
-import {geocodeFromStream} from '../src/cli/interface-adapters/onGeocodingAction';
+import { geocodeFromStream } from '../src/cli/interface-adapters/onGeocodingAction';
 import stream from 'node:stream';
 
 describe('geocoding', () => {

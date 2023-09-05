@@ -1,9 +1,12 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import Stream from "node:stream";
+import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { AddressFinderForStep5, FindParameters } from '../../AddressFinderForStep5';
-import { Query } from "../../query.class";
-import { FromStep3Type, PrefectureName } from "../../types";
+import {
+  AddressFinderForStep5,
+  FindParameters,
+} from '../../AddressFinderForStep5';
+import { Query } from '../../query.class';
+import { FromStep3Type, PrefectureName } from '../../types';
 import { NormalizeStep3b } from '../step3b-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
@@ -13,7 +16,7 @@ const MockedAddressFinder = AddressFinderForStep5 as jest.Mock;
 MockedAddressFinder.mockImplementation(() => {
   return {
     find: (params: FindParameters) => {
-      switch(params.prefecture) {
+      switch (params.prefecture) {
         case PrefectureName.TOKYO:
           return Promise.resolve({
             lg_code: '132063',
@@ -27,16 +30,17 @@ MockedAddressFinder.mockImplementation(() => {
           });
         case PrefectureName.HIROSHIMA:
           return Promise.resolve(null);
-        
+
         default:
-          throw new Error(`Unexpected prefecture was given: ${params.prefecture}`);
+          throw new Error(
+            `Unexpected prefecture was given: ${params.prefecture}`
+          );
       }
     },
   };
 });
 
 describe('step3b-transform', () => {
-  
   it('複数の都道府県名にマッチする場合は、町名まで正規化して都道府県名を判別する', async () => {
     // 東京都府中市と にマッチする
     const dummyCallback = jest.fn();
@@ -59,20 +63,25 @@ describe('step3b-transform', () => {
     ];
 
     const fromStep3: FromStep3Type = {
-      query: Query.create(`府中市宮西町2丁目24番地`),
+      query: Query.create('府中市宮西町2丁目24番地'),
       callback: dummyCallback,
     };
     await pipeline(
-      Stream.Readable.from([{
-        fromStep3,
-        matchedPatterns,
-      }], {
-        objectMode: true,
-      }),
+      Stream.Readable.from(
+        [
+          {
+            fromStep3,
+            matchedPatterns,
+          },
+        ],
+        {
+          objectMode: true,
+        }
+      ),
       target,
       outputWrite
     );
-    
+
     const actualValues = outputWrite.toArray();
     expect(actualValues.length).toBe(1);
     expect(actualValues[0]).toEqual({
@@ -81,8 +90,6 @@ describe('step3b-transform', () => {
         city: '府中市',
       }),
       callback: dummyCallback,
-    })
-
+    });
   });
-
 });

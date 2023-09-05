@@ -1,17 +1,21 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import Stream, { TransformCallback } from "node:stream";
+import Stream, { TransformCallback } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { getCityPatternsForEachPrefecture } from '../../getCityPatternsForEachPrefecture';
-import { Query } from "../../query.class";
-import { FromStep3Type, FromStep3aType, PrefectureName } from "../../types";
+import { Query } from '../../query.class';
+import { FromStep3Type, FromStep3aType, PrefectureName } from '../../types';
 import { NormalizeStep3a } from '../step3a-transform';
 import { dummyPrefectures } from './dummyPrefectures';
 import { WritableStreamToArray } from './stream-to-array';
 
 describe('step3a-transform', () => {
-  const cityPatternsForEachPrefecture = getCityPatternsForEachPrefecture(dummyPrefectures);
-  
-  const doTest = async (input: Query, callback: TransformCallback): Promise<FromStep3aType[]> => {
+  const cityPatternsForEachPrefecture =
+    getCityPatternsForEachPrefecture(dummyPrefectures);
+
+  const doTest = async (
+    input: Query,
+    callback: TransformCallback
+  ): Promise<FromStep3aType[]> => {
     const outputWrite = new WritableStreamToArray<FromStep3aType>();
     const fromStep3: FromStep3Type = {
       query: input,
@@ -26,12 +30,12 @@ describe('step3a-transform', () => {
       outputWrite
     );
     return outputWrite.toArray();
-  }
+  };
 
   it('複数の都道府県名にマッチする場合は、step3bに進む', async () => {
-    const input = Query.create(`府中市宮西町2丁目24番地`);
+    const input = Query.create('府中市宮西町2丁目24番地');
     const results = await doTest(input, jest.fn());
-    
+
     // 1クエリしかないので length = 1
     expect(results.length).toBe(1);
 
@@ -51,9 +55,9 @@ describe('step3a-transform', () => {
   });
 
   it('複数の広島市にマッチする場合は、step3bに進む', async () => {
-    const input = Query.create(`広島市佐伯区海老園二丁目5番28号`);
+    const input = Query.create('広島市佐伯区海老園二丁目5番28号');
     const results = await doTest(input, jest.fn());
-    
+
     // 1クエリしかないので length = 1
     expect(results.length).toBe(1);
 
@@ -75,19 +79,16 @@ describe('step3a-transform', () => {
   it('都道府県名に１つだけマッチする場合は step4に進む', async () => {
     // 広島市 にマッチするはず
     const step3finish = jest.fn();
-    const results = await doTest(
-      Query.create(`八幡市八幡園内75`),
-      step3finish,
-    );
-    
+    const results = await doTest(Query.create('八幡市八幡園内75'), step3finish);
+
     // step3finish が呼ばれているはず
     expect(step3finish).toHaveBeenCalledWith(
       null,
-      Query.create(`八幡市八幡園内75`).copy({
+      Query.create('八幡市八幡園内75').copy({
         prefectureName: PrefectureName.KYOTO,
         city: '八幡市',
         tempAddress: '八幡市八幡園内75',
       })
-    )
+    );
   });
 });

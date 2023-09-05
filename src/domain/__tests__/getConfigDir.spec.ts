@@ -1,4 +1,4 @@
-import {getDataDir} from '../getDataDir';
+import { getDataDir } from '../getDataDir';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';

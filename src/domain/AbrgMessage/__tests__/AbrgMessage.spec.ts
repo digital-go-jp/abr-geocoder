@@ -1,4 +1,4 @@
-import {AbrgMessage} from '..';
+import { AbrgMessage } from '..';
 import enMessages from '../locales/en';
 import jaMessages from '../locales/ja';
 

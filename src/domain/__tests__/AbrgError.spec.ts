@@ -1,5 +1,5 @@
-import {AbrgMessage} from '../AbrgMessage';
-import {AbrgError, AbrgErrorLevel} from '../AbrgError';
+import { AbrgMessage } from '../AbrgMessage';
+import { AbrgError, AbrgErrorLevel } from '../AbrgError';
 import jaMessage from '../AbrgMessage/locales/ja';
 import enMessage from '../AbrgMessage/locales/en';
 

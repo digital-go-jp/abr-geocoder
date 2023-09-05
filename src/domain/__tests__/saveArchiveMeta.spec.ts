@@ -1,5 +1,5 @@
-import {run} from 'node:test';
-import {saveArchiveMeta} from '../saveArchiveMeta';
+import { run } from 'node:test';
+import { saveArchiveMeta } from '../saveArchiveMeta';
 import Database from 'better-sqlite3';
 
 const dummyStatement = jest.fn();
