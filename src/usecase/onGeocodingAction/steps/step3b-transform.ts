@@ -2,7 +2,7 @@ import { Transform, TransformCallback } from 'node:stream';
 import { AddressFinderForStep3and5 } from '../AddressFinderForStep3and5';
 import { FromStep3aType } from '../types';
 
-export class NormalizeStep3b extends Transform {
+export class GeocodingStep3B extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {
     super({
       objectMode: true,

@@ -2,7 +2,7 @@ import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../query.class';
 import { InterpolatePattern, PrefectureName } from '../types';
 
-export class NormalizeStep4 extends Transform {
+export class GeocodingStep4 extends Transform {
   private readonly cityPatternsForEachPrefecture: Map<
     PrefectureName,
     InterpolatePattern[]

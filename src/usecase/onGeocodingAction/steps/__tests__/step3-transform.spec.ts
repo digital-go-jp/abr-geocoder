@@ -3,7 +3,7 @@ import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { Query } from '../../query.class';
 import { FromStep3Type, PrefectureName } from '../../types';
-import { NormalizeStep3 } from '../step3-transform';
+import { GeocodingStep3 } from '../step3-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
 describe('step3transform', () => {
@@ -18,7 +18,7 @@ describe('step3transform', () => {
       chunk?.callback();
       return true;
     });
-    const target = new NormalizeStep3(dummyStream);
+    const target = new GeocodingStep3(dummyStream);
     const outputWrite = new WritableStreamToArray<Query>();
 
     await pipeline(
@@ -44,7 +44,7 @@ describe('step3transform', () => {
     });
     const pushMethod = jest.spyOn(dummyStream, 'push');
 
-    const target = new NormalizeStep3(dummyStream);
+    const target = new GeocodingStep3(dummyStream);
     const outputWrite = new WritableStreamToArray<Query>();
 
     await pipeline(

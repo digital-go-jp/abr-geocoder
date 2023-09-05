@@ -1,7 +1,7 @@
 import Stream, { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../query.class';
 
-export class NormalizeStep3 extends Transform {
+export class GeocodingStep3 extends Transform {
   constructor(private otherReadable: Stream.Readable) {
     super({
       objectMode: true,

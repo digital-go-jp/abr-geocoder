@@ -1,7 +1,7 @@
 import { Writable } from 'node:stream';
 import { FromStep3Type } from '../types';
 
-export class NormalizeStep3Final extends Writable {
+export class GeocodingStep3Final extends Writable {
   constructor() {
     super({
       objectMode: true,

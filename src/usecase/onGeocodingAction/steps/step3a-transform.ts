@@ -6,7 +6,7 @@ import {
   Step3aMatchedPatternType,
 } from '../types';
 
-export class NormalizeStep3a extends Transform {
+export class GeocodingStep3A extends Transform {
   constructor(
     private cityPatternsForEachPrefecture: Map<
       PrefectureName,

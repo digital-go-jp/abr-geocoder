@@ -11,7 +11,7 @@ import { AddressFinderForStep3and5 } from '../AddressFinderForStep3and5';
 import { kan2num } from '../kan2num';
 import { Query } from '../query.class';
 
-export class NormalizeStep5 extends Transform {
+export class GeocodingStep5 extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {
     super({
       objectMode: true,

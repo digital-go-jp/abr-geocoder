@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import { getCityPatternsForEachPrefecture } from '../../getCityPatternsForEachPrefecture';
 import { Query } from '../../query.class';
 import { FromStep3Type, FromStep3aType, PrefectureName } from '../../types';
-import { NormalizeStep3a } from '../step3a-transform';
+import { GeocodingStep3A } from '../step3a-transform';
 import { dummyPrefectures } from './dummyPrefectures';
 import { WritableStreamToArray } from './stream-to-array';
 
@@ -21,7 +21,7 @@ describe('step3a-transform', () => {
       query: input,
       callback,
     };
-    const target = new NormalizeStep3a(cityPatternsForEachPrefecture);
+    const target = new GeocodingStep3A(cityPatternsForEachPrefecture);
     await pipeline(
       Stream.Readable.from([fromStep3], {
         objectMode: true,

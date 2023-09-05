@@ -21,16 +21,16 @@ import { getReadStreamFromSource } from './getReadStreamFromSource';
 import { getSameNamedPrefecturePatterns } from './getSameNamedPrefecturePatterns';
 import { Query } from './query.class';
 import {
-  NormalizeStep1,
-  NormalizeStep2,
-  NormalizeStep3,
-  NormalizeStep3Final,
-  NormalizeStep3a,
-  NormalizeStep3b,
-  NormalizeStep4,
-  NormalizeStep5,
-  NormalizeStep6,
-  NormalizeStep7,
+  GeocodingStep1,
+  GeocodingStep2,
+  GeocodingStep3,
+  GeocodingStep3Final,
+  GeocodingStep3A,
+  GeocodingStep3B,
+  GeocodingStep4,
+  GeocodingStep5,
+  GeocodingStep6,
+  GeocodingStep7,
 } from './steps';
 import { GeocodingParams, IAddressPatch, IPrefecture, InterpolatePattern, PrefectureName } from './types';
 
@@ -132,7 +132,7 @@ export namespace geocodingAction {
     //  ↓
     // 東京都千代田区紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階
     //
-    const normalizeStep1 = new NormalizeStep1();
+    const step1 = new GeocodingStep1();
 
     // 特定のパターンから都道府県名が判別できるか試みる
     //
@@ -154,7 +154,7 @@ export namespace geocodingAction {
     //   addr2: undefined,
     //   addr2_id: undefined
     // }
-    const normalizeStep2 = new NormalizeStep2({
+    const step2 = new GeocodingStep2({
       prefPatterns,
       sameNamedPrefPatterns,
     });
@@ -170,9 +170,9 @@ export namespace geocodingAction {
       read(size) {},
       objectMode: true,
     });
-    const step3a_stream = new NormalizeStep3a(cityPatternsForEachPrefecture);
-    const step3b_stream = new NormalizeStep3b(addressFinderForStep5);
-    const step3final_stream = new NormalizeStep3Final();
+    const step3a_stream = new GeocodingStep3A(cityPatternsForEachPrefecture);
+    const step3b_stream = new GeocodingStep3B(addressFinderForStep5);
+    const step3final_stream = new GeocodingStep3Final();
     step3other_stream
       .pipe(step3a_stream)
       .pipe(step3b_stream)
@@ -198,7 +198,7 @@ export namespace geocodingAction {
     //   addr2: undefined,
     //   addr2_id: undefined
     // }
-    const normalizeStep3 = new NormalizeStep3(step3other_stream);
+    const step3 = new GeocodingStep3(step3other_stream);
 
     // step2で都道府県名が判定できている場合、step3で判定しないので
     // この時点で判定できていないケースの city を判定している
@@ -221,7 +221,7 @@ export namespace geocodingAction {
     //   addr2: undefined,
     //   addr2_id: undefined
     // }
-    const normalizeStep4 = new NormalizeStep4({
+    const step4 = new GeocodingStep4({
       cityPatternsForEachPrefecture,
       wildcardHelper,
     });
@@ -246,7 +246,7 @@ export namespace geocodingAction {
     //   addr2: undefined,
     //   addr2_id: undefined
     // }
-    const normalizeStep5 = new NormalizeStep5(addressFinderForStep5);
+    const step5 = new GeocodingStep5(addressFinderForStep5);
 
     // TypeScript が prefecture の string型 を PrefectureName に変換できないので、
     // ここで変換する
@@ -264,23 +264,41 @@ export namespace geocodingAction {
       });
     
     // アドレスの補正処理
-    // おそらくうまく処理出来ないケースをここで修正している
-    const normalizeStep6 = new NormalizeStep6(patchValues);
+    // うまく処理出来ないケースをここで修正している
+    const step6 = new GeocodingStep6(patchValues);
 
-    // アドレスの補正処理らしいことをしている
+    // 最終的なデータを取得する
+    //
+    // Query {
+    //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
+    //   tempAddress: '{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
+    //   prefecture: '東京都',
+    //   city: '千代田区',
+    //   town: '紀尾井町',
+    //   town_id: '0056000',
+    //   lg_code: '131016',
+    //   lat: 35.681411,  <-- blkの緯度経度が取れる場合は、そこから。
+    //   lon: 139.73495,  <-- 取れない場合はtownの緯度経度を使用する
+    //   block: '1',
+    //   block_id: '001',
+    //   addr1: '3',
+    //   addr1_id: '003',
+    //   addr2: '',
+    //   addr2_id: ''
+    // }
     const addressFinderForStep7 = new AddressFinderForStep7(db);
-    const normalizeStep7 = new NormalizeStep7(addressFinderForStep7);
+    const step7 = new GeocodingStep7(addressFinderForStep7);
 
     getReadStreamFromSource(source)
       .pipe(lineStream)
       .pipe(convertToQuery)
-      .pipe(normalizeStep1)
-      .pipe(normalizeStep2)
-      .pipe(normalizeStep3)
-      .pipe(normalizeStep4)
-      .pipe(normalizeStep5)
-      .pipe(normalizeStep6)
-      .pipe(normalizeStep7)
+      .pipe(step1)
+      .pipe(step2)
+      .pipe(step3)
+      .pipe(step4)
+      .pipe(step5)
+      .pipe(step6)
+      .pipe(step7)
       .pipe(
         new Stream.Writable({
           objectMode: true,

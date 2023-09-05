@@ -3,7 +3,7 @@ import { RegExpEx } from '../../../domain';
 import { Query } from '../query.class';
 import { IAddressPatch } from '../types';
 
-export class NormalizeStep6 extends Transform {
+export class GeocodingStep6 extends Transform {
   constructor(private readonly addressPatches: IAddressPatch[]) {
     super({
       objectMode: true,

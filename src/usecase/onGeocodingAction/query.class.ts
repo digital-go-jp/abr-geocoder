@@ -32,6 +32,8 @@ export interface IQuery {
   addr2?: string;
 
   addr2_id?: string;
+  
+  latlon_acculate?: string;
 }
 
 export type QueryParams = IQuery;

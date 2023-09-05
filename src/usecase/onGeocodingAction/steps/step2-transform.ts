@@ -3,7 +3,7 @@ import { Query } from '../query.class';
 import { InterpolatePattern } from '../types';
 import { RegExpEx } from '../../../domain';
 
-export class NormalizeStep2 extends Transform {
+export class GeocodingStep2 extends Transform {
   constructor(
     private readonly params: {
       prefPatterns: InterpolatePattern[];

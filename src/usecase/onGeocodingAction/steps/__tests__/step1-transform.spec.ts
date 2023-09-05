@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
 import { DASH, SPACE } from '../../../../domain/constantValues';
 import { Query } from '../../query.class';
-import { NormalizeStep1 } from '../step1-transform';
+import { GeocodingStep1 } from '../step1-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
 describe('step1-transform', () => {
-  const target = new NormalizeStep1();
+  const target = new GeocodingStep1();
   const outputWrite = new WritableStreamToArray<Query>();
 
   beforeEach(() => {

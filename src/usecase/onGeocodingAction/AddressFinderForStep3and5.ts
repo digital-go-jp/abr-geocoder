@@ -45,6 +45,7 @@ export class AddressFinderForStep3and5 {
     this.wildcardHelper = wildcardHelper;
 
     // getTownList() で使用するSQLをstatementにしておく
+    // "name"の文字数が長い順にソートする
     this.getTownStatement = db.prepare(`
       select
         "town".${DataField.LG_CODE.dbColumn},
@@ -63,7 +64,8 @@ export class AddressFinderForStep3and5 {
           "city"."${DataField.CITY_NAME.dbColumn}" ||
           "city"."${DataField.OD_CITY_NAME.dbColumn}"
         ) = @city AND
-        "${DataField.TOWN_CODE.dbColumn}" <> 3;
+        "${DataField.TOWN_CODE.dbColumn}" <> 3
+        order by length("name") desc;
     `);
   }
 
@@ -325,10 +327,6 @@ export class AddressFinderForStep3and5 {
       prefecture,
       city,
     }) as TownRow[];
-
-    results.sort((a: TownRow, b: TownRow): number => {
-      return b.name.length - a.name.length;
-    })
 
     return Promise.resolve(results);
   }

@@ -11,7 +11,7 @@ import {
 } from '../../../domain/constantValues';
 import { Query } from '../query.class';
 
-export class NormalizeStep1 extends Transform {
+export class GeocodingStep1 extends Transform {
   constructor() {
     super({
       objectMode: true,

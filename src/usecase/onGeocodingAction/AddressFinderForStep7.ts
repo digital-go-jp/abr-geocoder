@@ -188,8 +188,8 @@ export class AddressFinderForStep7 {
         addr1_id: rsdt.addr1_id,
         addr2: addr2 || '',
         addr2_id: rsdt.addr2_id,
-        lat: rsdt.lat,
-        lon: rsdt.lon,
+        lat: rsdt.lat || query.lat,
+        lon: rsdt.lon || query.lon,
         lg_code: rsdt.lg_code,
         town_id: rsdt.town_id,
       });
@@ -211,8 +211,8 @@ export class AddressFinderForStep7 {
         addr1_id: rsdt.addr1_id,
         addr2: addr2,
         addr2_id: rsdt.addr2_id,
-        lat: rsdt.lat,
-        lon: rsdt.lon,
+        lat: rsdt.lat || query.lat,
+        lon: rsdt.lon || query.lon,
         town_id: rsdt.town_id,
         tempAddress: (addr2 ? `${DASH}${addr2}` : '') + query.tempAddress,
       });
@@ -234,8 +234,8 @@ export class AddressFinderForStep7 {
       block: blockNum,
       block_id: rsdt.blk_id,
       tempAddress: otherWithUnmatchedAddrs,
-      lat: rsdt.lat,
-      lon: rsdt.lon,
+      lat: rsdt.lat || query.lat,
+      lon: rsdt.lon || query.lon,
       town_id: rsdt.town_id,
       lg_code: rsdt.lg_code,
     });

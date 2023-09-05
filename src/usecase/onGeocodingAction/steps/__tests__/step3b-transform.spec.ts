@@ -7,7 +7,7 @@ import {
 } from '../../AddressFinderForStep3and5';
 import { Query } from '../../query.class';
 import { FromStep3Type, PrefectureName } from '../../types';
-import { NormalizeStep3b } from '../step3b-transform';
+import { GeocodingStep3B } from '../step3b-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
 jest.mock<AddressFinderForStep3and5>('../../AddressFinderForStep3and5');
@@ -47,7 +47,7 @@ describe('step3b-transform', () => {
 
     // jest.mock() で AddressFinder クラスをモック化してある
     const finder = new MockedAddressFinder() as AddressFinderForStep3and5;
-    const target = new NormalizeStep3b(finder);
+    const target = new GeocodingStep3B(finder);
     const outputWrite = new WritableStreamToArray<Query>();
     const matchedPatterns = [
       {

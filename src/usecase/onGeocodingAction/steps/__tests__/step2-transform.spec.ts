@@ -3,7 +3,7 @@ import Stream from 'node:stream';
 import { DASH } from '../../../../domain/constantValues';
 import { Query } from '../../query.class';
 import { InterpolatePattern, PrefectureName } from '../../types';
-import { NormalizeStep2 } from '../step2-transform';
+import { GeocodingStep2 } from '../step2-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
 const sameNamedPrefPatterns: InterpolatePattern[] = [
@@ -125,7 +125,7 @@ describe('step2transform', () => {
       objectMode: true,
     });
 
-    const target = new NormalizeStep2({
+    const target = new GeocodingStep2({
       prefPatterns,
       sameNamedPrefPatterns,
     });
