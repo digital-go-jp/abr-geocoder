@@ -33,9 +33,9 @@ export const SPACE: string = ' ';
 
 // 全角ハイフンを半角ハイフンに置き換えると、
 // 正規表現の範囲を示すために用いる半角ハイフンと被ってしまい
-// 問題を起こしやすいので、_(半角underscore) に置き換える
+// 問題を起こしやすいので、別の文字に置き換える
 // 基本的に住所には含まれていなはず
-export const DASH_ALT: string = '_';
+export const DASH: string = '@';
 
 export const SPACE_SYMBOLS: string = [
   ' ', // 半角スペース

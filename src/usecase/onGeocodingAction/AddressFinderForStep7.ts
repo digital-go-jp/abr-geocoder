@@ -2,6 +2,8 @@ import { Database, Statement } from 'better-sqlite3';
 import { DataField } from '../../domain/dataset';
 import { Query } from './query.class';
 import { PrefectureName } from './types';
+import { RegExpEx } from '../../domain';
+import { DASH } from '../../domain/constantValues';
 
 export type TownBlock = {
   lg_code: string;
@@ -156,7 +158,7 @@ export class AddressFinderForStep7 {
 
     // 番地の取得
     const match = query.tempAddress.match(
-      /^([1-9][0-9]*)(?:-([1-9][0-9]*))?(?:-([1-9][0-9]*))?/
+      RegExpEx.create(`^([1-9][0-9]*)(?:${DASH}([1-9][0-9]*))?(?:${DASH}([1-9][0-9]*))?`),
     );
     if (!match) {
       return query;
@@ -211,7 +213,7 @@ export class AddressFinderForStep7 {
         lat: rsdt.lat,
         lon: rsdt.lon,
         town_id: rsdt.town_id,
-        tempAddress: (addr2 ? `-${addr2}` : '') + query.tempAddress,
+        tempAddress: (addr2 ? `${DASH}${addr2}` : '') + query.tempAddress,
       });
     }
 
@@ -223,8 +225,8 @@ export class AddressFinderForStep7 {
     // 〇〇県 市〇〇 1 みたいな感じ
     const rsdt: RsdtAddr = rsdtMap.get(blockNum)!;
     const otherWithUnmatchedAddrs = [
-      addr1 ? `-${addr1}` : '',
-      addr2 ? `-${addr2}` : '',
+      addr1 ? `${DASH}${addr1}` : '',
+      addr2 ? `${DASH}${addr2}` : '',
       query.tempAddress,
     ].join('');
     return query.copy({
@@ -311,6 +313,6 @@ export class AddressFinderForStep7 {
     addr1?: string;
     addr2?: string;
   }) {
-    return [blockNum, addr1, addr2].filter(x => !!x).join('-');
+    return [blockNum, addr1, addr2].filter(x => !!x).join(DASH);
   }
 }

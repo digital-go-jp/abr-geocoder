@@ -2,7 +2,7 @@ import { Transform, TransformCallback } from 'node:stream';
 import { RegExpEx } from '../../../domain';
 import {
   ALPHA_NUMERIC_SYMBOLS,
-  DASH_ALT,
+  DASH,
   DASH_SYMBOLS,
   NUMRIC_AND_KANJI_SYMBOLS,
   SPACE,
@@ -56,7 +56,7 @@ export class NormalizeStep1 extends Transform {
         match => {
           return match.replace(
             RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'),
-            DASH_ALT
+            DASH
           );
         }
       )
@@ -73,13 +73,13 @@ export class NormalizeStep1 extends Transform {
         }
       )
       .replace(
-        RegExpEx.create(`.+?[${NUMRIC_AND_KANJI_SYMBOLS}]${DASH_ALT}`),
+        RegExpEx.create(`.+?[${NUMRIC_AND_KANJI_SYMBOLS}]${DASH}`),
         match => {
           return match.replace(RegExpEx.create('s', 'g'), ''); // 1番はじめに出てくるアラビア数字以前のスペースを削除
         }
       );
 
-    // console.log(`${query.originalInput} => ${modifiedInput}`);
+    console.log(`${query.input} => ${modifiedInput}`);
     next(
       null,
       query.copy({

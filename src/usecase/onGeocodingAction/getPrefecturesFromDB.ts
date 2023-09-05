@@ -16,7 +16,7 @@ export const getPrefecturesFromDB = async ({
           "${DataField.CITY_NAME.dbColumn}" || 
           "${DataField.OD_CITY_NAME.dbColumn}"
         ),
-        'lg_code', "${DataField.LG_CODE.dbColumn}"
+        '${DataField.LG_CODE.dbColumn}', "${DataField.LG_CODE.dbColumn}"
       )) AS "cities"
     FROM city
     GROUP BY pref_name

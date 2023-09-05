@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
-import { DASH_ALT, SPACE } from '../../../../domain/constantValues';
+import { DASH, SPACE } from '../../../../domain/constantValues';
 import { Query } from '../../query.class';
 import { NormalizeStep1 } from '../step1-transform';
 import { WritableStreamToArray } from './stream-to-array';
@@ -31,8 +31,8 @@ describe('step1-transform', () => {
 
     const actualValues = outputWrite.toArray();
     const expectValues = [
-      ['1', DASH_ALT, '2', DASH_ALT, '3'].join(''),
-      ['1', DASH_ALT, '2', DASH_ALT, '3'].join(''),
+      ['1', DASH, '2', DASH, '3'].join(''),
+      ['1', DASH, '2', DASH, '3'].join(''),
       'abcdefghijklmnopqrstuvwxyz',
       'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
       [
@@ -41,9 +41,9 @@ describe('step1-transform', () => {
         '渋谷区',
         SPACE,
         '3丁目0',
-        DASH_ALT,
+        DASH,
         '0',
-        DASH_ALT,
+        DASH,
         '0',
       ].join(''),
     ];

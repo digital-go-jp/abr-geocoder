@@ -6,8 +6,10 @@ import {
   NUMRIC_AND_KANJI_SYMBOLS,
   SPACE_SYMBOLS,
   DASH_SYMBOLS,
+  DASH,
 } from '../../../domain/constantValues';
 import { kan2num } from '../kan2num';
+import { RegExpEx } from '../../../domain';
 
 export class NormalizeStep5 extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep5) {
@@ -47,9 +49,9 @@ export class NormalizeStep5 extends Transform {
 
     // townが取得できた場合にのみ、addrに対する各種の変換処理を行う。
     const newAddress = query.tempAddress
-      .replace(/^-/, '')
-      .replace(/([0-9]+)(丁目)/g, match => {
-        return match.replace(/([0-9]+)/g, num => {
+      .replace(RegExpEx.create(`^${DASH}`), '')
+      .replace(RegExpEx.create('[0-9]+)(丁目)', 'g'), match => {
+        return match.replace(RegExpEx.create('([0-9]+)', 'g'), num => {
           return number2kanji(Number(num));
         });
       })
@@ -63,16 +65,16 @@ export class NormalizeStep5 extends Transform {
         new RegExp(
           `([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号?`
         ),
-        '$1-$3'
+        `\$1${DASH}\$3`
       )
       .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)番地?`), '$1')
-      .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)の?`), '$1-')
+      .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)の?`), `$1${DASH}`)
       .replace(
         new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)[${DASH_SYMBOLS}]`, 'g'),
         match => {
           return kan2num(match).replace(
             new RegExp(`[${DASH_SYMBOLS}]`, 'g'),
-            '-'
+            DASH
           );
         }
       )
@@ -81,19 +83,19 @@ export class NormalizeStep5 extends Transform {
         match => {
           return kan2num(match).replace(
             new RegExp(`[${DASH_SYMBOLS}]`, 'g'),
-            '-'
+            DASH
           );
         }
       )
-      .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)-`), s => {
+      .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)${DASH}`), s => {
         // `1-` のようなケース
         return kan2num(s);
       })
-      .replace(new RegExp(`-([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), s => {
+      .replace(new RegExp(`${DASH}([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), s => {
         // `-1` のようなケース
         return kan2num(s);
       })
-      .replace(new RegExp(`-[^0-9]+([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), s => {
+      .replace(new RegExp(`${DASH}[^0-9]+([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), s => {
         // `-あ1` のようなケース
         return kan2num(s);
       })

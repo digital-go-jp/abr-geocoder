@@ -124,10 +124,31 @@ export namespace geocodingAction {
     const cityPatternsForEachPrefecture =
       getCityPatternsForEachPrefecture(prefectures);
 
-    // 住所の正規化処理 第一段階
+    // 住所の正規化処理
+    //
+    // 例： ('＿' は全角スペース, @ は constantValues.DASH の文字)
+    // 東京都千代田区紀尾井町1-3'＿'東京ガーデンテラス紀尾井町 19階、20階 => 東京都千代田区紀尾井町1@3 東京ガーデンテラス紀尾井町 19階、20階
     const normalizeStep1 = new NormalizeStep1();
 
     // 特定のパターンから都道府県名が判別できるか試みる
+    //
+    // Query {
+    //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
+    //   tempAddress: '紀尾井町1@3 東京ガーデンテラス紀尾井町 19階、20階',
+    //   prefecture: '東京都',
+    //   city: '東京都千代田区',
+    //   town: undefined,
+    //   town_id: undefined,
+    //   lg_code: undefined,
+    //   lat: null,
+    //   lon: null,
+    //   block: undefined,
+    //   block_id: undefined,
+    //   addr1: undefined,
+    //   addr1_id: undefined,
+    //   addr2: undefined,
+    //   addr2_id: undefined
+    // }
     const normalizeStep2 = new NormalizeStep2({
       prefPatterns,
       sameNamedPrefPatterns,
@@ -139,14 +160,13 @@ export namespace geocodingAction {
       db,
       wildcardHelper,
     });
-    const step3stream = new Stream.Readable({
-      objectMode: true,
-    });
+    
     const step3a_stream = new NormalizeStep3a(cityPatternsForEachPrefecture);
     const step3b_stream = new NormalizeStep3b(addressFinderForStep5);
     const step3final_stream = new NormalizeStep3Final();
-    step3stream.pipe(step3a_stream).pipe(step3b_stream).pipe(step3final_stream);
-    const normalizeStep3 = new NormalizeStep3(step3stream);
+    step3a_stream.pipe(step3b_stream).pipe(step3final_stream);
+    
+    const normalizeStep3 = new NormalizeStep3(step3a_stream);
 
     // 何をしているのか良くわからない
     const normalizeStep4 = new NormalizeStep4({

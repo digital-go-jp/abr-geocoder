@@ -242,7 +242,7 @@ export class AddressFinderForStep5 {
         town.name
           // 横棒を含む場合（流通センター、など）に対応
           .replace(
-            RegExpEx.create(`/[${DASH_SYMBOLS}]`, 'g'),
+            RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'),
             `[${DASH_SYMBOLS}]`
           )
           .replace(RegExpEx.create('大?字', 'g'), '(大?字)?')

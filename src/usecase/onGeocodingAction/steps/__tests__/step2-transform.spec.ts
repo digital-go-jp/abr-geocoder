@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
-import { DASH_ALT } from '../../../../domain/constantValues';
+import { DASH } from '../../../../domain/constantValues';
 import { Query } from '../../query.class';
 import { InterpolatePattern, PrefectureName } from '../../types';
 import { NormalizeStep2 } from '../step2-transform';
@@ -139,11 +139,11 @@ describe('step2transform', () => {
   };
 
   it('"長崎" 県 "長崎" 市と同一名称を含むケース', async () => {
-    const input = Query.create(`長崎市魚の町4${DASH_ALT}1`);
+    const input = Query.create(`長崎市魚の町4${DASH}1`);
     const expectValues = [
-      Query.create(`長崎市魚の町4${DASH_ALT}1`).copy({
+      Query.create(`長崎市魚の町4${DASH}1`).copy({
         prefecture: PrefectureName.NAGASAKI,
-        tempAddress: `魚の町4${DASH_ALT}1`,
+        tempAddress: `魚の町4${DASH}1`,
         city: '長崎市',
       }),
     ];
