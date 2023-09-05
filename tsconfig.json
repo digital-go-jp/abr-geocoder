@@ -19,10 +19,9 @@
     "types": ["node"]
   },
   "include": [
-    "src/cli/**/*.ts",
+    "src/**/*.ts",
   ],
   "exclude": [
-    "node_modules/**/*",
-    "src/cli/usecase/onGeocodingAction/experimental/*"
+    "node_modules/**/*"
   ]
 }
