@@ -1,6 +1,6 @@
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../query.class';
-import { AddressFinderForStep5 } from '../AddressFinderForStep5';
+import { AddressFinderForStep3and5 } from '../AddressFinderForStep3and5';
 import { number2kanji } from '@geolonia/japanese-numeral';
 import {
   NUMRIC_AND_KANJI_SYMBOLS,
@@ -12,7 +12,7 @@ import { kan2num } from '../kan2num';
 import { RegExpEx } from '../../../domain';
 
 export class NormalizeStep5 extends Transform {
-  constructor(private readonly addressFinder: AddressFinderForStep5) {
+  constructor(private readonly addressFinder: AddressFinderForStep3and5) {
     super({
       objectMode: true,
     });

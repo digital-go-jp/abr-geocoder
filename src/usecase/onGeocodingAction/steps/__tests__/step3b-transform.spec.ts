@@ -2,17 +2,17 @@ import { describe, expect, it, jest } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
-  AddressFinderForStep5,
+  AddressFinderForStep3and5,
   FindParameters,
-} from '../../AddressFinderForStep5';
+} from '../../AddressFinderForStep3and5';
 import { Query } from '../../query.class';
 import { FromStep3Type, PrefectureName } from '../../types';
 import { NormalizeStep3b } from '../step3b-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
-jest.mock<AddressFinderForStep5>('../../AddressFinder');
+jest.mock<AddressFinderForStep3and5>('../../AddressFinder');
 
-const MockedAddressFinder = AddressFinderForStep5 as jest.Mock;
+const MockedAddressFinder = AddressFinderForStep3and5 as jest.Mock;
 MockedAddressFinder.mockImplementation(() => {
   return {
     find: (params: FindParameters) => {
@@ -46,7 +46,7 @@ describe('step3b-transform', () => {
     const dummyCallback = jest.fn();
 
     // jest.mock() で AddressFinder クラスをモック化してある
-    const finder = new MockedAddressFinder() as AddressFinderForStep5;
+    const finder = new MockedAddressFinder() as AddressFinderForStep3and5;
     const target = new NormalizeStep3b(finder);
     const outputWrite = new WritableStreamToArray<Query>();
     const matchedPatterns = [

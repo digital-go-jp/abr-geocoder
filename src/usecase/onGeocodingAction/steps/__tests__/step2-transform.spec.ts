@@ -170,15 +170,15 @@ describe('step2transform', () => {
 
   it('都道府県名を含むケース', async () => {
     const input = Query.create(
-      '東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階'
+      '東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階'
     );
     const expectValues = [
       Query.create(
-        '東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階'
+        '東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階'
       ).copy({
         prefecture: PrefectureName.TOKYO,
         tempAddress:
-          '千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階',
+          '千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階',
       }),
     ];
     await doProcess(input, expectValues);

@@ -32,7 +32,7 @@ export type FindParameters = {
  * オリジナルコードの getNormalizedCity() 関連を１つにまとめたクラス。
  * 実質的にジオコーディングしている部分
  */
-export class AddressFinderForStep5 {
+export class AddressFinderForStep3and5 {
   private readonly getTownStatement: Statement;
   private readonly wildcardHelper: (address: string) => string;
   constructor({

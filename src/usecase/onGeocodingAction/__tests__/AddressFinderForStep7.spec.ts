@@ -5,6 +5,7 @@ import dummyRsdtList from './dummyRsdtList.json';
 import { AddressFinderForStep7 } from '../AddressFinderForStep7';
 import { Query } from '../query.class';
 import { PrefectureName } from '../types';
+import { DASH } from '../../../domain/constantValues';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 
@@ -49,7 +50,7 @@ describe('AddressFinderForStep7', () => {
       prefecture: PrefectureName.TOKYO,
       city: '千代田区',
       town: '紀尾井町',
-      tempAddress: '1-3 東京ガーデンテラス紀尾井町 19階、20階',
+      tempAddress: `1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`,
     });
 
     const result = await addressFinder.find(query);

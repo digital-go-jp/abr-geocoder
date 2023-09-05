@@ -1,9 +1,9 @@
 import { Transform, TransformCallback } from 'node:stream';
-import { AddressFinderForStep5 } from '../AddressFinderForStep5';
+import { AddressFinderForStep3and5 } from '../AddressFinderForStep3and5';
 import { FromStep3aType } from '../types';
 
 export class NormalizeStep3b extends Transform {
-  constructor(private readonly addressFinder: AddressFinderForStep5) {
+  constructor(private readonly addressFinder: AddressFinderForStep3and5) {
     super({
       objectMode: true,
     });

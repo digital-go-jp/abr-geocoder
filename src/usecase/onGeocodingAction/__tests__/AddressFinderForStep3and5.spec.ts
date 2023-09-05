@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
-import { AddressFinderForStep5, TownRow } from '../AddressFinderForStep5';
+import { AddressFinderForStep3and5, TownRow } from '../AddressFinderForStep3and5';
 import { PrefectureName } from '../types';
+import { DASH } from '../../../domain/constantValues';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 
@@ -135,10 +136,10 @@ MockedDB.mockImplementation(() => {
 const wildcardHelper = (address: string) => {
   return address;
 };
-describe('AddressFinderForStep5', () => {
+describe('AddressFinderForStep3and5', () => {
   const mockedDB = new Database('<no sql file>');
 
-  const instance = new AddressFinderForStep5({
+  const instance = new AddressFinderForStep3and5({
     db: mockedDB,
     wildcardHelper,
   });
@@ -185,7 +186,7 @@ describe('AddressFinderForStep5', () => {
 
   it('見つからないケース', async () => {
     const result = await instance.find({
-      address: '御幸町16-1',
+      address: `御幸町16${DASH}1`,
       prefecture: PrefectureName.SHIZUOKA,
       cityName: '沼津市',
     });
@@ -195,7 +196,7 @@ describe('AddressFinderForStep5', () => {
 
   it('「町」を含む地名', async () => {
     const result = await instance.find({
-      address: '森野2-2-22',
+      address: `森野2${DASH}2${DASH}22`,
       prefecture: PrefectureName.TOKYO,
       cityName: '町田市',
     });
@@ -203,12 +204,12 @@ describe('AddressFinderForStep5', () => {
     expect(result).toEqual({
       lg_code: '132098',
       town_id: '0006002',
-      name: '森野2-',
+      name: `森野2`,
       koaza: '',
       lat: 35.548247,
       lon: 139.440264,
       originalName: '',
-      tempAddress: '2-22',
+      tempAddress: `${DASH}2${DASH}22`,
     });
   });
 });

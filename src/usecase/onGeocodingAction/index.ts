@@ -12,7 +12,7 @@ import {
   setupContainerForTest,
   setupContainerParams,
 } from '../../interface-adapter';
-import { AddressFinderForStep5 } from './AddressFinderForStep5';
+import { AddressFinderForStep3and5 } from './AddressFinderForStep3and5';
 import { AddressFinderForStep7 } from './AddressFinderForStep7';
 import { getCityPatternsForEachPrefecture } from './getCityPatternsForEachPrefecture';
 import { getPrefectureRegexPatterns } from './getPrefectureRegexPatterns';
@@ -156,7 +156,7 @@ export namespace geocodingAction {
 
     // step3はデータベースを使って都道府県と市町村を特定するため、処理が複雑になる
     // なので、さらに別のストリームで処理を行う
-    const addressFinderForStep5 = new AddressFinderForStep5({
+    const addressFinderForStep5 = new AddressFinderForStep3and5({
       db,
       wildcardHelper,
     });
