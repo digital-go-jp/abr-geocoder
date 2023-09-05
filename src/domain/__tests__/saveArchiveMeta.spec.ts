@@ -1,6 +1,6 @@
-import { run } from 'node:test';
-import { saveArchiveMeta } from '../saveArchiveMeta';
+import { describe, expect, it, jest } from '@jest/globals';
 import Database from 'better-sqlite3';
+import { saveArchiveMeta } from '../saveArchiveMeta';
 
 const dummyStatement = jest.fn();
 jest.mock('better-sqlite3', () => ({

@@ -20,6 +20,7 @@
 
     /* For loading json file */
     "resolveJsonModule": true,
+    "moduleResolution": "nodenext",
   },
   "include": [
     "src/**/*.ts",

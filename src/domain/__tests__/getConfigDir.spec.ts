@@ -1,7 +1,8 @@
-import { getDataDir } from '../getDataDir';
+import { describe, expect, it } from '@jest/globals';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import fs from 'node:fs';
+import { getDataDir } from '../getDataDir';
 
 describe('getDataDir', () => {
   it('should create a directory if not existed', async () => {

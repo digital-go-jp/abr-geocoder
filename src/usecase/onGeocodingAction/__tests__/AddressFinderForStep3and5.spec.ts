@@ -152,7 +152,7 @@ describe('AddressFinderForStep3and5', () => {
     const result = await instance.find({
       address: '本宿町2丁目22番地の22',
       prefecture: PrefectureName.TOKYO,
-      cityName: '府中市',
+      city: '府中市',
     });
     expect(result).toEqual({
       lg_code: '132063',
@@ -170,7 +170,7 @@ describe('AddressFinderForStep3and5', () => {
     const result = await instance.find({
       address: '中京区柳馬場通夷川上ル五町目242',
       prefecture: PrefectureName.KYOTO,
-      cityName: '京都市',
+      city: '京都市',
     });
     expect(result).toEqual({
       lg_code: '261041',
@@ -188,7 +188,7 @@ describe('AddressFinderForStep3and5', () => {
     const result = await instance.find({
       address: `御幸町16${DASH}1`,
       prefecture: PrefectureName.SHIZUOKA,
-      cityName: '沼津市',
+      city: '沼津市',
     });
 
     expect(result).toEqual(null);
@@ -198,7 +198,7 @@ describe('AddressFinderForStep3and5', () => {
     const result = await instance.find({
       address: `森野2${DASH}2${DASH}22`,
       prefecture: PrefectureName.TOKYO,
-      cityName: '町田市',
+      city: '町田市',
     });
 
     expect(result).toEqual({

@@ -21,7 +21,7 @@ describe('getPrefectureRegexPatterns', () => {
     });
 
     // 期待値と戻り値を同じように比較するために、並び替える
-    const comp = (a: InterpolatePattern, b: InterpolatePattern): number => {
+    const comp = (a: { prefecture: string; regExpPattern: string; }, b: { prefecture: string; regExpPattern: string; }): number => {
       return a.prefecture.charCodeAt(0) - b.prefecture.charCodeAt(0);
     };
 
@@ -29,23 +29,19 @@ describe('getPrefectureRegexPatterns', () => {
     expect(patterns.sort(comp)).toEqual(
       [
         {
-          address: '東京都',
-          prefectureName: PrefectureName.TOKYO,
+          prefecture: PrefectureName.TOKYO,
           regExpPattern: '^東京都?',
         },
         {
-          address: '北海道',
-          prefectureName: PrefectureName.HOKKAIDO,
+          prefecture: PrefectureName.HOKKAIDO,
           regExpPattern: '^北海道?',
         },
         {
-          address: '広島県',
-          prefectureName: PrefectureName.HIROSHIMA,
+          prefecture: PrefectureName.HIROSHIMA,
           regExpPattern: '^広島県?',
         },
         {
-          address: '京都府',
-          prefectureName: PrefectureName.KYOTO,
+          prefecture: PrefectureName.KYOTO,
           regExpPattern: '^京都府?',
         },
       ].sort(comp)

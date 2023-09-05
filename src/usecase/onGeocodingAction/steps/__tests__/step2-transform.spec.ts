@@ -8,85 +8,71 @@ import { WritableStreamToArray } from './stream-to-array';
 
 const sameNamedPrefPatterns: InterpolatePattern[] = [
   {
-    address: `${PrefectureName.HIROSHIMA}広島市`,
     regExpPattern: '^広島市',
     prefecture: PrefectureName.HIROSHIMA,
     city: '広島市',
   },
   {
-    address: `${PrefectureName.HIROSHIMA}広島市佐伯区`,
     regExpPattern: '^広島市佐伯区',
     prefecture: PrefectureName.HIROSHIMA,
     city: '広島市佐伯区',
   },
   {
-    address: `${PrefectureName.KYOTO}京都市`,
     regExpPattern: '^京都市',
     prefecture: PrefectureName.KYOTO,
     city: '京都市',
   },
   {
-    address: `${PrefectureName.KYOTO}京都市北区`,
     regExpPattern: '^京都市北区',
     prefecture: PrefectureName.KYOTO,
     city: '京都市北区',
   },
   {
-    address: `${PrefectureName.KYOTO}京都市上京区`,
     regExpPattern: '^京都市上京区',
     prefecture: PrefectureName.KYOTO,
     city: '京都市上京区',
   },
   {
-    address: `${PrefectureName.NAGASAKI}長崎市`,
     regExpPattern: '^長崎市',
     prefecture: PrefectureName.NAGASAKI,
     city: '長崎市',
   },
   {
-    address: `${PrefectureName.KAGOSHIMA}県鹿児島市`,
     regExpPattern: '^鹿児島市',
     prefecture: PrefectureName.KAGOSHIMA,
     city: '鹿児島市',
   },
   {
-    address: `${PrefectureName.KAGOSHIMA}鹿児島郡三島村`,
     regExpPattern: '^鹿児島郡三島村',
     prefecture: PrefectureName.KAGOSHIMA,
     city: '鹿児島郡三島村',
   },
   {
-    address: `${PrefectureName.KAGOSHIMA}鹿児島郡十島村`,
     regExpPattern: '^鹿児島郡十島村',
     prefecture: PrefectureName.KAGOSHIMA,
     city: '鹿児島郡十島村',
   },
   {
-    address: `${PrefectureName.FUKUSHIMA}石川郡石川町`,
     regExpPattern: '^石川郡石川町',
     prefecture: PrefectureName.FUKUSHIMA,
     city: '石川郡石川町',
   },
   {
-    address: `${PrefectureName.FUKUSHIMA}石川郡玉川村`,
     regExpPattern: '^石川郡玉川村',
     prefecture: PrefectureName.FUKUSHIMA,
     city: '石川郡玉川村',
   },
   {
-    address: `${PrefectureName.FUKUSHIMA}石川郡平田村`,
     regExpPattern: '^石川郡平田村',
     prefecture: PrefectureName.FUKUSHIMA,
     city: '石川郡平田村',
   },
   {
-    address: `${PrefectureName.FUKUSHIMA}石川郡浅川町`,
     regExpPattern: '^石川郡浅川町',
     prefecture: PrefectureName.FUKUSHIMA,
     city: '石川郡浅川町',
   },
   {
-    address: `${PrefectureName.FUKUSHIMA}石川郡古殿町`,
     regExpPattern: '^石川郡古殿町',
     prefecture: PrefectureName.FUKUSHIMA,
     city: '石川郡古殿町',
@@ -95,22 +81,18 @@ const sameNamedPrefPatterns: InterpolatePattern[] = [
 
 const prefPatterns: InterpolatePattern[] = [
   {
-    address: '東京都',
     prefecture: PrefectureName.TOKYO,
     regExpPattern: '^東京都?',
   },
   {
-    address: '北海道',
     prefecture: PrefectureName.HOKKAIDO,
     regExpPattern: '^北海道?',
   },
   {
-    address: '広島県',
     prefecture: PrefectureName.HIROSHIMA,
     regExpPattern: '^広島県?',
   },
   {
-    address: '京都府',
     prefecture: PrefectureName.KYOTO,
     regExpPattern: '^京都府?',
   },

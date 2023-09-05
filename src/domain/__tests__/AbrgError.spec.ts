@@ -1,7 +1,8 @@
-import { AbrgMessage } from '../AbrgMessage';
+import { describe, expect, it } from '@jest/globals';
 import { AbrgError, AbrgErrorLevel } from '../AbrgError';
-import jaMessage from '../AbrgMessage/locales/ja';
+import { AbrgMessage } from '../AbrgMessage';
 import enMessage from '../AbrgMessage/locales/en';
+import jaMessage from '../AbrgMessage/locales/ja';
 
 describe('AbrgError', () => {
   it('message should be written in Japanese', () => {
