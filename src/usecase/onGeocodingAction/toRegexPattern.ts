@@ -10,7 +10,10 @@ export const toRegexPattern = (address: string) => {
   // 以下なるべく文字数が多いものほど上にすること
   address = address
     .replace(RegExpEx.create('三栄町|四谷三栄町', 'g'), '(三栄町|四谷三栄町)')
-    .replace(RegExpEx.create('鬮野川|くじ野川|くじの川', 'g'), '(鬮野川|くじ野川|くじの川)')
+    .replace(
+      RegExpEx.create('鬮野川|くじ野川|くじの川', 'g'),
+      '(鬮野川|くじ野川|くじの川)'
+    )
     .replace(RegExpEx.create('通り|とおり', 'g'), '(通り|とおり)')
     .replace(RegExpEx.create('埠頭|ふ頭', 'g'), '(埠頭|ふ頭)')
     .replace(RegExpEx.create('番町|番丁', 'g'), '(番町|番丁)')

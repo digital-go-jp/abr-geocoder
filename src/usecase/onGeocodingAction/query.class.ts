@@ -33,14 +33,13 @@ export interface IQuery {
   addr2?: string;
 
   addr2_id?: string;
-  
+
   next?: TransformCallback;
 }
 
 export type QueryParams = IQuery;
 
 export type QueryJson = {
-
   // 入力された住所（最後まで変更しない）
   input: string;
 
@@ -72,7 +71,7 @@ export type QueryJson = {
   addr2?: string;
 
   addr2_id?: string;
-}
+};
 
 export class Query implements IQuery {
   public readonly input: string;
@@ -141,10 +140,7 @@ export class Query implements IQuery {
     );
   }
 
-  static create = (
-    address: string,
-    next?: TransformCallback,
-  ): Query => {
+  static create = (address: string, next?: TransformCallback): Query => {
     address = address.trim();
     return new Query({
       input: address,

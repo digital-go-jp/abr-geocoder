@@ -8,7 +8,9 @@ export class JisKanji {
   private JIS_KANJI_REGEX_PATTERNS: [regexp: RegExp, replaceTo: string][] = [];
 
   private constructor() {
-    for (const [oldKanji, newKanji] of Object.entries(oldKanji_to_newKanji_table)) {
+    for (const [oldKanji, newKanji] of Object.entries(
+      oldKanji_to_newKanji_table
+    )) {
       const pattern = `${oldKanji}|${newKanji}`;
 
       this.JIS_KANJI_REGEX_PATTERNS.push([
@@ -30,7 +32,6 @@ export class JisKanji {
   static replaceAll(target: string): string {
     return JisKanji.instnace.replaceAll(target);
   }
-
 }
 
 export const jisKanji = (target: string): string => {

@@ -21,7 +21,7 @@ export class GeocodingStep8 extends Transform {
     query = query.copy({
       tempAddress: this.restore(query.tempAddress),
     });
-    
+
     callback(null, query);
   }
 

@@ -1,4 +1,3 @@
-
 import { Database } from 'better-sqlite3';
 import { Readable, Transform, Writable } from 'node:stream';
 import { TransformCallback } from 'stream';
@@ -25,7 +24,12 @@ import {
   GeocodingStep7,
   GeocodingStep8,
 } from './steps';
-import { IAddressPatch, IPrefecture, InterpolatePattern, PrefectureName } from './types';
+import {
+  IAddressPatch,
+  IPrefecture,
+  InterpolatePattern,
+  PrefectureName,
+} from './types';
 
 export class StreamGeocoder extends Transform {
   private constructor(private stream: Readable) {
@@ -34,7 +38,11 @@ export class StreamGeocoder extends Transform {
     });
   }
 
-  _transform(line: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+  _transform(
+    line: Buffer,
+    encoding: BufferEncoding,
+    callback: TransformCallback
+  ): void {
     const input = line.toString();
 
     // コメント行は無視する
@@ -42,18 +50,15 @@ export class StreamGeocoder extends Transform {
       callback();
       return;
     }
-    
+
     // 入力値を最後までキープするため、Queryクラスでラップする
-    this.stream.push(
-      Query.create(input, callback),
-    );
+    this.stream.push(Query.create(input, callback));
   }
 
   static create = async (
     database: Database,
     fuzzy?: string
   ): Promise<StreamGeocoder> => {
-
     /**
      * 都道府県とそれに続く都市名を取得する
      */
@@ -107,6 +112,7 @@ export class StreamGeocoder extends Transform {
     //
     const step1 = new GeocodingStep1();
 
+    /* eslint-disable no-irregular-whitespace */
     // 特定のパターンから都道府県名が判別できるか試みる
     //
     // 以下のような形になる
@@ -127,6 +133,7 @@ export class StreamGeocoder extends Transform {
     //   addr2: undefined,
     //   addr2_id: undefined
     // }
+    /* eslint-enable no-irregular-whitespace */
     const step2 = new GeocodingStep2({
       prefPatterns,
       sameNamedPrefPatterns,
@@ -140,7 +147,7 @@ export class StreamGeocoder extends Transform {
     });
 
     const step3other_stream = new Readable({
-      read(size) {},
+      read() {},
       objectMode: true,
     });
     const step3a_stream = new GeocodingStep3A(cityPatternsForEachPrefecture);
@@ -151,6 +158,7 @@ export class StreamGeocoder extends Transform {
       .pipe(step3b_stream)
       .pipe(step3final_stream);
 
+    /* eslint-disable no-irregular-whitespace */
     // 都道府県名がstep2で判別出来ない場合、step3が実行される
     //
     // 以下のような形になる
@@ -171,8 +179,10 @@ export class StreamGeocoder extends Transform {
     //   addr2: undefined,
     //   addr2_id: undefined
     // }
+    /* eslint-enable no-irregular-whitespace */
     const step3 = new GeocodingStep3(step3other_stream);
 
+    /* eslint-disable no-irregular-whitespace */
     // step2で都道府県名が判定できている場合、step3で判定しないので
     // この時点で判定できていないケースの city を判定している
     //
@@ -194,11 +204,13 @@ export class StreamGeocoder extends Transform {
     //   addr2: undefined,
     //   addr2_id: undefined
     // }
+    /* eslint-enable no-irregular-whitespace */
     const step4 = new GeocodingStep4({
       cityPatternsForEachPrefecture,
       wildcardHelper,
     });
 
+    /* eslint-disable no-irregular-whitespace */
     // 詳細な情報を追加する。
     // 以下のような形になる
     //
@@ -219,6 +231,7 @@ export class StreamGeocoder extends Transform {
     //   addr2: undefined,
     //   addr2_id: undefined
     // }
+    /* eslint-enable no-irregular-whitespace */
     const step5 = new GeocodingStep5(addressFinderForStep5);
 
     // TypeScript が prefecture の string型 を PrefectureName に変換できないので、
@@ -226,20 +239,22 @@ export class StreamGeocoder extends Transform {
     const prefectureSet = new Set<string>();
     Object.values(PrefectureName).forEach(pref => {
       prefectureSet.add(pref);
-    })
-    const patchValues = PATCH_PATTERNS
-      .filter(pref => prefectureSet.has(pref.prefecture))
-      .map<IAddressPatch>(patch => {
-        return {
-          ...patch,
-          prefecture: patch.prefecture as PrefectureName,
-        }
-      });
-    
+    });
+    const patchValues = PATCH_PATTERNS.filter(pref =>
+      prefectureSet.has(pref.prefecture)
+    ).map<IAddressPatch>(patch => {
+      return {
+        ...patch,
+        prefecture: patch.prefecture as PrefectureName,
+      };
+    });
+
     // アドレスの補正処理
     // うまく処理出来ないケースをここで修正している
     const step6 = new GeocodingStep6(patchValues);
 
+    /* eslint-disable no-irregular-whitespace */
+    //
     // 最終的なデータを取得する
     //
     // Query {
@@ -259,14 +274,16 @@ export class StreamGeocoder extends Transform {
     //   addr2: '',
     //   addr2_id: ''
     // }
+    //
+    /* eslint-enable no-irregular-whitespace */
     const addressFinderForStep7 = new AddressFinderForStep7(database);
     const step7 = new GeocodingStep7(addressFinderForStep7);
 
     // {SPACE} と {DASH} をもとに戻す
     const step8 = new GeocodingStep8();
-    
+
     const processStream = new Readable({
-      read(size) {},
+      read() {},
       objectMode: true,
     });
     processStream
@@ -278,37 +295,39 @@ export class StreamGeocoder extends Transform {
       .pipe(step6)
       .pipe(step7)
       .pipe(step8)
-      .pipe(new Writable({
-        objectMode: true,
-        write(query: Query, encoding, callback) {
-          callback();
-          if (!query.next) {
-            return;
-          }
+      .pipe(
+        new Writable({
+          objectMode: true,
+          write(query: Query, encoding, callback) {
+            callback();
+            if (!query.next) {
+              return;
+            }
 
-          query.next(
-            null,
-            new GeocodeResult(
-              query.input,
-              query.lat,
-              query.lon,
-              query.tempAddress,
-              query.prefecture,
-              query.city,
-              query.town,
-              query.town_id,
-              query.lg_code,
-              query.block,
-              query.block_id,
-              query.addr1,
-              query.addr1_id,
-              query.addr2,
-              query.addr2_id,
-            ),
-          );
-        },
-      }))
-    
+            query.next(
+              null,
+              new GeocodeResult(
+                query.input,
+                query.lat,
+                query.lon,
+                query.tempAddress,
+                query.prefecture,
+                query.city,
+                query.town,
+                query.town_id,
+                query.lg_code,
+                query.block,
+                query.block_id,
+                query.addr1,
+                query.addr1_id,
+                query.addr2,
+                query.addr2_id
+              )
+            );
+          },
+        })
+      );
+
     return new StreamGeocoder(processStream);
-  }
+  };
 }

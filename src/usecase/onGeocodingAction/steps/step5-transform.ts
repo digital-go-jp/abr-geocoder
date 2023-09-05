@@ -5,7 +5,7 @@ import {
   DASH,
   J_DASH,
   NUMRIC_AND_KANJI_SYMBOLS,
-  SPACE
+  SPACE,
 } from '../../../domain/constantValues';
 import { AddressFinderForStep3and5 } from '../AddressFinderForStep3and5';
 import { kan2num } from '../kan2num';
@@ -57,45 +57,45 @@ export class GeocodingStep5 extends Transform {
         return match.replace(RegExpEx.create('([0-9]+)', 'g'), num => {
           return number2kanji(Number(num));
         });
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(
-        `(([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号)[${SPACE}]*(.+)`,
+        `(([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号)[${SPACE}]*(.+)`
       ),
-      '$1' + SPACE + '$5',
+      '$1' + SPACE + '$5'
     );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(
-        `([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号?`,
+        `([${NUMRIC_AND_KANJI_SYMBOLS}]+)(番地?)([${NUMRIC_AND_KANJI_SYMBOLS}]+)号?`
       ),
-      '$1' + DASH + '$3',
+      '$1' + DASH + '$3'
     );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)番地?`),
-      '$1',
+      '$1'
     );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)[${J_DASH}]`),
-      '$1' + DASH,
+      '$1' + DASH
     );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)${DASH}`, 'g'),
       match => {
         return kan2num(match);
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(`${DASH}([${NUMRIC_AND_KANJI_SYMBOLS}]+)`, 'g'),
       match => {
         return kan2num(match);
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
@@ -103,7 +103,7 @@ export class GeocodingStep5 extends Transform {
       s => {
         // `1-` のようなケース
         return kan2num(s);
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
@@ -111,7 +111,7 @@ export class GeocodingStep5 extends Transform {
       s => {
         // `-1` のようなケース
         return kan2num(s);
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
@@ -119,7 +119,7 @@ export class GeocodingStep5 extends Transform {
       s => {
         // `-あ1` のようなケース
         return kan2num(s);
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
@@ -127,8 +127,8 @@ export class GeocodingStep5 extends Transform {
       s => {
         // `串本町串本１２３４` のようなケース
         return kan2num(s);
-      },
-    )
+      }
+    );
 
     return query.copy({
       tempAddress: tempAddress.trim(),

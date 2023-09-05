@@ -46,31 +46,31 @@ export class GeocodingStep1 extends Transform {
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),
-      SPACE,
+      SPACE
     );
     tempAddress = tempAddress.replace(
       RegExpEx.create(`([${ALPHA_NUMERIC_SYMBOLS}]+)`, 'g'),
       match => {
         // 全角のアラビア数字は問答無用で半角にする
         return this.zenkakuToHankaku(match);
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(
         `([${NUMRIC_AND_KANJI_SYMBOLS}][${DASH_SYMBOLS}])|([${DASH_SYMBOLS}])[${NUMRIC_AND_KANJI_SYMBOLS}]`,
-        'g',
+        'g'
       ),
       match => {
         return match.replace(RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'), DASH);
-      },
+      }
     );
     tempAddress = tempAddress.replace(
       RegExpEx.create(`(.+)(丁目?|番(町|地|丁)|条|軒|線|(${J_DASH})町|地割)`),
       match => {
         // 町丁目名以前のスペースはすべて削除
         return match.replace(RegExpEx.create(SPACE, 'g'), '');
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
@@ -78,7 +78,7 @@ export class GeocodingStep1 extends Transform {
       match => {
         // 区、郡以前のスペースはすべて削除
         return match.replace(RegExpEx.create(SPACE, 'g'), '');
-      },
+      }
     );
 
     tempAddress = tempAddress.replace(
@@ -86,7 +86,7 @@ export class GeocodingStep1 extends Transform {
       match => {
         // 1番はじめに出てくるアラビア数字以前のスペースを削除
         return match.replace(RegExpEx.create(SPACE, 'g'), '');
-      },
+      }
     );
 
     next(

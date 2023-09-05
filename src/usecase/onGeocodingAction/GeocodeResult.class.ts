@@ -32,7 +32,7 @@ export class GeocodeResult {
     public readonly addr1?: string,
     public readonly addr1_id?: string,
     public readonly addr2?: string,
-    public readonly addr2_id?: string,
+    public readonly addr2_id?: string
   ) {
     Object.freeze(this);
   }

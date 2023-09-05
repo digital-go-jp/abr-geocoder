@@ -43,15 +43,14 @@ export namespace geocodingAction {
     format,
     fuzzy,
   }: GeocodingParams) => {
-
     const db: Database = container.resolve('Database');
 
     const geocoder = await StreamGeocoder.create(db, fuzzy);
 
     const lineStream = byline.createStream();
 
-    const formatter = ((format) => {
-      switch(format) {
+    const formatter = (format => {
+      switch (format) {
         case OutputFormat.CSV:
           return new CsvTransform({
             skipHeader: false,
@@ -71,14 +70,14 @@ export namespace geocodingAction {
               GeocodeResultFields.OTHER,
               GeocodeResultFields.LATITUDE,
               GeocodeResultFields.LONGITUDE,
-            ]
+            ],
           });
         case OutputFormat.JSON:
           return new JsonTransform();
-        
+
         case OutputFormat.GEOJSON:
           return new GeoJsonTransform();
-        
+
         default:
           throw new AbrgError({
             messageId: AbrgMessage.UNSUPPORTED_OUTPUT_FORMAT,
@@ -87,14 +86,12 @@ export namespace geocodingAction {
       }
     })(format);
 
-    const outputStream: Writable = ((destination) => {
+    const outputStream: Writable = (destination => {
       if (destination === '-' || destination === '') {
         return process.stdout;
       }
-      
-      return fs.createWriteStream(
-        fs.realpathSync(destination),
-      );
+
+      return fs.createWriteStream(fs.realpathSync(destination));
     })(destination);
 
     getReadStreamFromSource(source)

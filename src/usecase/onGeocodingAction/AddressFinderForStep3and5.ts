@@ -1,5 +1,10 @@
 import { Database, Statement } from 'better-sqlite3';
-import { DASH, DASH_SYMBOLS, J_DASH, KANJI_1to10_SYMBOLS } from '../../domain/constantValues';
+import {
+  DASH,
+  DASH_SYMBOLS,
+  J_DASH,
+  KANJI_1to10_SYMBOLS,
+} from '../../domain/constantValues';
 import { DataField } from '../../domain/dataset';
 import { RegExpEx } from '../../domain/RegExpEx';
 import { isKanjiNumberFollewedByCho } from './isKanjiNumberFollewedByCho';
@@ -220,10 +225,7 @@ export class AddressFinderForStep3and5 {
       const pattern = toRegexPattern(
         town.name
           // 横棒を含む場合（流通センター、など）に対応
-          .replace(
-            RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'),
-            DASH,
-          )
+          .replace(RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'), DASH)
           .replace(RegExpEx.create('大?字', 'g'), '(大?字)?')
           // 以下住所マスターの町丁目に含まれる数字を正規表現に変換する
           .replace(
@@ -239,9 +241,9 @@ export class AddressFinderForStep3and5 {
                   .toString()
                   .replace(
                     RegExpEx.create(
-                      `(丁目?|番(町|丁)|条|軒|線|(${J_DASH})町|地割|号)`,
+                      `(丁目?|番(町|丁)|条|軒|線|(${J_DASH})町|地割|号)`
                     ),
-                    '',
+                    ''
                   )
               );
 
