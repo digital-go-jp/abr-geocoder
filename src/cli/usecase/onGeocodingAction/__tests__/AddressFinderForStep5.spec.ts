@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
-import { AddressFinder, TownRow } from '../../AddressFinder';
-import { PrefectureName } from "../../types";
+import { AddressFinderForStep5, TownRow } from '../AddressFinderForStep5';
+import { PrefectureName } from "../types";
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 
@@ -138,10 +138,10 @@ MockedDB.mockImplementationOnce(() => {
 const wildcardHelper = (address: string) => {
   return address;
 };
-describe('AddressFinder', () => {
+describe('AddressFinderForStep5', () => {
   const mockedDB = new Database('<no sql file>');
 
-  const instance = new AddressFinder({
+  const instance = new AddressFinderForStep5({
     db: mockedDB,
     wildcardHelper,
   });

@@ -1,9 +1,9 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
-import {Database} from 'better-sqlite3';
-import {container} from 'tsyringe';
-import {Logger} from 'winston';
+import { Database } from 'better-sqlite3';
+import { container } from 'tsyringe';
+import { Logger } from 'winston';
 import {
   AbrgError,
   AbrgErrorLevel,
@@ -66,7 +66,7 @@ export namespace updateCheck {
       getLastDatasetModified,
     });
 
-    const {updateAvailable} = await downloader.updateCheck();
+    const { updateAvailable } = await downloader.updateCheck();
 
     logger.info(AbrgMessage.toString(AbrgMessage.NEW_DATASET_IS_AVAILABLE));
     if (!updateAvailable) {

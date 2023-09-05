@@ -1,11 +1,5 @@
-import {Database, Statement} from 'better-sqlite3';
-import {
-  IPrefecture,
-  ICity,
-  Prefecture,
-  PrefectureName,
-  City,
-} from './types';
+import { Database, Statement } from 'better-sqlite3';
+import { IPrefecture, ICity, Prefecture, PrefectureName, City } from './types';
 import { DataField } from '../../domain';
 
 export const getPrefecturesFromDB = async ({

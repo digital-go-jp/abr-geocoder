@@ -1,7 +1,6 @@
-import { type } from "node:os";
-import { TransformCallback } from "node:stream";
-import { Query } from "./query.class";
-
+import { type } from 'node:os';
+import { TransformCallback } from 'node:stream';
+import { Query } from './query.class';
 
 export interface ICity {
   name: string;
@@ -107,7 +106,7 @@ export type PrefectureParams = IPrefecture;
 export class Prefecture implements IPrefecture {
   public readonly cities: ICity[];
   public readonly name: PrefectureName;
-  constructor({cities, name}: PrefectureParams) {
+  constructor({ cities, name }: PrefectureParams) {
     this.cities = cities;
     this.name = name;
     Object.freeze(this);
@@ -135,23 +134,23 @@ export type InterpolatePattern = {
   address: string;
   prefectureName: PrefectureName;
   cityName?: string;
-}
+};
 export interface INormalizedCity {
   result: string;
 }
 
 export interface getNormalizedCityParams {
-  address: string,
-  prefectureName: PrefectureName,
+  address: string;
+  prefectureName: PrefectureName;
   cityName: string;
   wildcardHelper: (pattern: string) => string;
 }
 
 export type FromStep3Type = {
-  query: Query,
+  query: Query;
 
   // move to step 4
-  callback: TransformCallback,
+  callback: TransformCallback;
 };
 
 export type Step3aMatchedPatternType = {

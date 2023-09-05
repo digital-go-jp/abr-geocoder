@@ -9,6 +9,6 @@ export const getDataDir = async (overrideDataDir?: string) => {
   } else {
     dataDir = path.join(os.homedir(), '.abr-geocoder');
   }
-  await fs.promises.mkdir(dataDir, {recursive: true});
+  await fs.promises.mkdir(dataDir, { recursive: true });
   return dataDir;
 };

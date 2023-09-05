@@ -20,7 +20,6 @@
   },
   "include": [
     "src/cli/**/*.ts",
-    "settings/*.ts"
   ],
   "exclude": [
     "node_modules/**/*",

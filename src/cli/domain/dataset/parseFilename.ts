@@ -1,5 +1,5 @@
 import path from 'node:path';
-import {IDatasetFileMeta} from './types';
+import { IDatasetFileMeta } from './types';
 
 /**
  * リソースCSVファイルから、情報を読取る

@@ -1,4 +1,4 @@
-import {MultiBar} from 'cli-progress';
+import { MultiBar } from 'cli-progress';
 
 export const provideMultiProgressBar = (): MultiBar => {
   return new MultiBar({

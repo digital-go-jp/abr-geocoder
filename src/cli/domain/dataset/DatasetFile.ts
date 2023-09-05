@@ -1,6 +1,6 @@
 import proj4 from 'proj4';
-import {DataField} from './DataField';
-import {DatasetFileParams, IDatasetFile, IDatasetFileMeta} from './types';
+import { DataField } from './DataField';
+import { DatasetFileParams, IDatasetFile, IDatasetFileMeta } from './types';
 
 proj4.defs('EPSG:4612', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 proj4.defs('EPSG:6668', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
@@ -29,7 +29,7 @@ export abstract class DatasetFile implements IDatasetFile {
   }): Record<string, string | number>;
 
   // CSVのフィールド名をDBカラム名に変換する
-  parseFields(row: {[key: string]: string}): Record<string, string | number> {
+  parseFields(row: { [key: string]: string }): Record<string, string | number> {
     const result: Record<string, string | number> = {};
     this.fields.forEach(field => {
       result[field.dbColumn] = row[field.csv] as string;
@@ -41,7 +41,7 @@ export abstract class DataWithDateFile
   extends DatasetFile
   implements IDatasetFileMeta
 {
-  process(row: {[key: string]: string}): Record<string, string | number> {
+  process(row: { [key: string]: string }): Record<string, string | number> {
     return this.parseFields(row);
   }
 }
@@ -50,7 +50,7 @@ export abstract class DataForPosFile
   extends DatasetFile
   implements IDatasetFileMeta
 {
-  process(row: {[key: string]: string}): Record<string, string | number> {
+  process(row: { [key: string]: string }): Record<string, string | number> {
     const parsedRow = this.parseFields(row);
 
     // 座標系の変換

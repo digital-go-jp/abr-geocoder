@@ -1,11 +1,19 @@
-import { Transform, TransformCallback } from "node:stream";
-import { Query } from "../query.class";
-import { FromStep3Type, InterpolatePattern, PrefectureName, Step3aMatchedPatternType } from "../types";
-import { RegExpEx } from "../../../domain";
+import { Transform, TransformCallback } from 'node:stream';
+import { Query } from '../query.class';
+import {
+  FromStep3Type,
+  InterpolatePattern,
+  PrefectureName,
+  Step3aMatchedPatternType,
+} from '../types';
+import { RegExpEx } from '../../../domain';
 
 export class NormalizeStep3a extends Transform {
   constructor(
-    private cityPatternsForEachPrefecture: Map<PrefectureName, InterpolatePattern[]>,
+    private cityPatternsForEachPrefecture: Map<
+      PrefectureName,
+      InterpolatePattern[]
+    >
   ) {
     super({
       objectMode: true,
@@ -15,7 +23,7 @@ export class NormalizeStep3a extends Transform {
   _transform(
     fromStep3: FromStep3Type,
     encoding: BufferEncoding,
-    next: TransformCallback,
+    next: TransformCallback
   ): void {
     //
     // 都道府県名にマッチする場合は補完する
@@ -36,11 +44,13 @@ export class NormalizeStep3a extends Transform {
     // 市町村名から始まっている場合、異なる都道府県に同一名称の地域が存在するので、
     // マッチするパターンを探していく
     const matchedPatterns: Step3aMatchedPatternType[] = [];
-    for (const [prefectureName, cityPatterns] of this.cityPatternsForEachPrefecture.entries()) {
-      
+    for (const [
+      prefectureName,
+      cityPatterns,
+    ] of this.cityPatternsForEachPrefecture.entries()) {
       for (const cityPattern of cityPatterns) {
         const match = fromStep3.query.tempAddress.match(
-          cityPattern.regExpPattern,
+          cityPattern.regExpPattern
         );
 
         if (!match) {
@@ -62,8 +72,8 @@ export class NormalizeStep3a extends Transform {
       });
 
       // 都道府県名が判別できたので、step4に進む
-      next();  // ストリームをつなげる必要があるので、next() を実行しておく
-      
+      next(); // ストリームをつなげる必要があるので、next() を実行しておく
+
       // step4に進む
       return fromStep3.callback(null, fromStep3.query);
     }
@@ -76,5 +86,4 @@ export class NormalizeStep3a extends Transform {
       matchedPatterns,
     });
   }
-  
 }

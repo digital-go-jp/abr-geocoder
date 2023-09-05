@@ -1,4 +1,4 @@
-import {SingleBar} from 'cli-progress';
+import { SingleBar } from 'cli-progress';
 import prettyBytes from 'pretty-bytes';
 
 export const provideProgressBar = (): SingleBar => {

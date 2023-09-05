@@ -1,14 +1,11 @@
-import { Transform, TransformCallback } from "node:stream";
-import { Query } from "../query.class";
-import { FromStep3Type, InterpolatePattern, PrefectureName } from "../types";
-import { RegExpEx } from "../../../domain";
+import { Transform, TransformCallback } from 'node:stream';
+import { Query } from '../query.class';
+import { FromStep3Type, InterpolatePattern, PrefectureName } from '../types';
+import { RegExpEx } from '../../../domain';
 import Stream from 'node:stream';
 
 export class NormalizeStep3 extends Transform {
-
-  constructor(
-    private otherReadable: Stream.Readable,
-  ) {
+  constructor(private otherReadable: Stream.Readable) {
     super({
       objectMode: true,
     });
@@ -17,7 +14,7 @@ export class NormalizeStep3 extends Transform {
   _transform(
     query: Query,
     encoding: BufferEncoding,
-    callback: TransformCallback,
+    callback: TransformCallback
   ): void {
     //
     // 都道府県名にマッチする場合は補完する
@@ -30,7 +27,7 @@ export class NormalizeStep3 extends Transform {
     if (query.prefectureName) {
       return callback(null, query);
     }
-    
+
     // 処理が複雑なので、別のストリームで処理する
     this.otherReadable.push({
       query,
@@ -43,5 +40,4 @@ export class NormalizeStep3 extends Transform {
     this.otherReadable.push(null);
     callback();
   }
-  
 }

@@ -1,7 +1,14 @@
-import { Transform, TransformCallback } from "node:stream";
-import { Query } from "../query.class";
-import { ALPHA_NUMERIC_SYMBOLS, DASH_SYMBOLS, DASH_ALT, SPACE, NUMRIC_AND_KANJI_SYMBOLS, SPACE_SYMBOLS } from "../../../domain/constantValues";
-import { RegExpEx } from "../../../domain";
+import { Transform, TransformCallback } from 'node:stream';
+import { RegExpEx } from '../../../domain';
+import {
+  ALPHA_NUMERIC_SYMBOLS,
+  DASH_ALT,
+  DASH_SYMBOLS,
+  NUMRIC_AND_KANJI_SYMBOLS,
+  SPACE,
+  SPACE_SYMBOLS,
+} from '../../../domain/constantValues';
+import { Query } from '../query.class';
 
 export class NormalizeStep1 extends Transform {
   constructor() {
@@ -13,7 +20,7 @@ export class NormalizeStep1 extends Transform {
   private zenkakuToHankaku(str: string): string {
     // ロジック的に 'Ａ-Ｚａ-ｚ０-９' の順番に依存しているので、
     // ここではコードに直接書く
-    const regex = RegExpEx.create(`[Ａ-Ｚａ-ｚ０-９]`, 'g');
+    const regex = RegExpEx.create('[Ａ-Ｚａ-ｚ０-９]', 'g');
     return str.replace(regex, s => {
       return String.fromCharCode(s.charCodeAt(0) - 0xfee0);
     });
@@ -36,61 +43,48 @@ export class NormalizeStep1 extends Transform {
     //
     const modifiedInput = query.tempAddress
       .normalize('NFC')
-      .replace(
-        RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),
-        SPACE,
-      )
-      .replace(
-        RegExpEx.create(`([${ALPHA_NUMERIC_SYMBOLS}]+)`, 'g'),
-        match => {
-          // 全角のアラビア数字は問答無用で半角にする
-          return this.zenkakuToHankaku(match);
-        },
-      )
+      .replace(RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'), SPACE)
+      .replace(RegExpEx.create(`([${ALPHA_NUMERIC_SYMBOLS}]+)`, 'g'), match => {
+        // 全角のアラビア数字は問答無用で半角にする
+        return this.zenkakuToHankaku(match);
+      })
       .replace(
         RegExpEx.create(
           `([${NUMRIC_AND_KANJI_SYMBOLS}][${DASH_SYMBOLS}])|([${DASH_SYMBOLS}])[${NUMRIC_AND_KANJI_SYMBOLS}]`,
-          'g',
+          'g'
         ),
         match => {
           return match.replace(
             RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'),
-            DASH_ALT,
+            DASH_ALT
           );
-        },
+        }
       )
       .replace(
-        RegExpEx.create(
-          '(.+)(丁目?|番(町|地|丁)|条|軒|線|(の|ノ)町|地割)',
-        ),
+        RegExpEx.create('(.+)(丁目?|番(町|地|丁)|条|軒|線|(の|ノ)町|地割)'),
         match => {
-          return match.replace(
-            RegExpEx.create('\s', 'g'),
-            '',
-          ); // 町丁目名以前のスペースはすべて削除
-        },
+          return match.replace(RegExpEx.create('s', 'g'), ''); // 町丁目名以前のスペースはすべて削除
+        }
       )
       .replace(
         RegExpEx.create('(.+)((郡.+(町|村))|((市|巿).+(区|區)))'),
         match => {
-          return match.replace(
-            RegExpEx.create('\s', 'g'),
-            '',
-          ); // 区、郡以前のスペースはすべて削除
-      })
+          return match.replace(RegExpEx.create('s', 'g'), ''); // 区、郡以前のスペースはすべて削除
+        }
+      )
       .replace(
         RegExpEx.create(`.+?[${NUMRIC_AND_KANJI_SYMBOLS}]${DASH_ALT}`),
         match => {
-          return match.replace(
-            RegExpEx.create('\s', 'g'),
-            '',
-          ); // 1番はじめに出てくるアラビア数字以前のスペースを削除
-        },
+          return match.replace(RegExpEx.create('s', 'g'), ''); // 1番はじめに出てくるアラビア数字以前のスペースを削除
+        }
       );
-    
+
     // console.log(`${query.originalInput} => ${modifiedInput}`);
-    next(null, query.copy({
-      tempAddress: modifiedInput,
-    }));
+    next(
+      null,
+      query.copy({
+        tempAddress: modifiedInput,
+      })
+    );
   }
 }

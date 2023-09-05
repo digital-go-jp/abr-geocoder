@@ -1,18 +1,10 @@
-import { Transform, TransformCallback } from "node:stream";
-import { Query } from "../query.class";
-import { AddressFinder } from "../AddressFinder";
-import { number2kanji } from "@geolonia/japanese-numeral";
-import { NUMRIC_AND_KANJI_SYMBOLS, SPACE_SYMBOLS, DASH_SYMBOLS } from "../../../domain/constantValues";
-import { kan2num } from "../kan2num";
-import { IAddressPatch } from "../types";
-import { RegExpEx } from "../../../domain";
-import { add } from "winston";
+import { Transform, TransformCallback } from 'node:stream';
+import { RegExpEx } from '../../../domain';
+import { Query } from '../query.class';
+import { IAddressPatch } from '../types';
 
 export class NormalizeStep6 extends Transform {
-
-  constructor(
-    private readonly addressPatches: IAddressPatch[],
-  ) {
+  constructor(private readonly addressPatches: IAddressPatch[]) {
     super({
       objectMode: true,
     });
@@ -21,7 +13,7 @@ export class NormalizeStep6 extends Transform {
   _transform(
     query: Query,
     encoding: BufferEncoding,
-    callback: TransformCallback,
+    callback: TransformCallback
   ): void {
     //
     // 補正処理？
@@ -41,15 +33,14 @@ export class NormalizeStep6 extends Transform {
       }
       address = address.replace(
         RegExpEx.create(patch.regExpPattern),
-        patch.result,
-      )
-    })
+        patch.result
+      );
+    });
     callback(
       null,
       query.copy({
         tempAddress: address,
-      }),
+      })
     );
   }
-  
 }

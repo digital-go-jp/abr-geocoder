@@ -5,14 +5,15 @@ import { Database } from 'better-sqlite3';
 import byline from 'byline';
 import { Stream } from 'node:stream';
 import { container } from 'tsyringe';
-import { patchPatterns } from '../../../../settings/';
+import { patchPatterns } from '../../settings';
 import { RegExpEx } from '../../domain';
 import {
   setupContainer,
   setupContainerForTest,
   setupContainerParams,
 } from '../../interface-adapter';
-import { AddressFinder } from './AddressFinder';
+import { AddressFinderForStep5 } from './AddressFinderForStep5';
+import { AddressFinderForStep7 } from './AddressFinderForStep7';
 import { getCityPatternsForEachPrefecture } from './getCityPatternsForEachPrefecture';
 import { getPrefectureRegexPatterns } from './getPrefectureRegexPatterns';
 import { getPrefecturesFromDB } from './getPrefecturesFromDB';
@@ -28,6 +29,7 @@ import {
   NormalizeStep4,
   NormalizeStep5,
   NormalizeStep6,
+  NormalizeStep7,
 } from './normalize';
 import { Query } from './query.class';
 import { GeocodingParams, IPrefecture, InterpolatePattern } from './types';
@@ -65,7 +67,6 @@ export namespace geocodingAction {
     // const logger: Logger = container.resolve('Logger');
     // const progressBar = container.resolve<SingleBar>('DownloadProgressBar');
 
-
     const convertToQuery = new Stream.Transform({
       objectMode: true,
       transform(line: Buffer, encoding, callback) {
@@ -80,7 +81,7 @@ export namespace geocodingAction {
         // 入力値を最後までキープするため、Queryクラスでラップする
         callback(null, Query.create(input));
       },
-    })
+    });
 
     /**
      * 都道府県とそれに続く都市名を取得する
@@ -89,13 +90,12 @@ export namespace geocodingAction {
       db,
     });
 
-
     /**
      * string = "^愛知郡愛荘町" を  "^(愛|\\?)(知|\\?)(郡|\\?)(愛|\\?)(荘|\\?)(町|\\?)" にする
      */
     const insertWildcardMatching = (string: string) => {
       return string.replace(
-        RegExpEx.create('(?<!\\\[[^\\\]]*)([一-龯ぁ-んァ-ン])(?!\\\?)', 'g'),
+        RegExpEx.create('(?<!\\[[^\\]]*)([一-龯ぁ-んァ-ン])(?!\\?)', 'g'),
         '($1|\\?)'
       );
     };
@@ -113,16 +113,18 @@ export namespace geocodingAction {
     /**
      * 「福島県石川郡石川町」のように、市の名前が別の都道府県名から
      *  始まっているケースのための正規表現パターンを生成する
-     */ 
-    const sameNamedPrefPatterns: InterpolatePattern[] = getSameNamedPrefecturePatterns({
-      prefectures,
-      wildcardHelper,
-    });
+     */
+    const sameNamedPrefPatterns: InterpolatePattern[] =
+      getSameNamedPrefecturePatterns({
+        prefectures,
+        wildcardHelper,
+      });
 
     /**
      * 各都道府県別に市町村で始まるパターンを生成する
      */
-    const cityPatternsForEachPrefecture = getCityPatternsForEachPrefecture(prefectures);
+    const cityPatternsForEachPrefecture =
+      getCityPatternsForEachPrefecture(prefectures);
 
     // 住所の正規化処理 第一段階
     const normalizeStep1 = new NormalizeStep1();
@@ -132,7 +134,7 @@ export namespace geocodingAction {
 
     // step3はデータベースを使って都道府県と市町村を特定するため、処理が複雑になる
     // なので、さらに別のストリームで処理を行う
-    const addressFinder = new AddressFinder({
+    const addressFinderForStep5 = new AddressFinderForStep5({
       db,
       wildcardHelper,
     });
@@ -140,11 +142,9 @@ export namespace geocodingAction {
       objectMode: true,
     });
     const step3a_stream = new NormalizeStep3a(cityPatternsForEachPrefecture);
-    const step3b_stream = new NormalizeStep3b(addressFinder);
+    const step3b_stream = new NormalizeStep3b(addressFinderForStep5);
     const step3final_stream = new NormalizeStep3Final();
-    step3stream.pipe(step3a_stream)
-      .pipe(step3b_stream)
-      .pipe(step3final_stream)
+    step3stream.pipe(step3a_stream).pipe(step3b_stream).pipe(step3final_stream);
     const normalizeStep3 = new NormalizeStep3(step3stream);
 
     // 何をしているのか良くわからない
@@ -155,10 +155,17 @@ export namespace geocodingAction {
 
     // もう一度データベースを探して、情報を追加
     // (step3bを通過しないデータもあるから、このステップで追加しているように思う)
-    const normalizeStep5 = new NormalizeStep5(addressFinder);
+    const normalizeStep5 = new NormalizeStep5(addressFinderForStep5);
 
     // アドレスの補正処理らしいことをしている
     const normalizeStep6 = new NormalizeStep6(patchPatterns);
+
+    // アドレスの補正処理らしいことをしている
+    const addressFinderForStep7 = new AddressFinderForStep7({
+      db,
+      wildcardHelper,
+    });
+    const normalizeStep7 = new NormalizeStep7(addressFinderForStep7);
 
     getReadStreamFromSource(source)
       .pipe(lineStream)
@@ -168,25 +175,29 @@ export namespace geocodingAction {
       .pipe(normalizeStep3)
       .pipe(normalizeStep4)
       .pipe(normalizeStep5)
-      .pipe(new Stream.Writable({
-        objectMode: true,
-        write(chunk, encoding, callback) {
-          console.debug(chunk);
-          callback();
-        },
-      }))
-  //     .pipe(
-  //       new Stream.Writable({
-  //         objectMode: true,
-  //         write(chunk, encoding, callback) {
-  //           console.log(chunk.toString());
-  //           callback();
-  //         },
-  //       })
-  //     )
-  //     .on('end', () => {
-  //       db.close();
-  //     });
+      .pipe(normalizeStep6)
+      .pipe(normalizeStep7)
+      .pipe(
+        new Stream.Writable({
+          objectMode: true,
+          write(chunk, encoding, callback) {
+            console.debug(chunk);
+            callback();
+          },
+        })
+      )
+      //     .pipe(
+      //       new Stream.Writable({
+      //         objectMode: true,
+      //         write(chunk, encoding, callback) {
+      //           console.log(chunk.toString());
+      //           callback();
+      //         },
+      //       })
+      //     )
+      .on('end', () => {
+        db.close();
+      });
   };
 }
 
@@ -197,4 +208,3 @@ export const onGeocodingAction = async (params: GeocodingParams) => {
   });
   await geocodingAction.start(params);
 };
-

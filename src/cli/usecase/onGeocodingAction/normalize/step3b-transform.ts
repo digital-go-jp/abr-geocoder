@@ -1,11 +1,9 @@
-import { Transform, TransformCallback } from "node:stream";
-import { AddressFinder } from "../AddressFinder";
-import { FromStep3aType } from "../types";
+import { Transform, TransformCallback } from 'node:stream';
+import { AddressFinderForStep5 } from '../AddressFinderForStep5';
+import { FromStep3aType } from '../types';
 
 export class NormalizeStep3b extends Transform {
-  constructor(
-    private readonly addressFinder: AddressFinder,
-  ) {
+  constructor(private readonly addressFinder: AddressFinderForStep5) {
     super({
       objectMode: true,
     });
@@ -14,7 +12,7 @@ export class NormalizeStep3b extends Transform {
   _transform(
     fromStep3a: FromStep3aType,
     encoding: BufferEncoding,
-    next: TransformCallback,
+    next: TransformCallback
   ): void {
     //
     // オリジナルコード
@@ -29,7 +27,6 @@ export class NormalizeStep3b extends Transform {
     // move to step3b
     next: TransformCallback
   ) {
-    
     // マッチする都道府県が複数ある場合は町名まで正規化して都道府県名を判別する
     //（例: 東京都府中市と広島県府中市など）
     for (const matchedCity of fromStep3a.matchedPatterns) {
@@ -45,12 +42,11 @@ export class NormalizeStep3b extends Transform {
       // 都道府県名が判別できた
       fromStep3a.fromStep3.query = fromStep3a.fromStep3.query.copy({
         prefectureName: matchedCity.prefecture,
-        city: matchedCity.city
-      })
+        city: matchedCity.city,
+      });
       break;
     }
 
     next(null, fromStep3a.fromStep3);
   }
-  
 }

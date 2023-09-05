@@ -1,11 +1,11 @@
-import { Database, Statement } from "better-sqlite3";
-import { DASH_SYMBOLS, KANJI_1to10_SYMBOLS } from "../../domain/constantValues";
-import { DataField } from "../../domain/dataset/";
-import { RegExpEx } from "../../domain/RegExpEx";
+import { Database, Statement } from 'better-sqlite3';
+import { DASH_SYMBOLS, KANJI_1to10_SYMBOLS } from '../../domain/constantValues';
+import { DataField } from '../../domain/dataset';
+import { RegExpEx } from '../../domain/RegExpEx';
 import { isKanjiNumberFollewedByCho } from './isKanjiNumberFollewedByCho';
 import { kan2num } from './kan2num';
-import { toRegexPattern } from "./toRegexPattern";
-import { ITown, PrefectureName } from "./types";
+import { toRegexPattern } from './toRegexPattern';
+import { ITown, PrefectureName } from './types';
 
 export type TownRow = {
   lg_code: string;
@@ -13,17 +13,17 @@ export type TownRow = {
   name: string;
   koaza: string;
   lat: number;
-  lon: number
+  lon: number;
 };
 
 export type TownPattern = {
   town: ITown;
   pattern: string;
-}
+};
 
 export type FindParameters = {
-  address: string,
-  prefecture: PrefectureName,
+  address: string;
+  prefecture: PrefectureName;
   cityName: string;
 };
 
@@ -32,8 +32,7 @@ export type FindParameters = {
  * オリジナルコードの getNormalizedCity() 関連を１つにまとめたクラス。
  * 実質的にジオコーディングしている部分
  */
-export class AddressFinder {
-
+export class AddressFinderForStep5 {
   private readonly getTownStatement: Statement;
   private readonly wildcardHelper: (address: string) => string;
   constructor({
@@ -67,48 +66,27 @@ export class AddressFinder {
     //     "${DataField.TOWN_CODE}" <> 3;
     // `);
 
-
-    /*
-SELECT
-	town.lg_code,
-	town.town_id,
-	oaza_town_name || chome_name as "name",
-	koaza_name as "koaza",
-	rep_pnt_lat as "lat",
-	rep_pnt_lon as "lon"
-FROM
-	city left join "town" on town.lg_code = city.lg_code
-WHERE
-	city.pref_name = "東京都" AND
-	(
-		city.county_name || city.city_name || city.od_city_name
-	)  like "町田市%" AND
-	town_code <> 3
-	
-	*/
-
-
     // = @cityName よりも like '@cityName%%' のがヒット件数が広いので、
     // 試験的にこれにしてみる
     this.getTownStatement = db.prepare(`
       select
-        "town".${DataField.LG_CODE},
-        "town"."${DataField.TOWN_ID}",
-        "${DataField.OAZA_TOWN_NAME}" || "${DataField.CHOME_NAME}" as "name",
-        "${DataField.KOAZA_NAME}" as "koaza",
-        "${DataField.REP_PNT_LAT}" as "lat",
-        "${DataField.REP_PNT_LON}" as "lon"
+        "town".${DataField.LG_CODE.dbColumn},
+        "town"."${DataField.TOWN_ID.dbColumn}",
+        "${DataField.OAZA_TOWN_NAME.dbColumn}" || "${DataField.CHOME_NAME.dbColumn}" as "name",
+        "${DataField.KOAZA_NAME.dbColumn}" as "koaza",
+        "${DataField.REP_PNT_LAT.dbColumn}" as "lat",
+        "${DataField.REP_PNT_LON.dbColumn}" as "lon"
       from
         "city"
-        left join "town" on town.${DataField.LG_CODE} = city.${DataField.LG_CODE}
+        left join "town" on town.${DataField.LG_CODE.dbColumn} = city.${DataField.LG_CODE.dbColumn}
       where
-        "city"."${DataField.PREF_NAME}" = @prefecture AND
+        "city"."${DataField.PREF_NAME.dbColumn}" = @prefecture AND
         (
-          "city"."${DataField.COUNTY_NAME}" ||
-          "city"."${DataField.CITY_NAME}" ||
-          "city"."${DataField.OD_CITY_NAME}"
+          "city"."${DataField.COUNTY_NAME.dbColumn}" ||
+          "city"."${DataField.CITY_NAME.dbColumn}" ||
+          "city"."${DataField.OD_CITY_NAME.dbColumn}"
         ) like '@cityName%' AND
-        "${DataField.TOWN_CODE}" <> 3;
+        "${DataField.TOWN_CODE.dbColumn}" <> 3;
     `);
   }
 
@@ -121,10 +99,7 @@ WHERE
      * オリジナルコード
      * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L133-L164
      */
-    address = address.trim().replace(
-      RegExpEx.create('^大字'),
-      '',
-    );
+    address = address.trim().replace(RegExpEx.create('^大字'), '');
     const isKyotoCity = cityName.startsWith('京都市');
 
     // 都道府県名と市町村名から、その地域に所属する町（小区分）のリストをDatabaseから取得する
@@ -137,18 +112,18 @@ WHERE
     const searchPatterns = this.createSearchPatterns({
       towns,
       isKyotoCity,
-    }) 
+    });
     const townPatterns = this.toTownPatterns(searchPatterns);
 
-    const regexPrefixes = ['^']
+    const regexPrefixes = ['^'];
     if (isKyotoCity) {
       // 京都は通り名削除のために後方一致を使う
-      regexPrefixes.push('.*')
+      regexPrefixes.push('.*');
     }
 
     // 作成した正規表現パターンに基づき、マッチするか全部試す
     for (const regexPrefix of regexPrefixes) {
-      for (const {town, pattern} of townPatterns) {
+      for (const { town, pattern } of townPatterns) {
         const modifiedPattern = this.wildcardHelper(pattern);
         const regex = RegExpEx.create(`${regexPrefix}${modifiedPattern}`);
         const match = address.match(regex);
@@ -185,8 +160,7 @@ WHERE
     towns: TownRow[];
     isKyotoCity: boolean;
   }): ITown[] {
-    const townSet = new Set(towns.map((town) => town.name));
-    
+    const townSet = new Set(towns.map(town => town.name));
 
     // 町丁目に「○○町」が含まれるケースへの対応
     // 通常は「○○町」のうち「町」の省略を許容し同義語として扱うが、まれに自治体内に「○○町」と「○○」が共存しているケースがある。
@@ -219,10 +193,7 @@ WHERE
       // 冒頭の「町」が付く地名（町田市など）は明らかに省略するべきないので、除外
       //
       // NOTE: "abbr" は何の略だろう...?
-      const townAbbr = town.name.replace(
-        RegExpEx.create('(?!^町)町', 'g'),
-        '',
-      );
+      const townAbbr = town.name.replace(RegExpEx.create('(?!^町)町', 'g'), '');
 
       if (townSet.has(townAbbr)) {
         return;
@@ -255,75 +226,76 @@ WHERE
   private toTownPatterns(searchPatterns: ITown[]): TownPattern[] {
     // 少ない文字数の地名に対してミスマッチしないように文字の長さ順にソート
     searchPatterns.sort((townA: ITown, townB: ITown) => {
-      let aLen = townA.name.length
-      let bLen = townB.name.length
+      let aLen = townA.name.length;
+      let bLen = townB.name.length;
 
       // 大字で始まる場合、優先度を低く設定する。
       // 大字XX と XXYY が存在するケースもあるので、 XXYY を先にマッチしたい
-      if (townA.name.startsWith('大字')) aLen -= 2
-      if (townB.name.startsWith('大字')) bLen -= 2
+      if (townA.name.startsWith('大字')) aLen -= 2;
+      if (townB.name.startsWith('大字')) bLen -= 2;
 
-      return bLen - aLen
+      return bLen - aLen;
     });
 
     const patterns = searchPatterns.map(town => {
-
       const pattern = toRegexPattern(
         town.name
           // 横棒を含む場合（流通センター、など）に対応
           .replace(
             RegExpEx.create(`/[${DASH_SYMBOLS}]`, 'g'),
-            `[${DASH_SYMBOLS}]`,
+            `[${DASH_SYMBOLS}]`
           )
-          .replace(
-            RegExpEx.create('大?字', 'g'),
-            '(大?字)?',
-          )
+          .replace(RegExpEx.create('大?字', 'g'), '(大?字)?')
           // 以下住所マスターの町丁目に含まれる数字を正規表現に変換する
           .replace(
             RegExpEx.create(
               `([壱${KANJI_1to10_SYMBOLS}]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)`,
-              'g',
+              'g'
             ),
             (match: string) => {
-              const patterns: string[] = []
+              const patterns: string[] = [];
 
               patterns.push(
-                match.toString().replace(
-                  RegExpEx.create('(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)'),
-                  '',
-                ),
-              )
-              
+                match
+                  .toString()
+                  .replace(
+                    RegExpEx.create(
+                      '(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)'
+                    ),
+                    ''
+                  )
+
               // 漢数字
               if (match.match(RegExpEx.create('^壱'))) {
-                patterns.push('一')
-                patterns.push('1')
-                patterns.push('１')
+                patterns.push('一');
+                patterns.push('1');
+                patterns.push('１');
               } else {
                 const num = match
                   .replace(
                     RegExpEx.create(`([${KANJI_1to10_SYMBOLS}]+)`, 'g'),
-                    (match) => {
-                      return kan2num(match)
-                    },
+                    match => {
+                      return kan2num(match);
+                    }
                   )
                   .replace(
-                    RegExpEx.create('(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)'),
-                    '',
+                    RegExpEx.create(
+                      '(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)'
+                    ),
+                    ''
                   );
 
-                patterns.push(num.toString()) // 半角アラビア数字
+                patterns.push(num.toString()); // 半角アラビア数字
               }
 
               // 以下の正規表現は、上のよく似た正規表現とは違うことに注意！
               const prefixMatchers = patterns.join('|');
               return [
                 `(${prefixMatchers})`,
-                `((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[${DASH_SYMBOLS}])`
+                `((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[${DASH_SYMBOLS}])`,
               ].join('');
-            },
-          ),
+            }
+          )
       );
 
       return {
@@ -335,18 +307,20 @@ WHERE
     // X丁目の丁目なしの数字だけ許容するため、最後に数字だけ追加していく
     for (const town of searchPatterns) {
       const chomeMatch = town.name.match(
-        RegExpEx.create(`([^${KANJI_1to10_SYMBOLS}]+)([${KANJI_1to10_SYMBOLS}]+)(丁目?)`),
+        RegExpEx.create(
+          `([^${KANJI_1to10_SYMBOLS}]+)([${KANJI_1to10_SYMBOLS}]+)(丁目?)`
+        )
       );
 
       if (!chomeMatch) {
-        continue
+        continue;
       }
 
-      const chomeNamePart = chomeMatch[1]
-      const chomeNum = chomeMatch[2]
+      const chomeNamePart = chomeMatch[1];
+      const chomeNum = chomeMatch[2];
       const pattern = toRegexPattern(
-        `^${chomeNamePart}(${chomeNum}|${kan2num(chomeNum)})`,
-      )
+        `^${chomeNamePart}(${chomeNum}|${kan2num(chomeNum)})`
+      );
       patterns.push({
         town,
         pattern,
@@ -358,7 +332,7 @@ WHERE
 
   /**
    * SQLを実行する
-   * 
+   *
    * better-sqlite3自体はasyncではないが、将来的にTypeORMに変更したいので
    * asyncで関数を作っておく
    */
@@ -367,7 +341,7 @@ WHERE
     cityName,
   }: {
     prefecture: PrefectureName;
-    cityName: string
+    cityName: string;
   }): Promise<TownRow[]> {
     const results = this.getTownStatement.all({
       prefecture,

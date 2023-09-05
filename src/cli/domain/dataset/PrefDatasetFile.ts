@@ -1,6 +1,6 @@
-import {DataWithDateFile} from './DatasetFile';
-import {IDatasetFileMeta} from './types';
-import {DataField} from './DataField';
+import { DataWithDateFile } from './DatasetFile';
+import { IDatasetFileMeta } from './types';
+import { DataField } from './DataField';
 
 export class PrefDatasetFile
   extends DataWithDateFile

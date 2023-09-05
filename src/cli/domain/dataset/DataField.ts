@@ -1,7 +1,7 @@
 export class DataField {
   private constructor(
     public csv: string,
-    public dbColumn: string,
+    public dbColumn: string
   ) {
     this.csv = this.csv.toLocaleLowerCase();
     this.dbColumn = this.dbColumn.toLocaleLowerCase();

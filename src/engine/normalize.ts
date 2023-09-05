@@ -1,8 +1,8 @@
-import {number2kanji} from '@geolonia/japanese-numeral';
-import {currentConfig} from './config';
-import {kan2num} from './lib/kan2num';
-import {zen2han} from './lib/zen2han';
-import {patchAddr} from './lib/patchAddr';
+import { number2kanji } from '@geolonia/japanese-numeral';
+import { currentConfig } from './config';
+import { kan2num } from './lib/kan2num';
+import { zen2han } from './lib/zen2han';
+import { patchAddr } from './lib/patchAddr';
 import {
   getPrefectures,
   getPrefectureRegexPatterns,
@@ -13,8 +13,8 @@ import {
   getBlkList,
   SingleCity,
 } from './lib/cacheRegexes';
-import {formatResidentialSection} from './formatting';
-import {insertWildcardMatching} from './lib/dict';
+import { formatResidentialSection } from './formatting';
+import { insertWildcardMatching } from './lib/dict';
 
 /**
  * normalize {@link Normalizer} の動作オプション。
@@ -105,7 +105,7 @@ export type Normalizer = (
 
 export type FetchLike = (
   input: string
-) => Promise<Response | {json: () => Promise<unknown>}>;
+) => Promise<Response | { json: () => Promise<unknown> }>;
 
 const defaultOption = {
   level: 8,
@@ -114,7 +114,7 @@ const defaultOption = {
 /**
  * @internal
  */
-export const internals: {fetch: FetchLike} = {
+export const internals: { fetch: FetchLike } = {
   // default fetch
   fetch: async () => {
     return {
@@ -205,7 +205,7 @@ async function normalizeResidentialPart(
     const blk = match[1];
     const addr1 = match[2];
     const addr2 = match[3];
-    const jyukyohyoji = formatResidentialSection({blk, addr1, addr2});
+    const jyukyohyoji = formatResidentialSection({ blk, addr1, addr2 });
     const residentialWithAddr2 = rsdtList.find(
       res => formatResidentialSection(res) === jyukyohyoji
     );
@@ -226,7 +226,7 @@ async function normalizeResidentialPart(
 
     if (addr2) {
       // まずはaddr2を削って再度検索
-      const jyukyohyoji = formatResidentialSection({blk, addr1});
+      const jyukyohyoji = formatResidentialSection({ blk, addr1 });
       const residential = rsdtList.find(
         res => formatResidentialSection(res) === jyukyohyoji
       );
@@ -270,7 +270,7 @@ export const normalize: Normalizer = async (
   address,
   _option = defaultOption
 ) => {
-  const option = {...defaultOption, ..._option};
+  const option = { ...defaultOption, ..._option };
 
   /**
    * 入力された住所に対して以下の正規化を予め行う。
@@ -348,7 +348,7 @@ export const normalize: Normalizer = async (
 
   if (!pref) {
     // 都道府県名が省略されている
-    const matched: {pref: string; city: SingleCity; other: string}[] = [];
+    const matched: { pref: string; city: SingleCity; other: string }[] = [];
     for (const prefectureName in prefectures) {
       const cities = prefectures[prefectureName];
       const cityPatterns = getCityRegexPatterns(prefectureName, cities);

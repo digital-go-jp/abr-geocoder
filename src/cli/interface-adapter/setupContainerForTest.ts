@@ -1,13 +1,13 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import {container} from 'tsyringe';
+import { container } from 'tsyringe';
 import {
   provideDatabase,
   provideProgressBar,
   provideLogger,
   provideMultiProgressBar,
 } from './providers';
-import {setupContainerParams} from './setupContainerParams';
+import { setupContainerParams } from './setupContainerParams';
 import { PrefectureName } from '../usecase';
 
 export const setupContainerForTest = async ({
@@ -47,9 +47,6 @@ export const setupContainerForTest = async ({
   container.registerInstance('MultiProgressBar', progress2);
 
   container.register<PrefectureName[]>('Prefectures', {
-    useValue: [
-      PrefectureName.HOKKAIDO,
-      PrefectureName.AOMORI,
-    ],
+    useValue: [PrefectureName.HOKKAIDO, PrefectureName.AOMORI],
   });
 };

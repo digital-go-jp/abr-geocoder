@@ -108,8 +108,8 @@ export class Normalize {
         const prefs: Prefecture[] = prefectureStmt.all() as Prefecture[];
         return {
           json: async () => {
-            const out: {[key: string]: string[]} = {};
-            for (const {todofuken_name, towns} of prefs) {
+            const out: { [key: string]: string[] } = {};
+            for (const { todofuken_name, towns } of prefs) {
               out[todofuken_name] = JSON.parse(towns);
             }
             return out;

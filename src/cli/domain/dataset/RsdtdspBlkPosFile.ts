@@ -1,6 +1,6 @@
-import {DataField} from './DataField';
-import {DataForPosFile} from './DatasetFile';
-import {DatasetFileParams, IDatasetFile, IDatasetFileMeta} from './types';
+import { DataField } from './DataField';
+import { DataForPosFile } from './DatasetFile';
+import { DatasetFileParams, IDatasetFile, IDatasetFileMeta } from './types';
 
 export class RsdtdspBlkPosFile extends DataForPosFile implements IDatasetFile {
   get fields(): DataField[] {

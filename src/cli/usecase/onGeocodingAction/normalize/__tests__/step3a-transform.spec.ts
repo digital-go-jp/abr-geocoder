@@ -3,7 +3,7 @@ import Stream, { TransformCallback } from "node:stream";
 import { pipeline } from 'node:stream/promises';
 import { getCityPatternsForEachPrefecture } from '../../getCityPatternsForEachPrefecture';
 import { Query } from "../../query.class";
-import { FromStep3Type, FromStep3aType, PrefectureName, Step3aMatchedPatternType } from "../../types";
+import { FromStep3Type, FromStep3aType, PrefectureName } from "../../types";
 import { NormalizeStep3a } from '../step3a-transform';
 import { dummyPrefectures } from './dummyPrefectures';
 import { WritableStreamToArray } from './stream-to-array';

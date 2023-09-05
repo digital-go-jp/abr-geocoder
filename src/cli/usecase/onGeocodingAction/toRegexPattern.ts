@@ -1,11 +1,11 @@
-import {jisKanji} from './jisKanji';
+import { jisKanji } from './jisKanji';
 
 /**
  * オリジナルコード
  * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/dict.ts#L25C1-L61C1
  */
 export const toRegexPattern = (string: string) => {
-  let _str = string
+  let _str = string;
 
   // 以下なるべく文字数が多いものほど上にすること
   _str = _str
@@ -34,9 +34,9 @@ export const toRegexPattern = (string: string) => {
     .replace(/曾|曽/g, '(曾|曽)')
     .replace(/舟|船/g, '(舟|船)')
     .replace(/莵|菟/g, '(莵|菟)')
-    .replace(/市|巿/g, '(市|巿)')
+    .replace(/市|巿/g, '(市|巿)');
 
   _str = jisKanji(_str);
 
-  return _str
-}
+  return _str;
+};

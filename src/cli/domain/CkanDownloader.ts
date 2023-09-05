@@ -1,9 +1,9 @@
-import {SingleBar} from 'cli-progress';
+import { SingleBar } from 'cli-progress';
 import fs from 'node:fs';
-import {Transform} from 'node:stream';
-import {Client, Dispatcher, request} from 'undici';
-import {AbrgError, AbrgErrorLevel} from './AbrgError';
-import {AbrgMessage} from './AbrgMessage';
+import { Transform } from 'node:stream';
+import { Client, Dispatcher, request } from 'undici';
+import { AbrgError, AbrgErrorLevel } from './AbrgError';
+import { AbrgMessage } from './AbrgMessage';
 import {
   CKANPackageShow,
   CKANResponse,
@@ -38,11 +38,14 @@ export class CkanDownloader {
   }
 
   async getDatasetMetadata(): Promise<DatasetMetadata> {
-    const {statusCode, body} = await request(this.getDatasetUrl(this.ckanId), {
-      headers: {
-        'user-agent': this.userAgent,
-      },
-    });
+    const { statusCode, body } = await request(
+      this.getDatasetUrl(this.ckanId),
+      {
+        headers: {
+          'user-agent': this.userAgent,
+        },
+      }
+    );
 
     const HTTP_OK = 200;
 
@@ -119,7 +122,10 @@ export class CkanDownloader {
       return downloadFilePath;
     }
 
-    const streamFactory: Dispatcher.StreamFactory = ({statusCode, headers}) => {
+    const streamFactory: Dispatcher.StreamFactory = ({
+      statusCode,
+      headers,
+    }) => {
       if (statusCode !== 200) {
         // this.logger.debug(`download error: status code = ${statusCode}`);
         throw new AbrgError({

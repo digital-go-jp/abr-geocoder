@@ -1,5 +1,5 @@
-import {formatResidentialSection} from './engine/formatting';
-import {NormalizeResult} from './engine/normalize';
+import { formatResidentialSection } from './engine/formatting';
+import { NormalizeResult } from './engine/normalize';
 
 export function json(r: NormalizeResult): NormalizeResult {
   return r;

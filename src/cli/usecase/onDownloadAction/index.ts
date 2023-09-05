@@ -1,22 +1,22 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
-import {Database} from 'better-sqlite3';
+import { Database } from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
-import {container} from 'tsyringe';
-import {Logger} from 'winston';
-import {AbrgMessage, CkanDownloader} from '../../domain';
+import { container } from 'tsyringe';
+import { Logger } from 'winston';
+import { AbrgMessage, CkanDownloader } from '../../domain';
 
 import CLIInfinityProgress from 'cli-infinity-progress';
-import {MultiBar, SingleBar} from 'cli-progress';
+import { MultiBar, SingleBar } from 'cli-progress';
 import {
   setupContainer,
   setupContainerForTest,
   setupContainerParams,
 } from '../../interface-adapter';
-import {fsIterator} from './fsIterator';
-import {loadDatasetProcess} from './loadDatasetProcess';
+import { fsIterator } from './fsIterator';
+import { loadDatasetProcess } from './loadDatasetProcess';
 
 export namespace downloadDataset {
   let initialized = false;
@@ -45,7 +45,7 @@ export namespace downloadDataset {
     await setupContainerForTest(params);
   }
 
-  export async function start({dataDir, ckanId}: setupContainerParams) {
+  export async function start({ dataDir, ckanId }: setupContainerParams) {
     if (!initialized) {
       throw new Error(
         'Must run init() or initForTest() before involving this function'
@@ -90,7 +90,7 @@ export namespace downloadDataset {
     // データの更新を確認する
     // --------------------------------------
     logger.info(AbrgMessage.toString(AbrgMessage.CHECKING_UPDATE));
-    const {updateAvailable, upstreamMeta} = await downloader.updateCheck();
+    const { updateAvailable, upstreamMeta } = await downloader.updateCheck();
 
     // 更新データがなければ終了
     // if (!updateAvailable) {
@@ -148,7 +148,7 @@ export namespace downloadDataset {
     db.close();
 
     // 展開したzipファイルのディレクトリを削除
-    await fs.promises.rm(tmpDir, {recursive: true});
+    await fs.promises.rm(tmpDir, { recursive: true });
   }
 }
 /*

@@ -7,7 +7,6 @@
     "lib": ["ES2015"]
   },
   "include": [
-    "src/cli/**/*.ts",
-    "settings/*.ts"
+    "src/cli/**/*.ts"
   ]
 }

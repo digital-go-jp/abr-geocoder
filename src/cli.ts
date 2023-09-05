@@ -5,15 +5,15 @@ import path from 'node:path';
 
 import byline from 'byline';
 import Table from 'cli-table3';
-import {program} from 'commander';
-import {getDataDir} from './config';
-import {formatResidentialSection} from './engine/formatting';
-import {NormalizeResult} from './engine/normalize';
+import { program } from 'commander';
+import { getDataDir } from './config';
+import { formatResidentialSection } from './engine/formatting';
+import { NormalizeResult } from './engine/normalize';
 import * as Formatters from './formatters';
-import {Normalize} from './normalizer';
+import { Normalize } from './normalizer';
 
 const packageJsonPath = path.join(__dirname, '../package.json');
-const {description, version} = JSON.parse(
+const { description, version } = JSON.parse(
   fs.readFileSync(packageJsonPath, 'utf8')
 );
 
@@ -76,7 +76,7 @@ program
     for await (const lineBuf of lines) {
       const line: string = lineBuf.toString();
       if (line.startsWith('#')) continue;
-      const r = await g.normalizeAddress(line, {fuzzy: options.fuzzy});
+      const r = await g.normalizeAddress(line, { fuzzy: options.fuzzy });
       if (!options.format.startsWith('nd')) {
         allResults.push(r);
       } else if (options.format === 'ndjson') {
@@ -107,7 +107,7 @@ program
           r.city + (r.lg_code ? ` (${r.lg_code})` : ''),
           r.town + (r.town_id ? ` (${r.town_id})` : ''),
           (r.blk || '') + (r.blk_id ? ` (${r.blk_id})` : ''),
-          formatResidentialSection({addr1: r.addr1, addr2: r.addr2}) +
+          formatResidentialSection({ addr1: r.addr1, addr2: r.addr2 }) +
             (r.addr1_id || r.addr2_id
               ? ` (${formatResidentialSection({
                   addr1: r.addr1_id,

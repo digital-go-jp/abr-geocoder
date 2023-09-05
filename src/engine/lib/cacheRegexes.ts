@@ -1,10 +1,10 @@
-import {toRegexPattern} from './dict';
-import {kan2num} from './kan2num';
+import { toRegexPattern } from './dict';
+import { kan2num } from './kan2num';
 import LRU from 'lru-cache';
-import {currentConfig} from '../config';
-import {internals} from '../normalize';
-import {findKanjiNumbers} from '@geolonia/japanese-numeral';
-import {formatResidentialSection} from '../formatting';
+import { currentConfig } from '../config';
+import { internals } from '../normalize';
+import { findKanjiNumbers } from '@geolonia/japanese-numeral';
+import { formatResidentialSection } from '../formatting';
 
 export type SingleCity = {
   // 市区町村名
@@ -13,7 +13,7 @@ export type SingleCity = {
   // 全国地方公共団体コード
   code: string;
 };
-type PrefectureList = {[key: string]: SingleCity[]};
+type PrefectureList = { [key: string]: SingleCity[] };
 
 interface SingleTown {
   // 全国地方公共団体コード
@@ -64,11 +64,11 @@ const cachedTownRegexes = new LRU<string, [SingleTown, string][]>({
 });
 
 let cachedPrefecturePatterns: [string, string][] | undefined = undefined;
-const cachedCityPatterns: {[key: string]: [SingleCity, string][]} = {};
+const cachedCityPatterns: { [key: string]: [SingleCity, string][] } = {};
 let cachedPrefectures: PrefectureList | undefined = undefined;
-const cachedTowns: {[key: string]: TownList} = {};
-const cachedBlkLists: {[key: string]: BlkList} = {};
-const cachedRsdtLists: {[key: string]: RsdtList} = {};
+const cachedTowns: { [key: string]: TownList } = {};
+const cachedBlkLists: { [key: string]: BlkList } = {};
+const cachedRsdtLists: { [key: string]: RsdtList } = {};
 let cachedSameNamedPrefectureCityRegexPatterns: [string, string][] | undefined =
   undefined;
 

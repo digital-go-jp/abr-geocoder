@@ -8,7 +8,7 @@ export const getPrefectureRegexPatterns = ({
   prefectures,
   wildcardHelper,
 }: {
-  prefectures: IPrefecture[],
+  prefectures: IPrefecture[];
   wildcardHelper: (pattern: string) => string;
 }): InterpolatePattern[] => {
   return prefectures.map<InterpolatePattern>(pref => {

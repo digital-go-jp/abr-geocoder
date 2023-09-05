@@ -1,4 +1,4 @@
-import {getSystemLocale} from '../getSystemLocale';
+import { getSystemLocale } from '../getSystemLocale';
 import i18next from 'i18next';
 
 export enum AbrgMessage {

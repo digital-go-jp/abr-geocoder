@@ -1,12 +1,12 @@
-import { Transform, TransformCallback } from "node:stream";
-import { Query } from "../query.class";
-import { FromStep3Type, IPrefecture, InterpolatePattern, PrefectureName } from "../types";
-import { RegExpEx } from "../../../domain";
-import Stream from 'node:stream';
+import { Transform, TransformCallback } from 'node:stream';
+import { Query } from '../query.class';
+import { InterpolatePattern, PrefectureName } from '../types';
 
 export class NormalizeStep4 extends Transform {
-
-  private readonly cityPatternsForEachPrefecture: Map<PrefectureName, InterpolatePattern[]>;
+  private readonly cityPatternsForEachPrefecture: Map<
+    PrefectureName,
+    InterpolatePattern[]
+  >;
   private readonly wildcardHelper: (address: string) => string;
 
   constructor({
@@ -26,7 +26,7 @@ export class NormalizeStep4 extends Transform {
   _transform(
     query: Query,
     encoding: BufferEncoding,
-    callback: TransformCallback,
+    callback: TransformCallback
   ): void {
     //
     // step3a で同じようなことをしているのに、する必要があるのか？
@@ -44,18 +44,17 @@ export class NormalizeStep4 extends Transform {
       return callback(null, query);
     }
 
-    const cityPatterns = this.cityPatternsForEachPrefecture.get(query.prefectureName)!;
-    
+    const cityPatterns = this.cityPatternsForEachPrefecture.get(
+      query.prefectureName
+
     for (const { regExpPattern, address } of cityPatterns) {
-      const match = query.tempAddress.match(
-        this.wildcardHelper(regExpPattern),
-      );
+      const match = query.tempAddress.match(this.wildcardHelper(regExpPattern));
       if (!match) {
         continue;
       }
       query = query.copy({
         city: address,
-        
+
         // 市区町村名以降の住所
         tempAddress: query.tempAddress.substring(match[0].length),
       });
@@ -65,5 +64,4 @@ export class NormalizeStep4 extends Transform {
 
     callback(null, query);
   }
-
 }

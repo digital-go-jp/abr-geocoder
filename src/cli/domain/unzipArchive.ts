@@ -17,7 +17,7 @@ export const unzipArchive = async ({
     return outputPath;
   }
 
-  const zip = new StreamZip.async({file: srcZip});
+  const zip = new StreamZip.async({ file: srcZip });
   const entries = await zip.entries();
   const entriesAry = Object.values(entries);
   if (
@@ -43,7 +43,7 @@ export const unzipArchive = async ({
       })
     );
   });
-  await fs.promises.mkdir(outputPath, {recursive: true});
+  await fs.promises.mkdir(outputPath, { recursive: true });
   await zip.extract(null, outputPath);
   await Promise.all(subExtracts);
   await zip.close();

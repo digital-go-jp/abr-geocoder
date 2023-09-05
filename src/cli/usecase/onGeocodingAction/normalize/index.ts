@@ -7,3 +7,4 @@ export * from './step3final-transform';
 export * from './step4-transform';
 export * from './step5-transform';
 export * from './step6-transform';
+export * from './step7-transform';

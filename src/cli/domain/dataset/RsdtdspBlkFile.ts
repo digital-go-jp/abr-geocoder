@@ -1,6 +1,6 @@
-import {DataField} from './DataField';
-import {DataWithDateFile} from './DatasetFile';
-import {IDatasetFileMeta, DatasetFileParams} from './types';
+import { DataField } from './DataField';
+import { DataWithDateFile } from './DatasetFile';
+import { IDatasetFileMeta, DatasetFileParams } from './types';
 
 export class RsdtdspBlkFile
   extends DataWithDateFile

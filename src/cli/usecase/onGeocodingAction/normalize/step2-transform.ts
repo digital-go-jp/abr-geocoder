@@ -1,12 +1,10 @@
-import { Transform, TransformCallback } from "node:stream";
-import { Query } from "../query.class";
-import { InterpolatePattern } from "../types";
-import { RegExpEx } from "../../../domain";
+import { Transform, TransformCallback } from 'node:stream';
+import { Query } from '../query.class';
+import { InterpolatePattern } from '../types';
+import { RegExpEx } from '../../../domain';
 
 export class NormalizeStep2 extends Transform {
-  constructor(
-    private sameNamedPrefPatterns: InterpolatePattern[],
-  ) {
+  constructor(private sameNamedPrefPatterns: InterpolatePattern[]) {
     super({
       objectMode: true,
     });
@@ -26,7 +24,7 @@ export class NormalizeStep2 extends Transform {
     //
     for (const pattern of this.sameNamedPrefPatterns) {
       const match = query.tempAddress.match(
-        RegExpEx.create(pattern.regExpPattern),
+        RegExpEx.create(pattern.regExpPattern)
       );
       if (!match) {
         continue;
@@ -43,7 +41,7 @@ export class NormalizeStep2 extends Transform {
       });
       break;
     }
-    
+
     next(null, query);
   }
 }

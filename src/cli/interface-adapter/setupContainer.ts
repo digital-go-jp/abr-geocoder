@@ -1,14 +1,14 @@
-import {MultiBar, SingleBar} from 'cli-progress';
+import { MultiBar, SingleBar } from 'cli-progress';
 import fs from 'node:fs';
 import path from 'node:path';
-import {container} from 'tsyringe';
+import { container } from 'tsyringe';
 import {
   provideDatabase,
   provideLogger,
   provideMultiProgressBar,
   provideProgressBar,
 } from './providers';
-import {setupContainerParams} from './setupContainerParams';
+import { setupContainerParams } from './setupContainerParams';
 import { PrefectureName } from '../usecase';
 
 export const setupContainer = async ({
