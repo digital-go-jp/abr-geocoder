@@ -16,8 +16,7 @@ export class JsonTransform extends Stream.Transform {
   }
 
   _transform(result: GeocodeResult, encoding: BufferEncoding, callback: TransformCallback): void {
-    
-    callback(null, JSON.stringify({
+    const jsonStr = JSON.stringify({
       prefecture: result.prefecture?.toString(),
       city: result.city,
       town: result.town,
@@ -33,6 +32,7 @@ export class JsonTransform extends Stream.Transform {
       addr1_id: result.addr1_id,
       addr2: result.addr2,
       addr2_id: result.addr2_id,
-    }, null, 2));
+    }, null, 2);
+    callback(null, `${jsonStr}\n`);
   }
 }

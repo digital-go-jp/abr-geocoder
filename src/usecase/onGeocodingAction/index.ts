@@ -40,9 +40,7 @@ export namespace geocodingAction {
   export const start = async ({
     source,
     destination,
-    dataDir,
-    resourceId,
-    format = OutputFormat.JSON,
+    format,
     fuzzy,
   }: GeocodingParams) => {
 

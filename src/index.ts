@@ -151,10 +151,10 @@ yargs(hideBin(process.argv))
     async argv => {
       await onGeocodingAction({
         source: (argv.inputFile as string) || '-',
-        destination: '',
+        destination: (argv.outputFile as string) || '',
         dataDir: argv.workDir || dataDir,
         resourceId: argv.resource || 'ba000001',
-        format: OutputFormat[argv.format as keyof typeof OutputFormat],
+        format: argv.format as OutputFormat,
         fuzzy: argv.fuzzy || '?',
       });
     }

@@ -16,32 +16,31 @@ export class GeoJsonTransform extends Stream.Transform {
   }
 
   _transform(result: GeocodeResult, encoding: BufferEncoding, callback: TransformCallback): void {
-    
-    callback(null, JSON.stringify({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [
-            result.lon,
-            result.lat,
-          ],
-        },
-        properties: {
-          prefecture: result.prefecture?.toString(),
-          city: result.city,
-          town: result.town,
-          town_id: result.town_id,
-          lg_code: result.lg_code,
-          input: result.input,
-          other: result.other,
-          block: result.block,
-          block_id: result.block_id,
-          addr1: result.addr1,
-          addr1_id: result.addr1_id,
-          addr2: result.addr2,
-          addr2_id: result.addr2_id,
-        },
-      }, null, 2),
-    );
+    const geojsonStr = JSON.stringify({
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [
+          result.lon,
+          result.lat,
+        ],
+      },
+      properties: {
+        prefecture: result.prefecture?.toString(),
+        city: result.city,
+        town: result.town,
+        town_id: result.town_id,
+        lg_code: result.lg_code,
+        input: result.input,
+        other: result.other,
+        block: result.block,
+        block_id: result.block_id,
+        addr1: result.addr1,
+        addr1_id: result.addr1_id,
+        addr2: result.addr2,
+        addr2_id: result.addr2_id,
+      },
+    }, null, 2);
+    callback(null, `${geojsonStr}\n`);
   }
 }
