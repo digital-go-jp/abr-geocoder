@@ -37,17 +37,12 @@ export type RsdtAddr = {
 export class AddressFinderForStep7 {
   private readonly getBlockListStatement: Statement;
   private readonly getRsdtListStatement: Statement;
-  private readonly wildcardHelper: (address: string) => string;
-  constructor({
-    db,
-    wildcardHelper,
-  }: {
-    db: Database;
-    wildcardHelper: (address: string) => string;
-  }) {
-    this.wildcardHelper = wildcardHelper;
+
+  constructor(db: Database) {
 
     this.getBlockListStatement = db.prepare(`
+      /* unit test: getBlockListStatement */
+
       select
         "blk".${DataField.LG_CODE.dbColumn},
         "blk".${DataField.TOWN_ID.dbColumn},
@@ -79,17 +74,19 @@ export class AddressFinderForStep7 {
           "city".${DataField.COUNTY_NAME.dbColumn} ||
           "city".${DataField.CITY_NAME.dbColumn} ||
           "city".${DataField.OD_CITY_NAME.dbColumn}
-        ) = @city
+        ) = @city and
         blk.${DataField.BLK_NUM.dbColumn} is not null
     `);
 
     this.getRsdtListStatement = db.prepare(`
+      /* unit test: getRsdtListStatement */
+
       select
         "rsdt".${DataField.LG_CODE.dbColumn},
         "rsdt".${DataField.TOWN_ID.dbColumn},
         "rsdt".${DataField.BLK_ID.dbColumn},
         "rsdt".${DataField.ADDR_ID.dbColumn} as "addr1_id",
-        "rsdt".${DataField.ADDR2_ID.dbColumn}",
+        "rsdt".${DataField.ADDR2_ID.dbColumn},
         blk.${DataField.BLK_NUM.dbColumn} as "blk",
         rsdt.${DataField.RSDT_NUM.dbColumn} as "addr1",
         rsdt.${DataField.RSDT_NUM2.dbColumn} as "addr2",
@@ -131,7 +128,7 @@ export class AddressFinderForStep7 {
      */
 
     const townBlocks = await this.getBlockList({
-      prefecture: query.prefectureName!,
+      prefecture: query.prefecture!,
       city: query.city!,
       town: query.town!,
     });
@@ -144,7 +141,7 @@ export class AddressFinderForStep7 {
     const rsdtMap = new Map<string, RsdtAddr>();
     (
       await this.getRsdtList({
-        prefecture: query.prefectureName!,
+        prefecture: query.prefecture!,
         city: query.city!,
         town: query.town!,
       })
@@ -182,14 +179,16 @@ export class AddressFinderForStep7 {
     if (rsdtMap.has(pattern1)) {
       const rsdt: RsdtAddr = rsdtMap.get(pattern1)!;
       return query.copy({
-        block: rsdt.blk,
-        blockId: rsdt.blk_id,
+        block: blockNum,
+        block_id: rsdt.blk_id,
         addr1: addr1,
-        addr1Id: rsdt.addr1_id,
+        addr1_id: rsdt.addr1_id,
         addr2: addr2 || '',
-        addr2Id: rsdt.addr2_id,
+        addr2_id: rsdt.addr2_id,
         lat: rsdt.lat,
         lon: rsdt.lon,
+        lg_code: rsdt.lg_code,
+        town_id: rsdt.town_id,
       });
     }
 
@@ -202,16 +201,23 @@ export class AddressFinderForStep7 {
     if (rsdtMap.has(pattern2)) {
       const rsdt: RsdtAddr = rsdtMap.get(pattern2)!;
       return query.copy({
-        block: rsdt.blk,
-        blockId: rsdt.blk_id,
+        lg_code: rsdt.lg_code,
+        block: blockNum,
+        block_id: rsdt.blk_id,
         addr1: addr1,
-        addr1Id: rsdt.addr1_id,
+        addr1_id: rsdt.addr1_id,
         addr2: addr2,
-        addr2Id: rsdt.addr2_id,
+        addr2_id: rsdt.addr2_id,
         lat: rsdt.lat,
         lon: rsdt.lon,
+        town_id: rsdt.town_id,
         tempAddress: (addr2 ? `-${addr2}` : '') + query.tempAddress,
       });
+    }
+
+    // 番地情報がないケースはそのまま返す
+    if (!rsdtMap.has(blockNum)) {
+      return query;
     }
 
     // 〇〇県 市〇〇 1 みたいな感じ
@@ -222,11 +228,13 @@ export class AddressFinderForStep7 {
       query.tempAddress,
     ].join('');
     return query.copy({
-      block: rsdt.blk,
-      blockId: rsdt.blk_id,
+      block: blockNum,
+      block_id: rsdt.blk_id,
       tempAddress: otherWithUnmatchedAddrs,
       lat: rsdt.lat,
       lon: rsdt.lon,
+      town_id: rsdt.town_id,
+      lg_code: rsdt.lg_code,
     });
   }
 
@@ -239,7 +247,7 @@ export class AddressFinderForStep7 {
    * オリジナルコード
    * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/cacheRegexes.ts#L141-L161
    */
-  async getBlockList({
+  private async getBlockList({
     prefecture,
     city,
     town,
@@ -266,7 +274,7 @@ export class AddressFinderForStep7 {
    * オリジナルコード
    * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/cacheRegexes.ts#L163-L196
    */
-  async getRsdtList({
+  private async getRsdtList({
     prefecture,
     city,
     town,

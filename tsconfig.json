@@ -16,7 +16,10 @@
     /* For tsyringe */
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node"]
+    "types": ["node"],
+
+    /* For loading json file */
+    "resolveJsonModule": true,
   },
   "include": [
     "src/**/*.ts",

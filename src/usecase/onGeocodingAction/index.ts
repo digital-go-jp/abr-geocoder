@@ -30,7 +30,7 @@ import {
   NormalizeStep5,
   NormalizeStep6,
   NormalizeStep7,
-} from './normalize';
+} from './steps';
 import { Query } from './query.class';
 import { GeocodingParams, IPrefecture, InterpolatePattern } from './types';
 
@@ -162,10 +162,7 @@ export namespace geocodingAction {
     const normalizeStep6 = new NormalizeStep6(patchPatterns);
 
     // アドレスの補正処理らしいことをしている
-    const addressFinderForStep7 = new AddressFinderForStep7({
-      db,
-      wildcardHelper,
-    });
+    const addressFinderForStep7 = new AddressFinderForStep7(db);
     const normalizeStep7 = new NormalizeStep7(addressFinderForStep7);
 
     getReadStreamFromSource(source)

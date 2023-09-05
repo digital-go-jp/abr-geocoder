@@ -108,7 +108,7 @@ const kyotoTowns: TownRow[] = [
   },
 ];
 
-MockedDB.mockImplementationOnce(() => {
+MockedDB.mockImplementation(() => {
   return {
     prepare: (sql: string) => {
       return {
