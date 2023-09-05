@@ -39,10 +39,10 @@ export const getCityRegexPatterns = ({
       }
 
       return {
-        prefectureName: prefecture.name,
+        prefecture: prefecture.name,
         regExpPattern: pattern,
         address: `${prefecture.name}${city.name}`,
-        cityName: city.name,
+        city: city.name,
       };
     });
 };
