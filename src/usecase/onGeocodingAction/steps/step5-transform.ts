@@ -95,10 +95,13 @@ export class NormalizeStep5 extends Transform {
         // `-1` のようなケース
         return kan2num(s);
       })
-      .replace(new RegExp(`${DASH}[^0-9]+([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), s => {
-        // `-あ1` のようなケース
-        return kan2num(s);
-      })
+      .replace(
+        new RegExp(`${DASH}[^0-9]+([${NUMRIC_AND_KANJI_SYMBOLS}]+)`),
+        s => {
+          // `-あ1` のようなケース
+          return kan2num(s);
+        }
+      )
 
       .replace(new RegExp(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)`), s => {
         // `串本町串本１２３４` のようなケース

@@ -160,12 +160,12 @@ export namespace geocodingAction {
       db,
       wildcardHelper,
     });
-    
+
     const step3a_stream = new NormalizeStep3a(cityPatternsForEachPrefecture);
     const step3b_stream = new NormalizeStep3b(addressFinderForStep5);
     const step3final_stream = new NormalizeStep3Final();
     step3a_stream.pipe(step3b_stream).pipe(step3final_stream);
-    
+
     const normalizeStep3 = new NormalizeStep3(step3a_stream);
 
     // 何をしているのか良くわからない

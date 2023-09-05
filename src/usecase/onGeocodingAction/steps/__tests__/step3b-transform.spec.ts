@@ -10,7 +10,7 @@ import { FromStep3Type, PrefectureName } from '../../types';
 import { NormalizeStep3b } from '../step3b-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
-jest.mock<AddressFinderForStep3and5>('../../AddressFinder');
+jest.mock<AddressFinderForStep3and5>('../../AddressFinderForStep3and5');
 
 const MockedAddressFinder = AddressFinderForStep3and5 as jest.Mock;
 MockedAddressFinder.mockImplementation(() => {

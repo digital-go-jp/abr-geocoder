@@ -41,7 +41,6 @@ export class AddressFinderForStep7 {
   private readonly getRsdtListStatement: Statement;
 
   constructor(db: Database) {
-
     this.getBlockListStatement = db.prepare(`
       /* unit test: getBlockListStatement */
 
@@ -158,7 +157,9 @@ export class AddressFinderForStep7 {
 
     // 番地の取得
     const match = query.tempAddress.match(
-      RegExpEx.create(`^([1-9][0-9]*)(?:${DASH}([1-9][0-9]*))?(?:${DASH}([1-9][0-9]*))?`),
+      RegExpEx.create(
+        `^([1-9][0-9]*)(?:${DASH}([1-9][0-9]*))?(?:${DASH}([1-9][0-9]*))?`
+      )
     );
     if (!match) {
       return query;

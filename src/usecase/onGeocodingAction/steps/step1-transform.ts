@@ -54,10 +54,7 @@ export class NormalizeStep1 extends Transform {
           'g'
         ),
         match => {
-          return match.replace(
-            RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'),
-            DASH
-          );
+          return match.replace(RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'), DASH);
         }
       )
       .replace(
