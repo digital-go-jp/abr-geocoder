@@ -44,12 +44,12 @@ describe('step3a-transform', () => {
       {
         prefecture: PrefectureName.TOKYO,
         city: '府中市',
-        input: '宮西町2丁目24番地',
+        tempAddress: '宮西町2丁目24番地',
       },
       {
         prefecture: PrefectureName.HIROSHIMA,
         city: '府中市',
-        input: '宮西町2丁目24番地',
+        tempAddress: '宮西町2丁目24番地',
       },
     ]);
   });
@@ -66,12 +66,12 @@ describe('step3a-transform', () => {
       {
         prefecture: PrefectureName.HIROSHIMA,
         city: '広島市佐伯区',
-        input: '海老園二丁目5番28号',
+        tempAddress: '海老園二丁目5番28号',
       },
       {
         prefecture: PrefectureName.HIROSHIMA,
         city: '広島市',
-        input: '佐伯区海老園二丁目5番28号',
+        tempAddress: '佐伯区海老園二丁目5番28号',
       },
     ]);
   });
@@ -87,7 +87,7 @@ describe('step3a-transform', () => {
       Query.create('八幡市八幡園内75').copy({
         prefecture: PrefectureName.KYOTO,
         city: '八幡市',
-        tempAddress: '八幡市八幡園内75',
+        tempAddress: '八幡園内75',
       })
     );
   });
