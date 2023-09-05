@@ -34,7 +34,7 @@ export class NormalizeStep3 extends Transform {
 
   _final(callback: (error?: Error | null | undefined) => void): void {
     // send the end signal
-    this.otherReadable.push(null);
+    this.otherReadable.destroy();
     callback();
   }
 }

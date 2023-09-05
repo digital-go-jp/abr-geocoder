@@ -31,10 +31,7 @@ describe('step3transform', () => {
 
     // 都道府県名が判別出来ているので、step3a に続く
     // stream のpushが「呼び出されている」ことを確認
-    //
-    // streamの最後を示すnullだけは呼び出されるので、
-    // 2回呼び出されることを確認すれば良い
-    expect(pushMethod).toHaveBeenCalledTimes(2);
+    expect(pushMethod).toHaveBeenCalledTimes(1);
   });
 
   it('都道府県名が判別出来ている場合はスキップする', async () => {
@@ -60,9 +57,7 @@ describe('step3transform', () => {
 
     // 都道府県名が判別出来ているので、step3a に続く
     // stream のpushが「呼び出されていない」ことを確認
-    // (streamの最後を示すnullだけは呼び出される)
-    expect(pushMethod).toHaveBeenCalledTimes(1);
-    expect(pushMethod).toHaveBeenLastCalledWith(null);
+    expect(pushMethod).toHaveBeenCalledTimes(0);
 
     // step3の結果として、入力値と同じものが返ってくることを確認
     const actualValues = outputWrite.toArray();

@@ -5,13 +5,13 @@ import { Database } from 'better-sqlite3';
 import byline from 'byline';
 import { Stream } from 'node:stream';
 import { container } from 'tsyringe';
-import PATCH_PATTERNS from '../../settings/patchPatterns';
 import { RegExpEx } from '../../domain';
 import {
   setupContainer,
   setupContainerForTest,
   setupContainerParams,
 } from '../../interface-adapter';
+import PATCH_PATTERNS from '../../settings/patchPatterns';
 import { AddressFinderForStep3and5 } from './AddressFinderForStep3and5';
 import { AddressFinderForStep7 } from './AddressFinderForStep7';
 import { getCityPatternsForEachPrefecture } from './getCityPatternsForEachPrefecture';
@@ -19,6 +19,7 @@ import { getPrefectureRegexPatterns } from './getPrefectureRegexPatterns';
 import { getPrefecturesFromDB } from './getPrefecturesFromDB';
 import { getReadStreamFromSource } from './getReadStreamFromSource';
 import { getSameNamedPrefecturePatterns } from './getSameNamedPrefecturePatterns';
+import { Query } from './query.class';
 import {
   NormalizeStep1,
   NormalizeStep2,
@@ -31,7 +32,6 @@ import {
   NormalizeStep6,
   NormalizeStep7,
 } from './steps';
-import { Query } from './query.class';
 import { GeocodingParams, IAddressPatch, IPrefecture, InterpolatePattern, PrefectureName } from './types';
 
 export namespace geocodingAction {
@@ -126,16 +126,20 @@ export namespace geocodingAction {
 
     // 住所の正規化処理
     //
-    // 例： ('＿' は全角スペース, @ は constantValues.DASH の文字)
-    // 東京都千代田区紀尾井町1-3'＿'東京ガーデンテラス紀尾井町 19階、20階 => 東京都千代田区紀尾井町1@3 東京ガーデンテラス紀尾井町 19階、20階
+    // 例：
+    //
+    // 東京都千代田区紀尾井町1ー3 東京ガーデンテラス紀尾井町 19階、20階
+    //  ↓
+    // 東京都千代田区紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階
+    //
     const normalizeStep1 = new NormalizeStep1();
 
     // 特定のパターンから都道府県名が判別できるか試みる
     //
-    // 以下のような形になる (@ は constantValues.DASH の文字)
+    // 以下のような形になる
     // Query {
     //   input: '東京都千代田区紀尾井町1ー3　東京ガーデンテラス紀尾井町 19階、20階',
-    //   tempAddress: '千代田区紀尾井町1@3 東京ガーデンテラス紀尾井町 19階、20階',
+    //   tempAddress: '千代田区紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階',
     //   prefecture: '東京都',
     //   city: undefined,
     //   town: undefined,
@@ -162,12 +166,19 @@ export namespace geocodingAction {
       wildcardHelper,
     });
 
+    const step3other_stream = new Stream.Readable({
+      read(size) {},
+      objectMode: true,
+    });
     const step3a_stream = new NormalizeStep3a(cityPatternsForEachPrefecture);
     const step3b_stream = new NormalizeStep3b(addressFinderForStep5);
     const step3final_stream = new NormalizeStep3Final();
-    step3a_stream.pipe(step3b_stream).pipe(step3final_stream);
+    step3other_stream
+      .pipe(step3a_stream)
+      .pipe(step3b_stream)
+      .pipe(step3final_stream);
 
-    const normalizeStep3 = new NormalizeStep3(step3a_stream);
+    const normalizeStep3 = new NormalizeStep3(step3other_stream);
 
     // step2でprefectureが判定できている場合はstep3で判定しないので
     // この時点で判定できていないケースの city を判定している
