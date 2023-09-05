@@ -1,4 +1,4 @@
-import { IPrefecture, InterpolatePattern, Prefecture } from './types';
+import { IPrefecture, InterpolatePattern } from './types';
 
 /**
  *  オリジナルコード

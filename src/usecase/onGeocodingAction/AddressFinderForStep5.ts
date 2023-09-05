@@ -264,6 +264,7 @@ export class AddressFinderForStep5 {
                     ),
                     ''
                   )
+              );
 
               // 漢数字
               if (match.match(RegExpEx.create('^壱'))) {
