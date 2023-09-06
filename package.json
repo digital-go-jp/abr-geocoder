@@ -1,6 +1,6 @@
 {
   "name": "@digital-go-jp/abr-geocoder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
   "author": "Japan Digital Agency (デジタル庁)",
   "repository": {
@@ -16,10 +16,10 @@
     "node": ">=18"
   },
   "bin": {
-    "abrg": "build/cli/index.js"
+    "abrg": "build/index.js"
   },
   "scripts": {
-    "start": "ts-node src/cli.ts",
+    "start": "ts-node src/index.ts",
     "build": "tsc",
     "clean": "tsc --build --clean",
     "test": "jest",
