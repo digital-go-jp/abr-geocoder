@@ -21,7 +21,7 @@ export const toRegexPattern = (address: string) => {
     .replace(RegExpEx.create('穝|さい', 'g'), '(穝|さい)')
     .replace(RegExpEx.create('杁|えぶり', 'g'), '(杁|えぶり)')
     .replace(RegExpEx.create('薭|稗|ひえ|ヒエ', 'g'), '(薭|稗|ひえ|ヒエ)')
-    .replace(RegExpEx.create(`[${J_DASH}]`, 'g'), `[${J_DASH}]`)
+    .replace(RegExpEx.create(`[のノ之丿]`, 'g'), `[のノ之丿]`)
     .replace(RegExpEx.create('[ヶケが]', 'g'), '[ヶケが]')
     .replace(RegExpEx.create('[ヵカか力]', 'g'), '[ヵカか力]')
     .replace(RegExpEx.create('[ッツっつ]', 'g'), '[ッツっつ]')

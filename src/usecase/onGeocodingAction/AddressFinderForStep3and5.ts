@@ -123,8 +123,8 @@ export class AddressFinderForStep3and5 {
           originalName: town.originalName,
           town_id: town.town_id,
           koaza: town.koaza,
-          name: match[0],
-          tempAddress: address.substring(match[0].length),
+          name: town.name,
+          tempAddress: address.substring(match[0].length)
         };
       }
     }
@@ -175,16 +175,14 @@ export class AddressFinderForStep3and5 {
       }
 
       // 冒頭の「町」が付く地名（町田市など）は明らかに省略するべきないので、除外
-      //
-      // NOTE: "abbr" は何の略だろう...?
-      const townAbbr = town.name.replace(RegExpEx.create('(?!^町)町', 'g'), '');
+      const townAddr = town.name.replace(RegExpEx.create('(?!^町)町', 'g'), '');
 
-      if (townSet.has(townAbbr)) {
+      if (townSet.has(townAddr)) {
         return;
       }
 
       // 大字は省略されるため、大字〇〇と〇〇町がコンフリクトする。このケースを除外
-      if (townSet.has(`大字${townAbbr}`)) {
+      if (townSet.has(`大字${townAddr}`)) {
         return;
       }
 
@@ -194,7 +192,7 @@ export class AddressFinderForStep3and5 {
 
       // エイリアスとして「〇〇町」の"町"なしパターンを登録
       results.push({
-        name: townAbbr,
+        name: townAddr,
         originalName: town.name,
         lg_code: town.lg_code,
         town_id: town.town_id,
@@ -225,7 +223,7 @@ export class AddressFinderForStep3and5 {
       const pattern = toRegexPattern(
         town.name
           // 横棒を含む場合（流通センター、など）に対応
-          .replace(RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'), DASH)
+          .replace(RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'), `[${DASH}]`)
           .replace(RegExpEx.create('大?字', 'g'), '(大?字)?')
           // 以下住所マスターの町丁目に含まれる数字を正規表現に変換する
           .replace(
@@ -274,7 +272,7 @@ export class AddressFinderForStep3and5 {
               const prefixMatchers = patterns.join('|');
               return [
                 `(${prefixMatchers})`,
-                `((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[${DASH_SYMBOLS}])`,
+                `((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[${DASH}])`,
               ].join('');
             }
           )
@@ -290,7 +288,7 @@ export class AddressFinderForStep3and5 {
     for (const town of searchPatterns) {
       const chomeMatch = town.name.match(
         RegExpEx.create(
-          `([^${KANJI_1to10_SYMBOLS}]+)([${KANJI_1to10_SYMBOLS}]+)(丁目?)`
+          `^([${KANJI_1to10_SYMBOLS}]+)([${KANJI_1to10_SYMBOLS}]+)(丁目?)`
         )
       );
 

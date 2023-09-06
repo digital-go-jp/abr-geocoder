@@ -35,17 +35,7 @@ describe('step1-transform', () => {
       ['1', DASH, '2', DASH, '3'].join(''),
       'abcdefghijklmnopqrstuvwxyz',
       'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-      [
-        '東京都',
-        SPACE,
-        '渋谷区',
-        SPACE,
-        '3丁目0',
-        DASH,
-        '0',
-        DASH,
-        '0',
-      ].join(''),
+      ['東京都渋谷区3丁目0',DASH,'0',DASH,'0'].join(''),
     ];
     expect(expectValues.length).toBe(actualValues.length);
     expectValues.forEach((expectVal, i) => {

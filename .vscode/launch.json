@@ -15,7 +15,6 @@
       "args": [
         "${workspaceFolder}/src/index.ts",
         "${workspaceFolder}/test/sample-data.txt",
-        "${workspaceFolder}/test/sample-output.txt",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

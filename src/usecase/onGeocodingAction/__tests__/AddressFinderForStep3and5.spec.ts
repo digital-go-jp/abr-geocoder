@@ -113,7 +113,7 @@ MockedDB.mockImplementation(() => {
   return {
     prepare: (sql: string) => {
       return {
-        all: (params: { prefecture: PrefectureName; cityName: string }) => {
+        all: (params: { prefecture: PrefectureName; city: string }) => {
           switch (params.prefecture) {
             case PrefectureName.TOKYO:
               return tokyoTowns;
@@ -157,7 +157,7 @@ describe('AddressFinderForStep3and5', () => {
     expect(result).toEqual({
       lg_code: '132063',
       town_id: '0001002',
-      name: '本宿町2丁目',
+      name: '本宿町二丁目',
       koaza: '',
       lat: 35.672654,
       lon: 139.46089,
@@ -179,7 +179,7 @@ describe('AddressFinderForStep3and5', () => {
       originalName: '',
       town_id: '0000005',
       koaza: '',
-      name: '中京区柳馬場通夷川上ル五町目',
+      name: '五丁目',
       tempAddress: '242',
     });
   });
@@ -204,12 +204,12 @@ describe('AddressFinderForStep3and5', () => {
     expect(result).toEqual({
       lg_code: '132098',
       town_id: '0006002',
-      name: `森野2`,
+      name: `森野二丁目`,
       koaza: '',
       lat: 35.548247,
       lon: 139.440264,
       originalName: '',
-      tempAddress: `${DASH}2${DASH}22`,
+      tempAddress: `2${DASH}22`,
     });
   });
 });

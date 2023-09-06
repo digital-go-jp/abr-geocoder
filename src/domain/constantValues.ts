@@ -8,7 +8,7 @@ export const DASH_SYMBOLS: string = [
   '—', // 全角ダッシュ
   '─', // 罫線
   '━', // 罫線（太）
-  '一', // いち
+  // '一', // いち
   '―', // ホリゾンタルバー
   'ー', // 全角長音
   'ｰ', // 半角長音
@@ -29,7 +29,7 @@ export const NUMRIC_AND_KANJI_SYMBOLS: string = [
 ].join('');
 export const ALPHA_NUMERIC_SYMBOLS: string = ['０-９Ａ-Ｚａ-ｚ'].join('');
 
-export const J_DASH: string = 'の|之|ノ';
+export const J_DASH: string = 'の|之|ノ|丿';
 
 // 半角スペースに置き換えると
 // 問題を起こしやすいので、別の文字に置き換える
