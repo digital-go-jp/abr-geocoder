@@ -53,12 +53,12 @@ describe('step3b-transform', () => {
       {
         prefecture: PrefectureName.HIROSHIMA,
         city: '府中市',
-        input: '宮西町2丁目24番地',
+        tempAddress: '宮西町2丁目24番地',
       },
       {
         prefecture: PrefectureName.TOKYO,
         city: '府中市',
-        input: '宮西町2丁目24番地',
+        tempAddress: '宮西町2丁目24番地',
       },
     ];
 
@@ -82,12 +82,16 @@ describe('step3b-transform', () => {
       outputWrite
     );
 
+    // step3a で広島県府中市と東京都府中市の2つのパターンが検出されたとする
+    // でも MockedAddressFinder が東京都府中市のデータしか返さないので、
+    // 東京都府中市だけに特定されるはず
     const actualValues = outputWrite.toArray();
     expect(actualValues.length).toBe(1);
     expect(actualValues[0]).toEqual({
       query: Query.create('府中市宮西町2丁目24番地').copy({
         prefecture: PrefectureName.TOKYO,
         city: '府中市',
+        tempAddress: '宮西町2丁目24番地',
       }),
       callback: dummyCallback,
     });
