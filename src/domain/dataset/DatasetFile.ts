@@ -1,6 +1,6 @@
 import proj4 from 'proj4';
+import { DatasetFileParams, IDatasetFile, IDatasetFileMeta } from '../types';
 import { DataField } from './DataField';
-import { DatasetFileParams, IDatasetFile, IDatasetFileMeta } from './types';
 
 proj4.defs('EPSG:4612', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 proj4.defs('EPSG:6668', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');

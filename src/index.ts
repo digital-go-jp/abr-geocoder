@@ -7,14 +7,11 @@ import os from 'node:os';
 import path from 'node:path';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { AbrgMessage } from './domain';
+import { onDownloadAction } from './controllers/onDownloadAction';
+import { onGeocodingAction } from './controllers/onGeocoding';
+import { onUpdateCheckAction } from './controllers/onUpdateCheckAction';
+import { AbrgMessage, OutputFormat } from './domain';
 import { parsePackageJson } from './interface-adapter';
-import {
-  OutputFormat,
-  onDownloadAction,
-  onGeocodingAction,
-  onUpdateCheckAction,
-} from './usecase';
 
 const dataDir = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);

@@ -3,13 +3,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { container } from 'tsyringe';
 import {
+  CsvTransform,
+  GeoJsonTransform,
+  JsonTransform,
+  provideCsvFormatter,
+  provideGeoJsonFormatter,
+  provideJsonFormatter,
+} from './formatters/';
+import {
   provideDatabase,
   provideLogger,
   provideMultiProgressBar,
   provideProgressBar,
 } from './providers';
-import { setupContainerParams } from './setupContainerParams';
-import { PrefectureName } from '../usecase';
+
+export interface setupContainerParams {
+  dataDir: string;
+  ckanId: string;
+}
 
 export const setupContainer = async ({
   dataDir,
@@ -29,9 +40,13 @@ export const setupContainer = async ({
     await fs.promises.mkdir(dataDir);
   }
 
+  //
   const sqliteFilePath = path.join(dataDir, `${ckanId}.sqlite`);
-  const schemaFilePath = path.join(__dirname, 'schema.sql');
 
+  // データベースを構築するために必要なSQL
+  const schemaFilePath = path.join(__dirname, '..', 'domain', 'schema.sql');
+
+  // アプリケーション全体を通して使用するデータベース
   const db = await provideDatabase({
     schemaFilePath,
     sqliteFilePath,
@@ -40,67 +55,38 @@ export const setupContainer = async ({
     useValue: db,
   });
 
+  // ロガー
   const logger = provideLogger();
   container.registerInstance('Logger', logger);
 
+  // ダウロードのときに表示するプログレスバー
   container.register<SingleBar>('ProgressBar', {
     useFactory: () => {
       return provideProgressBar();
     },
   });
+
+  // CSV を データベースに保存するとに表示するプログレスバー
   container.register<MultiBar>('MultiProgressBar', {
     useFactory: () => {
       return provideMultiProgressBar();
     },
   });
-  container.register<PrefectureName[]>('Prefectures', {
-    useValue: [
-      PrefectureName.HOKKAIDO,
-      PrefectureName.AOMORI,
-      PrefectureName.IWATE,
-      PrefectureName.MIYAGI,
-      PrefectureName.YAMAGATA,
-      PrefectureName.FUKUSHIMA,
-      PrefectureName.IBARAKI,
-      PrefectureName.TOCHIGI,
-      PrefectureName.GUMMA,
-      PrefectureName.SAITAMA,
-      PrefectureName.CHIBA,
-      PrefectureName.TOKYO,
-      PrefectureName.KANAGAWA,
-      PrefectureName.YAMANASHI,
-      PrefectureName.NAGANO,
-      PrefectureName.NIIGATA,
-      PrefectureName.TOYAMA,
-      PrefectureName.ISHIKAWA,
-      PrefectureName.FUKUI,
-      PrefectureName.SHIZUOKA,
-      PrefectureName.AICHI,
-      PrefectureName.GIFU,
-      PrefectureName.MIE,
-      PrefectureName.SHIGA,
-      PrefectureName.KYOTO,
-      PrefectureName.OSAKA,
-      PrefectureName.HYOGO,
-      PrefectureName.NARA,
-      PrefectureName.WAKAYAMA,
-      PrefectureName.OKAYAMA,
-      PrefectureName.HIROSHIMA,
-      PrefectureName.TOTTORI,
-      PrefectureName.SHIMANE,
-      PrefectureName.YAMAGUCHI,
-      PrefectureName.TOKUSHIMA,
-      PrefectureName.KAGAWA,
-      PrefectureName.EHIME,
-      PrefectureName.KOCHI,
-      PrefectureName.FUKUOKA,
-      PrefectureName.SAGA,
-      PrefectureName.NAGASAKI,
-      PrefectureName.OITA,
-      PrefectureName.KUMAMOTO,
-      PrefectureName.MIYAZAKI,
-      PrefectureName.KAGOSHIMA,
-      PrefectureName.OKINAWA,
-    ],
+
+  // Geocoding結果の出力を整形するフォーマッター
+  container.register<CsvTransform>('csv-formatter', {
+    useFactory: () => {
+      return provideCsvFormatter();
+    },
+  });
+  container.register<GeoJsonTransform>('geojson-formatter', {
+    useFactory: () => {
+      return provideGeoJsonFormatter();
+    },
+  });
+  container.register<JsonTransform>('json-formatter', {
+    useFactory: () => {
+      return provideJsonFormatter();
+    },
   });
 };

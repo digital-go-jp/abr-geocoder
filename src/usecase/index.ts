@@ -1,3 +1,2 @@
-export * from './onDownloadAction';
-export * from './onGeocodingAction';
-export * from './onUpdateCheckAction';
+export * from './downloader/';
+export * from './geocoder/';
