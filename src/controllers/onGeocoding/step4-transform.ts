@@ -1,5 +1,6 @@
 import { Transform, TransformCallback } from 'node:stream';
 import { PrefectureName, InterpolatePattern, Query } from '../../domain';
+import { MatchLevel } from '../../domain/matchLevel.enum';
 
 export class GeocodingStep4 extends Transform {
   private readonly cityPatternsForEachPrefecture: Map<
@@ -50,8 +51,12 @@ export class GeocodingStep4 extends Transform {
       if (!match) {
         continue;
       }
+
       query = query.copy({
         city,
+
+        // 市区町村名が判別できた
+        match_level: MatchLevel.ADMINISTRATIVE_AREA,
 
         // 市区町村名以降の住所
         tempAddress: query.tempAddress.substring(match[0].length),

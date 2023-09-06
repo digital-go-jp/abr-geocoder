@@ -5,6 +5,7 @@ import { DASH } from '../../../settings/constantValues';
 import { AddressFinderForStep7 } from '../AddressFinderForStep7';
 import dummyBlockList from './dummyBlockList.json';
 import dummyRsdtList from './dummyRsdtList.json';
+import { MatchLevel } from '../../../domain/matchLevel.enum';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 
@@ -68,6 +69,7 @@ describe('AddressFinderForStep7', () => {
       addr1_id: '003',
       addr2: '',
       addr2_id: '',
+      match_level: MatchLevel.RESIDENTIAL_DETAIL,
     }))
   });
 
@@ -78,6 +80,7 @@ describe('AddressFinderForStep7', () => {
       city: '広島市',
       town: '佐伯区海老園',
       tempAddress: '二丁目5番28号',
+      match_level: MatchLevel.TOWN_LOCAL,
     });
 
     const result = await addressFinder.find(query);
@@ -91,6 +94,7 @@ describe('AddressFinderForStep7', () => {
       city: '広島市',
       town: '佐伯区海老園',
       tempAddress: '',
+      match_level: MatchLevel.TOWN_LOCAL,
     });
 
     const result = await addressFinder.find(query);

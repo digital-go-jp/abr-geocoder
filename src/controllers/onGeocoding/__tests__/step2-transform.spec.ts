@@ -4,6 +4,7 @@ import { DASH } from '../../../settings/constantValues';
 import { InterpolatePattern, PrefectureName, Query } from '../../../domain/';
 import { GeocodingStep2 } from '../step2-transform';
 import { WritableStreamToArray } from './stream-to-array';
+import { MatchLevel } from '../../../domain/matchLevel.enum';
 
 const sameNamedPrefPatterns: InterpolatePattern[] = [
   {
@@ -126,6 +127,7 @@ describe('step2transform', () => {
         prefecture: PrefectureName.NAGASAKI,
         tempAddress: `魚の町4${DASH}1`,
         city: '長崎市',
+        match_level: MatchLevel.ADMINISTRATIVE_AREA,
       }),
     ];
     await doProcess(input, expectValues);
@@ -138,6 +140,7 @@ describe('step2transform', () => {
         prefecture: PrefectureName.FUKUSHIMA,
         tempAddress: '大字永田字切田116番地',
         city: '石川郡平田村',
+        match_level: MatchLevel.ADMINISTRATIVE_AREA,
       }),
     ];
     await doProcess(input, expectValues);
@@ -160,7 +163,9 @@ describe('step2transform', () => {
     const expectValues = [
       Query.create(inputAddress).copy({
         prefecture: PrefectureName.TOKYO,
-        tempAddress: `千代田区紀尾井町1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`}),
+        tempAddress: `千代田区紀尾井町1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`,
+        match_level: MatchLevel.PREFECTURE,
+      }),
     ];
     await doProcess(input, expectValues);
   });

@@ -1,5 +1,6 @@
 import { Transform, TransformCallback } from 'node:stream';
 import { InterpolatePattern, Query, RegExpEx } from '../../domain';
+import { MatchLevel } from '../../domain/matchLevel.enum';
 
 export class GeocodingStep2 extends Transform {
   constructor(
@@ -33,6 +34,9 @@ export class GeocodingStep2 extends Transform {
         continue;
       }
       query = query.copy({
+        // マッチレベル = 都道府県 + 市区町村
+        match_level: MatchLevel.ADMINISTRATIVE_AREA,
+
         // 都道府県は分かっている
         prefecture: pattern.prefecture,
 
@@ -58,6 +62,9 @@ export class GeocodingStep2 extends Transform {
         continue;
       }
       query = query.copy({
+        // マッチレベル = 都道府県
+        match_level: MatchLevel.PREFECTURE,
+
         // 都道府県は分かっている
         prefecture: pattern.prefecture,
 

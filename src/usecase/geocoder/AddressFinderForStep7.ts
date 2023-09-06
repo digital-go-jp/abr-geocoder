@@ -1,6 +1,7 @@
 import { Database, Statement } from 'better-sqlite3';
 import { RegExpEx, DataField, PrefectureName, Query } from '../../domain';
 import { DASH } from '../../settings/constantValues';
+import { MatchLevel } from '../../domain/matchLevel.enum';
 
 export type TownBlock = {
   lg_code: string;
@@ -189,6 +190,9 @@ export class AddressFinderForStep7 {
         lon: rsdt.lon || query.lon,
         lg_code: rsdt.lg_code,
         town_id: rsdt.town_id,
+
+        // 住居表示の街区符号・住居番号までの判別ができた
+        match_level: MatchLevel.RESIDENTIAL_DETAIL,
       });
     }
 
@@ -212,6 +216,9 @@ export class AddressFinderForStep7 {
         lon: rsdt.lon || query.lon,
         town_id: rsdt.town_id,
         tempAddress: (addr2 ? `${DASH}${addr2}` : '') + query.tempAddress,
+
+        // 住居表示の街区符号・住居番号までの判別ができた
+        match_level: MatchLevel.RESIDENTIAL_DETAIL,
       });
     }
 
@@ -235,6 +242,9 @@ export class AddressFinderForStep7 {
       lon: rsdt.lon || query.lon,
       town_id: rsdt.town_id,
       lg_code: rsdt.lg_code,
+
+      // 住居表示の街区までの判別ができた
+      match_level: MatchLevel.RESIDENTIAL_BLOCK,
     });
   }
 

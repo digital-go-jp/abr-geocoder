@@ -9,6 +9,7 @@ import {
   J_DASH,
 } from '../../settings/constantValues';
 import { AddressFinderForStep3and5 } from '../../usecase';
+import { MatchLevel } from '../../domain/matchLevel.enum';
 
 export class GeocodingStep5 extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {
@@ -140,16 +141,26 @@ export class GeocodingStep5 extends Transform {
       prefecture: query.prefecture!,
       city: query.city!,
     });
+
     if (!normalized) {
       return query;
     }
+
     return query.copy({
+      // 町字の情報
       town_id: normalized.town_id,
       town: normalized.name,
+
       tempAddress: normalized.tempAddress,
+
+      // 町字レベルでの緯度経度
       lat: normalized.lat,
       lon: normalized.lon,
+
       lg_code: normalized.lg_code,
+
+      // 町字まで判別できた
+      match_level: MatchLevel.TOWN_LOCAL,
     });
   }
 }

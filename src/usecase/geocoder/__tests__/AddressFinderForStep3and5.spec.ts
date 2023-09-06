@@ -3,6 +3,7 @@ import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
 import { PrefectureName } from '../../../domain';
 import { DASH } from '../../../settings/constantValues';
 import { AddressFinderForStep3and5, TownRow } from '../AddressFinderForStep3and5';
+import { MatchLevel } from '../../../domain/matchLevel.enum';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 

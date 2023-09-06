@@ -1,5 +1,6 @@
 import { TransformCallback } from 'node:stream';
 import { PrefectureName } from './types';
+import { MatchLevel } from './matchLevel.enum';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）
@@ -33,6 +34,8 @@ export interface IQuery {
   addr2?: string;
 
   addr2_id?: string;
+
+  match_level: MatchLevel;
 
   next?: TransformCallback;
 }
@@ -71,6 +74,8 @@ export type QueryJson = {
   addr2?: string;
 
   addr2_id?: string;
+
+  match_level: number;
 };
 
 export class Query implements IQuery {
@@ -89,6 +94,7 @@ export class Query implements IQuery {
   public readonly addr1_id?: string;
   public readonly addr2?: string;
   public readonly addr2_id?: string;
+  public readonly match_level: MatchLevel;
   public readonly next?: TransformCallback;
 
   private constructor(params: QueryParams) {
@@ -107,6 +113,7 @@ export class Query implements IQuery {
     this.addr1_id = params.addr1_id;
     this.addr2 = params.addr2;
     this.addr2_id = params.addr2_id;
+    this.match_level = params.match_level;
     this.next = params.next;
     Object.freeze(this);
   }
@@ -130,6 +137,7 @@ export class Query implements IQuery {
           addr1_id: this.addr1_id,
           addr2: this.addr2,
           addr2_id: this.addr2_id,
+          match_level: this.match_level,
         },
         newValues,
         {
@@ -147,6 +155,7 @@ export class Query implements IQuery {
       tempAddress: address,
       lat: null,
       lon: null,
+      match_level: MatchLevel.UNKNOWN,
       next,
     });
   };

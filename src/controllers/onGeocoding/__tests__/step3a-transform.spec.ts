@@ -6,6 +6,7 @@ import { Query, FromStep3Type, FromStep3aType, PrefectureName } from '../../../d
 import { GeocodingStep3A } from '../step3a-transform';
 import { dummyPrefectures } from './dummyPrefectures';
 import { WritableStreamToArray } from './stream-to-array';
+import { MatchLevel } from '../../../domain/matchLevel.enum';
 
 describe('step3a-transform', () => {
   const cityPatternsForEachPrefecture =
@@ -87,6 +88,7 @@ describe('step3a-transform', () => {
         prefecture: PrefectureName.KYOTO,
         city: '八幡市',
         tempAddress: '八幡園内75',
+        match_level: MatchLevel.ADMINISTRATIVE_AREA,
       })
     );
   });

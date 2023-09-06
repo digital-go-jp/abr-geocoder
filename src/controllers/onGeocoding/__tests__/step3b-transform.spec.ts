@@ -8,6 +8,7 @@ import {
 import { Query, FromStep3Type, PrefectureName } from '../../../domain';
 import { GeocodingStep3B } from '../step3b-transform';
 import { WritableStreamToArray } from './stream-to-array';
+import { MatchLevel } from '../../../domain/matchLevel.enum';
 
 jest.mock<AddressFinderForStep3and5>('../../../usecase/');
 
@@ -91,6 +92,7 @@ describe('step3b-transform', () => {
         prefecture: PrefectureName.TOKYO,
         city: '府中市',
         tempAddress: '宮西町2丁目24番地',
+        match_level: MatchLevel.ADMINISTRATIVE_AREA,
       }),
       callback: dummyCallback,
     });

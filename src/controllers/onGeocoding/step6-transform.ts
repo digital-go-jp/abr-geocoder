@@ -14,7 +14,7 @@ export class GeocodingStep6 extends Transform {
     callback: TransformCallback
   ): void {
     //
-    // 補正処理？
+    // 個別ケースの補正処理
     //
     // オリジナルコード
     // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/patchAddr.ts#L25-L40
@@ -29,11 +29,13 @@ export class GeocodingStep6 extends Transform {
       ) {
         return;
       }
+
       address = address.replace(
         RegExpEx.create(patch.regExpPattern),
         patch.result
       );
     });
+
     callback(
       null,
       query.copy({

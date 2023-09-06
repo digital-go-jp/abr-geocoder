@@ -27,19 +27,24 @@ export class GeoJsonTransform extends Stream.Transform {
         coordinates: [result.lon, result.lat],
       },
       properties: {
-        prefecture: result.prefecture?.toString(),
-        city: result.city,
-        town: result.town,
-        town_id: result.town_id,
-        lg_code: result.lg_code,
-        input: result.input,
-        other: result.other,
-        block: result.block,
-        block_id: result.block_id,
-        addr1: result.addr1,
-        addr1_id: result.addr1_id,
-        addr2: result.addr2,
-        addr2_id: result.addr2_id,
+        query: {
+          input: result.input,
+        },
+        result: {
+          match_level: result.match_level,
+          prefecture: result.prefecture?.toString(),
+          city: result.city,
+          town: result.town,
+          town_id: result.town_id,
+          lg_code: result.lg_code,
+          other: result.other,
+          block: result.block,
+          block_id: result.block_id,
+          addr1: result.addr1,
+          addr1_id: result.addr1_id,
+          addr2: result.addr2,
+          addr2_id: result.addr2_id,
+        }
       },
     });
     callback(null, `${geojsonStr}\n`);

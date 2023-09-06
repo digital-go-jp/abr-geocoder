@@ -1,5 +1,8 @@
+import { MatchLevel } from './matchLevel.enum';
+
 export enum GeocodeResultFields {
   INPUT = 'input',
+  MATCH_LEVEL = 'match_level',
   LATITUDE = 'lat',
   LONGITUDE = 'lon',
   OTHER = 'other',
@@ -19,6 +22,7 @@ export enum GeocodeResultFields {
 export class GeocodeResult {
   constructor(
     public readonly input: string,
+    public readonly match_level: MatchLevel,
     public readonly lat: number | null,
     public readonly lon: number | null,
     public readonly other: string,

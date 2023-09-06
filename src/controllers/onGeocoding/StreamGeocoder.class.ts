@@ -141,7 +141,7 @@ export class StreamGeocoder extends Transform {
 
     // step3はデータベースを使って都道府県と市町村を特定するため、処理が複雑になる
     // なので、さらに別のストリームで処理を行う
-    const addressFinderForStep5 = new AddressFinderForStep3and5({
+    const addressFinderForStep3and5 = new AddressFinderForStep3and5({
       db: database,
       wildcardHelper,
     });
@@ -151,7 +151,7 @@ export class StreamGeocoder extends Transform {
       objectMode: true,
     });
     const step3a_stream = new GeocodingStep3A(cityPatternsForEachPrefecture);
-    const step3b_stream = new GeocodingStep3B(addressFinderForStep5);
+    const step3b_stream = new GeocodingStep3B(addressFinderForStep3and5);
     const step3final_stream = new GeocodingStep3Final();
     step3other_stream
       .pipe(step3a_stream)
@@ -232,7 +232,7 @@ export class StreamGeocoder extends Transform {
     //   addr2_id: undefined
     // }
     /* eslint-enable no-irregular-whitespace */
-    const step5 = new GeocodingStep5(addressFinderForStep5);
+    const step5 = new GeocodingStep5(addressFinderForStep3and5);
 
     // TypeScript が prefecture の string型 を PrefectureName に変換できないので、
     // ここで変換する
@@ -308,6 +308,7 @@ export class StreamGeocoder extends Transform {
               null,
               new GeocodeResult(
                 query.input,
+                query.match_level,
                 query.lat,
                 query.lon,
                 query.tempAddress,

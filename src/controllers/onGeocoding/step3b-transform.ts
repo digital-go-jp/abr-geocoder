@@ -1,6 +1,7 @@
 import { Transform, TransformCallback } from 'node:stream';
 import { FromStep3aType } from '../../domain';
 import { AddressFinderForStep3and5 } from '../../usecase';
+import { MatchLevel } from '../../domain/matchLevel.enum';
 
 export class GeocodingStep3B extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {
@@ -39,11 +40,12 @@ export class GeocodingStep3B extends Transform {
         continue;
       }
 
-      // 都道府県名が判別できた
+      // 都道府県名 + 市区町村名が判別できた
       fromStep3a.fromStep3.query = fromStep3a.fromStep3.query.copy({
         prefecture: matchedCity.prefecture,
         city: matchedCity.city,
         tempAddress: matchedCity.tempAddress,
+        match_level: MatchLevel.ADMINISTRATIVE_AREA,
       });
       break;
     }

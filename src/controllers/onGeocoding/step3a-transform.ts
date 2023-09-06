@@ -5,6 +5,7 @@ import {
   FromStep3Type,
   Step3aMatchedPatternType,
 } from '../../domain';
+import { MatchLevel } from '../../domain/matchLevel.enum';
 
 export class GeocodingStep3A extends Transform {
   constructor(
@@ -65,6 +66,7 @@ export class GeocodingStep3A extends Transform {
 
     if (matchedPatterns.length === 1) {
       fromStep3.query = fromStep3.query.copy({
+        match_level: MatchLevel.ADMINISTRATIVE_AREA,
         prefecture: matchedPatterns[0].prefecture,
         city: matchedPatterns[0].city,
         tempAddress: matchedPatterns[0].tempAddress,

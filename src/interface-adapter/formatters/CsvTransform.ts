@@ -37,6 +37,9 @@ export class CsvTransform extends Stream.Transform {
           case GeocodeResultFields.INPUT:
             return `"${result.input}"`;
 
+          case GeocodeResultFields.MATCH_LEVEL:
+            return result.match_level.toString();
+
           case GeocodeResultFields.LATITUDE:
             return result.lat?.toString() || '';
 
@@ -66,6 +69,21 @@ export class CsvTransform extends Stream.Transform {
 
           case GeocodeResultFields.BLOCK_ID:
             return `"${result.block_id}"`;
+
+          case GeocodeResultFields.ADDR1:
+            return result.addr1?.toString() || '';
+
+          case GeocodeResultFields.ADDR1_ID:
+            return result.addr1_id?.toString() || '';
+
+          case GeocodeResultFields.ADDR2:
+            return result.addr2?.toString() || '';
+
+          case GeocodeResultFields.ADDR2_ID:
+            return result.addr2_id?.toString() || '';
+
+          default:
+            throw new Error(`Unimplemented field : ${column}`);
         }
       })
       .join(', ');
@@ -85,17 +103,18 @@ export const provideCsvFormatter = (): CsvTransform => {
     columns: [
       // 出力するCSVカラムの順番
       GeocodeResultFields.INPUT,
+      GeocodeResultFields.MATCH_LEVEL,
+      GeocodeResultFields.LG_CODE,
       GeocodeResultFields.PREFECTURE,
       GeocodeResultFields.CITY,
-      GeocodeResultFields.LG_CODE,
       GeocodeResultFields.TOWN,
-      GeocodeResultFields.TOWN_ID,
+      // GeocodeResultFields.TOWN_ID,
       GeocodeResultFields.BLOCK,
-      GeocodeResultFields.BLOCK_ID,
+      // GeocodeResultFields.BLOCK_ID,
       GeocodeResultFields.ADDR1,
-      GeocodeResultFields.ADDR1_ID,
+      // GeocodeResultFields.ADDR1_ID,
       GeocodeResultFields.ADDR2,
-      GeocodeResultFields.ADDR2_ID,
+      // GeocodeResultFields.ADDR2_ID,
       GeocodeResultFields.OTHER,
       GeocodeResultFields.LATITUDE,
       GeocodeResultFields.LONGITUDE,
