@@ -4,8 +4,9 @@
 name: "Linter"
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
+      - main
       - develop
 
 jobs:
@@ -68,6 +69,12 @@ jobs:
           ignore-patterns: |
             build/
       
+      - name: Run unit tests
+        uses: ArtiomTr/jest-coverage-report-action@v2
+        with:
+          package-manager: pnpm
+          github-token: ${{ secrets.SECRET_TOKEN }}
+
       - name: build test
         shell: bash
         run: |
