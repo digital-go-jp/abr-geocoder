@@ -18,6 +18,6 @@ module.exports = {
   ],
   roots: ['./src'],
   testRegex: './src/.*\\.(test|spec)?\\.(ts|ts)$',
-  testPathIgnorePatterns: ["/lib/", "/build/", "/node_modules/"],
+  testPathIgnorePatterns: ["lib/", "build/", "node_modules/"],
   collectCoverage: true,
 };
