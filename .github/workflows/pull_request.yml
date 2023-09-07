@@ -85,5 +85,5 @@ jobs:
         with:
           package-manager: pnpm
           skip-step: all
-          with:
-            coverage-file: ./coverage/coverage-final.json
+          coverage-file: ./coverage/coverage-final.json
+  
