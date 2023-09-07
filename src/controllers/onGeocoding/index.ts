@@ -71,7 +71,11 @@ export namespace geocodingAction {
 
     // 出力先（ファイル or stdout）の選択
     const outputStream: Writable = (destination => {
-      if (destination === '-' || destination === '') {
+      if (
+        destination === '-' ||
+        destination === '' ||
+        destination === undefined
+      ) {
         return process.stdout;
       }
 

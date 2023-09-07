@@ -5,6 +5,7 @@ export const getReadStreamFromSource = (
   source: string
 ): NodeJS.ReadStream | fs.ReadStream => {
   if (source === '-') {
+    // パイプ処理なしで、`abrg -` とされた場合はエラー
     if (process.stdin.isTTY) {
       throw new AbrgError({
         messageId: AbrgMessage.INPUT_SOURCE_FROM_STDIN_ERROR,
