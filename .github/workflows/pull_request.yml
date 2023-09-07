@@ -73,8 +73,17 @@ jobs:
         shell: bash
         run: |
           pnpm run build
-          
+      
+      # coverage/coverage-final.json
       - name: Run unit tests
+        shell: bash
+        run: |
+          pnpm run test
+
+      - name: create test report
         uses: ArtiomTr/jest-coverage-report-action@v2
         with:
           package-manager: pnpm
+          skip-step: all
+          with:
+            coverage-file: ./coverage/coverage-final.json

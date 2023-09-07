@@ -20,4 +20,5 @@ module.exports = {
   testRegex: './src/.*\\.(test|spec)?\\.(ts|ts)$',
   testPathIgnorePatterns: ["lib/", "build/", "node_modules/"],
   collectCoverage: true,
+  coverageReporters: ["json"],
 };
