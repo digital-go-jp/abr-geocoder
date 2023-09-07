@@ -3,7 +3,6 @@ node_modules/
 build/
 yarn.lock
 package-lock.json
-pnpm-lock.yaml
 coverage/
 experimental/
 node_modules*/
