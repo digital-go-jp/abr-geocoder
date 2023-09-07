@@ -10,7 +10,13 @@ import { hideBin } from 'yargs/helpers';
 import { onDownloadAction } from './controllers/onDownloadAction';
 import { onGeocodingAction } from './controllers/onGeocoding';
 import { onUpdateCheckAction } from './controllers/onUpdateCheckAction';
-import { AbrgError, AbrgErrorLevel, AbrgMessage, OutputFormat, bubblingFindFile } from './domain';
+import {
+  AbrgError,
+  AbrgErrorLevel,
+  AbrgMessage,
+  OutputFormat,
+  bubblingFindFile,
+} from './domain';
 import { parsePackageJson } from './interface-adapter';
 
 const dataDir = path.join(os.homedir(), '.abr-geocoder');
@@ -50,7 +56,9 @@ const main = async () => {
             alias: 'd',
             type: 'string',
             default: dataDir,
-            describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_COMMON_DATADIR_OPTION
+            ),
           })
           .option('resource', {
             alias: 'r',
@@ -84,7 +92,9 @@ const main = async () => {
             alias: 'd',
             type: 'string',
             default: dataDir,
-            describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_COMMON_DATADIR_OPTION
+            ),
           })
           .option('resource', {
             alias: 'r',
@@ -122,13 +132,17 @@ const main = async () => {
           .option('fuzzy', {
             type: 'string',
             default: '?',
-            describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_OPTION),
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
+            ),
           })
           .option('workDir', {
             alias: 'w',
             type: 'string',
             default: dataDir,
-            describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_COMMON_DATADIR_OPTION
+            ),
           })
           .option('resource', {
             alias: 'r',
@@ -142,7 +156,9 @@ const main = async () => {
             alias: 'f',
             type: 'string',
             default: 'json',
-            describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FORMAT_OPTION),
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_GEOCODE_FORMAT_OPTION
+            ),
             choices: ['csv', 'json', 'geojson'],
           })
           .positional('<inputFile>', {
@@ -166,6 +182,5 @@ const main = async () => {
       }
     )
     .parse();
-
-}
+};
 main();

@@ -44,7 +44,7 @@ export class GeoJsonTransform extends Stream.Transform {
           addr1_id: result.addr1_id,
           addr2: result.addr2,
           addr2_id: result.addr2_id,
-        }
+        },
       },
     });
     callback(null, `${geojsonStr}\n`);

@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export async function bubblingFindFile(currDir: string, targetFilename: string): Promise<string | undefined> {
+export async function bubblingFindFile(
+  currDir: string,
+  targetFilename: string
+): Promise<string | undefined> {
   try {
     const files = await fs.promises.readdir(currDir);
     const existFile = files.some(file => file.endsWith(targetFilename));
@@ -13,7 +16,7 @@ export async function bubblingFindFile(currDir: string, targetFilename: string):
 
     // 見つからない場合は1つ上の階層を探索
     return bubblingFindFile(path.resolve(currDir, '..'), targetFilename);
-  } catch(err) {
+  } catch (err) {
     // root directoryに達した時点でエラーになるはずなので、探索を辞める
     return undefined;
   }

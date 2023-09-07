@@ -16,7 +16,7 @@ import {
   provideMultiProgressBar,
   provideProgressBar,
 } from './providers';
-import { 
+import {
   AbrgError,
   AbrgErrorLevel,
   AbrgMessage,

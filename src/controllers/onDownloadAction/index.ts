@@ -10,8 +10,7 @@ import {
   AbrgError,
   AbrgErrorLevel,
   AbrgMessage,
-  fsIterator,
-  saveArchiveMeta,
+  fsIterator
 } from '../../domain';
 
 import CLIInfinityProgress from 'cli-infinity-progress';
