@@ -16,6 +16,12 @@ import {
   provideMultiProgressBar,
   provideProgressBar,
 } from './providers';
+import { 
+  AbrgError,
+  AbrgErrorLevel,
+  AbrgMessage,
+  bubblingFindFile,
+} from '../domain';
 
 export interface setupContainerParams {
   dataDir: string;
@@ -44,7 +50,13 @@ export const setupContainer = async ({
   const sqliteFilePath = path.join(dataDir, `${ckanId}.sqlite`);
 
   // データベースを構築するために必要なSQL
-  const schemaFilePath = path.join(__dirname, '..', 'domain', 'schema.sql');
+  const schemaFilePath = await bubblingFindFile(__dirname, 'schema.sql');
+  if (schemaFilePath === undefined || !fs.existsSync(schemaFilePath)) {
+    throw new AbrgError({
+      messageId: AbrgMessage.CANNOT_FIND_SQL_FILE,
+      level: AbrgErrorLevel.ERROR,
+    });
+  }
 
   // アプリケーション全体を通して使用するデータベース
   const db = await provideDatabase({

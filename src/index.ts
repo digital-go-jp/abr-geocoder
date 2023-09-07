@@ -10,150 +10,162 @@ import { hideBin } from 'yargs/helpers';
 import { onDownloadAction } from './controllers/onDownloadAction';
 import { onGeocodingAction } from './controllers/onGeocoding';
 import { onUpdateCheckAction } from './controllers/onUpdateCheckAction';
-import { AbrgMessage, OutputFormat } from './domain';
+import { AbrgError, AbrgErrorLevel, AbrgMessage, OutputFormat, bubblingFindFile } from './domain';
 import { parsePackageJson } from './interface-adapter';
 
 const dataDir = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
-const { version } = parsePackageJson({
-  filePath: path.join(__dirname, '..', 'package.json'),
-});
+const main = async () => {
+  const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
+  if (!packageJsonFilePath) {
+    throw new AbrgError({
+      messageId: AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE,
+      level: AbrgErrorLevel.ERROR,
+    });
+  }
 
-/**
- * CLIパーサー (通常のプログラムのエントリーポイント)
- */
-yargs(hideBin(process.argv))
-  .version(version)
-  .wrap(terminalWidth)
-  .scriptName('abrg')
-
-  /**
-   * abrg update-check
-   * ローカルDBと比較して新しいデータセットの有無を調べる
-   */
-  .command(
-    'update-check',
-    AbrgMessage.toString(AbrgMessage.CLI_UPDATE_CHECK_DESC),
-    (yargs: yargs.Argv) => {
-      return yargs
-        .option('dataDir', {
-          alias: 'd',
-          type: 'string',
-          default: dataDir,
-          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
-        })
-        .option('resource', {
-          alias: 'r',
-          type: 'string',
-          default: 'ba000001',
-          describe: AbrgMessage.toString(
-            AbrgMessage.CLI_COMMON_RESOURCE_OPTION
-          ),
-        });
-    },
-    async argv => {
-      await onUpdateCheckAction({
-        dataDir: argv.dataDir,
-        ckanId: argv.resource,
-      }).catch((error: Error) => {
-        console.error(error);
-      });
-    }
-  )
+  const { version } = parsePackageJson({
+    filePath: packageJsonFilePath,
+  });
 
   /**
-   * abrg download
-   * データセットをダウンロードする
+   * CLIパーサー (通常のプログラムのエントリーポイント)
    */
-  .command(
-    'download',
-    AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_DESC),
-    (yargs: yargs.Argv) => {
-      return yargs
-        .option('dataDir', {
-          alias: 'd',
-          type: 'string',
-          default: dataDir,
-          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
-        })
-        .option('resource', {
-          alias: 'r',
-          type: 'string',
-          default: 'ba000001',
-          describe: AbrgMessage.toString(
-            AbrgMessage.CLI_COMMON_RESOURCE_OPTION
-          ),
-        })
-        .option('force', {
-          alias: 'f',
-          type: 'boolean',
-          describe: AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_FORCE_DESC),
-        });
-    },
-    async argv => {
-      await onDownloadAction({
-        dataDir: argv.dataDir,
-        ckanId: argv.resource,
-      }).catch((error: Error) => {
-        console.error(error);
-      });
-    }
-  )
+  yargs(hideBin(process.argv))
+    .version(version)
+    .wrap(terminalWidth)
+    .scriptName('abrg')
 
-  /**
-   * abrg
-   * 入力されたファイル、または標準入力から与えられる住所をジオコーディングする
-   */
-  .command(
-    '$0 <inputFile> [<outputFile>]',
-    AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_DESC),
-    (yargs: yargs.Argv) => {
-      return yargs
-        .option('fuzzy', {
-          type: 'string',
-          default: '?',
-          describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_OPTION),
-        })
-        .option('workDir', {
-          alias: 'w',
-          type: 'string',
-          default: dataDir,
-          describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
-        })
-        .option('resource', {
-          alias: 'r',
-          type: 'string',
-          default: 'ba000001',
-          describe: AbrgMessage.toString(
-            AbrgMessage.CLI_COMMON_RESOURCE_OPTION
-          ),
-        })
-        .option('format', {
-          alias: 'f',
-          type: 'string',
-          default: 'json',
-          describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FORMAT_OPTION),
-          choices: ['csv', 'json', 'geojson'],
-        })
-        .positional('<inputFile>', {
-          describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),
-          default: '-',
-        })
-        .positional('[<outputFile>]', {
-          describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_OUTPUT_FILE),
-          default: '',
+    /**
+     * abrg update-check
+     * ローカルDBと比較して新しいデータセットの有無を調べる
+     */
+    .command(
+      'update-check',
+      AbrgMessage.toString(AbrgMessage.CLI_UPDATE_CHECK_DESC),
+      (yargs: yargs.Argv) => {
+        return yargs
+          .option('dataDir', {
+            alias: 'd',
+            type: 'string',
+            default: dataDir,
+            describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
+          })
+          .option('resource', {
+            alias: 'r',
+            type: 'string',
+            default: 'ba000001',
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_COMMON_RESOURCE_OPTION
+            ),
+          });
+      },
+      async argv => {
+        await onUpdateCheckAction({
+          dataDir: argv.dataDir,
+          ckanId: argv.resource,
+        }).catch((error: Error) => {
+          console.error(error);
         });
-    },
-    async argv => {
-      await onGeocodingAction({
-        source: (argv.inputFile as string) || '-',
-        destination: (argv.outputFile as string) || '',
-        dataDir: argv.workDir || dataDir,
-        resourceId: argv.resource || 'ba000001',
-        format: argv.format as OutputFormat,
-        fuzzy: argv.fuzzy || '?',
-      });
-    }
-  )
-  .parse();
+      }
+    )
+
+    /**
+     * abrg download
+     * データセットをダウンロードする
+     */
+    .command(
+      'download',
+      AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_DESC),
+      (yargs: yargs.Argv) => {
+        return yargs
+          .option('dataDir', {
+            alias: 'd',
+            type: 'string',
+            default: dataDir,
+            describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
+          })
+          .option('resource', {
+            alias: 'r',
+            type: 'string',
+            default: 'ba000001',
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_COMMON_RESOURCE_OPTION
+            ),
+          })
+          .option('force', {
+            alias: 'f',
+            type: 'boolean',
+            describe: AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_FORCE_DESC),
+          });
+      },
+      async argv => {
+        await onDownloadAction({
+          dataDir: argv.dataDir,
+          ckanId: argv.resource,
+        }).catch((error: Error) => {
+          console.error(error);
+        });
+      }
+    )
+
+    /**
+     * abrg
+     * 入力されたファイル、または標準入力から与えられる住所をジオコーディングする
+     */
+    .command(
+      '$0 <inputFile> [<outputFile>]',
+      AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_DESC),
+      (yargs: yargs.Argv) => {
+        return yargs
+          .option('fuzzy', {
+            type: 'string',
+            default: '?',
+            describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_OPTION),
+          })
+          .option('workDir', {
+            alias: 'w',
+            type: 'string',
+            default: dataDir,
+            describe: AbrgMessage.toString(AbrgMessage.CLI_COMMON_DATADIR_OPTION),
+          })
+          .option('resource', {
+            alias: 'r',
+            type: 'string',
+            default: 'ba000001',
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_COMMON_RESOURCE_OPTION
+            ),
+          })
+          .option('format', {
+            alias: 'f',
+            type: 'string',
+            default: 'json',
+            describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FORMAT_OPTION),
+            choices: ['csv', 'json', 'geojson'],
+          })
+          .positional('<inputFile>', {
+            describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),
+            default: '-',
+          })
+          .positional('[<outputFile>]', {
+            describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_OUTPUT_FILE),
+            default: '',
+          });
+      },
+      async argv => {
+        await onGeocodingAction({
+          source: (argv.inputFile as string) || '-',
+          destination: (argv.outputFile as string) || '',
+          dataDir: argv.workDir || dataDir,
+          resourceId: argv.resource || 'ba000001',
+          format: argv.format as OutputFormat,
+          fuzzy: argv.fuzzy || '?',
+        });
+      }
+    )
+    .parse();
+
+}
+main();

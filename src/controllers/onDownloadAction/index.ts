@@ -11,6 +11,7 @@ import {
   AbrgErrorLevel,
   AbrgMessage,
   fsIterator,
+  saveArchiveMeta,
 } from '../../domain';
 
 import CLIInfinityProgress from 'cli-infinity-progress';
@@ -132,7 +133,7 @@ export namespace downloadDataset {
     // saveArchiveMeta({
     //   db,
     //   meta: upstreamMeta,
-    // })ß
+    // })
 
     db.close();
 
