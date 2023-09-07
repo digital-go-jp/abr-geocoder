@@ -73,7 +73,6 @@ jobs:
         uses: ArtiomTr/jest-coverage-report-action@v2
         with:
           package-manager: pnpm
-          github-token: ${{ secrets.SECRET_TOKEN }}
 
       - name: build test
         shell: bash
