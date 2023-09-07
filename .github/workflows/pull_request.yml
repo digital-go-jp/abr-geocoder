@@ -1,7 +1,7 @@
 ## This workflow has been disabled for now, because the CKAN API is blocking our requests.
 ## Re-enable when we can package test data inside this repository.
 
-name: "Linter"
+name: "PR check"
 
 on:
   pull_request:
@@ -10,7 +10,17 @@ on:
       - develop
 
 jobs:
-  build:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v3
+        
+        - name: Run unit tests
+          uses: ArtiomTr/jest-coverage-report-action@v2
+          with:
+            package-manager: pnpm
+
+  lint_and_build:
     runs-on: ubuntu-latest
 
     # Set up concurrency so the SQLite cache can be reused between nodejs matrix versions
@@ -68,11 +78,6 @@ jobs:
           ignore-path: .eslintignore
           ignore-patterns: |
             build/
-      
-      - name: Run unit tests
-        uses: ArtiomTr/jest-coverage-report-action@v2
-        with:
-          package-manager: pnpm
 
       - name: build test
         shell: bash
