@@ -69,14 +69,18 @@ export class StreamGeocoder extends Transform {
     /**
      * string = "^愛知郡愛荘町" を  "^(愛|\\?)(知|\\?)(郡|\\?)(愛|\\?)(荘|\\?)(町|\\?)" にする
      */
-    const insertWildcardMatching = (string: string) => {
-      return string.replace(
-        RegExpEx.create('(?<!\\[[^\\]]*)([一-龯ぁ-んァ-ン])(?!\\?)', 'g'),
-        '($1|\\?)'
-      );
-    };
     const passThrough = (pattern: string) => pattern;
-    const wildcardHelper = fuzzy ? insertWildcardMatching : passThrough;
+    const wildcardHelper = (() => {
+      if (!fuzzy) {
+        return passThrough;
+      }
+      return (string: string) => {
+        return string.replace(
+          RegExpEx.create(`(?<!\\[[^\\]]*)([一-龯ぁ-んァ-ン])(?!${fuzzy})`, 'g'),
+          `($1|${fuzzy})`
+        )
+      };
+    })();
 
     /**
      * regexpPattern = ^東京都? を作成する
