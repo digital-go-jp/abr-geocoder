@@ -55,11 +55,10 @@ jobs:
       
       - name: Run tests
         run: |
-          npx jest --coverage | tee ./coverage.txt && exit ${PIPESTATUS[0]}
+          npx jest --coverage --coverageReporters json-summary
 
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main
         with:
           github-token: ${{ secrets.WORKFLOW_TOKEN }}
-          coverage-path: ./coverage.txt
   
