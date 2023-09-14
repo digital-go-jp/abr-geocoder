@@ -155,11 +155,11 @@ const main = async () => {
           .option('format', {
             alias: 'f',
             type: 'string',
-            default: 'json',
+            default: 'csv',
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_GEOCODE_FORMAT_OPTION
             ),
-            choices: ['csv', 'json', 'geojson'],
+            choices: ['csv', 'json', 'ndjson', 'geojson', 'ndgeojson'],
           })
           .positional('<inputFile>', {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),

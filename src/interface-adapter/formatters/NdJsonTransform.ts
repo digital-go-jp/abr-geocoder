@@ -1,11 +1,8 @@
 import { Stream } from 'node:stream';
-import { GeocodeResult } from '../../domain/';
+import { GeocodeResult } from '../../domain';
 import { TransformCallback } from 'stream';
 
-export class JsonTransform extends Stream.Transform {
-  private buffer: string = '';
-  private lineNum: number = 0;
-
+export class NdJsonTransform extends Stream.Transform {
   private constructor() {
     super({
       // Data format coming from the previous stream is object mode.
@@ -23,15 +20,10 @@ export class JsonTransform extends Stream.Transform {
     encoding: BufferEncoding,
     callback: TransformCallback
   ): void {
-    const out = this.buffer;
-    
-    if (this.lineNum > 0) {
-      this.buffer = ',';
-    } else {
-      this.buffer = '[';
-    }
-    this.lineNum++;
-    this.buffer += JSON.stringify(
+    const JSON_SPACE = 2;
+    const JSON_REPLACER = null;
+
+    const jsonStr = JSON.stringify(
       {
         query: {
           input: result.input,
@@ -54,16 +46,10 @@ export class JsonTransform extends Stream.Transform {
           addr2_id: result.addr2_id,
         },
       });
-    callback(null, out);
+    callback(null, `${jsonStr}\n`);
   }
 
-  _final(callback: (error?: Error | null | undefined) => void): void {
-    this.emit('data', this.buffer);
-    this.emit('data', ']');
-    callback();
-  }
-
-  static create = (): JsonTransform => {
-    return new JsonTransform();
-  }
+  static create = (): NdJsonTransform => {
+    return new NdJsonTransform();
+  }  
 }

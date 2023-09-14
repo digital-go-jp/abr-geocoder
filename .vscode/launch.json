@@ -7,13 +7,81 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "geocoding",
+      "name": "geocoding(default)",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
         "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/test/sample-data.txt",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(json)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/test/sample-data.txt",
+        "-f",
+        "json",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(ndjson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/test/sample-data.txt",
+        "--format",
+        "ndjson",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(geojson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/index.ts",
+        "-f",
+        "geojson",
+        "${workspaceFolder}/test/sample-data.txt",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(ndgeojson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/index.ts",
+        "-f",
+        "ndgeojson",
         "${workspaceFolder}/test/sample-data.txt",
       ],
       "console": "integratedTerminal",

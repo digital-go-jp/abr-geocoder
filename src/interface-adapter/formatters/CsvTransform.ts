@@ -5,7 +5,7 @@ import { TransformCallback } from 'stream';
 export class CsvTransform extends Stream.Transform {
   private readonly rows: string[] = [];
 
-  constructor(
+  private constructor(
     private readonly options: {
       columns: GeocodeResultFields[];
       skipHeader: boolean;
@@ -95,29 +95,33 @@ export class CsvTransform extends Stream.Transform {
 
     callback(null, csvLines);
   }
-}
 
-export const provideCsvFormatter = (): CsvTransform => {
-  return new CsvTransform({
-    skipHeader: false,
-    columns: [
-      // 出力するCSVカラムの順番
-      GeocodeResultFields.INPUT,
-      GeocodeResultFields.MATCH_LEVEL,
-      GeocodeResultFields.LG_CODE,
-      GeocodeResultFields.PREFECTURE,
-      GeocodeResultFields.CITY,
-      GeocodeResultFields.TOWN,
-      // GeocodeResultFields.TOWN_ID,
-      GeocodeResultFields.BLOCK,
-      // GeocodeResultFields.BLOCK_ID,
-      GeocodeResultFields.ADDR1,
-      // GeocodeResultFields.ADDR1_ID,
-      GeocodeResultFields.ADDR2,
-      // GeocodeResultFields.ADDR2_ID,
-      GeocodeResultFields.OTHER,
-      GeocodeResultFields.LATITUDE,
-      GeocodeResultFields.LONGITUDE,
-    ],
-  });
+  static DEFAULT_COLUMNS = [
+    // 出力するCSVカラムの順番
+    GeocodeResultFields.INPUT,
+    GeocodeResultFields.MATCH_LEVEL,
+    GeocodeResultFields.LG_CODE,
+    GeocodeResultFields.PREFECTURE,
+    GeocodeResultFields.CITY,
+    GeocodeResultFields.TOWN,
+    // GeocodeResultFields.TOWN_ID,
+    GeocodeResultFields.BLOCK,
+    // GeocodeResultFields.BLOCK_ID,
+    GeocodeResultFields.ADDR1,
+    // GeocodeResultFields.ADDR1_ID,
+    GeocodeResultFields.ADDR2,
+    // GeocodeResultFields.ADDR2_ID,
+    GeocodeResultFields.OTHER,
+    GeocodeResultFields.LATITUDE,
+    GeocodeResultFields.LONGITUDE,
+  ];
+
+  static create = (
+    columns: GeocodeResultFields[] = this.DEFAULT_COLUMNS,
+  ): CsvTransform => {
+    return new CsvTransform({
+      skipHeader: false,
+      columns,
+    });
+  }
 };

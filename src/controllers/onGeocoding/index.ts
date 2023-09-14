@@ -17,11 +17,14 @@ import {
   CsvTransform,
   GeoJsonTransform,
   JsonTransform,
+  NdGeoJsonTransform,
+  NdJsonTransform,
   setupContainer,
   setupContainerParams,
 } from '../../interface-adapter';
 import { getReadStreamFromSource } from '../../usecase/';
 import { StreamGeocoder } from './StreamGeocoder.class';
+import path from 'node:path';
 
 export namespace geocodingAction {
   let initialized = false;
@@ -61,6 +64,12 @@ export namespace geocodingAction {
         case OutputFormat.GEOJSON:
           return container.resolve<GeoJsonTransform>('geojson-formatter');
 
+        case OutputFormat.NDJSON:
+          return container.resolve<NdJsonTransform>('ndjson-formatter');
+
+        case OutputFormat.NDGEOJSON:
+          return container.resolve<NdGeoJsonTransform>('ndgeojson-formatter');
+  
         default:
           throw new AbrgError({
             messageId: AbrgMessage.UNSUPPORTED_OUTPUT_FORMAT,
@@ -79,7 +88,7 @@ export namespace geocodingAction {
         return process.stdout;
       }
 
-      return fs.createWriteStream(fs.realpathSync(destination));
+      return fs.createWriteStream(path.normalize(destination), 'utf8');
     })(destination);
 
     // メイン処理

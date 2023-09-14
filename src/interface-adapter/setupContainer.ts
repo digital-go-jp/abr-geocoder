@@ -6,9 +6,8 @@ import {
   CsvTransform,
   GeoJsonTransform,
   JsonTransform,
-  provideCsvFormatter,
-  provideGeoJsonFormatter,
-  provideJsonFormatter,
+  NdGeoJsonTransform,
+  NdJsonTransform,
 } from './formatters/';
 import {
   provideDatabase,
@@ -88,17 +87,27 @@ export const setupContainer = async ({
   // Geocoding結果の出力を整形するフォーマッター
   container.register<CsvTransform>('csv-formatter', {
     useFactory: () => {
-      return provideCsvFormatter();
+      return CsvTransform.create(CsvTransform.DEFAULT_COLUMNS);
     },
   });
   container.register<GeoJsonTransform>('geojson-formatter', {
     useFactory: () => {
-      return provideGeoJsonFormatter();
+      return GeoJsonTransform.create();
+    },
+  });
+  container.register<NdGeoJsonTransform>('ndgeojson-formatter', {
+    useFactory: () => {
+      return NdGeoJsonTransform.create();
     },
   });
   container.register<JsonTransform>('json-formatter', {
     useFactory: () => {
-      return provideJsonFormatter();
+      return JsonTransform.create();
+    },
+  });
+  container.register<NdJsonTransform>('ndjson-formatter', {
+    useFactory: () => {
+      return NdJsonTransform.create();
     },
   });
 };
