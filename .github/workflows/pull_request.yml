@@ -23,7 +23,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
       - uses: pnpm/action-setup@v2
         name: Install pnpm
@@ -47,9 +47,9 @@ jobs:
       #     restore-keys: |
       #       ${{ runner.os }}-pnpm-store-
 
-      # - name: Install dependencies
-      #   if: steps.node_modules.outputs.cache-hit != 'true'
-      #   run: pnpm install
+      - name: Install dependencies
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: pnpm install
 
       - name: Run eslint on changed files
         uses: sibiraj-s/action-eslint@v3
