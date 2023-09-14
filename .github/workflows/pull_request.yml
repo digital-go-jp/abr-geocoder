@@ -25,13 +25,6 @@ jobs:
         with:
           node-version: 20
 
-      - uses: pnpm/action-setup@v2
-        name: Install pnpm
-        id: pnpm-install
-        with:
-          version: 8
-          # run_install: false
-
       # - name: Get pnpm store directory
       #   id: pnpm-cache
       #   shell: bash
@@ -49,7 +42,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.node_modules.outputs.cache-hit != 'true'
-        run: pnpm install
+        run: npm install
 
       - name: Run eslint on changed files
         uses: sibiraj-s/action-eslint@v3
@@ -63,11 +56,11 @@ jobs:
       - name: build test
         shell: bash
         run: |
-          pnpm run build
+          npm run build
       
       - name: create test report
         uses: ArtiomTr/jest-coverage-report-action@v2
         with:
-          package-manager: pnpm
+          package-manager: npm
           skip-step: install
   
