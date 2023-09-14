@@ -1,0 +1,48 @@
+import { Stream } from 'node:stream';
+import { GeocodeResult } from '../../domain';
+import { TransformCallback } from 'stream';
+
+export class DebugBypass extends Stream.Transform {
+  private constructor() {
+    super({
+      // Data format coming from the previous stream is object mode.
+      // Because we expect GeocodeResult
+      writableObjectMode: true,
+
+      // Data format to the next stream is non-object mode.
+      // Because we output string as Buffer.
+      readableObjectMode: false,
+    });
+  }
+
+  _transform(
+    result: GeocodeResult,
+    encoding: BufferEncoding,
+    callback: TransformCallback
+  ): void {
+
+    callback(null, `new GeocodeResult(\n
+      '${result.input}',
+      ${result.match_level},
+      ${result.lat || null},
+      ${result.lon || null},
+      '${result.other || ""}',
+      '${result.prefecture || ""}',
+      '${result.city || ""}',
+      '${result.town || ""}',
+      '${result.town_id || ""}',
+      '${result.lg_code || ""}',
+      '${result.block || ""}',
+      '${result.block_id || ""}',
+      '${result.addr1 || ""}',
+      '${result.addr1_id || ""}',
+      '${result.addr2 || ""}',
+      '${result.addr2_id || ""}',
+    ),
+\n`);
+  }
+
+  static create = (): DebugBypass => {
+    return new DebugBypass();
+  }  
+}

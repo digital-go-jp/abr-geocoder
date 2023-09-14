@@ -22,6 +22,24 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "geocoding(csv)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/test/sample-data.txt",
+        "${workspaceFolder}/test/result.csv",
+        "-f",
+        "csv",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "geocoding(json)",
       "runtimeArgs": [
         "--require",
@@ -30,6 +48,7 @@
       "args": [
         "${workspaceFolder}/src/index.ts",
         "${workspaceFolder}/test/sample-data.txt",
+        "${workspaceFolder}/test/result.json",
         "-f",
         "json",
       ],
@@ -47,6 +66,7 @@
       "args": [
         "${workspaceFolder}/src/index.ts",
         "${workspaceFolder}/test/sample-data.txt",
+        "${workspaceFolder}/test/result.nd.json",
         "--format",
         "ndjson",
       ],
@@ -66,6 +86,7 @@
         "-f",
         "geojson",
         "${workspaceFolder}/test/sample-data.txt",
+        "${workspaceFolder}/test/result.geo.json",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -83,6 +104,7 @@
         "-f",
         "ndgeojson",
         "${workspaceFolder}/test/sample-data.txt",
+        "${workspaceFolder}/test/result.nd.geo.json",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

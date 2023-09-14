@@ -47,28 +47,28 @@ export class CsvTransform extends Stream.Transform {
             return result.lon?.toString() || '';
 
           case GeocodeResultFields.PREFECTURE:
-            return `"${result.prefecture}"`;
+            return result.prefecture || '';
 
           case GeocodeResultFields.CITY:
-            return `"${result.city}"`;
+            return result.city || '';
 
           case GeocodeResultFields.LG_CODE:
-            return `"${result.lg_code}"`;
+            return result.lg_code || '';
 
           case GeocodeResultFields.TOWN:
-            return `"${result.town}"`;
+            return result.town || '';
 
           case GeocodeResultFields.TOWN_ID:
-            return `"${result.town_id}"`;
+            return result.town_id || '';
 
           case GeocodeResultFields.OTHER:
-            return `"${result.other}"`;
+            return result.other || '';
 
           case GeocodeResultFields.BLOCK:
-            return `"${result.block}"`;
+            return result.block || '';
 
           case GeocodeResultFields.BLOCK_ID:
-            return `"${result.block_id}"`;
+            return result.block_id || '';
 
           case GeocodeResultFields.ADDR1:
             return result.addr1?.toString() || '';
@@ -86,7 +86,7 @@ export class CsvTransform extends Stream.Transform {
             throw new Error(`Unimplemented field : ${column}`);
         }
       })
-      .join(', ');
+      .join(',');
 
     this.rows.push(line);
     this.rows.push('');

@@ -17,8 +17,12 @@ module.exports = {
     "settings"
   ],
   roots: ['./src'],
-  testRegex: './src/.*\\.(test|spec)?\\.(ts|ts)$',
-  testPathIgnorePatterns: ["lib/", "build/", "node_modules/"],
+  testRegex: './src/.*\\.(test|spec)?\\.ts$',
+  testPathIgnorePatterns: [
+    "lib/", 
+    "build/",
+    "node_modules/", 
+  ],
   collectCoverage: true,
   coverageReporters: ["json"],
 };

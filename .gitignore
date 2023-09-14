@@ -6,3 +6,4 @@ package-lock.json
 coverage/
 experimental/
 node_modules*/
+test/result*
