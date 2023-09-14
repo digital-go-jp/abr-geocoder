@@ -46,7 +46,7 @@ jobs:
           ignore-patterns: |
             build/
             node_modules/
-          github-token: ${{ secrets.WORKFLOW_TOKEN }}
+          token: ${{ secrets.WORKFLOW_TOKEN }}
 
       - name: build test
         shell: bash
@@ -66,6 +66,5 @@ jobs:
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main
         with:
-          skip-step: install
           github-token: ${{ secrets.WORKFLOW_TOKEN }}
   
