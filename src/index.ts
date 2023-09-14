@@ -171,8 +171,12 @@ const main = async () => {
           });
       },
       async argv => {
+        let inputFile = '-';
+        if (typeof argv['inputFile'] === 'string') {
+          inputFile = argv['inputFile'] as string;
+        }
         await onGeocodingAction({
-          source: (argv['inputFile'] as string) || '-',
+          source: inputFile,
           destination: (argv['outputFile'] as string) || '',
           dataDir: argv.workDir || dataDir,
           resourceId: argv.resource || 'ba000001',
