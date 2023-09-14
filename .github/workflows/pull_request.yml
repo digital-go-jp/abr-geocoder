@@ -55,7 +55,7 @@ jobs:
       
       - name: Run tests
         run: |
-          npx jest --coverage --coverageReporters json-summary
+          npx jest --coverage | tee ./coverage.txt && exit ${PIPESTATUS[0]}
 
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main
