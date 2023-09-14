@@ -25,20 +25,14 @@ jobs:
         with:
           node-version: 20
 
-      # - name: Get pnpm store directory
-      #   id: pnpm-cache
-      #   shell: bash
-      #   run: |
-      #     echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      # - uses: actions/cache@v3
-      #   name: Setup pnpm cache
-      #   id: node_modules
-      #   with:
-      #     path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-      #     key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v3
+        name: Setup npm cache
+        id: node_modules
+        with:
+          path: node_modules/
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
 
       - name: Install dependencies
         if: steps.node_modules.outputs.cache-hit != 'true'
@@ -52,6 +46,7 @@ jobs:
           ignore-patterns: |
             build/
             node_modules/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: build test
         shell: bash
@@ -63,4 +58,5 @@ jobs:
         with:
           package-manager: npm
           skip-step: install
+          github-token: ${{ secrets.GITHUB_TOKEN }}
   
