@@ -66,27 +66,14 @@ jobs:
           extensions: 'ts'
           annotations: true
           ignore-path: .eslintignore
-          ignore-patterns: |
-            build/
 
       - name: build test
         shell: bash
         run: |
           pnpm run build
       
-  coverage:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          
       - name: create test report
         uses: ArtiomTr/jest-coverage-report-action@v2
         with:
           package-manager: pnpm
-  
+          skip-step: install
