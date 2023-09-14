@@ -66,6 +66,9 @@ jobs:
           extensions: 'ts'
           annotations: true
           ignore-path: .eslintignore
+          ignore-patterns: |
+            build/
+            node_modules/
 
       - name: build test
         shell: bash
@@ -77,3 +80,4 @@ jobs:
         with:
           package-manager: pnpm
           skip-step: install
+  
