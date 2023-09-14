@@ -53,12 +53,6 @@ jobs:
         run: |
           npm run build
       
-      # - name: create test report
-      #   uses: ArtiomTr/jest-coverage-report-action@v2
-      #   with:
-      #     package-manager: npm
-      #     skip-step: install
-      #     github-token: ${{ secrets.WORKFLOW_TOKEN }}
       - name: Run tests
         run: |
           npx jest --coverage --coverageReporters json-summary
@@ -67,4 +61,5 @@ jobs:
         uses: MishaKav/jest-coverage-comment@main
         with:
           github-token: ${{ secrets.WORKFLOW_TOKEN }}
+          coverage-path: ./coverage.txt
   
