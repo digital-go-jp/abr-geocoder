@@ -25,18 +25,22 @@ jobs:
         with:
           node-version: 20
 
-      # - uses: actions/cache@v3
-      #   name: Setup npm cache
-      #   id: node_modules
-      #   with:
-      #     path: node_modules/
-      #     key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+      - name: Install dependencies
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: npm install --global yarn
+
+      - uses: actions/cache@v3
+        name: Setup npm cache
+        id: node_modules
+        with:
+          path: node_modules/
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
 
       - name: Install dependencies
-        # if: steps.node_modules.outputs.cache-hit != 'true'
-        run: npm install
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: yarn install
 
       - name: Run eslint on changed files
         uses: sibiraj-s/action-eslint@v3
