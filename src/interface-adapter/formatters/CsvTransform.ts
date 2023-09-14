@@ -117,11 +117,11 @@ export class CsvTransform extends Stream.Transform {
   ];
 
   static create = (
-    columns: GeocodeResultFields[] = this.DEFAULT_COLUMNS,
+    columns: GeocodeResultFields[] = this.DEFAULT_COLUMNS
   ): CsvTransform => {
     return new CsvTransform({
       skipHeader: false,
       columns,
     });
-  }
-};
+  };
+}

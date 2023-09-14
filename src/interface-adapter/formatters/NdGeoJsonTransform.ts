@@ -54,4 +54,3 @@ export class NdGeoJsonTransform extends Stream.Transform {
     return new NdGeoJsonTransform();
   };
 }
-

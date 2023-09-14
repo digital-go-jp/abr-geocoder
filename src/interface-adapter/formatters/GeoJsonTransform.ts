@@ -25,7 +25,6 @@ export class GeoJsonTransform extends Stream.Transform {
   ): void {
     const out = this.buffer;
 
-    
     if (this.lineNum > 0) {
       this.buffer = ',';
     } else {
@@ -67,7 +66,7 @@ export class GeoJsonTransform extends Stream.Transform {
     this.emit('data', ']');
     callback();
   }
-  
+
   static create = (): GeoJsonTransform => {
     return new GeoJsonTransform();
   };

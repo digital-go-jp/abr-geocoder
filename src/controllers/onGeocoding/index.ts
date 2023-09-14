@@ -69,7 +69,7 @@ export namespace geocodingAction {
 
         case OutputFormat.NDGEOJSON:
           return container.resolve<NdGeoJsonTransform>('ndgeojson-formatter');
-  
+
         default:
           throw new AbrgError({
             messageId: AbrgMessage.UNSUPPORTED_OUTPUT_FORMAT,

@@ -24,36 +24,35 @@ export class JsonTransform extends Stream.Transform {
     callback: TransformCallback
   ): void {
     const out = this.buffer;
-    
+
     if (this.lineNum > 0) {
       this.buffer = ',';
     } else {
       this.buffer = '[';
     }
     this.lineNum++;
-    this.buffer += JSON.stringify(
-      {
-        query: {
-          input: result.input,
-        },
-        result: {
-          prefecture: result.prefecture?.toString(),
-          match_level: result.match_level,
-          city: result.city,
-          town: result.town,
-          town_id: result.town_id,
-          lg_code: result.lg_code,
-          other: result.other,
-          lat: result.lat,
-          lon: result.lon,
-          block: result.block,
-          block_id: result.block_id,
-          addr1: result.addr1,
-          addr1_id: result.addr1_id,
-          addr2: result.addr2,
-          addr2_id: result.addr2_id,
-        },
-      });
+    this.buffer += JSON.stringify({
+      query: {
+        input: result.input,
+      },
+      result: {
+        prefecture: result.prefecture?.toString(),
+        match_level: result.match_level,
+        city: result.city,
+        town: result.town,
+        town_id: result.town_id,
+        lg_code: result.lg_code,
+        other: result.other,
+        lat: result.lat,
+        lon: result.lon,
+        block: result.block,
+        block_id: result.block_id,
+        addr1: result.addr1,
+        addr1_id: result.addr1_id,
+        addr2: result.addr2,
+        addr2_id: result.addr2_id,
+      },
+    });
     callback(null, out);
   }
 
@@ -65,5 +64,5 @@ export class JsonTransform extends Stream.Transform {
 
   static create = (): JsonTransform => {
     return new JsonTransform();
-  }
+  };
 }
