@@ -46,17 +46,27 @@ jobs:
           ignore-patterns: |
             build/
             node_modules/
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.WORKFLOW_TOKEN }}
 
       - name: build test
         shell: bash
         run: |
           npm run build
       
+      # - name: create test report
+      #   uses: ArtiomTr/jest-coverage-report-action@v2
+      #   with:
+      #     package-manager: npm
+      #     skip-step: install
+      #     github-token: ${{ secrets.WORKFLOW_TOKEN }}
+      - name: Run tests
+        run: |
+          npx jest --coverage --coverageReporters json-summary
+
       - name: create test report
-        uses: ArtiomTr/jest-coverage-report-action@v2
+        uses: MishaKav/jest-coverage-comment@main
         with:
-          package-manager: npm
+          github-token: npm
           skip-step: install
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.WORKFLOW_TOKEN }}
   
