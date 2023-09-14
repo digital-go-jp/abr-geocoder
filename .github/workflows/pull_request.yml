@@ -59,7 +59,7 @@ jobs:
 
       # run eslint on all files if eslintrc changes
       - name: Run eslint on changed files
-        if: steps.filter.outputs.target == 'false'
+        # if: steps.filter.outputs.target == 'false'
         uses: sibiraj-s/action-eslint@v3
         with:
           eslint-args: '--ignore-path=.gitignore --quiet'
