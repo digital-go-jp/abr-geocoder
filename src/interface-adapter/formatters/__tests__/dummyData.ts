@@ -4,7 +4,7 @@ import { MatchLevel } from '../../../domain/matchLevel.enum';
 export const dummyData = [
   new GeocodeResult(
     '東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階',
-    MatchLevel.RESIDENTIAL_DETAIL,
+    8,
     35.681411,
     139.73495,
     ' 東京ガーデンテラス紀尾井町 19階、20階',
@@ -23,7 +23,7 @@ export const dummyData = [
 
   new GeocodeResult(
     '東京都千代田区紀尾井町1',
-    MatchLevel.TOWN_LOCAL,
+    3,
     35.681411,
     139.73495,
     '',
@@ -32,17 +32,17 @@ export const dummyData = [
     '紀尾井町',
     '0056000',
     '131016',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
   ),
 
   new GeocodeResult(
     '山形県山形市旅篭町二丁目3番25号',
-    MatchLevel.RESIDENTIAL_DETAIL,
+    8,
     38.255437,
     140.339126,
     '',
@@ -61,7 +61,7 @@ export const dummyData = [
 
   new GeocodeResult(
     '山形市旅篭町二丁目3番25号',
-    MatchLevel.RESIDENTIAL_DETAIL,
+    8,
     38.255437,
     140.339126,
     '',
@@ -80,7 +80,7 @@ export const dummyData = [
 
   new GeocodeResult(
     '東京都町田市森野2-2-22',
-    MatchLevel.RESIDENTIAL_DETAIL,
+    8,
     35.548247,
     139.440264,
     '',

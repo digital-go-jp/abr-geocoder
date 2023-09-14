@@ -1,16 +1,16 @@
 import { describe, expect, it } from '@jest/globals';
-import { CsvTransform } from '../CsvTransform';
+import { GeoJsonTransform } from '../GeoJsonTransform';
 import { Stream } from 'node:stream';
 import { dummyData } from './dummyData';
 import fs from 'node:fs';
 import path from 'node:path';
 
-describe('CsvTransform', () => {
-  it('should output rows with expected CSV format()', async () => {
-    const transform = CsvTransform.create(CsvTransform.DEFAULT_COLUMNS);
+describe('GeoJsonTransform', () => {
+  it('should output rows with expected JSON format()', async () => {
+    const transform = GeoJsonTransform.create();
 
-    const expectCsv = await fs.promises.readFile(
-      path.normalize(path.join(__dirname, './expectCsvOutput.csv')),
+    const expectJson = await fs.promises.readFile(
+      path.normalize(path.join(__dirname, './expectGeoJsonOutput.json')),
       'utf-8',
     )
 
@@ -31,6 +31,6 @@ describe('CsvTransform', () => {
     )
     
     const result = buffer.join('');
-    expect(result.trim()).toEqual(expectCsv.trim())
+    expect(result.trim()).toEqual(expectJson.trim())
   });
 });
