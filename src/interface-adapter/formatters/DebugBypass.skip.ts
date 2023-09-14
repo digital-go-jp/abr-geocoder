@@ -20,13 +20,14 @@ export class DebugBypass extends Stream.Transform {
     encoding: BufferEncoding,
     callback: TransformCallback
   ): void {
-
-    callback(null, `new GeocodeResult(\n
+    callback(
+      null,
+      `new GeocodeResult(\n
       '${result.input}',
       ${result.match_level},
       ${result.lat || null},
       ${result.lon || null},
-      '${result.other || ""}',
+      '${result.other || ''}',
       ${result.prefecture ? "'" + result.prefecture + "'" : undefined},
       ${result.city ? "'" + result.city + "'" : undefined},
       ${result.town ? "'" + result.town + "'" : undefined},
@@ -39,10 +40,11 @@ export class DebugBypass extends Stream.Transform {
       ${result.addr2 ? "'" + result.addr2 + "'" : undefined},
       ${result.addr2_id ? "'" + result.addr2_id + "'" : undefined},
     ),
-\n`);
+\n`
+    );
   }
 
   static create = (): DebugBypass => {
     return new DebugBypass();
-  }  
+  };
 }
