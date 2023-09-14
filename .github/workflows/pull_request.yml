@@ -66,7 +66,6 @@ jobs:
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main
         with:
-          github-token: npm
           skip-step: install
           github-token: ${{ secrets.WORKFLOW_TOKEN }}
   
