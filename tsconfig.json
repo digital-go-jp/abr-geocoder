@@ -2,7 +2,7 @@
   "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
     "outDir": "./build",                        /* Redirect output structure to the directory. */
-    "lib": [],
+    "lib": ["ES2021"],
 
     /* Strict Type-Checking Options */
     "strict": true,                           /* Enable all strict type-checking options. */

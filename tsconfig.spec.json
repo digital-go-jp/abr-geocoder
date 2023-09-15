@@ -4,7 +4,7 @@
   "compilerOptions": {
     "types": [ "node", "jest" ],
     "moduleResolution": "node",
-    "lib": ["ES2015"],
+    "lib": ["ES2021"],
   },
   "include": [
     "src/**/*.ts"
