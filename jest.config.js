@@ -24,5 +24,6 @@ module.exports = {
     "node_modules/", 
   ],
   collectCoverage: true,
-  coverageReporters: ["json"],
+  reporters: ['default', ['jest-junit', { outputDirectory: 'coverage' }]],
+  coverageReporters: ['clover', 'json', 'lcov', ['text', { file: 'coverage.txt' }], 'json-summary']
 };

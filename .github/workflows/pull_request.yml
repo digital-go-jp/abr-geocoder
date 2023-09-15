@@ -42,7 +42,7 @@ jobs:
         if: steps.node_modules.outputs.cache-hit != 'true'
         run: yarn install
 
-      - name: Run eslint on changed files
+      - name: Run eslint
         uses: sibiraj-s/action-eslint@v3
         with:
           extensions: 'ts'
@@ -52,11 +52,6 @@ jobs:
             node_modules/
           token: ${{ secrets.WORKFLOW_TOKEN }}
 
-      - name: build test
-        shell: bash
-        run: |
-          npm run build
-      
       - name: Run tests
         run: |
           npx jest --coverage --coverageReporters json-summary
@@ -65,4 +60,15 @@ jobs:
         uses: MishaKav/jest-coverage-comment@main
         with:
           github-token: ${{ secrets.WORKFLOW_TOKEN }}
+          summary-title: Coverage Summary
+          coverage-summary-path: ./coverage/coverage-summary.json
+          junitxml-title: JUnit
+          junitxml-path: ./coverage/junit.xml
+          coverage-title: Coverage Details
+          coverage-path: ./coverage/coverage.txt
   
+      - name: build test
+        shell: bash
+        run: |
+          npm run build
+      
