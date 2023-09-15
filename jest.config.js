@@ -16,7 +16,7 @@ module.exports = {
     "src",
     "settings"
   ],
-  roots: ['./src'],
+  roots: ['<rootDir>/src/'],
   testRegex: './src/.*\\.(test|spec)?\\.ts$',
   testPathIgnorePatterns: [
     "lib/", 

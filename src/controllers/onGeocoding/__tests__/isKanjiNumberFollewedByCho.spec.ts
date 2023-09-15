@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { isKanjiNumberFollewedByCho } from '../../../domain/';
 
 describe('isKanjiNumberFollewedByCho', () => {
-  it('trueを返すケース', () => {
+  it.concurrent('trueを返すケース', async () => {
     // 十六町 のように漢数字と町が連結している
     expect(isKanjiNumberFollewedByCho('名古屋市瑞穂区十六町1丁目1')).toBe(true);
 
@@ -16,7 +16,7 @@ describe('isKanjiNumberFollewedByCho', () => {
     expect(isKanjiNumberFollewedByCho('高知県	高岡郡	四万十町1-1-1')).toBe(true);
   });
 
-  it('falseを返すケース', () => {
+  it.concurrent('falseを返すケース', async () => {
     // 16町 のように漢数字と町が連結していない
     expect(isKanjiNumberFollewedByCho('16町')).toBe(false);
 

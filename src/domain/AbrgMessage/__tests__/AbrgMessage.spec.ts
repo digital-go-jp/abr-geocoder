@@ -5,13 +5,13 @@ import jaMessages from '../locales/ja';
 
 describe('AbrgMessage', () => {
   describe('toString()', () => {
-    it('should return message by English', () => {
+    it.concurrent('should return message by English', async () => {
       AbrgMessage.setLocale('en');
       const result = AbrgMessage.toString(AbrgMessage.CHECKING_UPDATE);
       expect(result).toEqual(enMessages.CHECKING_UPDATE);
     });
 
-    it('should return message by Japanese', () => {
+    it.concurrent('should return message by Japanese', async () => {
       AbrgMessage.setLocale('ja');
       const result = AbrgMessage.toString(AbrgMessage.CHECKING_UPDATE);
       expect(result).toEqual(jaMessages.CHECKING_UPDATE);

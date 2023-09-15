@@ -6,7 +6,7 @@ import { GeocodingStep3 } from '../step3-transform';
 import { WritableStreamToArray } from './stream-to-array';
 
 describe('step3transform', () => {
-  it('都道府県名が判別出来ていない場合は、step3aに続くstreamを呼び出す', async () => {
+  it.concurrent('都道府県名が判別出来ていない場合は、step3aに続くstreamを呼び出す', async () => {
     const dummyData = Query.create('千葉市どこか');
     const dummyStream = new Stream.Readable({
       objectMode: true,
@@ -33,7 +33,7 @@ describe('step3transform', () => {
     expect(pushMethod).toHaveBeenCalledTimes(1);
   });
 
-  it('都道府県名が判別出来ている場合はスキップする', async () => {
+  it.concurrent('都道府県名が判別出来ている場合はスキップする', async () => {
     const dummyData = Query.create('千葉市どこか').copy({
       prefecture: PrefectureName.CHIBA,
     });

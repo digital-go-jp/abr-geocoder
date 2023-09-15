@@ -44,7 +44,7 @@ describe('AddressFinderForStep7', () => {
   const mockedDB = new Database('<no sql file>');
   const addressFinder = new AddressFinderForStep7(mockedDB);
   
-  it('番地情報を返すケース(1)', async () => {
+  it.concurrent('番地情報を返すケース(1)', async () => {
     const inputAddress = `東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階`;
     const query = Query.create(inputAddress).copy({
       prefecture: PrefectureName.TOKYO,
@@ -73,7 +73,7 @@ describe('AddressFinderForStep7', () => {
     }))
   });
 
-  it('番地情報を返さない場合はQueryを変更しない', async () => {
+  it.concurrent('番地情報を返さない場合はQueryを変更しない', async () => {
     const inputAddress = `広島市佐伯区海老園二丁目5番28号`;
     const query = Query.create(inputAddress).copy({
       prefecture: PrefectureName.HIROSHIMA,
@@ -87,7 +87,7 @@ describe('AddressFinderForStep7', () => {
     expect(result).toEqual(query);
   })
 
-  it('番地を含まないケース', async () => {
+  it.concurrent('番地を含まないケース', async () => {
     const inputAddress = `広島市佐伯区海老園`;
     const query = Query.create(inputAddress).copy({
       prefecture: PrefectureName.HIROSHIMA,

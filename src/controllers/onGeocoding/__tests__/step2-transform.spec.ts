@@ -120,7 +120,7 @@ describe('step2transform', () => {
     expect(actualValues).toEqual(expectValues);
   };
 
-  it('"長崎" 県 "長崎" 市と同一名称を含むケース', async () => {
+  it.concurrent('"長崎" 県 "長崎" 市と同一名称を含むケース', async () => {
     const input = Query.create(`長崎市魚の町4${DASH}1`);
     const expectValues = [
       Query.create(`長崎市魚の町4${DASH}1`).copy({
@@ -133,7 +133,7 @@ describe('step2transform', () => {
     await doProcess(input, expectValues);
   });
 
-  it('他都道府県名を含む市町村名のケース', async () => {
+  it.concurrent('他都道府県名を含む市町村名のケース', async () => {
     const input = Query.create('石川郡平田村大字永田字切田116番地');
     const expectValues = [
       Query.create('石川郡平田村大字永田字切田116番地').copy({
@@ -146,13 +146,13 @@ describe('step2transform', () => {
     await doProcess(input, expectValues);
   });
 
-  it('step2ではマッチしないケース', async () => {
+  it.concurrent('step2ではマッチしないケース', async () => {
     const input = Query.create('東彼杵郡東彼杵町蔵本郷1850番地6');
     const expectValues = [input];
     await doProcess(input, expectValues);
   });
 
-  it('都道府県名を含むケース', async () => {
+  it.concurrent('都道府県名を含むケース', async () => {
     // オリジナルの住所
     const inputAddress = '東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階';
 

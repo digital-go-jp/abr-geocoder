@@ -148,7 +148,7 @@ describe('AddressFinderForStep3and5', () => {
     MockedDB.mockClear();
   });
 
-  it('特定できるはずのケース', async () => {
+  it.concurrent('特定できるはずのケース', async () => {
     const result = await instance.find({
       address: '本宿町2丁目22番地の22',
       prefecture: PrefectureName.TOKYO,
@@ -166,7 +166,7 @@ describe('AddressFinderForStep3and5', () => {
     });
   });
 
-  it('京都の住所ケース', async () => {
+  it.concurrent('京都の住所ケース', async () => {
     const result = await instance.find({
       address: '中京区柳馬場通夷川上ル五町目242',
       prefecture: PrefectureName.KYOTO,
@@ -184,7 +184,7 @@ describe('AddressFinderForStep3and5', () => {
     });
   });
 
-  it('見つからないケース', async () => {
+  it.concurrent('見つからないケース', async () => {
     const result = await instance.find({
       address: `御幸町16${DASH}1`,
       prefecture: PrefectureName.SHIZUOKA,
@@ -194,7 +194,7 @@ describe('AddressFinderForStep3and5', () => {
     expect(result).toEqual(null);
   });
 
-  it('「町」を含む地名', async () => {
+  it.concurrent('「町」を含む地名', async () => {
     const result = await instance.find({
       address: `森野2${DASH}2${DASH}22`,
       prefecture: PrefectureName.TOKYO,

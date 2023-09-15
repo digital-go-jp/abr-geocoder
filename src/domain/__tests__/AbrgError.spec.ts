@@ -5,7 +5,7 @@ import enMessage from '../AbrgMessage/locales/en';
 import jaMessage from '../AbrgMessage/locales/ja';
 
 describe('AbrgError', () => {
-  it('message should be written in Japanese', () => {
+  it.concurrent('message should be written in Japanese', async () => {
     AbrgMessage.setLocale('ja');
     expect(() => {
       throw new AbrgError({
@@ -15,7 +15,7 @@ describe('AbrgError', () => {
     }).toThrow(jaMessage.CANNOT_FIND_INPUT_FILE);
   });
 
-  it('message should be written in English', () => {
+  it.concurrent('message should be written in English', async () => {
     AbrgMessage.setLocale('en');
     expect(() => {
       throw new AbrgError({

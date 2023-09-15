@@ -32,7 +32,7 @@ describe('step3a-transform', () => {
     return outputWrite.toArray();
   };
 
-  it('複数の都道府県名にマッチする場合は、step3bに進む', async () => {
+  it.concurrent('複数の都道府県名にマッチする場合は、step3bに進む', async () => {
     const input = Query.create('府中市宮西町2丁目24番地');
     const results = await doTest(input, jest.fn());
 
@@ -54,7 +54,7 @@ describe('step3a-transform', () => {
     ]);
   });
 
-  it('複数の広島市にマッチする場合は、step3bに進む', async () => {
+  it.concurrent('複数の広島市にマッチする場合は、step3bに進む', async () => {
     const input = Query.create('広島市佐伯区海老園二丁目5番28号');
     const results = await doTest(input, jest.fn());
 
@@ -76,7 +76,7 @@ describe('step3a-transform', () => {
     ]);
   });
 
-  it('都道府県名に１つだけマッチする場合は step4に進む', async () => {
+  it.concurrent('都道府県名に１つだけマッチする場合は step4に進む', async () => {
     // 広島市 にマッチするはず
     const step3finish = jest.fn();
     const results = await doTest(Query.create('八幡市八幡園内75'), step3finish);

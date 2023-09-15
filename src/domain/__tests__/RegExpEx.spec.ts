@@ -2,13 +2,13 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { RegExpEx } from '../RegExpEx';
 
 describe('RegExpEx', () => {
-  it('should be the same', () => {
+  it.concurrent('should be the same', async () => {
     const target1 = /[a-zA-Z]/g;
     const target2 = RegExpEx.create('[a-zA-Z]', 'g');
     expect(target2).toEqual(target1);
   });
 
-  it('should return the same instance for the same pattern', () => {
+  it.concurrent('should return the same instance for the same pattern', async () => {
     const regExp1 = RegExpEx.create('[a-zA-Z]', 'g');
     const regExp2 = RegExpEx.create('[a-zA-Z]', 'g');
     expect(regExp1).toBe(regExp2);
