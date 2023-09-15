@@ -53,14 +53,17 @@ jobs:
           token: ${{ secrets.WORKFLOW_TOKEN }}
 
       - name: Run tests
-        run: |
-          npx jest --coverage --coverageReporters json-summary
+        run: npx jest
 
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main
         with:
           github-token: ${{ secrets.WORKFLOW_TOKEN }}
           summary-title: Coverage Summary
+          badge-title: Coverage
+          hide-comment: false
+          create-new-comment: false
+          hide-summary: false
           coverage-summary-path: ./coverage/coverage-summary.json
           junitxml-title: JUnit
           junitxml-path: ./coverage/junit.xml
