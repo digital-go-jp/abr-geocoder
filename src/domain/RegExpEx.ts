@@ -14,11 +14,12 @@ export class RegExpEx extends RegExp {
   }
 
   static create(pattern: string, flag: string = ''): RegExpEx {
-    const key = RegExpEx.getKey(pattern, flag);
+    const patternStr = pattern.toString();
+    const key = RegExpEx.getKey(patternStr, flag);
     if (RegExpEx.staticCache.has(key)) {
       return RegExpEx.staticCache.get(key)!;
     }
-    const instance = new RegExpEx(pattern, flag);
+    const instance = new RegExpEx(patternStr, flag);
     RegExpEx.staticCache.set(key, instance);
     return instance;
   }
