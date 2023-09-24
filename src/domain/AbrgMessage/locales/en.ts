@@ -43,5 +43,6 @@ const messages: Record<AbrgMessage, string> = {
     'Can not file the required file "schema.sql"',
   [AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE]:
     'Can not file the required file "package.json"',
+  [AbrgMessage.PROMPT_CONTINUE_TO_DOWNLOAD]: 'Continue to download?',
 };
 export default messages;

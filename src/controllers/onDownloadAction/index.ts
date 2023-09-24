@@ -41,38 +41,22 @@ export namespace downloadDataset {
       );
     }
 
-    const logger: Logger = container.resolve('Logger');
-    const db: Database = container.resolve('Database');
-    const downloadProgressBar = container.resolve<SingleBar>('ProgressBar');
-    const loadingProgressBar = container.resolve<MultiBar>('MultiProgressBar');
+    const db = container.resolve<Database>('DATABASE');
+    const logger: Logger = container.resolve('LOGGER');
+    const downloadProgressBar = container.resolve<SingleBar>('PROGRESS_BAR');
+    const loadingProgressBar = container.resolve<MultiBar>('MULTI_PROGRESS_BAR');
     const downloadDir = path.join(dataDir, 'download');
-    const userAgent: string = container.resolve('USER_AGENT');
-    const getDatasetUrl: (ckanId: string) => string =
-      container.resolve('getDatasetUrl');
 
     if (!fs.existsSync(downloadDir)) {
       await fs.promises.mkdir(downloadDir);
     }
 
-    const getLastDatasetModified = async (): Promise<string | undefined> => {
-      const result = db
-        .prepare(
-          "select value from metadata where key = 'last_modified' limit 1"
-        )
-        .get() as
-        | {
-            value: string;
-          }
-        | undefined;
-      return result?.value;
-    };
-
     // ダウンローダのインスタンスを作成
     const downloader = new CkanDownloader({
+      datasetUrl: container.resolve<string>('DATASET_URL'),
+      userAgent: container.resolve<string>('USER_AGENT'),
+      db,
       ckanId,
-      userAgent,
-      getDatasetUrl,
-      getLastDatasetModified,
     });
 
     // --------------------------------------
@@ -98,17 +82,15 @@ export namespace downloadDataset {
       AbrgMessage.toString(AbrgMessage.START_DOWNLOADING_NEW_DATASET)
     );
 
-    const downloadedFilePath = await downloader.download({
-      progressBar: downloadProgressBar,
-      downloadDir,
-    });
+    const dstFilePath = `${downloadDir}/${ckanId}.zip`;
+    await downloader.download(dstFilePath);
 
     // --------------------------------------
     // ダウンロードしたzipファイルを全展開する
     // --------------------------------------
     logger.info(AbrgMessage.toString(AbrgMessage.EXTRACTING_THE_DATA));
 
-    const tmpDir = await fs.promises.mkdtemp(path.dirname(downloadedFilePath));
+    const tmpDir = await fs.promises.mkdtemp(path.dirname(dstFilePath));
     const fileLoadingProgress = new CLIInfinityProgress();
     fileLoadingProgress.setHeader('Finding dataset files...');
     fileLoadingProgress.start();
@@ -127,12 +109,6 @@ export namespace downloadDataset {
       csvFiles,
       multiProgressBar: loadingProgressBar,
     });
-
-    // 更新情報を保存する
-    // saveArchiveMeta({
-    //   db,
-    //   meta: upstreamMeta,
-    // })
 
     db.close();
 

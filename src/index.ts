@@ -9,7 +9,6 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { onDownloadAction } from './controllers/onDownloadAction';
 import { onGeocodingAction } from './controllers/onGeocoding';
-import { onUpdateCheckAction } from './controllers/onUpdateCheckAction';
 import {
   AbrgError,
   AbrgErrorLevel,
@@ -17,12 +16,18 @@ import {
   OutputFormat,
   bubblingFindFile,
 } from './domain';
-import { parsePackageJson } from './interface-adapter';
+import { parsePackageJson, setupContainer } from './interface-adapter';
+import confirm from '@inquirer/confirm';
+import {Database} from 'better-sqlite3';
+import { CkanDownloader } from './usecase';
+import { SingleBar } from 'cli-progress';
+
 
 const dataDir = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
 const main = async () => {
+
   const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
   if (!packageJsonFilePath) {
     throw new AbrgError({
@@ -70,12 +75,31 @@ const main = async () => {
           });
       },
       async argv => {
-        await onUpdateCheckAction({
+
+        const ckanId = argv.resource;
+        const container = await setupContainer({
           dataDir: argv.dataDir,
-          ckanId: argv.resource,
-        }).catch((error: Error) => {
-          console.error(error);
+          ckanId,
+        })
+
+        const downloader = new CkanDownloader({
+          db: container.resolve<Database>('DATABASE'),
+          userAgent: container.resolve<string>('USER_AGENT'),
+          datasetUrl: container.resolve<string>('DATASET_URL'),
+          ckanId,
+          dataDir: argv.dataDir,
         });
+        const isUpdateAvailable = await downloader.updateCheck();
+        
+        if (!isUpdateAvailable) {
+          console.info(
+            AbrgMessage.toString(AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE),
+          );
+          return;
+        }
+        console.info(
+          AbrgMessage.toString(AbrgMessage.NEW_DATASET_IS_AVAILABLE),
+        );
       }
     )
 
@@ -111,12 +135,51 @@ const main = async () => {
           });
       },
       async argv => {
-        await onDownloadAction({
+
+        const ckanId = argv.resource;
+        const container = await setupContainer({
           dataDir: argv.dataDir,
-          ckanId: argv.resource,
-        }).catch((error: Error) => {
-          console.error(error);
+          ckanId,
         });
+
+        const progress = container.resolve<SingleBar>('PROGRESS_BAR');
+        
+        const workDir = argv.workDir as string || dataDir;
+
+        const downloader = new CkanDownloader({
+          db: container.resolve<Database>('DATABASE'),
+          userAgent: container.resolve<string>('USER_AGENT'),
+          datasetUrl: container.resolve<string>('DATASET_URL'),
+          ckanId,
+          dataDir: workDir,
+        });
+        const isUpdateAvailable = await downloader.updateCheck();
+        
+        if (!isUpdateAvailable) {
+          console.info(
+            AbrgMessage.toString(AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE),
+          );
+          return;
+        }
+
+        downloader.on('download:start', ({
+          position,
+          length,
+        }: {
+          position: number,
+          length: number,
+        }) => {
+          progress.start(length, position);
+        });
+        downloader.on('download:data', (chunkSize: number) => {
+          progress.increment(chunkSize);
+        })
+        downloader.on('download:end', () => {
+          progress.stop();
+        })
+        await downloader.download();
+
+        
       }
     )
 

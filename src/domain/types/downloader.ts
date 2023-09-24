@@ -1,16 +1,13 @@
-export type CheckForUpdatesOutput = {
-  updateAvailable: boolean;
-  upstreamMeta: DatasetMetadata;
-};
+import { DatasetMetadata } from "./DatasetMetadata";
 
 export type ArchiveMetadata = {
   // last_modified: string;
   [key: string]: string | number;
 };
 
-export type DatasetMetadata = {
-  fileUrl: string;
-  lastModified: string;
+export type CheckForUpdatesOutput = {
+  updateAvailable: boolean;
+  meta: DatasetMetadata,
 };
 
 export type CKANResponse<T> =

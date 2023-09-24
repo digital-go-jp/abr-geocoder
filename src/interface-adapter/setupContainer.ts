@@ -1,7 +1,7 @@
 import { MultiBar, SingleBar } from 'cli-progress';
 import fs from 'node:fs';
 import path from 'node:path';
-import { container } from 'tsyringe';
+import { DependencyContainer, container } from 'tsyringe';
 import {
   CsvTransform,
   GeoJsonTransform,
@@ -30,14 +30,14 @@ export interface setupContainerParams {
 export const setupContainer = async ({
   dataDir,
   ckanId,
-}: setupContainerParams) => {
-  container.register('USER_AGENT', {
+}: setupContainerParams): Promise<DependencyContainer> => {
+  const myContainer = container.createChildContainer();
+
+  myContainer.register('USER_AGENT', {
     useValue: 'curl/7.81.0',
   });
-  container.register('getDatasetUrl', {
-    useValue: (ckanId: string) => {
-      return `https://catalog.registries.digital.go.jp/rc/api/3/action/package_show?id=${ckanId}`;
-    },
+  myContainer.register('DATASET_URL', {
+    useValue: `https://catalog.registries.digital.go.jp/rc/api/3/action/package_show?id=${ckanId}`,
   });
 
   const existDataDir = fs.existsSync(dataDir);
@@ -62,52 +62,54 @@ export const setupContainer = async ({
     schemaFilePath,
     sqliteFilePath,
   });
-  container.register('Database', {
+  myContainer.register('DATABASE', {
     useValue: db,
   });
 
   // ロガー
   const logger = provideLogger();
-  container.registerInstance('Logger', logger);
+  myContainer.registerInstance('LOGGER', logger);
 
   // ダウロードのときに表示するプログレスバー
-  container.register<SingleBar>('ProgressBar', {
+  myContainer.register<SingleBar>('PROGRESS_BAR', {
     useFactory: () => {
       return provideProgressBar();
     },
   });
 
   // CSV を データベースに保存するとに表示するプログレスバー
-  container.register<MultiBar>('MultiProgressBar', {
+  myContainer.register<MultiBar>('MULTI_PROGRESS_BAR', {
     useFactory: () => {
       return provideMultiProgressBar();
     },
   });
 
   // Geocoding結果の出力を整形するフォーマッター
-  container.register<CsvTransform>('csv-formatter', {
+  myContainer.register<CsvTransform>('csv-formatter', {
     useFactory: () => {
       return CsvTransform.create(CsvTransform.DEFAULT_COLUMNS);
     },
   });
-  container.register<GeoJsonTransform>('geojson-formatter', {
+  myContainer.register<GeoJsonTransform>('geojson-formatter', {
     useFactory: () => {
       return GeoJsonTransform.create();
     },
   });
-  container.register<NdGeoJsonTransform>('ndgeojson-formatter', {
+  myContainer.register<NdGeoJsonTransform>('ndgeojson-formatter', {
     useFactory: () => {
       return NdGeoJsonTransform.create();
     },
   });
-  container.register<JsonTransform>('json-formatter', {
+  myContainer.register<JsonTransform>('json-formatter', {
     useFactory: () => {
       return JsonTransform.create();
     },
   });
-  container.register<NdJsonTransform>('ndjson-formatter', {
+  myContainer.register<NdJsonTransform>('ndjson-formatter', {
     useFactory: () => {
       return NdJsonTransform.create();
     },
   });
+
+  return myContainer;
 };
