@@ -1,3 +1,4 @@
+import { IStreamReady } from '..';
 import { DatasetFileParams, IDatasetFileMeta } from '../types';
 import { DataField } from './DataField';
 import { DataWithDateFile } from './DatasetFile';
@@ -34,7 +35,7 @@ export class CityDatasetFile
 
   static create(
     params: IDatasetFileMeta,
-    inputStream: NodeJS.ReadableStream
+    csvFile: IStreamReady,
   ): CityDatasetFile {
     const sql = `INSERT OR REPLACE INTO "city"
       (
@@ -78,7 +79,7 @@ export class CityDatasetFile
     return new CityDatasetFile({
       ...params,
       sql,
-      inputStream,
+      csvFile,
     });
   }
 }

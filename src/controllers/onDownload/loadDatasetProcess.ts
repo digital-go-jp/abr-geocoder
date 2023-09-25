@@ -13,19 +13,25 @@ import {
   RsdtdspRsdtPosFile,
   TownDatasetFile,
   TownPosDatasetFile,
-  fsIteratorResult,
+  IStreamReady,
   parseFilename,
 } from '../../domain';
+import { DependencyContainer } from 'tsyringe';
+import { Logger } from 'winston';
 
 export const loadDatasetProcess = async ({
   db,
+  container,
   csvFiles,
-  multiProgressBar,
 }: {
   db: Database;
-  csvFiles: fsIteratorResult[];
-  multiProgressBar: MultiBar;
+  csvFiles: IStreamReady[];
+  container: DependencyContainer;
 }) => {
+
+  const logger = container.resolve<Logger | undefined>('LOGGER');
+  const multiProgressBar = container.resolve<MultiBar | undefined>('MULTI_PROGRESS_BAR');
+
   // _pos_ ファイルのSQL が updateになっているので、
   // それ以外の基本的な情報を先に insert する必要がある。
   // そのため _pos_ がファイル名に含まれている場合は、
@@ -54,17 +60,17 @@ export const loadDatasetProcess = async ({
     objectMode: true,
   });
   filesStream.on('finish', () => {
-    console.log('fileStream is finished');
+    logger?.info('fileStream is finished');
   });
 
-  const fileParseProgresss = multiProgressBar.create(csvFiles.length, 0, {
+  const fileParseProgresss = multiProgressBar?.create(csvFiles.length, 0, {
     filename: 'analysis...',
   });
 
   const fileParseStream = new Stream.Transform({
     objectMode: true,
-    transform(chunk: fsIteratorResult, encoding, callback) {
-      fileParseProgresss.increment();
+    transform(chunk: IStreamReady, encoding, callback) {
+      fileParseProgresss?.increment();
 
       // ファイル名から情報を得る
       const fileMeta = parseFilename({
@@ -72,44 +78,44 @@ export const loadDatasetProcess = async ({
       });
       if (!fileMeta) {
         // skip
-        console.log(`[skip]--->${chunk.name}`);
+        logger?.debug(`[skip]--->${chunk.name}`);
         callback();
         return;
       }
 
       switch (fileMeta.type) {
         case 'pref':
-          callback(null, PrefDatasetFile.create(fileMeta, chunk.stream));
+          callback(null, PrefDatasetFile.create(fileMeta, chunk));
           break;
         case 'city':
-          callback(null, CityDatasetFile.create(fileMeta, chunk.stream));
+          callback(null, CityDatasetFile.create(fileMeta, chunk));
           break;
         case 'town':
-          callback(null, TownDatasetFile.create(fileMeta, chunk.stream));
+          callback(null, TownDatasetFile.create(fileMeta, chunk));
           break;
         case 'rsdtdsp_blk':
-          callback(null, RsdtdspBlkFile.create(fileMeta, chunk.stream));
+          callback(null, RsdtdspBlkFile.create(fileMeta, chunk));
           break;
         case 'rsdtdsp_rsdt':
-          callback(null, RsdtdspRsdtFile.create(fileMeta, chunk.stream));
+          callback(null, RsdtdspRsdtFile.create(fileMeta, chunk));
           break;
         case 'town_pos':
-          callback(null, TownPosDatasetFile.create(fileMeta, chunk.stream));
+          callback(null, TownPosDatasetFile.create(fileMeta, chunk));
           break;
         case 'rsdtdsp_blk_pos':
-          callback(null, RsdtdspBlkPosFile.create(fileMeta, chunk.stream));
+          callback(null, RsdtdspBlkPosFile.create(fileMeta, chunk));
           break;
         case 'rsdtdsp_rsdt_pos':
-          callback(null, RsdtdspRsdtPosFile.create(fileMeta, chunk.stream));
+          callback(null, RsdtdspRsdtPosFile.create(fileMeta, chunk));
           break;
         default:
-          console.log(`[error]--->${chunk.name}`);
+          logger?.error(`[error]--->${chunk.name}`);
           throw new Error(`unknown type: ${fileMeta.type}`);
       }
     },
   });
 
-  const loadDataProgress = multiProgressBar.create(csvFiles.length, 0, {
+  const loadDataProgress = multiProgressBar?.create(csvFiles.length, 0, {
     filename: 'loading...',
   });
   const loadDataStream = new Stream.Writable({
@@ -122,42 +128,47 @@ export const loadDatasetProcess = async ({
 
       // DBに登録
       db.exec('BEGIN');
-      datasetFile.inputStream
-        .pipe(
-          csvParser({
-            skipComments: true,
-          })
-        )
-        .pipe(
-          new Stream.Writable({
-            objectMode: true,
-            write(chunk, encoding, next) {
-              const processed = datasetFile.process(chunk);
-              statement.run(processed);
-              next(null);
-            },
-          })
-        )
-        .on('finish', () => {
-          db.exec('COMMIT');
+      datasetFile.csvFile.getStream().then(async (fileStream: NodeJS.ReadableStream) => {
+        fileStream.
+          pipe(
+            csvParser({
+              skipComments: true,
+            })
+          )
+          .pipe(
+            new Stream.Writable({
+              objectMode: true,
+              write(chunk, encoding, next) {
+                const processed = datasetFile.process(chunk);
+                statement.run(processed);
+                next(null);
+              },
+            })
+          )
+          .on('finish', () => {
+            db.exec('COMMIT');
 
-          loadDataProgress.increment();
-          loadDataProgress.updateETA();
-          callback(null);
+            loadDataProgress?.increment();
+            loadDataProgress?.updateETA();
+            callback(null);
+          })
+          .on('error', error => {
+            if (db.inTransaction) {
+              db.exec('ROLLBACK');
+            }
+            callback(error);
+          });
         })
-        .on('error', error => {
-          if (db.inTransaction) {
-            db.exec('ROLLBACK');
-          }
-          callback(error);
-        });
+
     },
   });
 
   await pipeline(filesStream, fileParseStream, loadDataStream);
 
-  loadDataProgress.stop();
-  multiProgressBar.remove(loadDataProgress);
+  loadDataProgress?.stop();
+  if (loadDataProgress) {
+    multiProgressBar?.remove(loadDataProgress);
+  }
 };
 // const test = async () => {
 //   const downloadDir = '/Users/maskatsum/.abr-geocoder/download';

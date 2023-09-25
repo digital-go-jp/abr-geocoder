@@ -1,3 +1,4 @@
+import { IStreamReady } from '..';
 import { DatasetFileParams, IDatasetFileMeta } from '../types';
 import { DataField } from './DataField';
 import { DataWithDateFile } from './DatasetFile';
@@ -55,7 +56,7 @@ export class TownDatasetFile
 
   static create(
     params: IDatasetFileMeta,
-    inputStream: NodeJS.ReadableStream
+    csvFile: IStreamReady
   ): TownDatasetFile {
     const sql = `INSERT OR REPLACE INTO "town"
       (
@@ -141,7 +142,7 @@ export class TownDatasetFile
     return new TownDatasetFile({
       ...params,
       sql,
-      inputStream,
+      csvFile,
     });
   }
 }

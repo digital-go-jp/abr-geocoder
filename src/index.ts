@@ -7,8 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { onDownloadAction } from './controllers/onDownloadAction';
-import { onGeocodingAction } from './controllers/onGeocoding';
+import { onDownload, onUpdateCheck, onGeocoding } from './controllers';
 import {
   AbrgError,
   AbrgErrorLevel,
@@ -17,13 +16,9 @@ import {
   bubblingFindFile,
 } from './domain';
 import { parsePackageJson, setupContainer } from './interface-adapter';
-import confirm from '@inquirer/confirm';
-import {Database} from 'better-sqlite3';
-import { CkanDownloader } from './usecase';
-import { SingleBar } from 'cli-progress';
 
 
-const dataDir = path.join(os.homedir(), '.abr-geocoder');
+const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
 const main = async () => {
@@ -60,7 +55,7 @@ const main = async () => {
           .option('dataDir', {
             alias: 'd',
             type: 'string',
-            default: dataDir,
+            default: DEFAULT_DATA_DIR,
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_COMMON_DATADIR_OPTION
             ),
@@ -80,26 +75,11 @@ const main = async () => {
         const container = await setupContainer({
           dataDir: argv.dataDir,
           ckanId,
-        })
-
-        const downloader = new CkanDownloader({
-          db: container.resolve<Database>('DATABASE'),
-          userAgent: container.resolve<string>('USER_AGENT'),
-          datasetUrl: container.resolve<string>('DATASET_URL'),
-          ckanId,
-          dataDir: argv.dataDir,
         });
-        const isUpdateAvailable = await downloader.updateCheck();
-        
-        if (!isUpdateAvailable) {
-          console.info(
-            AbrgMessage.toString(AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE),
-          );
-          return;
-        }
-        console.info(
-          AbrgMessage.toString(AbrgMessage.NEW_DATASET_IS_AVAILABLE),
-        );
+        await onUpdateCheck({
+          container,
+          ckanId,
+        })
       }
     )
 
@@ -115,7 +95,7 @@ const main = async () => {
           .option('dataDir', {
             alias: 'd',
             type: 'string',
-            default: dataDir,
+            default: DEFAULT_DATA_DIR,
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_COMMON_DATADIR_OPTION
             ),
@@ -141,45 +121,11 @@ const main = async () => {
           dataDir: argv.dataDir,
           ckanId,
         });
-
-        const progress = container.resolve<SingleBar>('PROGRESS_BAR');
-        
-        const workDir = argv.workDir as string || dataDir;
-
-        const downloader = new CkanDownloader({
-          db: container.resolve<Database>('DATABASE'),
-          userAgent: container.resolve<string>('USER_AGENT'),
-          datasetUrl: container.resolve<string>('DATASET_URL'),
+        await onDownload({
+          container,
           ckanId,
-          dataDir: workDir,
+          dataDir: argv.workDir as string || DEFAULT_DATA_DIR,
         });
-        const isUpdateAvailable = await downloader.updateCheck();
-        
-        if (!isUpdateAvailable) {
-          console.info(
-            AbrgMessage.toString(AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE),
-          );
-          return;
-        }
-
-        downloader.on('download:start', ({
-          position,
-          length,
-        }: {
-          position: number,
-          length: number,
-        }) => {
-          progress.start(length, position);
-        });
-        downloader.on('download:data', (chunkSize: number) => {
-          progress.increment(chunkSize);
-        })
-        downloader.on('download:end', () => {
-          progress.stop();
-        })
-        await downloader.download();
-
-        
       }
     )
 
@@ -202,7 +148,7 @@ const main = async () => {
           .option('workDir', {
             alias: 'w',
             type: 'string',
-            default: dataDir,
+            default: DEFAULT_DATA_DIR,
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_COMMON_DATADIR_OPTION
             ),
@@ -234,17 +180,26 @@ const main = async () => {
           });
       },
       async argv => {
+        const dataDir = argv.workDir || DEFAULT_DATA_DIR;
+
+        const ckanId = argv.resource;
+        const container = await setupContainer({
+          dataDir,
+          ckanId,
+        });
+
         let inputFile = '-';
         if (typeof argv['inputFile'] === 'string') {
           inputFile = argv['inputFile'] as string;
         }
-        await onGeocodingAction({
+        await onGeocoding({
           source: inputFile,
           destination: (argv['outputFile'] as string) || '',
-          dataDir: argv.workDir || dataDir,
+          dataDir,
           resourceId: argv.resource || 'ba000001',
           format: argv.format as OutputFormat,
           fuzzy: argv.fuzzy || '?',
+          container,
         });
       }
     )

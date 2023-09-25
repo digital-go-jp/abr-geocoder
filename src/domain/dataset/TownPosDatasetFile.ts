@@ -1,3 +1,4 @@
+import { IStreamReady } from '..';
 import { DatasetFileParams, IDatasetFile, IDatasetFileMeta } from '../types';
 import { DataField } from './DataField';
 import { DataForPosFile } from './DatasetFile';
@@ -19,7 +20,7 @@ export class TownPosDatasetFile extends DataForPosFile implements IDatasetFile {
 
   static create(
     params: IDatasetFileMeta,
-    inputStream: NodeJS.ReadableStream
+    csvFile: IStreamReady,
   ): TownPosDatasetFile {
     const sql = `UPDATE
         "town"
@@ -33,7 +34,7 @@ export class TownPosDatasetFile extends DataForPosFile implements IDatasetFile {
     return new TownPosDatasetFile({
       ...params,
       sql,
-      inputStream,
+      csvFile,
     });
   }
 }

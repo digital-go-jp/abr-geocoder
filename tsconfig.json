@@ -23,7 +23,7 @@
     "moduleResolution": "nodenext",
   },
   "include": [
-    "src/**/*.ts", 
+    "src/**/*.ts",
   ],
   "exclude": [
     "src/**.skip.ts",

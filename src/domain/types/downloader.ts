@@ -1,3 +1,4 @@
+import { IStreamReady } from "..";
 import { DatasetMetadata } from "./DatasetMetadata";
 
 export type ArchiveMetadata = {
@@ -47,7 +48,7 @@ export interface IDatasetFileMeta {
 
 export interface IDatasetFile extends IDatasetFileMeta {
   sql: string;
-  inputStream: NodeJS.ReadableStream;
+  csvFile: IStreamReady;
 }
 
 export type DatasetFileParams = IDatasetFile;

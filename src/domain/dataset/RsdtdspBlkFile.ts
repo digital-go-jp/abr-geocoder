@@ -1,3 +1,4 @@
+import { IStreamReady } from '..';
 import { DatasetFileParams, IDatasetFileMeta } from '../types';
 import { DataField } from './DataField';
 import { DataWithDateFile } from './DatasetFile';
@@ -36,7 +37,7 @@ export class RsdtdspBlkFile
 
   static create(
     params: IDatasetFileMeta,
-    inputStream: NodeJS.ReadableStream
+    csvFile: IStreamReady,
   ): RsdtdspBlkFile {
     const sql = `INSERT OR REPLACE INTO
       "rsdtdsp_blk"
@@ -84,7 +85,7 @@ export class RsdtdspBlkFile
     return new RsdtdspBlkFile({
       ...params,
       sql,
-      inputStream,
+      csvFile,
     });
   }
 }

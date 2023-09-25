@@ -1,4 +1,10 @@
-export class DatasetMetadata {
+export interface IDatasetMetadata {
+  lastModified?: string;
+  contentLength: number;
+  etag?: string;
+  fileUrl: string;
+}
+export class DatasetMetadata implements IDatasetMetadata {
   public readonly lastModified?: string;
   public readonly contentLength: number;
   public readonly etag?: string;

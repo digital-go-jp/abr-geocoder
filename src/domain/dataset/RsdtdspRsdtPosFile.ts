@@ -1,3 +1,4 @@
+import { IStreamReady } from '..';
 import { DatasetFileParams, IDatasetFile, IDatasetFileMeta } from '../types';
 import { DataField } from './DataField';
 import { DataForPosFile } from './DatasetFile';
@@ -22,7 +23,7 @@ export class RsdtdspRsdtPosFile extends DataForPosFile implements IDatasetFile {
 
   static create(
     params: IDatasetFileMeta,
-    inputStream: NodeJS.ReadableStream
+    csvFile: IStreamReady,
   ): RsdtdspRsdtPosFile {
     const sql = `UPDATE
         "rsdtdsp_rsdt"
@@ -39,7 +40,7 @@ export class RsdtdspRsdtPosFile extends DataForPosFile implements IDatasetFile {
     return new RsdtdspRsdtPosFile({
       ...params,
       sql,
-      inputStream,
+      csvFile,
     });
   }
 }

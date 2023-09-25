@@ -14,6 +14,7 @@ import {
   provideLogger,
   provideMultiProgressBar,
   provideProgressBar,
+  provideInifinityProgressBar,
 } from './providers';
 import {
   AbrgError,
@@ -21,6 +22,7 @@ import {
   AbrgMessage,
   bubblingFindFile,
 } from '../domain';
+import CLIInfinityProgress from 'cli-infinity-progress';
 
 export interface setupContainerParams {
   dataDir: string;
@@ -69,6 +71,13 @@ export const setupContainer = async ({
   // ロガー
   const logger = provideLogger();
   myContainer.registerInstance('LOGGER', logger);
+
+  // 
+  myContainer.register<CLIInfinityProgress>('INFINITY_PROGRESS_BAR', {
+    useFactory: () => {
+      return provideInifinityProgressBar();
+    },
+  });
 
   // ダウロードのときに表示するプログレスバー
   myContainer.register<SingleBar>('PROGRESS_BAR', {

@@ -1,3 +1,4 @@
+import { IStreamReady } from '..';
 import { IDatasetFileMeta } from '../types';
 import { DataField } from './DataField';
 import { DataWithDateFile } from './DatasetFile';
@@ -20,7 +21,7 @@ export class PrefDatasetFile
 
   static create(
     params: IDatasetFileMeta,
-    inputStream: NodeJS.ReadableStream
+    csvFile: IStreamReady,
   ): PrefDatasetFile {
     const sql = `INSERT OR REPLACE INTO "pref"
       (
@@ -46,7 +47,7 @@ export class PrefDatasetFile
     return new PrefDatasetFile({
       ...params,
       sql,
-      inputStream,
+      csvFile,
     });
   }
 }

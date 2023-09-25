@@ -1,6 +1,7 @@
 import proj4 from 'proj4';
 import { DatasetFileParams, IDatasetFile, IDatasetFileMeta } from '../types';
 import { DataField } from './DataField';
+import { IStreamReady } from '..';
 
 proj4.defs('EPSG:4612', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 proj4.defs('EPSG:6668', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
@@ -11,7 +12,7 @@ export abstract class DatasetFile implements IDatasetFile {
   public readonly path: string;
   public readonly filename: string;
   public readonly sql: string;
-  public readonly inputStream: NodeJS.ReadableStream;
+  public readonly csvFile: IStreamReady;
 
   abstract get fields(): DataField[];
 
@@ -21,7 +22,7 @@ export abstract class DatasetFile implements IDatasetFile {
     this.path = params.path;
     this.filename = params.filename;
     this.sql = params.sql;
-    this.inputStream = params.inputStream;
+    this.csvFile = params.csvFile;
   }
 
   abstract process(rows: {

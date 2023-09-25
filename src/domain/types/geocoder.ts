@@ -120,15 +120,6 @@ export enum OutputFormat {
   NDGEOJSON = 'ndgeojson',
 }
 
-export interface GeocodingParams {
-  source: string;
-  destination: string;
-  dataDir: string;
-  resourceId: string;
-  format: OutputFormat;
-  fuzzy?: string;
-}
-
 export type InterpolatePattern = {
   regExpPattern: string;
   prefecture: PrefectureName;
