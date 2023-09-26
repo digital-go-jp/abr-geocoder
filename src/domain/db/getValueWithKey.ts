@@ -1,5 +1,4 @@
 import { Database } from 'better-sqlite3';
-import stringHash from 'string-hash';
 
 export const getValueWithKey = ({
   db,
@@ -11,7 +10,7 @@ export const getValueWithKey = ({
   const result = db
     .prepare('select value from metadata where key = @key limit 1')
     .get({
-      key: stringHash(key),
+      key,
     }) as
     | {
         value: string;

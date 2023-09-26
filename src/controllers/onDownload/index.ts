@@ -80,7 +80,7 @@ export const onDownload = async ({
     db,
     key: ckanId,
     value: downloadInfo.metadata.toString(),
-  })
+  });
 
   db.close();
 
