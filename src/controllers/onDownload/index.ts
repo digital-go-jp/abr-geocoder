@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DependencyContainer } from 'tsyringe';
 import { Logger } from 'winston';
-import { AbrgMessage } from '../../domain';
+import { AbrgMessage, saveKeyAndValue } from '../../domain';
 import { downloadProcess } from './downloadProcess';
 import { extractDatasetProcess } from './extractDatasetProcess';
 import { loadDatasetHistory } from './loadDatasetHistory';
@@ -75,6 +75,13 @@ export const onDownload = async ({
     csvFiles,
     container,
   });
+
+  saveKeyAndValue({
+    db,
+    key: ckanId,
+    value: downloadInfo.metadata.toString(),
+  })
+
   db.close();
 
   // 展開したzipファイルのディレクトリを削除
