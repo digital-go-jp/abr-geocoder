@@ -1,5 +1,5 @@
-import { IStreamReady } from "..";
-import { DatasetMetadata } from "./DatasetMetadata";
+import { IStreamReady } from '..';
+import { DatasetMetadata } from './DatasetMetadata';
 
 export type ArchiveMetadata = {
   // last_modified: string;
@@ -8,7 +8,7 @@ export type ArchiveMetadata = {
 
 export type CheckForUpdatesOutput = {
   updateAvailable: boolean;
-  meta: DatasetMetadata,
+  meta: DatasetMetadata;
 };
 
 export type CKANResponse<T> =

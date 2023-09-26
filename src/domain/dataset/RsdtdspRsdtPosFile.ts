@@ -23,7 +23,7 @@ export class RsdtdspRsdtPosFile extends DataForPosFile implements IDatasetFile {
 
   static create(
     params: IDatasetFileMeta,
-    csvFile: IStreamReady,
+    csvFile: IStreamReady
   ): RsdtdspRsdtPosFile {
     const sql = `UPDATE
         "rsdtdsp_rsdt"

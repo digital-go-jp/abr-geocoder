@@ -9,3 +9,4 @@ export * from './RsdtdspRsdtPosFile';
 export * from './TownDatasetFile';
 export * from './TownPosDatasetFile';
 export * from './parseFilename';
+export * from './DatasetRow';

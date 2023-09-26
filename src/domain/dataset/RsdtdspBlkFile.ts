@@ -37,7 +37,7 @@ export class RsdtdspBlkFile
 
   static create(
     params: IDatasetFileMeta,
-    csvFile: IStreamReady,
+    csvFile: IStreamReady
   ): RsdtdspBlkFile {
     const sql = `INSERT OR REPLACE INTO
       "rsdtdsp_blk"

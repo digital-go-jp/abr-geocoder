@@ -72,7 +72,7 @@ export const setupContainer = async ({
   const logger = provideLogger();
   myContainer.registerInstance('LOGGER', logger);
 
-  // 
+  //
   myContainer.register<CLIInfinityProgress>('INFINITY_PROGRESS_BAR', {
     useFactory: () => {
       return provideInifinityProgressBar();

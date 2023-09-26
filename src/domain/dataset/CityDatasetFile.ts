@@ -35,7 +35,7 @@ export class CityDatasetFile
 
   static create(
     params: IDatasetFileMeta,
-    csvFile: IStreamReady,
+    csvFile: IStreamReady
   ): CityDatasetFile {
     const sql = `INSERT OR REPLACE INTO "city"
       (

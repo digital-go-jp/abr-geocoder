@@ -20,7 +20,7 @@ export class TownPosDatasetFile extends DataForPosFile implements IDatasetFile {
 
   static create(
     params: IDatasetFileMeta,
-    csvFile: IStreamReady,
+    csvFile: IStreamReady
   ): TownPosDatasetFile {
     const sql = `UPDATE
         "town"

@@ -1,15 +1,16 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
+import { Database } from 'better-sqlite3';
 import fs from 'node:fs';
+import path from 'node:path';
 import { DependencyContainer } from 'tsyringe';
 import { Logger } from 'winston';
 import { AbrgMessage } from '../../domain';
 import { downloadProcess } from './downloadProcess';
 import { extractDatasetProcess } from './extractDatasetProcess';
+import { loadDatasetHistory } from './loadDatasetHistory';
 import { loadDatasetProcess } from './loadDatasetProcess';
-import { Database } from 'better-sqlite3';
-import path from 'node:path';
 
 export const onDownload = async ({
   ckanId,
@@ -27,15 +28,20 @@ export const onDownload = async ({
     await fs.promises.mkdir(downloadDir);
   }
 
-  const downloadedFilePath = await downloadProcess({
+  const downloadInfo = await downloadProcess({
     container,
     ckanId,
     dstDir: downloadDir,
   });
-  
-  if (!downloadedFilePath) {
+
+  if (!downloadInfo?.downloadFilePath) {
     return;
   }
+
+  const db = container.resolve<Database>('DATABASE');
+  const datasetHistory = await loadDatasetHistory({
+    db,
+  });
 
   // --------------------------------------
   // ダウンロードしたzipファイルを全展開する
@@ -45,14 +51,25 @@ export const onDownload = async ({
   const extractDir = await fs.promises.mkdtemp(path.join(dataDir, 'dataset'));
   const csvFiles = await extractDatasetProcess({
     container,
-    srcDir: downloadDir,
+    srcFile: downloadInfo.downloadFilePath,
     dstDir: extractDir,
+    datasetHistory,
   });
+
+  if (csvFiles.length === 0) {
+    logger?.info(
+      AbrgMessage.toString(AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE)
+    );
+    db.close();
+
+    // 展開したzipファイルのディレクトリを削除
+    await fs.promises.rm(extractDir, { recursive: true });
+    return;
+  }
 
   // 各データセットのzipファイルを展開して、Databaseに登録する
   logger?.info(AbrgMessage.toString(AbrgMessage.LOADING_INTO_DATABASE));
 
-  const db = container.resolve<Database>('DATABASE');
   await loadDatasetProcess({
     db,
     csvFiles,
@@ -62,4 +79,4 @@ export const onDownload = async ({
 
   // 展開したzipファイルのディレクトリを削除
   await fs.promises.rm(extractDir, { recursive: true });
-}
+};

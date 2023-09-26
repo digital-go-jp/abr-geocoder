@@ -9,7 +9,7 @@ export class DatasetMetadata implements IDatasetMetadata {
   public readonly contentLength: number;
   public readonly etag?: string;
   public readonly fileUrl: string;
-  
+
   constructor(params: {
     lastModified?: string;
     contentLength: number;
@@ -28,7 +28,7 @@ export class DatasetMetadata implements IDatasetMetadata {
       lastModified: this.lastModified,
       contentLength: this.contentLength,
       etag: this.etag,
-      fileUrl: this.fileUrl
+      fileUrl: this.fileUrl,
     };
   }
 
@@ -38,12 +38,14 @@ export class DatasetMetadata implements IDatasetMetadata {
 
   static from = (value: string): DatasetMetadata => {
     const jsonValue = JSON.parse(value);
-    if (!('lastModified' in jsonValue) ||
+    if (
+      !('lastModified' in jsonValue) ||
       !('contentLength' in jsonValue) ||
       !('etag' in jsonValue) ||
-      !('fileUrl' in jsonValue)) {
-        throw new Error('Can not parse value as DatasetMetadata');
+      !('fileUrl' in jsonValue)
+    ) {
+      throw new Error('Can not parse value as DatasetMetadata');
     }
     return new DatasetMetadata(jsonValue);
-  }
+  };
 }

@@ -21,7 +21,7 @@ export class PrefDatasetFile
 
   static create(
     params: IDatasetFileMeta,
-    csvFile: IStreamReady,
+    csvFile: IStreamReady
   ): PrefDatasetFile {
     const sql = `INSERT OR REPLACE INTO "pref"
       (

@@ -23,7 +23,7 @@
     "moduleResolution": "nodenext",
   },
   "include": [
-    "src/**/*.ts",
+    "src/**/*.ts", "src/usecase/downloader",
   ],
   "exclude": [
     "src/**.skip.ts",

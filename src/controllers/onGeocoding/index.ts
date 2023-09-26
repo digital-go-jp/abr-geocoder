@@ -18,7 +18,7 @@ import {
   GeoJsonTransform,
   JsonTransform,
   NdGeoJsonTransform,
-  NdJsonTransform
+  NdJsonTransform,
 } from '../../interface-adapter';
 import { getReadStreamFromSource } from '../../usecase/';
 import { StreamGeocoder } from './StreamGeocoder.class';

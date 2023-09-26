@@ -17,12 +17,10 @@ import {
 } from './domain';
 import { parsePackageJson, setupContainer } from './interface-adapter';
 
-
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
 const main = async () => {
-
   const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
   if (!packageJsonFilePath) {
     throw new AbrgError({
@@ -70,7 +68,6 @@ const main = async () => {
           });
       },
       async argv => {
-
         const ckanId = argv.resource;
         const container = await setupContainer({
           dataDir: argv.dataDir,
@@ -79,7 +76,7 @@ const main = async () => {
         await onUpdateCheck({
           container,
           ckanId,
-        })
+        });
       }
     )
 
@@ -115,7 +112,6 @@ const main = async () => {
           });
       },
       async argv => {
-
         const ckanId = argv.resource;
         const container = await setupContainer({
           dataDir: argv.dataDir,
@@ -124,7 +120,7 @@ const main = async () => {
         await onDownload({
           container,
           ckanId,
-          dataDir: argv.workDir as string || DEFAULT_DATA_DIR,
+          dataDir: (argv.workDir as string) || DEFAULT_DATA_DIR,
         });
       }
     )

@@ -21,7 +21,7 @@ export class RsdtdspBlkPosFile extends DataForPosFile implements IDatasetFile {
 
   static create(
     params: IDatasetFileMeta,
-    csvFile: IStreamReady,
+    csvFile: IStreamReady
   ): RsdtdspBlkPosFile {
     const sql = `UPDATE
         "rsdtdsp_blk"

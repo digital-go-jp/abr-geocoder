@@ -143,3 +143,13 @@ CREATE TABLE IF NOT EXISTS "metadata" (
   "value" TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "metadata_key" ON "metadata" ("key");
+
+
+CREATE TABLE IF NOT EXISTS "dataset" (
+  "key" TEXT,
+  "type" TEXT,
+  "content_length" NUMBER,
+  "crc32" NUMBER,
+  "last_modified" NUMBER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "dataset_key" ON "dataset" ("key");

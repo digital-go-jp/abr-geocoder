@@ -1,6 +1,5 @@
-import { Database } from "better-sqlite3";
-import {DatasetMetadata} from '..';
-import stringHash from "string-hash";
+import { Database } from 'better-sqlite3';
+import stringHash from 'string-hash';
 
 export const saveKeyAndValue = ({
   db,
@@ -9,12 +8,10 @@ export const saveKeyAndValue = ({
 }: {
   db: Database;
   key: string;
-  value: DatasetMetadata;
+  value: string;
 }) => {
-  db.prepare(
-    `insert or replace into metadata values(@key, @value)`
-  ).run({
+  db.prepare('insert or replace into metadata values(@key, @value)').run({
     key: stringHash(key),
-    value: value.toString(),
+    value,
   });
-}
+};

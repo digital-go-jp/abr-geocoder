@@ -1,18 +1,15 @@
-import { Database } from "better-sqlite3";
-import {DatasetMetadata} from '..';
-import stringHash from "string-hash";
+import { Database } from 'better-sqlite3';
+import stringHash from 'string-hash';
 
 export const getValueWithKey = ({
   db,
   key,
 }: {
-  db: Database,
-  key: string
-}): DatasetMetadata | undefined => {
+  db: Database;
+  key: string;
+}): string | undefined => {
   const result = db
-    .prepare(
-      `select value from metadata where key = @key limit 1`
-    )
+    .prepare('select value from metadata where key = @key limit 1')
     .get({
       key: stringHash(key),
     }) as
@@ -23,5 +20,5 @@ export const getValueWithKey = ({
   if (!result) {
     return;
   }
-  return DatasetMetadata.from(result.value);
-}
+  return result.value;
+};

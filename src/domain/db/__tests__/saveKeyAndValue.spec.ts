@@ -33,24 +33,16 @@ describe("saveKeyAndValue()", () => {
     mockedStringHash.mockClear();
   });
 
-  it("should encode value as JSON", () => {
-    const value = new DatasetMetadata({
-      lastModified: 'Thu, 29 Jun 2023 20:03:24 GMT',
-      etag: '"85a3b4aefbe07aad6ef6da7a17d87dd4-60"',
-      contentLength: 503120257,
-      fileUrl: 'https://catalog.registries.digital.go.jp/rsc/address/address_all.csv.zip',
-    });
+  it("should save value correctly", () => {
 
     saveKeyAndValue({
       db: mockedDB,
       key: 'ba000001',
-      value
+      value: '1234',
     });
     expect(mockedStringHash).toBeCalledWith('ba000001');
     expect(mockRunMethod).toBeCalled();
-    const receivedValue = mockRunMethod.mock.calls[0][0]];
-    const valueProp = JSON.parse((receivedValue as any).value);
-
-    expect(valueProp).toEqual(value.toJSON());
+    const receivedValue = mockRunMethod.mock.calls[0][0];
+    expect(receivedValue).toEqual({"key": 123456, "value": "1234"});
   });
 });

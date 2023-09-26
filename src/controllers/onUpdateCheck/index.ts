@@ -1,8 +1,8 @@
 import { DependencyContainer } from 'tsyringe';
-import { CkanDownloader } from "../../usecase";
+import { CkanDownloader } from '../../usecase';
 import { Database } from 'better-sqlite3';
 import { AbrgMessage } from '../../domain';
-import { Logger } from "winston";
+import { Logger } from 'winston';
 
 export const onUpdateCheck = async ({
   container,
@@ -11,7 +11,6 @@ export const onUpdateCheck = async ({
   container: DependencyContainer;
   ckanId: string;
 }) => {
-
   const logger = container.resolve<Logger | undefined>('LOGGER');
   const downloader = new CkanDownloader({
     db: container.resolve<Database>('DATABASE'),
@@ -20,15 +19,13 @@ export const onUpdateCheck = async ({
     ckanId,
     dstDir: '',
   });
-  const isUpdateAvailable = await downloader.updateCheck();
-  
-  if (!isUpdateAvailable) {
+  const isUpdateDataAvailable = await downloader.updateCheck();
+
+  if (!isUpdateDataAvailable) {
     logger?.info(
-      AbrgMessage.toString(AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE),
+      AbrgMessage.toString(AbrgMessage.ERROR_NO_UPDATE_IS_AVAILABLE)
     );
     return;
   }
-  logger?.info(
-    AbrgMessage.toString(AbrgMessage.NEW_DATASET_IS_AVAILABLE),
-  );
-}
+  logger?.info(AbrgMessage.toString(AbrgMessage.NEW_DATASET_IS_AVAILABLE));
+};

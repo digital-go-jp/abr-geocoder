@@ -2,30 +2,38 @@
 import 'reflect-metadata';
 
 import { DependencyContainer } from 'tsyringe';
-import {
-  findTargetFilesInZipFiles, IStreamReady
-} from '../../domain';
 
 import CLIInfinityProgress from 'cli-infinity-progress';
+import {
+  DatasetRow,
+  IStreamReady,
+  findTargetFilesInZipFiles,
+} from '../../domain';
+import path from 'node:path';
 
 export const extractDatasetProcess = async ({
   container,
-  srcDir,
+  srcFile,
   dstDir,
+  datasetHistory,
 }: {
-  srcDir: string;
+  srcFile: string;
   dstDir: string;
   container: DependencyContainer;
+  datasetHistory: Map<string, DatasetRow>;
 }): Promise<IStreamReady[]> => {
-  const fileLoadingProgress = container.resolve<CLIInfinityProgress | undefined>('INFINITY_PROGRESS_BAR');
+  const fileLoadingProgress = container.resolve<
+    CLIInfinityProgress | undefined
+  >('INFINITY_PROGRESS_BAR');
   fileLoadingProgress?.setHeader('Finding dataset files...');
   fileLoadingProgress?.start();
   const csvFiles = await findTargetFilesInZipFiles({
-    srcDir,
+    srcDir: path.dirname(srcFile),
     dstDir,
     targetExtention: '.csv',
-    fileLoadingProgress
+    fileLoadingProgress,
+    datasetHistory,
   });
   fileLoadingProgress?.remove();
-  return csvFiles
-}
+  return csvFiles;
+};

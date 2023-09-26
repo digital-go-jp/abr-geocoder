@@ -5,18 +5,15 @@ export const headRequest = async ({
   userAgent,
   headers,
 }: {
-  url: string,
-  userAgent: string,
-  headers?: { [key: string]: string | undefined },
+  url: string;
+  userAgent: string;
+  headers?: { [key: string]: string | undefined };
 }): Promise<Dispatcher.ResponseData> => {
-  return await request(
-    url,
-    {
-      headers: {
-        'user-agent': userAgent,
-        ...headers,
-      },
-      method: 'HEAD',
-    }
-  );
-}
+  return await request(url, {
+    headers: {
+      'user-agent': userAgent,
+      ...headers,
+    },
+    method: 'HEAD',
+  });
+};

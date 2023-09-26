@@ -44,5 +44,6 @@ const messages: Record<AbrgMessage, string> = {
   [AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE]:
     'Can not file the required file "package.json"',
   [AbrgMessage.PROMPT_CONTINUE_TO_DOWNLOAD]: 'Continue to download?',
+  [AbrgMessage.DOWNLOAD_ERROR]: 'Download error',
 };
 export default messages;

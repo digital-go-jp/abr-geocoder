@@ -42,7 +42,7 @@ export class RsdtdspRsdtFile
 
   static create(
     params: IDatasetFileMeta,
-    csvFile: IStreamReady,
+    csvFile: IStreamReady
   ): RsdtdspRsdtFile {
     const sql = `INSERT OR REPLACE INTO "rsdtdsp_rsdt"
       (

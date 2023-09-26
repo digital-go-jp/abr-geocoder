@@ -28,9 +28,10 @@ export const loadDatasetProcess = async ({
   csvFiles: IStreamReady[];
   container: DependencyContainer;
 }) => {
-
   const logger = container.resolve<Logger | undefined>('LOGGER');
-  const multiProgressBar = container.resolve<MultiBar | undefined>('MULTI_PROGRESS_BAR');
+  const multiProgressBar = container.resolve<MultiBar | undefined>(
+    'MULTI_PROGRESS_BAR'
+  );
 
   // _pos_ ファイルのSQL が updateになっているので、
   // それ以外の基本的な情報を先に insert する必要がある。
@@ -128,9 +129,9 @@ export const loadDatasetProcess = async ({
 
       // DBに登録
       db.exec('BEGIN');
-      datasetFile.csvFile.getStream().then(async (fileStream: NodeJS.ReadableStream) => {
-        fileStream.
-          pipe(
+      datasetFile.csvFile.getStream().then(fileStream => {
+        fileStream
+          .pipe(
             csvParser({
               skipComments: true,
             })
@@ -148,18 +149,40 @@ export const loadDatasetProcess = async ({
           .on('finish', () => {
             db.exec('COMMIT');
 
+            db.prepare(
+              `INSERT OR REPLACE INTO "dataset"
+          (
+            key,
+            type,
+            content_length,
+            crc32,
+            last_modified
+          ) values (
+            @key,
+            @type,
+            @content_length,
+            @crc32,
+            @last_modified
+          )`
+            ).run({
+              key: datasetFile.filename,
+              type: datasetFile.type,
+              content_length: datasetFile.csvFile.contentLength,
+              crc32: datasetFile.csvFile.crc32,
+              last_modified: datasetFile.csvFile.lastModified,
+            });
+
             loadDataProgress?.increment();
             loadDataProgress?.updateETA();
             callback(null);
           })
-          .on('error', error => {
+          .on('error', (error: Error) => {
             if (db.inTransaction) {
               db.exec('ROLLBACK');
             }
             callback(error);
           });
-        })
-
+      });
     },
   });
 

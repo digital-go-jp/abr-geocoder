@@ -19,12 +19,7 @@ mockedStringHash.mockImplementation((key: string): number => {
 
 describe("getValueWithKey()", () => {
   it.concurrent("should return expected value", async () => {
-    const expectedValue = {
-      lastModified: 'Thu, 29 Jun 2023 20:03:24 GMT',
-      etag: '"85a3b4aefbe07aad6ef6da7a17d87dd4-60"',
-      contentLength: 503120257,
-      fileUrl: 'https://catalog.registries.digital.go.jp/rsc/address/address_all.csv.zip',
-    };
+    const expectedValue = 
 
     MockedDB.mockImplementation(() => {
       return {
@@ -33,7 +28,7 @@ describe("getValueWithKey()", () => {
             get: (key: number): { [key: string]: string } | undefined => {
               return {
                 key: 'ba000001',
-                value: JSON.stringify(expectedValue),
+                value: '1234',
               }
             },
           };
@@ -47,7 +42,7 @@ describe("getValueWithKey()", () => {
       key: 'ba000001',
     });
 
-    expect(receivedValue).toEqual(expectedValue);
+    expect(receivedValue).toEqual('1234');
   });
   it.concurrent("should return ", async () => {
 
