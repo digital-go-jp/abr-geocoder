@@ -1,7 +1,7 @@
 import { Database } from 'better-sqlite3';
 import { SingleBar } from 'cli-progress';
 import { DependencyContainer } from 'tsyringe';
-import { CkanDownloader } from '../../usecase';
+import { CkanDownloader, CkanDownloaderEvent } from '../../usecase';
 import { DatasetMetadata } from '../../domain';
 
 export const downloadProcess = async ({
@@ -34,15 +34,15 @@ export const downloadProcess = async ({
   // 最新データセットをダウンロードする
   // --------------------------------------
   downloader.on(
-    'download:start',
+    CkanDownloaderEvent.START,
     ({ position, length }: { position: number; length: number }) => {
       progress?.start(length, position);
     }
   );
-  downloader.on('download:data', (chunkSize: number) => {
+  downloader.on(CkanDownloaderEvent.DATA, (chunkSize: number) => {
     progress?.increment(chunkSize);
   });
-  downloader.on('download:end', () => {
+  downloader.on(CkanDownloaderEvent.END, () => {
     progress?.stop();
   });
   return {

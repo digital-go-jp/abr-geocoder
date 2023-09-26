@@ -12,10 +12,12 @@ import {
   CKANPackageShow,
   CKANResponse,
   DatasetMetadata,
+  getRequest,
   getValueWithKey,
+  headRequest,
   saveKeyAndValue,
 } from '../../domain';
-import { getRequest, headRequest } from '../../domain/http';
+import { verifyPartialDownloadedFile } from './verifyPartialDownloadedFile';
 
 export interface CkanDownloaderParams {
   userAgent: string;
@@ -23,6 +25,12 @@ export interface CkanDownloaderParams {
   db: Database;
   ckanId: string;
   dstDir: string;
+}
+
+export enum CkanDownloaderEvent {
+  START = 'start',
+  DATA = 'data',
+  END = 'end',
 }
 
 export class CkanDownloader extends EventEmitter {
@@ -146,41 +154,11 @@ export class CkanDownloader extends EventEmitter {
     if (!csvMetaStr) {
       return true;
     }
-    const csvMeta = DatasetMetadata.from(csvMetaStr);
+    const localCsvMeta = DatasetMetadata.from(csvMetaStr);
 
-    const downloadFilePath = this.getDownloadFilePath();
-    if (!fs.existsSync(downloadFilePath)) {
-      return true;
-    }
-    const stat = await fs.promises.stat(downloadFilePath);
-    const startAt = stat.size - 1024;
-    const response = await getRequest({
-      url: csvMeta.fileUrl,
-      userAgent: this.userAgent,
-      headers: {
-        Range: `bytes=${startAt}-`,
-      },
-    });
+    const apiCsvMeta = await this.getDatasetMetadata();
 
-    if (response.statusCode !== StatusCodes.PARTIAL_CONTENT) {
-      return true;
-    }
-
-    const contentLength = parseInt(
-      (response.headers['content-range'] as string).split('/')[1]
-    );
-    if (contentLength !== stat.size) {
-      return true;
-    }
-
-    const fileLast1k = Buffer.alloc(1024);
-    const fd = await fs.promises.open(downloadFilePath, 'r');
-    await fd.read(fileLast1k, 0, 1024, startAt);
-    fd.close();
-
-    const arrayBuffer = await response.body.arrayBuffer();
-    const recvLast1k = Buffer.from(arrayBuffer);
-    return Buffer.compare(fileLast1k, recvLast1k) !== 0;
+    return !localCsvMeta.equal(apiCsvMeta);
   }
 
   private getDownloadFilePath(): string {
@@ -201,12 +179,21 @@ export class CkanDownloader extends EventEmitter {
       if (!metadata || !metadata.etag || !fs.existsSync(dst)) {
         return [0, await fs.promises.open(downloadFilePath, 'w')];
       }
+      const isValid = await verifyPartialDownloadedFile({
+        userAgent: this.userAgent,
+        targetFile: downloadFilePath,
+        metadata,
+      });
+      if (!isValid) {
+        return [0, await fs.promises.open(downloadFilePath, 'w')];
+      }
 
       const stat = fs.statSync(dst);
       return [stat.size, await fs.promises.open(downloadFilePath, 'a+')];
     })(downloadFilePath);
 
     if (startAt === metadata?.contentLength) {
+      client.close();
       return downloadFilePath;
     }
 
@@ -219,7 +206,7 @@ export class CkanDownloader extends EventEmitter {
       write(chunk: Buffer, encoding, callback) {
         fd.write(chunk, 0, chunk.byteLength, fsPointer);
         fsPointer += chunk.byteLength;
-        downloaderEmit('download:data', chunk.byteLength);
+        downloaderEmit(CkanDownloaderEvent.DATA, chunk.byteLength);
         callback();
       },
     });
@@ -249,11 +236,11 @@ export class CkanDownloader extends EventEmitter {
               });
               saveKeyAndValue({
                 db: this.db,
-                key: `download:${this.ckanId}`,
+                key: this.ckanId,
                 value: newCsvMeta.toString(),
               });
 
-              downloaderEmit('download:start', {
+              downloaderEmit(CkanDownloaderEvent.START, {
                 position: 0,
                 length: metadata.contentLength,
               });
@@ -275,11 +262,11 @@ export class CkanDownloader extends EventEmitter {
 
               saveKeyAndValue({
                 db: this.db,
-                key: `download:${this.ckanId}`,
+                key: this.ckanId,
                 value: newCsvMeta.toString(),
               });
 
-              downloaderEmit('download:start', {
+              downloaderEmit(CkanDownloaderEvent.START, {
                 position: startAt,
                 length: metadata.contentLength,
               });
@@ -289,7 +276,7 @@ export class CkanDownloader extends EventEmitter {
             case StatusCodes.NOT_MODIFIED: {
               fsPointer = metadata.contentLength;
 
-              downloaderEmit('download:start', {
+              downloaderEmit(CkanDownloaderEvent.START, {
                 position: metadata.contentLength,
                 length: metadata.contentLength,
               });
@@ -313,11 +300,11 @@ export class CkanDownloader extends EventEmitter {
       if (err instanceof Error && err.name === 'AbortError') {
         return downloadFilePath;
       }
-      console.error(err);
-      return null;
+      throw err;
     } finally {
       fd.close();
-      this.emit('download:end');
+      client.close();
+      this.emit(CkanDownloaderEvent.END);
     }
   }
 }

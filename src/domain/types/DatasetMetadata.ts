@@ -36,6 +36,19 @@ export class DatasetMetadata implements IDatasetMetadata {
     return JSON.stringify(this.toJSON());
   }
 
+  equal(other?: DatasetMetadata): boolean {
+    if (!other) {
+      return false;
+    }
+
+    return (
+      this.contentLength === other.contentLength &&
+      this.etag === other.etag &&
+      this.fileUrl === other.fileUrl &&
+      this.lastModified === other.lastModified
+    );
+  }
+
   static from = (value: string): DatasetMetadata => {
     const jsonValue = JSON.parse(value);
     if (

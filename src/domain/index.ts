@@ -5,6 +5,7 @@ export * from './RegExpEx';
 export * from './bubblingFindFile';
 export * from './dataset';
 export * from './db';
+export * from './http';
 export * from './getDataDir';
 export * from './isKanjiNumberFollewedByCho';
 export * from './jisKanji';
