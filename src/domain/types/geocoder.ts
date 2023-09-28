@@ -116,8 +116,8 @@ export enum OutputFormat {
   JSON = 'json',
   CSV = 'csv',
   GEOJSON = 'geojson',
-  NDJSON = 'ndjson',
-  NDGEOJSON = 'ndgeojson',
+  ND_JSON = 'nd_json',
+  ND_GEOJSON = 'nd_geojson',
 }
 
 export type InterpolatePattern = {

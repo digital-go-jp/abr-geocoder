@@ -11,6 +11,7 @@ import { downloadProcess } from './downloadProcess';
 import { extractDatasetProcess } from './extractDatasetProcess';
 import { loadDatasetHistory } from './loadDatasetHistory';
 import { loadDatasetProcess } from './loadDatasetProcess';
+import { DI_TOKEN } from '../../interface-adapter';
 
 export const onDownload = async ({
   ckanId,
@@ -21,7 +22,7 @@ export const onDownload = async ({
   dataDir: string;
   container: DependencyContainer;
 }) => {
-  const logger = container.resolve<Logger | undefined>('LOGGER');
+  const logger = container.resolve<Logger | undefined>(DI_TOKEN.LOGGER);
 
   const downloadDir = path.join(dataDir, 'download');
   if (!fs.existsSync(downloadDir)) {
@@ -38,7 +39,7 @@ export const onDownload = async ({
     return;
   }
 
-  const db = container.resolve<Database>('DATABASE');
+  const db = container.resolve<Database>(DI_TOKEN.DATABASE);
   const datasetHistory = await loadDatasetHistory({
     db,
   });

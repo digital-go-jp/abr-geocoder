@@ -3,6 +3,7 @@ import { CkanDownloader } from '../../usecase';
 import { Database } from 'better-sqlite3';
 import { AbrgMessage } from '../../domain';
 import { Logger } from 'winston';
+import { DI_TOKEN } from '../../interface-adapter';
 
 export const onUpdateCheck = async ({
   container,
@@ -11,11 +12,11 @@ export const onUpdateCheck = async ({
   container: DependencyContainer;
   ckanId: string;
 }) => {
-  const logger = container.resolve<Logger | undefined>('LOGGER');
+  const logger = container.resolve<Logger | undefined>(DI_TOKEN.LOGGER);
   const downloader = new CkanDownloader({
-    db: container.resolve<Database>('DATABASE'),
-    userAgent: container.resolve<string>('USER_AGENT'),
-    datasetUrl: container.resolve<string>('DATASET_URL'),
+    db: container.resolve<Database>(DI_TOKEN.DATABASE),
+    userAgent: container.resolve<string>(DI_TOKEN.USER_AGENT),
+    datasetUrl: container.resolve<string>(DI_TOKEN.DATASET_URL),
     ckanId,
     dstDir: '',
   });

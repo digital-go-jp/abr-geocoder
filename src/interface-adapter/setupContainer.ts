@@ -23,6 +23,7 @@ import {
   bubblingFindFile,
 } from '../domain';
 import CLIInfinityProgress from 'cli-infinity-progress';
+import { DI_TOKEN } from './tokens';
 
 export interface setupContainerParams {
   dataDir: string;
@@ -35,10 +36,10 @@ export const setupContainer = async ({
 }: setupContainerParams): Promise<DependencyContainer> => {
   const myContainer = container.createChildContainer();
 
-  myContainer.register('USER_AGENT', {
+  myContainer.register(DI_TOKEN.USER_AGENT, {
     useValue: 'curl/7.81.0',
   });
-  myContainer.register('DATASET_URL', {
+  myContainer.register(DI_TOKEN.DATASET_URL, {
     useValue: `https://catalog.registries.digital.go.jp/rc/api/3/action/package_show?id=${ckanId}`,
   });
 
@@ -64,57 +65,58 @@ export const setupContainer = async ({
     schemaFilePath,
     sqliteFilePath,
   });
-  myContainer.register('DATABASE', {
+  myContainer.register(DI_TOKEN.DATABASE, {
     useValue: db,
   });
 
   // ロガー
   const logger = provideLogger();
-  myContainer.registerInstance('LOGGER', logger);
+  myContainer.registerInstance(DI_TOKEN.LOGGER, logger);
 
   //
-  myContainer.register<CLIInfinityProgress>('INFINITY_PROGRESS_BAR', {
+  myContainer.register<CLIInfinityProgress>(
+    DI_TOKEN.INFINITY_PROGRESS_BAR, {
     useFactory: () => {
       return provideInifinityProgressBar();
     },
   });
 
   // ダウロードのときに表示するプログレスバー
-  myContainer.register<SingleBar>('PROGRESS_BAR', {
+  myContainer.register<SingleBar>(DI_TOKEN.PROGRESS_BAR, {
     useFactory: () => {
       return provideProgressBar();
     },
   });
 
   // CSV を データベースに保存するとに表示するプログレスバー
-  myContainer.register<MultiBar>('MULTI_PROGRESS_BAR', {
+  myContainer.register<MultiBar>(DI_TOKEN.MULTI_PROGRESS_BAR, {
     useFactory: () => {
       return provideMultiProgressBar();
     },
   });
 
   // Geocoding結果の出力を整形するフォーマッター
-  myContainer.register<CsvTransform>('csv-formatter', {
+  myContainer.register<CsvTransform>(DI_TOKEN.CSV_FORMATTER, {
     useFactory: () => {
       return CsvTransform.create(CsvTransform.DEFAULT_COLUMNS);
     },
   });
-  myContainer.register<GeoJsonTransform>('geojson-formatter', {
+  myContainer.register<GeoJsonTransform>(DI_TOKEN.GEOJSON_FORMATTER, {
     useFactory: () => {
       return GeoJsonTransform.create();
     },
   });
-  myContainer.register<NdGeoJsonTransform>('ndgeojson-formatter', {
+  myContainer.register<NdGeoJsonTransform>(DI_TOKEN.ND_GEOJSON_FORMATTER, {
     useFactory: () => {
       return NdGeoJsonTransform.create();
     },
   });
-  myContainer.register<JsonTransform>('json-formatter', {
+  myContainer.register<JsonTransform>(DI_TOKEN.JSON_FORMATTER, {
     useFactory: () => {
       return JsonTransform.create();
     },
   });
-  myContainer.register<NdJsonTransform>('ndjson-formatter', {
+  myContainer.register<NdJsonTransform>(DI_TOKEN.ND_JSON_FORMATTER, {
     useFactory: () => {
       return NdJsonTransform.create();
     },

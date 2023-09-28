@@ -15,6 +15,7 @@ import {
 } from '../../domain';
 import {
   CsvTransform,
+  DI_TOKEN,
   GeoJsonTransform,
   JsonTransform,
   NdGeoJsonTransform,
@@ -39,7 +40,7 @@ export const onGeocoding = async ({
   container: DependencyContainer;
 }) => {
   // データベースのインスタンスを取得
-  const db: Database = container.resolve('Database');
+  const db: Database = container.resolve(DI_TOKEN.DATABASE);
 
   // Geocodingを行うメイン部分
   const geocoder = await StreamGeocoder.create(db, fuzzy);
@@ -51,19 +52,19 @@ export const onGeocoding = async ({
   const formatter: Transform = (format => {
     switch (format) {
       case OutputFormat.CSV:
-        return container.resolve<CsvTransform>('csv-formatter');
+        return container.resolve<CsvTransform>(DI_TOKEN.CSV_FORMATTER);
 
       case OutputFormat.JSON:
-        return container.resolve<JsonTransform>('json-formatter');
+        return container.resolve<JsonTransform>(DI_TOKEN.JSON_FORMATTER);
 
       case OutputFormat.GEOJSON:
-        return container.resolve<GeoJsonTransform>('geojson-formatter');
+        return container.resolve<GeoJsonTransform>(DI_TOKEN.GEOJSON_FORMATTER);
 
-      case OutputFormat.NDJSON:
-        return container.resolve<NdJsonTransform>('ndjson-formatter');
+      case OutputFormat.ND_JSON:
+        return container.resolve<NdJsonTransform>(DI_TOKEN.ND_JSON_FORMATTER);
 
-      case OutputFormat.NDGEOJSON:
-        return container.resolve<NdGeoJsonTransform>('ndgeojson-formatter');
+      case OutputFormat.ND_GEOJSON:
+        return container.resolve<NdGeoJsonTransform>(DI_TOKEN.ND_GEOJSON_FORMATTER);
 
       default:
         throw new AbrgError({

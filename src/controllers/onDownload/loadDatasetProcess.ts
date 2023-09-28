@@ -18,6 +18,7 @@ import {
 } from '../../domain';
 import { DependencyContainer } from 'tsyringe';
 import { Logger } from 'winston';
+import { DI_TOKEN } from '../../interface-adapter';
 
 export const loadDatasetProcess = async ({
   db,
@@ -28,9 +29,9 @@ export const loadDatasetProcess = async ({
   csvFiles: IStreamReady[];
   container: DependencyContainer;
 }) => {
-  const logger = container.resolve<Logger | undefined>('LOGGER');
+  const logger = container.resolve<Logger | undefined>(DI_TOKEN.LOGGER);
   const multiProgressBar = container.resolve<MultiBar | undefined>(
-    'MULTI_PROGRESS_BAR'
+    DI_TOKEN.MULTI_PROGRESS_BAR,
   );
 
   // _pos_ ファイルのSQL が updateになっているので、

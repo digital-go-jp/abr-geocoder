@@ -10,6 +10,7 @@ import {
   findTargetFilesInZipFiles,
 } from '../../domain';
 import path from 'node:path';
+import { DI_TOKEN } from '../../interface-adapter';
 
 export const extractDatasetProcess = async ({
   container,
@@ -24,7 +25,7 @@ export const extractDatasetProcess = async ({
 }): Promise<IStreamReady[]> => {
   const fileLoadingProgress = container.resolve<
     CLIInfinityProgress | undefined
-  >('INFINITY_PROGRESS_BAR');
+  >(DI_TOKEN.INFINITY_PROGRESS_BAR);
   fileLoadingProgress?.setHeader('Finding dataset files...');
   fileLoadingProgress?.start();
   const csvFiles = await findTargetFilesInZipFiles({

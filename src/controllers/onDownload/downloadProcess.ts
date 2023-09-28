@@ -3,6 +3,7 @@ import { SingleBar } from 'cli-progress';
 import { DependencyContainer } from 'tsyringe';
 import { CkanDownloader, CkanDownloaderEvent } from '../../usecase';
 import { DatasetMetadata } from '../../domain';
+import { DI_TOKEN } from '../../interface-adapter';
 
 export const downloadProcess = async ({
   container,
@@ -16,10 +17,10 @@ export const downloadProcess = async ({
   metadata: DatasetMetadata;
   downloadFilePath: string | null;
 }> => {
-  const db = container.resolve<Database>('DATABASE');
-  const userAgent = container.resolve<string>('USER_AGENT');
-  const datasetUrl = container.resolve<string>('DATASET_URL');
-  const progress = container.resolve<SingleBar | undefined>('PROGRESS_BAR');
+  const db = container.resolve<Database>(DI_TOKEN.DATABASE);
+  const userAgent = container.resolve<string>(DI_TOKEN.USER_AGENT);
+  const datasetUrl = container.resolve<string>(DI_TOKEN.DATASET_URL);
+  const progress = container.resolve<SingleBar | undefined>(DI_TOKEN.PROGRESS_BAR);
 
   const downloader = new CkanDownloader({
     db,
