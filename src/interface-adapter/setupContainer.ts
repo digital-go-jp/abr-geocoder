@@ -74,8 +74,7 @@ export const setupContainer = async ({
   myContainer.registerInstance(DI_TOKEN.LOGGER, logger);
 
   //
-  myContainer.register<CLIInfinityProgress>(
-    DI_TOKEN.INFINITY_PROGRESS_BAR, {
+  myContainer.register<CLIInfinityProgress>(DI_TOKEN.INFINITY_PROGRESS_BAR, {
     useFactory: () => {
       return provideInifinityProgressBar();
     },

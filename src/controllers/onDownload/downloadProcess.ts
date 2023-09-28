@@ -20,7 +20,9 @@ export const downloadProcess = async ({
   const db = container.resolve<Database>(DI_TOKEN.DATABASE);
   const userAgent = container.resolve<string>(DI_TOKEN.USER_AGENT);
   const datasetUrl = container.resolve<string>(DI_TOKEN.DATASET_URL);
-  const progress = container.resolve<SingleBar | undefined>(DI_TOKEN.PROGRESS_BAR);
+  const progress = container.resolve<SingleBar | undefined>(
+    DI_TOKEN.PROGRESS_BAR
+  );
 
   const downloader = new CkanDownloader({
     db,

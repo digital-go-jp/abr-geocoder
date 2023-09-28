@@ -64,7 +64,9 @@ export const onGeocoding = async ({
         return container.resolve<NdJsonTransform>(DI_TOKEN.ND_JSON_FORMATTER);
 
       case OutputFormat.ND_GEOJSON:
-        return container.resolve<NdGeoJsonTransform>(DI_TOKEN.ND_GEOJSON_FORMATTER);
+        return container.resolve<NdGeoJsonTransform>(
+          DI_TOKEN.ND_GEOJSON_FORMATTER
+        );
 
       default:
         throw new AbrgError({

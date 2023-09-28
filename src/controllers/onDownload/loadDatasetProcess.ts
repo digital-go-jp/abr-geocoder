@@ -31,7 +31,7 @@ export const loadDatasetProcess = async ({
 }) => {
   const logger = container.resolve<Logger | undefined>(DI_TOKEN.LOGGER);
   const multiProgressBar = container.resolve<MultiBar | undefined>(
-    DI_TOKEN.MULTI_PROGRESS_BAR,
+    DI_TOKEN.MULTI_PROGRESS_BAR
   );
 
   // _pos_ ファイルのSQL が updateになっているので、
