@@ -104,11 +104,6 @@ export const main = async (...args: string[]) => {
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_COMMON_RESOURCE_OPTION
             ),
-          })
-          .option('force', {
-            alias: 'f',
-            type: 'boolean',
-            describe: AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_FORCE_DESC),
           });
       },
       async argv => {
