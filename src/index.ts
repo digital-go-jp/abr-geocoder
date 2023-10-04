@@ -20,7 +20,7 @@ import { parsePackageJson, setupContainer } from './interface-adapter';
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
-const main = async () => {
+export const main = async (...args: string[]) => {
   const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
   if (!packageJsonFilePath) {
     throw new AbrgError({
@@ -36,8 +36,8 @@ const main = async () => {
   /**
    * CLIパーサー (通常のプログラムのエントリーポイント)
    */
-  yargs(hideBin(process.argv))
     .version(version)
+  yargs(hideBin(args))
     .wrap(terminalWidth)
     .scriptName('abrg')
 
@@ -201,4 +201,4 @@ const main = async () => {
     )
     .parse();
 };
-main();
+main(...process.argv);
