@@ -115,7 +115,7 @@ export const main = async (...args: string[]) => {
         await onDownload({
           container,
           ckanId,
-          dataDir: (argv.workDir as string) || DEFAULT_DATA_DIR,
+          dataDir: argv.dataDir,
         });
       }
     )
