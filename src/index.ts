@@ -186,7 +186,6 @@ export const main = async (...args: string[]) => {
         await onGeocoding({
           source: inputFile,
           destination: (argv['outputFile'] as string) || '',
-          dataDir,
           format: argv.format as OutputFormat,
           fuzzy: argv.fuzzy || '?',
           container,
