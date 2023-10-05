@@ -34,7 +34,6 @@ export const onGeocoding = async ({
   source: string;
   destination: string;
   dataDir: string;
-  resourceId: string;
   format: OutputFormat;
   fuzzy?: string;
   container: DependencyContainer;

@@ -187,7 +187,6 @@ export const main = async (...args: string[]) => {
           source: inputFile,
           destination: (argv['outputFile'] as string) || '',
           dataDir,
-          resourceId: argv.resource || 'ba000001',
           format: argv.format as OutputFormat,
           fuzzy: argv.fuzzy || '?',
           container,
