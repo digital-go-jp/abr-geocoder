@@ -164,30 +164,25 @@ export const main = async (...args: string[]) => {
           .positional('<inputFile>', {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),
             default: '-',
+            type: 'string',
           })
           .positional('[<outputFile>]', {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_OUTPUT_FILE),
-            default: '',
+            type: 'string',
+            default: undefined,
           });
       },
       async argv => {
-        const dataDir = argv.dataDir || DEFAULT_DATA_DIR;
-
-        const ckanId = argv.resource;
         const container = await setupContainer({
-          dataDir,
-          ckanId,
+          dataDir: argv.dataDir,
+          ckanId: argv.resource,
         });
 
-        let inputFile = '-';
-        if (typeof argv['inputFile'] === 'string') {
-          inputFile = argv['inputFile'] as string;
-        }
         await onGeocoding({
-          source: inputFile,
-          destination: (argv['outputFile'] as string) || '',
+          source: argv['inputFile'] as string,
+          destination: argv['outputFile'] as string | undefined,
           format: argv.format as OutputFormat,
-          fuzzy: argv.fuzzy || '?',
+          fuzzy: argv.fuzzy,
           container,
         });
       }

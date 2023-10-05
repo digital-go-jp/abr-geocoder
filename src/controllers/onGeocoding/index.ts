@@ -32,7 +32,7 @@ export const onGeocoding = async ({
   container,
 }: {
   source: string;
-  destination: string;
+  destination?: string;
   format: OutputFormat;
   fuzzy?: string;
   container: DependencyContainer;
