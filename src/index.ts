@@ -36,8 +36,8 @@ export const main = async (...args: string[]) => {
   /**
    * CLIパーサー (通常のプログラムのエントリーポイント)
    */
-    .version(version)
   yargs(hideBin(args))
+    .version(version)
     .wrap(terminalWidth)
     .scriptName('abrg')
 
@@ -136,8 +136,8 @@ export const main = async (...args: string[]) => {
               AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
             ),
           })
-          .option('workDir', {
-            alias: 'w',
+          .option('dataDir', {
+            alias: 'd',
             type: 'string',
             default: DEFAULT_DATA_DIR,
             describe: AbrgMessage.toString(
@@ -171,7 +171,7 @@ export const main = async (...args: string[]) => {
           });
       },
       async argv => {
-        const dataDir = argv.workDir || DEFAULT_DATA_DIR;
+        const dataDir = argv.dataDir || DEFAULT_DATA_DIR;
 
         const ckanId = argv.resource;
         const container = await setupContainer({
