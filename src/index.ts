@@ -5,7 +5,8 @@ import 'reflect-metadata';
 
 import os from 'node:os';
 import path from 'node:path';
-import yargs from 'yargs';
+import fs from 'node:fs';
+import yargs, { ArgumentsCamelCase, MiddlewareFunction } from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { onDownload, onUpdateCheck, onGeocoding } from './controllers';
 import {
@@ -16,6 +17,7 @@ import {
   bubblingFindFile,
 } from './domain';
 import { parsePackageJson, setupContainer } from './interface-adapter';
+import { DEFAULT_FUZZY_CHAR } from './settings/constantValues';
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
@@ -33,6 +35,7 @@ export const main = async (...args: string[]) => {
     filePath: packageJsonFilePath,
   });
 
+
   /**
    * CLIパーサー (通常のプログラムのエントリーポイント)
    */
@@ -46,7 +49,7 @@ export const main = async (...args: string[]) => {
      * ローカルDBと比較して新しいデータセットの有無を調べる
      */
     .command(
-      'update-check',
+      'update-check [options]',
       AbrgMessage.toString(AbrgMessage.CLI_UPDATE_CHECK_DESC),
       (yargs: yargs.Argv) => {
         return yargs
@@ -85,7 +88,7 @@ export const main = async (...args: string[]) => {
      * データセットをダウンロードする
      */
     .command(
-      'download',
+      'download [options]',
       AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_DESC),
       (yargs: yargs.Argv) => {
         return yargs
@@ -125,13 +128,13 @@ export const main = async (...args: string[]) => {
      * 入力されたファイル、または標準入力から与えられる住所をジオコーディングする
      */
     .command(
-      '$0 <inputFile> [<outputFile>]',
+      '$0 <inputFile> [outputFile] [options]',
       AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_DESC),
       (yargs: yargs.Argv) => {
         return yargs
           .option('fuzzy', {
             type: 'string',
-            default: '?',
+            default: DEFAULT_FUZZY_CHAR,
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
             ),
@@ -161,18 +164,40 @@ export const main = async (...args: string[]) => {
             ),
             choices: ['csv', 'json', 'ndjson', 'geojson', 'ndgeojson'],
           })
-          .positional('<inputFile>', {
+          .positional('inputFile', {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),
-            default: '-',
             type: 'string',
+            coerce: (inputFile: string) => {
+              console.log(`--->inputFile: ${inputFile}`);
+              if (process.env.NODE_ENV === 'test') {
+                return inputFile;
+              }
+              if (inputFile === '-') {
+                return '-';
+              }
+              if (fs.existsSync(inputFile)) {
+                return inputFile;
+              }
+              throw new AbrgError({
+                messageId: AbrgMessage.CANNOT_FIND_INPUT_FILE,
+                level: AbrgErrorLevel.ERROR,
+              });
+            }
           })
-          .positional('[<outputFile>]', {
+          .positional('outputFile', {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_OUTPUT_FILE),
             type: 'string',
             default: undefined,
-          });
+          })
       },
       async argv => {
+        
+        // Prevent users from running this command without options.
+        // i.e. $> abrg
+        if (!argv['inputFile']) {
+          return;
+        }
+
         const container = await setupContainer({
           dataDir: argv.dataDir,
           ckanId: argv.resource,
@@ -187,6 +212,26 @@ export const main = async (...args: string[]) => {
         });
       }
     )
+    .fail((msg: string, e: Error, yargs: yargs.Argv<{}>) => {
+      if (args.length <= 2) {
+        // Show help if no options are provided.
+        yargs.showVersion((version: string) => {
+          console.error(`====================================`);
+          console.error(`= abr-geocoder version: ${version}`);
+          console.error(`====================================`);
+        });
+        yargs.showHelp();
+        return;
+      }
+
+      // Otherwise, show the error message
+      console.error(`[error] ${msg}`);
+    })
     .parse();
+    // .parse((err: Error | undefined, argv: ArgumentsCamelCase, output: string) => {
+    //   console.log(argv);
+    // });
 };
-main(...process.argv);
+if (process.env.NODE_ENV !== 'test') {
+  main(...process.argv);
+}
