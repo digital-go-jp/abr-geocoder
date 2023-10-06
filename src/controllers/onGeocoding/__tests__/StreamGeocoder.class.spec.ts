@@ -135,7 +135,7 @@ describe('StreamGeocoder', () => {
       const args = mockedGetPreRegP.mock.calls[0];
       const wildcardHelper = args[0].wildcardHelper;
       expect(wildcardHelper('^愛知郡愛荘町'))
-        .toEqual(`^(愛|${fuzzy})(知|${fuzzy})(郡|${fuzzy})(愛|${fuzzy})(荘|${fuzzy})(町|${fuzzy})`);
+        .toEqual(`^(愛|\\${fuzzy})(知|\\${fuzzy})(郡|\\${fuzzy})(愛|\\${fuzzy})(荘|\\${fuzzy})(町|\\${fuzzy})`);
     });
   })
 });
