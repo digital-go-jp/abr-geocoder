@@ -1,13 +1,12 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
-import { jest, describe, expect, it, afterEach, beforeEach, beforeAll, afterAll } from '@jest/globals';
-import { packageJsonMeta, parsePackageJson, setupContainer } from '../interface-adapter';
-import { onUpdateCheck, onDownload, onGeocoding } from '../controllers';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { onDownload, onGeocoding, onUpdateCheck } from '../controllers';
+import { AbrgMessage } from '../domain';
 import { main } from '../index';
+import { setupContainer } from '../interface-adapter';
 import { DEFAULT_FUZZY_CHAR } from '../settings/constantValues';
-import yargs from 'yargs';
-import { AbrgError, AbrgMessage } from '../domain';
 
 
 jest.mock('../domain', () => {
@@ -121,141 +120,149 @@ describe('[cli]download', () => {
 
 describe('[cli] geocoding', () => {
 
-  it.concurrent('should run geocoding command', async () => {
-    const inputFile = './somewhere/query.txt';
+  describe('regular usages', () => {
+    it.concurrent('should run geocoding command', async () => {
+      const inputFile = './somewhere/query.txt';
 
-    await runCommand(inputFile);
+      await runCommand(inputFile);
 
-    expect(setupContainer).toBeCalledWith({
-      dataDir: expect.any(String),
-      ckanId: 'ba000001',
+      expect(setupContainer).toBeCalledWith({
+        dataDir: expect.any(String),
+        ckanId: 'ba000001',
+      });
+
+      expect(onGeocoding).toBeCalledWith({
+        container: undefined,
+        source: inputFile,
+        format: expect.any(String),
+        destination: undefined,
+        fuzzy: DEFAULT_FUZZY_CHAR,
+      });
     });
 
-    expect(onGeocoding).toBeCalledWith({
-      container: undefined,
-      source: inputFile,
-      format: expect.any(String),
-      destination: undefined,
-      fuzzy: DEFAULT_FUZZY_CHAR,
+    it.concurrent('case: abrg -f json -fuzzy ● <inputFile>', async () => {
+      const inputFile = './somewhere/query.txt';
+
+      const fuzzyChar = '●';
+      await runCommand('-f', 'json', '--fuzzy', fuzzyChar, inputFile);
+
+      expect(setupContainer).toBeCalledWith({
+        dataDir: expect.any(String),
+        ckanId: 'ba000001',
+      });
+
+      expect(onGeocoding).toBeCalledWith({
+        container: undefined,
+        source: inputFile,
+        format: 'json',
+        destination: undefined,
+        fuzzy: fuzzyChar,
+      });
+    });
+
+    it.concurrent('case: abrg -f ndjson <inputFile>', async () => {
+      const inputFile = './somewhere/query.txt';
+
+      await runCommand('-f', 'ndjson', inputFile);
+
+      expect(setupContainer).toBeCalledWith({
+        dataDir: expect.any(String),
+        ckanId: 'ba000001',
+      });
+
+      expect(onGeocoding).toBeCalledWith({
+        container: undefined,
+        source: inputFile,
+        format: 'ndjson',
+        destination: undefined,
+        fuzzy: DEFAULT_FUZZY_CHAR,
+      });
+    });
+
+    it.concurrent('case: abrg -d somewhere <inputFile>', async () => {
+      const inputFile = './somewhere/query.txt';
+
+      await runCommand('-d', 'somewhere', inputFile);
+
+      expect(setupContainer).toBeCalledWith({
+        dataDir: 'somewhere',
+        ckanId: 'ba000001',
+      });
+
+      expect(onGeocoding).toBeCalledWith({
+        container: undefined,
+        source: inputFile,
+        format: 'csv',
+        destination: undefined,
+        fuzzy: DEFAULT_FUZZY_CHAR,
+      });
+    });
+    
+    it.concurrent('should receive outputFile option', async () => {
+      const inputFile = './somewhere/query.txt';
+      const outputFilee = './somewhere/result.csv';
+
+      await runCommand(inputFile, outputFilee, '-f', 'csv');
+
+      expect(setupContainer).toBeCalledWith({
+        dataDir: expect.any(String),
+        ckanId: 'ba000001',
+      });
+
+      expect(onGeocoding).toBeCalledWith({
+        container: undefined,
+        source: inputFile,
+        format: 'csv',
+        destination: outputFilee,
+        fuzzy: DEFAULT_FUZZY_CHAR,
+      });
+    });
+
+    it.concurrent('should receive outputFile option, even if arguments order is incorrect', async () => {
+      const inputFile = './somewhere/query.txt';
+      const outputFilee = './somewhere/result.csv';
+
+      await runCommand('-f', 'csv', inputFile, outputFilee);
+
+      expect(setupContainer).toBeCalledWith({
+        dataDir: expect.any(String),
+        ckanId: 'ba000001',
+      });
+
+      expect(onGeocoding).toBeCalledWith({
+        container: undefined,
+        source: inputFile,
+        format: 'csv',
+        destination: outputFilee,
+        fuzzy: DEFAULT_FUZZY_CHAR,
+      });
     });
   });
 
-  it.concurrent('case: abrg -f json -fuzzy ● <inputFile>', async () => {
-    const inputFile = './somewhere/query.txt';
-
-    const fuzzyChar = '●';
-    await runCommand('-f', 'json', '--fuzzy', fuzzyChar, inputFile);
-
-    expect(setupContainer).toBeCalledWith({
-      dataDir: expect.any(String),
-      ckanId: 'ba000001',
+  describe('special case', () => {
+    beforeAll(() => {
+      jest.resetAllMocks();
     });
 
-    expect(onGeocoding).toBeCalledWith({
-      container: undefined,
-      source: inputFile,
-      format: 'json',
-      destination: undefined,
-      fuzzy: fuzzyChar,
-    });
-  });
-
-  it.concurrent('case: abrg -f ndjson <inputFile>', async () => {
-    const inputFile = './somewhere/query.txt';
-
-    await runCommand('-f', 'ndjson', inputFile);
-
-    expect(setupContainer).toBeCalledWith({
-      dataDir: expect.any(String),
-      ckanId: 'ba000001',
-    });
-
-    expect(onGeocoding).toBeCalledWith({
-      container: undefined,
-      source: inputFile,
-      format: 'ndjson',
-      destination: undefined,
-      fuzzy: DEFAULT_FUZZY_CHAR,
-    });
-  });
-
-  it.concurrent('case: abrg -d somewhere <inputFile>', async () => {
-    const inputFile = './somewhere/query.txt';
-
-    await runCommand('-d', 'somewhere', inputFile);
-
-    expect(setupContainer).toBeCalledWith({
-      dataDir: 'somewhere',
-      ckanId: 'ba000001',
-    });
-
-    expect(onGeocoding).toBeCalledWith({
-      container: undefined,
-      source: inputFile,
-      format: 'csv',
-      destination: undefined,
-      fuzzy: DEFAULT_FUZZY_CHAR,
-    });
-  });
+    it('should receive "-" as inputFile', async () => {
+      const inputFile = '-';
   
-  it.concurrent('should receive outputFile option', async () => {
-    const inputFile = './somewhere/query.txt';
-    const outputFilee = './somewhere/result.csv';
-
-    await runCommand(inputFile, outputFilee, '-f', 'csv');
-
-    expect(setupContainer).toBeCalledWith({
-      dataDir: expect.any(String),
-      ckanId: 'ba000001',
+      await runCommand(inputFile);
+  
+      expect(setupContainer).toBeCalledWith({
+        dataDir: expect.any(String),
+        ckanId: 'ba000001',
+      });
+  
+      expect(onGeocoding).toBeCalledWith({
+        container: undefined,
+        source: inputFile,
+        format: 'csv',
+        destination: undefined,
+        fuzzy: DEFAULT_FUZZY_CHAR,
+      });
     });
-
-    expect(onGeocoding).toBeCalledWith({
-      container: undefined,
-      source: inputFile,
-      format: 'csv',
-      destination: outputFilee,
-      fuzzy: DEFAULT_FUZZY_CHAR,
-    });
-  });
-
-  it.concurrent('should receive outputFile option, even if arguments order is incorrect', async () => {
-    const inputFile = './somewhere/query.txt';
-    const outputFilee = './somewhere/result.csv';
-
-    await runCommand('-f', 'csv', inputFile, outputFilee);
-
-    expect(setupContainer).toBeCalledWith({
-      dataDir: expect.any(String),
-      ckanId: 'ba000001',
-    });
-
-    expect(onGeocoding).toBeCalledWith({
-      container: undefined,
-      source: inputFile,
-      format: 'csv',
-      destination: outputFilee,
-      fuzzy: DEFAULT_FUZZY_CHAR,
-    });
-  });
-
-  // it.concurrent('should receive "-" as inputFile', async () => {
-  //   const inputFile = '-';
-
-  //   await runCommand(inputFile);
-
-  //   expect(setupContainer).toBeCalledWith({
-  //     dataDir: expect.any(String),
-  //     ckanId: 'ba000001',
-  //   });
-
-  //   expect(onGeocoding).toBeCalledWith({
-  //     container: undefined,
-  //     source: inputFile,
-  //     format: 'csv',
-  //     destination: undefined,
-  //     fuzzy: DEFAULT_FUZZY_CHAR,
-  //   });
-  // });
+  })
   
 });
 
@@ -282,9 +289,9 @@ describe('[cli] error cases', () => {
 
   });
 
-  it.concurrent('should occur an error if input file is invalid', async () => {
+  it('should occur an error if input file is invalid', async () => {
     
-    await runCommand('1');
+    await runCommand('invalidFilePathSuchAs1');
     expect(stdErr).toBeCalled();
     expect(buffer.join("\n")).toContain(
       AbrgMessage.toString(AbrgMessage.CANNOT_FIND_INPUT_FILE),

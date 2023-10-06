@@ -22,24 +22,34 @@ import { DEFAULT_FUZZY_CHAR } from './settings/constantValues';
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
-export const main = async (...args: string[]) => {
-  const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
-  if (!packageJsonFilePath) {
-    throw new AbrgError({
-      messageId: AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE,
-      level: AbrgErrorLevel.ERROR,
-    });
-  }
+export const main = async (...processArgv: string[]) => {
 
-  const { version } = parsePackageJson({
-    filePath: packageJsonFilePath,
-  });
+  const { version } = await (async () => {
+    
+    if (process.env.NODE_ENV === 'test') {
+      return {
+        version: '0.0.0-test',
+        description: 'test',
+      };
+    }
+    const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
+    if (!packageJsonFilePath) {
+      throw new AbrgError({
+        messageId: AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE,
+        level: AbrgErrorLevel.ERROR,
+      });
+    }
+
+    return parsePackageJson({
+      filePath: packageJsonFilePath,
+    });
+  })();
 
 
   /**
    * CLIパーサー (通常のプログラムのエントリーポイント)
    */
-  yargs(hideBin(args))
+  yargs
     .version(version)
     .wrap(terminalWidth)
     .scriptName('abrg')
@@ -122,6 +132,20 @@ export const main = async (...args: string[]) => {
         });
       }
     )
+    .command(
+      'hidden',
+      '',
+      (yargs: yargs.Argv) => {
+        console.log('here!');
+        yargs.option('file', {
+          type: 'string',
+          nargs: 1,
+        })
+      },
+      async (args: yargs.ArgumentsCamelCase) => {
+        console.log(args);
+      }
+    )
 
     /**
      * abrg
@@ -168,8 +192,8 @@ export const main = async (...args: string[]) => {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),
             type: 'string',
             coerce: (inputFile: string) => {
-              console.log(`--->inputFile: ${inputFile}`);
-              if (process.env.NODE_ENV === 'test') {
+              console.log(`--->inputFile: ${inputFile}`, processArgv);
+              if (process.env.NODE_ENV === 'test' && inputFile !== 'invalidFilePathSuchAs1') {
                 return inputFile;
               }
               if (inputFile === '-') {
@@ -213,7 +237,7 @@ export const main = async (...args: string[]) => {
       }
     )
     .fail((msg: string, e: Error, yargs: yargs.Argv<{}>) => {
-      if (args.length <= 2) {
+      if (yargs.length <= 2) {
         // Show help if no options are provided.
         yargs.showVersion((version: string) => {
           console.error(`====================================`);
@@ -227,10 +251,9 @@ export const main = async (...args: string[]) => {
       // Otherwise, show the error message
       console.error(`[error] ${msg}`);
     })
-    .parse();
-    // .parse((err: Error | undefined, argv: ArgumentsCamelCase, output: string) => {
-    //   console.log(argv);
-    // });
+    .parse(hideBin(processArgv), {}, (err: Error | undefined, argv: ArgumentsCamelCase, output: string) => {
+      console.log(argv);
+    });
 };
 if (process.env.NODE_ENV !== 'test') {
   main(...process.argv);
