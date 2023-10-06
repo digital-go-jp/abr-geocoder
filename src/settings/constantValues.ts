@@ -46,3 +46,6 @@ export const SPACE_SYMBOLS: string = [
   ' ', // 半角スペース
   '　', // 全角スペース
 ].join('');
+
+// ワイルドカードとしてマッチングさせる1文字
+export const DEFAULT_FUZZY_CHAR: string = '?';
