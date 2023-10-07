@@ -67,7 +67,6 @@ jobs:
           junitxml-path: ./coverage/junit.xml
           coverage-title: Coverage Details
           coverage-path: ./coverage/coverage.txt
-          coverage-path-prefix: src/
   
       - name: build test
         shell: bash
