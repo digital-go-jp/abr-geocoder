@@ -197,8 +197,8 @@ export class CkanDownloader extends EventEmitter {
       return downloadFilePath;
     }
 
-    const downloaderEmit = (eventName: string, data: any) => {
-      this.emit(eventName, data);
+    const downloaderEmit = (eventName: string, ...args: unknown[]) => {
+      this.emit(eventName, ...args);
     };
 
     let fsPointer = startAt;

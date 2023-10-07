@@ -71,7 +71,10 @@ export class StreamGeocoder extends Transform {
      */
     const insertWildcardMatching = (string: string) => {
       return string.replace(
-        RegExpEx.create(`(?<!\\[[^\\]]*)([一-龯ぁ-んァ-ン])(?!\\${fuzzy})`, 'g'),
+        RegExpEx.create(
+          `(?<!\\[[^\\]]*)([一-龯ぁ-んァ-ン])(?!\\${fuzzy})`,
+          'g'
+        ),
         `($1|\\${fuzzy})`
       );
     };

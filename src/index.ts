@@ -16,18 +16,25 @@ import {
   OutputFormat,
   bubblingFindFile,
 } from './domain';
-import { packageJsonMeta, parsePackageJson, setupContainer } from './interface-adapter';
-import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from './settings/constantValues';
+import {
+  packageJsonMeta,
+  parsePackageJson,
+  setupContainer,
+} from './interface-adapter';
+import {
+  DEFAULT_FUZZY_CHAR,
+  SINGLE_DASH_ALTERNATIVE,
+} from './settings/constantValues';
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
-// yargs が　'-' を解析できないので、別の文字に置き換える
+// yargs が '-' を解析できないので、別の文字に置き換える
 export const parseHelper = (processArgv: string[]): string[] => {
   const result: string[] = [];
   const stack: string[] = [' '];
-  for (let arg of processArgv) {
-    for (let char of arg) {
+  for (const arg of processArgv) {
+    for (const char of arg) {
       if (char === ' ' && stack.at(-1) === ' ') {
         continue;
       }
@@ -38,7 +45,7 @@ export const parseHelper = (processArgv: string[]): string[] => {
     }
   }
 
-  let buffer: string[] = [];
+  const buffer: string[] = [];
   while (stack.length > 0) {
     const char = stack.pop();
     if (char === undefined) {
@@ -63,7 +70,9 @@ export const parseHelper = (processArgv: string[]): string[] => {
   return result;
 };
 
-export const getPackageInfo = async (nodeEnv?: string): Promise<packageJsonMeta> => {
+export const getPackageInfo = async (
+  nodeEnv?: string
+): Promise<packageJsonMeta> => {
   if (nodeEnv === 'test') {
     return {
       version: '0.0.0-test',
@@ -82,13 +91,12 @@ export const getPackageInfo = async (nodeEnv?: string): Promise<packageJsonMeta>
   return parsePackageJson({
     filePath: packageJsonFilePath,
   });
-}
+};
 
 export const main = async (
   nodeEnv: string | undefined,
   ...processArgv: string[]
 ) => {
-
   const { version } = await getPackageInfo(nodeEnv);
   const parsedArgs = parseHelper(processArgv);
 
@@ -225,12 +233,12 @@ export const main = async (
             type: 'string',
             coerce: (inputFile: string) => {
               if (
-                inputFile === SINGLE_DASH_ALTERNATIVE || 
-                nodeEnv === 'test' && inputFile !== 'invalidFilePathSuchAs1'
+                inputFile === SINGLE_DASH_ALTERNATIVE ||
+                (nodeEnv === 'test' && inputFile !== 'invalidFilePathSuchAs1')
               ) {
                 return inputFile;
               }
-              
+
               if (fs.existsSync(inputFile)) {
                 return inputFile;
               }
@@ -238,16 +246,15 @@ export const main = async (
                 messageId: AbrgMessage.CANNOT_FIND_INPUT_FILE,
                 level: AbrgErrorLevel.ERROR,
               });
-            }
+            },
           })
           .positional('outputFile', {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_OUTPUT_FILE),
             type: 'string',
             default: undefined,
-          })
+          });
       },
       async argv => {
-        
         // Prevent users from running this command without options.
         // i.e. $> abrg
         if (!argv['inputFile']) {
@@ -272,9 +279,9 @@ export const main = async (
       if (parsedArgs.length <= 2) {
         // Show help if no options are provided.
         yargs.showVersion((version: string) => {
-          console.error(`====================================`);
+          console.error('====================================');
           console.error(`= abr-geocoder version: ${version}`);
-          console.error(`====================================`);
+          console.error('====================================');
         });
         yargs.showHelp();
         return;
