@@ -47,10 +47,7 @@ export const parseHelper = (processArgv: string[]): string[] => {
 
   const buffer: string[] = [];
   while (stack.length > 0) {
-    const char = stack.pop();
-    if (char === undefined) {
-      continue;
-    }
+    const char = stack.pop()!;
 
     if (char !== ' ') {
       buffer.unshift(char);
@@ -70,16 +67,7 @@ export const parseHelper = (processArgv: string[]): string[] => {
   return result;
 };
 
-export const getPackageInfo = async (
-  nodeEnv?: string
-): Promise<packageJsonMeta> => {
-  if (nodeEnv === 'test') {
-    return {
-      version: '0.0.0-test',
-      description: 'test',
-    };
-  }
-
+export const getPackageInfo = async (): Promise<packageJsonMeta> => {
   const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
   if (!packageJsonFilePath) {
     throw new AbrgError({
@@ -97,7 +85,7 @@ export const main = async (
   nodeEnv: string | undefined,
   ...processArgv: string[]
 ) => {
-  const { version } = await getPackageInfo(nodeEnv);
+  const { version } = await getPackageInfo();
   const parsedArgs = parseHelper(processArgv);
 
   /**

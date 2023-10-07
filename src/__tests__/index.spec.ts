@@ -3,8 +3,8 @@ import 'reflect-metadata';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { onDownload, onGeocoding, onUpdateCheck } from '../controllers';
-import { AbrgMessage } from '../domain';
-import { main, parseHelper } from '../index';
+import { AbrgError, AbrgMessage, bubblingFindFile } from '../domain';
+import { getPackageInfo, main, parseHelper } from '../index';
 import { setupContainer } from '../interface-adapter';
 import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '../settings/constantValues';
 
@@ -24,7 +24,36 @@ jest.mock('../controllers', () => ({
 }));
 jest.mock('../interface-adapter', () => ({
   setupContainer: jest.fn(),
+  parsePackageJson: jest.fn().mockReturnValue({
+    version: '0.0.0',
+    description: 'unit test'
+  }),
 }));
+
+describe('getPackageInfo', () => {
+  it('should occur an error if bubblingFindFile() returns undefined', async () => {
+
+    await expect(getPackageInfo())
+    .resolves
+    .toMatchObject({
+      version: '0.0.0',
+      description: 'unit test'
+    });
+  });
+
+  it('should occur an error if bubblingFindFile() returns undefined', async () => {
+    const orgMock = (bubblingFindFile as jest.Mock).getMockImplementation;
+    (bubblingFindFile as jest.Mock).mockImplementation(async () => {
+      return undefined;
+    });
+
+    await expect(getPackageInfo())
+    .rejects
+    .toThrow(AbrgMessage.toString(AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE));
+
+    (bubblingFindFile as jest.Mock).mockImplementation(orgMock);
+  });
+});
 
 describe('parseHelper', () => {
   it.concurrent('should receive [node, abrg]', async () => {
@@ -263,34 +292,32 @@ describe('[cli] geocoding', () => {
     });
   });
 
-  describe('special case', () => {
-    beforeAll(() => {
-      jest.resetAllMocks();
-    });
-
-    it('should receive "-" as inputFile', async () => {
-      const inputFile = '-';
-  
-      await runCommand(inputFile);
-  
-      expect(setupContainer).toBeCalledWith({
-        dataDir: expect.any(String),
-        ckanId: 'ba000001',
-      });
-  
-      expect(onGeocoding).toBeCalledWith({
-        container: undefined,
-        source: SINGLE_DASH_ALTERNATIVE,
-        format: 'csv',
-        destination: undefined,
-        fuzzy: DEFAULT_FUZZY_CHAR,
-      });
-    });
-  })
-  
 });
 
-describe('[cli] error cases', () => {
+describe('[cli] special cases', () => {
+
+  beforeAll(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should receive "-" as inputFile', async () => {
+    const inputFile = '-';
+
+    await runCommand(inputFile);
+
+    expect(setupContainer).toBeCalledWith({
+      dataDir: expect.any(String),
+      ckanId: 'ba000001',
+    });
+
+    expect(onGeocoding).toBeCalledWith({
+      container: undefined,
+      source: SINGLE_DASH_ALTERNATIVE,
+      format: 'csv',
+      destination: undefined,
+      fuzzy: DEFAULT_FUZZY_CHAR,
+    });
+  });
 
   it('should show the command help if no arguments', async () => {
     const buffer: string[] = [];
