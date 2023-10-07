@@ -23,6 +23,7 @@ import {
 } from '../../interface-adapter';
 import { getReadStreamFromSource } from '../../usecase/';
 import { StreamGeocoder } from './StreamGeocoder.class';
+import { SINGLE_DASH_ALTERNATIVE } from '../../settings/constantValues';
 
 export const onGeocoding = async ({
   source,
@@ -77,7 +78,7 @@ export const onGeocoding = async ({
   // 出力先（ファイル or stdout）の選択
   const outputStream: Writable = (destination => {
     if (
-      destination === '-' ||
+      destination === SINGLE_DASH_ALTERNATIVE ||
       destination === '' ||
       destination === undefined
     ) {

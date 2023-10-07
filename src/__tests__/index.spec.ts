@@ -4,9 +4,9 @@ import 'reflect-metadata';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { onDownload, onGeocoding, onUpdateCheck } from '../controllers';
 import { AbrgMessage } from '../domain';
-import { main } from '../index';
+import { main, parseHelper } from '../index';
 import { setupContainer } from '../interface-adapter';
-import { DEFAULT_FUZZY_CHAR } from '../settings/constantValues';
+import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '../settings/constantValues';
 
 
 jest.mock('../domain', () => {
@@ -24,11 +24,35 @@ jest.mock('../controllers', () => ({
 }));
 jest.mock('../interface-adapter', () => ({
   setupContainer: jest.fn(),
-  parsePackageJson: jest.fn().mockReturnValue({
-    version: '0.0.0',
-    description: 'unit test'
-  })
 }));
+
+describe('parseHelper', () => {
+  it.concurrent('should receive [node, abrg]', async () => {
+    const processArgv = ['node', 'abrg'];
+    const results = parseHelper(processArgv);
+    expect(results).toEqual(['node', 'abrg']);
+  });
+  it.concurrent('should receive [node, abrg, update-check]', async () => {
+    const processArgv = ['node', 'abrg', 'update-check'];
+    const results = parseHelper(processArgv);
+    expect(results).toEqual(['node', 'abrg', 'update-check']);
+  });
+  it.concurrent('should receive [node, abrg, update-check] even if arguments are not formatted', async () => {
+    const processArgv = ['node    abrg    update-check'];
+    const results = parseHelper(processArgv);
+    expect(results).toEqual(['node', 'abrg', 'update-check']);
+  });
+  it.concurrent('should receive [node, abrg, update-check, -d, 1234]', async () => {
+    const processArgv = ['node', 'abrg', 'update-check', '-d 1234'];
+    const results = parseHelper(processArgv);
+    expect(results).toEqual(['node', 'abrg', 'update-check', '-d', '1234']);
+  });
+  it.concurrent('should receive [node, abrg, -d, 1234,  update-check]', async () => {
+    const processArgv = ['node', 'abrg', '-d 1234', 'update-check'];
+    const results = parseHelper(processArgv);
+    expect(results).toEqual(['node', 'abrg', '-d', '1234', 'update-check']);
+  });
+});
 
 describe('[cli]update-check', () => {
 
@@ -256,7 +280,7 @@ describe('[cli] geocoding', () => {
   
       expect(onGeocoding).toBeCalledWith({
         container: undefined,
-        source: inputFile,
+        source: SINGLE_DASH_ALTERNATIVE,
         format: 'csv',
         destination: undefined,
         fuzzy: DEFAULT_FUZZY_CHAR,
@@ -309,5 +333,5 @@ const runCommand = async (...args: string[]) => {
   ];
 
   // Require the yargs CLI script
-  return await main(...dummyArgv);
+  return await main('test', ...dummyArgv);
 }

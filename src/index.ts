@@ -3,12 +3,12 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import fs from 'node:fs';
-import yargs, { ArgumentsCamelCase, MiddlewareFunction } from 'yargs';
+import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { onDownload, onUpdateCheck, onGeocoding } from './controllers';
+import { onDownload, onGeocoding, onUpdateCheck } from './controllers';
 import {
   AbrgError,
   AbrgErrorLevel,
@@ -16,35 +16,81 @@ import {
   OutputFormat,
   bubblingFindFile,
 } from './domain';
-import { parsePackageJson, setupContainer } from './interface-adapter';
-import { DEFAULT_FUZZY_CHAR } from './settings/constantValues';
+import { packageJsonMeta, parsePackageJson, setupContainer } from './interface-adapter';
+import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from './settings/constantValues';
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
-export const main = async (...processArgv: string[]) => {
-
-  const { version } = await (async () => {
-    
-    if (process.env.NODE_ENV === 'test') {
-      return {
-        version: '0.0.0-test',
-        description: 'test',
-      };
+// yargs が　'-' を解析できないので、別の文字に置き換える
+export const parseHelper = (processArgv: string[]): string[] => {
+  const result: string[] = [];
+  const stack: string[] = [' '];
+  for (let arg of processArgv) {
+    for (let char of arg) {
+      if (char === ' ' && stack.at(-1) === ' ') {
+        continue;
+      }
+      stack.push(char);
     }
-    const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
-    if (!packageJsonFilePath) {
-      throw new AbrgError({
-        messageId: AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE,
-        level: AbrgErrorLevel.ERROR,
-      });
+    if (stack.at(-1) !== ' ') {
+      stack.push(' ');
+    }
+  }
+
+  let buffer: string[] = [];
+  while (stack.length > 0) {
+    const char = stack.pop();
+    if (char === undefined) {
+      continue;
     }
 
-    return parsePackageJson({
-      filePath: packageJsonFilePath,
+    if (char !== ' ') {
+      buffer.unshift(char);
+      continue;
+    }
+
+    if (buffer.length === 0) {
+      continue;
+    }
+    let word = buffer.join('');
+    if (word === '-') {
+      word = SINGLE_DASH_ALTERNATIVE;
+    }
+    result.unshift(word);
+    buffer.length = 0;
+  }
+  return result;
+};
+
+export const getPackageInfo = async (nodeEnv?: string): Promise<packageJsonMeta> => {
+  if (nodeEnv === 'test') {
+    return {
+      version: '0.0.0-test',
+      description: 'test',
+    };
+  }
+
+  const packageJsonFilePath = await bubblingFindFile(__dirname, 'package.json');
+  if (!packageJsonFilePath) {
+    throw new AbrgError({
+      messageId: AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE,
+      level: AbrgErrorLevel.ERROR,
     });
-  })();
+  }
 
+  return parsePackageJson({
+    filePath: packageJsonFilePath,
+  });
+}
+
+export const main = async (
+  nodeEnv: string | undefined,
+  ...processArgv: string[]
+) => {
+
+  const { version } = await getPackageInfo(nodeEnv);
+  const parsedArgs = parseHelper(processArgv);
 
   /**
    * CLIパーサー (通常のプログラムのエントリーポイント)
@@ -132,20 +178,6 @@ export const main = async (...processArgv: string[]) => {
         });
       }
     )
-    .command(
-      'hidden',
-      '',
-      (yargs: yargs.Argv) => {
-        console.log('here!');
-        yargs.option('file', {
-          type: 'string',
-          nargs: 1,
-        })
-      },
-      async (args: yargs.ArgumentsCamelCase) => {
-        console.log(args);
-      }
-    )
 
     /**
      * abrg
@@ -192,13 +224,13 @@ export const main = async (...processArgv: string[]) => {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),
             type: 'string',
             coerce: (inputFile: string) => {
-              console.log(`--->inputFile: ${inputFile}`, processArgv);
-              if (process.env.NODE_ENV === 'test' && inputFile !== 'invalidFilePathSuchAs1') {
+              if (
+                inputFile === SINGLE_DASH_ALTERNATIVE || 
+                nodeEnv === 'test' && inputFile !== 'invalidFilePathSuchAs1'
+              ) {
                 return inputFile;
               }
-              if (inputFile === '-') {
-                return '-';
-              }
+              
               if (fs.existsSync(inputFile)) {
                 return inputFile;
               }
@@ -237,7 +269,7 @@ export const main = async (...processArgv: string[]) => {
       }
     )
     .fail((msg: string, e: Error, yargs: yargs.Argv<{}>) => {
-      if (yargs.length <= 2) {
+      if (parsedArgs.length <= 2) {
         // Show help if no options are provided.
         yargs.showVersion((version: string) => {
           console.error(`====================================`);
@@ -251,10 +283,8 @@ export const main = async (...processArgv: string[]) => {
       // Otherwise, show the error message
       console.error(`[error] ${msg}`);
     })
-    .parse(hideBin(processArgv), {}, (err: Error | undefined, argv: ArgumentsCamelCase, output: string) => {
-      console.log(argv);
-    });
+    .parse(hideBin(parsedArgs));
 };
 if (process.env.NODE_ENV !== 'test') {
-  main(...process.argv);
+  main(process.env.NODE_ENV, ...process.argv);
 }
