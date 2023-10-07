@@ -291,35 +291,36 @@ describe('[cli] geocoding', () => {
 });
 
 describe('[cli] error cases', () => {
-  const buffer: string[] = [];
-  const stdErr = jest.spyOn(console, 'error').mockImplementation(
-    (line: string) => {
-      buffer.push(line);
-    });
 
-  beforeEach(() => {
-    buffer.length = 0;
-    stdErr.mockClear();
-  })
-
-  afterAll(() => {
-    stdErr.mockRestore();
-  })
-  
   it('should show the command help if no arguments', async () => {
+    const buffer: string[] = [];
+    const stdErr = jest.spyOn(console, 'error').mockImplementation(
+      (line: string) => {
+        buffer.push(line);
+      });
+
+
     await runCommand();
     expect(stdErr).toBeCalled();
     expect(buffer.join("\n")).toContain('abr-geocoder version');
 
+    stdErr.mockRestore();
   });
 
   it('should occur an error if input file is invalid', async () => {
     
+    const buffer: string[] = [];
+    const stdErr = jest.spyOn(console, 'error').mockImplementation(
+      (line: string) => {
+        buffer.push(line);
+      });
+
     await runCommand('invalidFilePathSuchAs1');
     expect(stdErr).toBeCalled();
     expect(buffer.join("\n")).toContain(
       AbrgMessage.toString(AbrgMessage.CANNOT_FIND_INPUT_FILE),
     );
+    stdErr.mockRestore();
   });
   
 });
