@@ -1,8 +1,8 @@
-import stream from "node:stream";
+import { describe, expect, it, jest } from '@jest/globals';
 import fs from "node:fs";
-import { getReadStreamFromSource } from '../../../usecase';
-import { SINGLE_DASH_ALTERNATIVE } from "../../../settings/constantValues";
 import { AbrgError, AbrgErrorLevel, AbrgMessage } from "../../../domain";
+import { SINGLE_DASH_ALTERNATIVE } from "../../../settings/constantValues";
+import { getReadStreamFromSource } from '../../../usecase';
 
 describe('getReadStreamFromSource', () => {
   it.concurrent('should return process.stdin if the command is involved by "abrg -"', async () => {
