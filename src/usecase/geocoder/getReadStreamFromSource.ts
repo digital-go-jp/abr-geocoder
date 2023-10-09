@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 import { AbrgError, AbrgErrorLevel, AbrgMessage } from '../../domain';
+import { SINGLE_DASH_ALTERNATIVE } from '../../settings/constantValues';
 
 export const getReadStreamFromSource = (
   source: string
 ): NodeJS.ReadStream | fs.ReadStream => {
-  if (source === '-') {
+  if (source === SINGLE_DASH_ALTERNATIVE) {
     // パイプ処理なしで、`abrg -` とされた場合はエラー
     if (process.stdin.isTTY) {
       throw new AbrgError({
