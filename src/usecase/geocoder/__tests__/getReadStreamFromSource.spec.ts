@@ -5,10 +5,12 @@ import { SINGLE_DASH_ALTERNATIVE } from "../../../settings/constantValues";
 import { getReadStreamFromSource } from '../../../usecase';
 
 describe('getReadStreamFromSource', () => {
-  it.concurrent('should return process.stdin if the command is involved by "abrg -"', async () => {
-    const orgStdIn = process.stdin;
-    jest.replaceProperty(orgStdIn, 'isTTY', false);
-    Object.defineProperty(orgStdIn, 'isDummy', {
+  it('should return process.stdin if the command is involved by "abrg -"', () => {
+    const orgStdIn = Object.create(process.stdin);
+    Reflect.defineProperty(orgStdIn, 'isTTY', {
+      value: false,
+    });
+    Reflect.defineProperty(orgStdIn, 'isDummy', {
       value: true,
     });
     
@@ -17,11 +19,14 @@ describe('getReadStreamFromSource', () => {
     expect((result as any).isDummy).toEqual(true);
 
     mockStdIn.mockRestore();
+    Reflect.deleteProperty(orgStdIn, 'isTTY');
   });
-  it.concurrent('should throw an error if the command is involved by "abrg -" and process.stdin.isTTY', async () => {
-    const orgStdIn = process.stdin;
-    jest.replaceProperty(orgStdIn, 'isTTY', true);
-    Object.defineProperty(orgStdIn, 'isDummy', {
+  it('should throw an error if the command is involved by "abrg -" and process.stdin.isTTY', () => {
+    const orgStdIn = Object.create(process.stdin);
+    Reflect.defineProperty(orgStdIn, 'isTTY', {
+      value: true,
+    });
+    Reflect.defineProperty(orgStdIn, 'isDummy', {
       value: true,
     });
     
@@ -34,14 +39,15 @@ describe('getReadStreamFromSource', () => {
     }));
 
     mockStdIn.mockRestore();
+    Reflect.deleteProperty(orgStdIn, 'isTTY');
   });
 
-  it.concurrent('should return fs.ReadStream if source is a valid file', async () => {
+  it('should return fs.ReadStream if source is a valid file', () => {
     const result = getReadStreamFromSource(__filename);
     expect(result).toBeInstanceOf(fs.ReadStream);
   });
 
-  it.concurrent('should occur an error if source is invalid file path.', async () => {
+  it('should occur an error if source is invalid file path.', () => {
     expect(() => {
       getReadStreamFromSource('somewhere');
     }).toThrow(new AbrgError({
