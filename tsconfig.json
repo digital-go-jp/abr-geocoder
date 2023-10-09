@@ -23,10 +23,10 @@
     "moduleResolution": "nodenext",
   },
   "include": [
-    "src/**/*.ts", "src/usecase/downloader",
+    "src/**/*.ts",
   ],
   "exclude": [
-    "src/**.skip.ts",
+    "src/**/__tests__/*",
     "node_modules/**/*"
   ]
 }

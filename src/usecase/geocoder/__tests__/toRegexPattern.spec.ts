@@ -1,11 +1,11 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import { jisKanji } from '../../../domain';
 import { toRegexPattern } from '../../geocoder';
 
 
 jest.mock('../../../domain', () => ({
-  ...(jest.requireActual('../../../domain')),
-  jisKanji: jest.fn().mockImplementation((text: string) => {
+  ...(jest.requireActual('../../../domain') as typeof import('../../../domain')),
+  jisKanji: jest.fn().mockImplementation((text) => {
     return text;
   }),
 }))
