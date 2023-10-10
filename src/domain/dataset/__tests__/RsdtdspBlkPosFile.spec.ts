@@ -1,8 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
+import { RsdtdspBlkPosFile } from '../..';
 import { IStreamReady } from '../../findTargetFilesInZipFiles';
 import { IDatasetFileMeta } from '../../types';
 import { DataField } from '../DataField';
-import { RsdtdspBlkPosFile } from '../..';
 
 describe('RsdtdspBlkPosFile', () => {
   it.concurrent('should create an instance', async () => {
