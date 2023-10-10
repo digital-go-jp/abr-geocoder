@@ -7,8 +7,8 @@ import { RsdtdspBlkPosFile, RsdtdspRsdtFile } from '../..';
 describe('RsdtdspRsdtFile', () => {
   it.concurrent('should create an instance', async () => {
     const fileMeta: IDatasetFileMeta = {
-      type: 'rsdtdsp_blk_pos',
-      fileArea: 'pref01',
+      type: 'rsdtdsp_rsdt',
+      fileArea: 'pref02',
       path: 'dummy',
       filename: 'mt_rsdtdsp_rsdt_pref02.csv',
     };
@@ -55,8 +55,8 @@ describe('RsdtdspRsdtFile', () => {
 
   it.concurrent('should return expected values from a given row', async () => {
     const fileMeta: IDatasetFileMeta = {
-      type: 'rsdtdsp_blk_pos',
-      fileArea: 'pref01',
+      type: 'rsdtdsp_rsdt',
+      fileArea: 'pref02',
       path: 'dummy',
       filename: 'mt_rsdtdsp_rsdt_pref02.csv',
     };
