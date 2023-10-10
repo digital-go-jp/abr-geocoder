@@ -1,9 +1,9 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { onDownload, onGeocoding, onUpdateCheck } from '../controllers';
-import { AbrgError, AbrgMessage, bubblingFindFile } from '../domain';
+import { AbrgMessage, bubblingFindFile } from '../domain';
 import { getPackageInfo, main, parseHelper } from '../index';
 import { setupContainer } from '../interface-adapter';
 import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '../settings/constantValues';
@@ -189,11 +189,30 @@ describe('[cli] geocoding', () => {
         source: inputFile,
         format: expect.any(String),
         destination: undefined,
+        fuzzy: undefined,
+      });
+    });
+
+    it.concurrent('case: abrg -f json -fuzzy <inputFile>', async () => {
+      const inputFile = './somewhere/query.txt';
+
+      await runCommand('-f', 'json', '--fuzzy', inputFile);
+
+      expect(setupContainer).toBeCalledWith({
+        dataDir: expect.any(String),
+        ckanId: 'ba000001',
+      });
+
+      expect(onGeocoding).toBeCalledWith({
+        container: undefined,
+        source: inputFile,
+        format: 'json',
+        destination: undefined,
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
     });
 
-    it.concurrent('case: abrg -f json -fuzzy ● <inputFile>', async () => {
+    it.concurrent('case: abrg -f json --fuzzy ● <inputFile>', async () => {
       const inputFile = './somewhere/query.txt';
 
       const fuzzyChar = '●';
@@ -228,7 +247,7 @@ describe('[cli] geocoding', () => {
         source: inputFile,
         format: 'ndjson',
         destination: undefined,
-        fuzzy: DEFAULT_FUZZY_CHAR,
+        fuzzy: undefined,
       });
     });
 
@@ -247,7 +266,7 @@ describe('[cli] geocoding', () => {
         source: inputFile,
         format: 'csv',
         destination: undefined,
-        fuzzy: DEFAULT_FUZZY_CHAR,
+        fuzzy: undefined,
       });
     });
     
@@ -267,7 +286,7 @@ describe('[cli] geocoding', () => {
         source: inputFile,
         format: 'csv',
         destination: outputFilee,
-        fuzzy: DEFAULT_FUZZY_CHAR,
+        fuzzy: undefined,
       });
     });
 
@@ -287,7 +306,7 @@ describe('[cli] geocoding', () => {
         source: inputFile,
         format: 'csv',
         destination: outputFilee,
-        fuzzy: DEFAULT_FUZZY_CHAR,
+        fuzzy: undefined,
       });
     });
   });
@@ -315,7 +334,7 @@ describe('[cli] special cases', () => {
       source: SINGLE_DASH_ALTERNATIVE,
       format: 'csv',
       destination: undefined,
-      fuzzy: DEFAULT_FUZZY_CHAR,
+      fuzzy: undefined,
     });
   });
 

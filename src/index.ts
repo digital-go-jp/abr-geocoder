@@ -31,17 +31,20 @@ const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 
 // yargs が '-' を解析できないので、別の文字に置き換える
 export const parseHelper = (processArgv: string[]): string[] => {
+  const SINGLE_SPACE = ' ';
+
   const result: string[] = [];
-  const stack: string[] = [' '];
+  const stack: string[] = [SINGLE_SPACE];
+
   for (const arg of processArgv) {
     for (const char of arg) {
-      if (char === ' ' && stack.at(-1) === ' ') {
+      if (char === SINGLE_SPACE && stack.at(-1) === SINGLE_SPACE) {
         continue;
       }
       stack.push(char);
     }
-    if (stack.at(-1) !== ' ') {
-      stack.push(' ');
+    if (stack.at(-1) !== SINGLE_SPACE) {
+      stack.push(SINGLE_SPACE);
     }
   }
 
@@ -49,7 +52,7 @@ export const parseHelper = (processArgv: string[]): string[] => {
   while (stack.length > 0) {
     const char = stack.pop()!;
 
-    if (char !== ' ') {
+    if (char !== SINGLE_SPACE) {
       buffer.unshift(char);
       continue;
     }
@@ -57,10 +60,24 @@ export const parseHelper = (processArgv: string[]): string[] => {
     if (buffer.length === 0) {
       continue;
     }
+
+    // Special replace cases
     let word = buffer.join('');
-    if (word === '-') {
-      word = SINGLE_DASH_ALTERNATIVE;
+    switch (word) {
+      case '-':
+        word = SINGLE_DASH_ALTERNATIVE;
+        break;
+
+      case '--fuzzy':
+        if ((result.length === 0) || (result[0].length !== 1)) {
+          result.unshift(DEFAULT_FUZZY_CHAR);
+        }
+        break;
+
+      default:
+        break;
     }
+    
     result.unshift(word);
     buffer.length = 0;
   }
@@ -186,7 +203,6 @@ export const main = async (
         return yargs
           .option('fuzzy', {
             type: 'string',
-            default: DEFAULT_FUZZY_CHAR,
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
             ),
