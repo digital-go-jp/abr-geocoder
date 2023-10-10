@@ -69,7 +69,7 @@ export const parseHelper = (processArgv: string[]): string[] => {
         break;
 
       case '--fuzzy':
-        if ((result.length === 0) || (result[0].length !== 1)) {
+        if (result.length === 0 || result[0].length !== 1) {
           result.unshift(DEFAULT_FUZZY_CHAR);
         }
         break;
@@ -77,7 +77,7 @@ export const parseHelper = (processArgv: string[]): string[] => {
       default:
         break;
     }
-    
+
     result.unshift(word);
     buffer.length = 0;
   }
@@ -235,7 +235,7 @@ export const main = async (
               OutputFormat.JSON,
               OutputFormat.NDJSON,
               OutputFormat.GEOJSON,
-              OutputFormat.NDGEOJSON
+              OutputFormat.NDGEOJSON,
             ],
           })
           .positional('inputFile', {
