@@ -210,11 +210,17 @@ export const main = async (
           .option('format', {
             alias: 'f',
             type: 'string',
-            default: 'csv',
+            default: OutputFormat.CSV,
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_GEOCODE_FORMAT_OPTION
             ),
-            choices: ['csv', 'json', 'ndjson', 'geojson', 'ndgeojson'],
+            choices: [
+              OutputFormat.CSV,
+              OutputFormat.JSON,
+              OutputFormat.NDGEOJSON,
+              OutputFormat.GEOJSON,
+              OutputFormat.NDGEOJSON
+            ],
           })
           .positional('inputFile', {
             describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),

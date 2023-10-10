@@ -59,10 +59,10 @@ export const onGeocoding = async ({
       case OutputFormat.GEOJSON:
         return container.resolve<GeoJsonTransform>(DI_TOKEN.GEOJSON_FORMATTER);
 
-      case OutputFormat.ND_JSON:
+      case OutputFormat.NDJSON:
         return container.resolve<NdJsonTransform>(DI_TOKEN.ND_JSON_FORMATTER);
 
-      case OutputFormat.ND_GEOJSON:
+      case OutputFormat.NDGEOJSON:
         return container.resolve<NdGeoJsonTransform>(
           DI_TOKEN.ND_GEOJSON_FORMATTER
         );
