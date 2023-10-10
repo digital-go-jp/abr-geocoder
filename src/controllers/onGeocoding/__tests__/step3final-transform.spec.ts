@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import { FromStep3Type, Query } from '../../../domain';
 import { GeocodingStep3Final } from '../step3final-transform';
 
-describe('step3final-transform', () => {
+describe('GeocodingStep3Final', () => {
   it.concurrent('should involve the callback of the chunk', async () => {
     
     const fromStep3: FromStep3Type = {

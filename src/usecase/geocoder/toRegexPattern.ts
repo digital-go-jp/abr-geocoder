@@ -4,7 +4,7 @@ import { RegExpEx, jisKanji } from '../../domain';
  * オリジナルコード
  * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/dict.ts#L25C1-L61C1
  */
-export const toRegexPattern = (address: string) => {
+export const toRegexPattern = (address: string): string => {
   // 以下なるべく文字数が多いものほど上にすること
   address = address
     .replace(RegExpEx.create('三栄町|四谷三栄町', 'g'), '(三栄町|四谷三栄町)')

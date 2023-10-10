@@ -25,7 +25,7 @@ describe('RsdtdspRsdtFile', () => {
     const instance = RsdtdspRsdtFile.create(fileMeta, istreamReady);
     expect(instance).not.toBeNull();
     expect(instance.filename).toBe('mt_rsdtdsp_rsdt_pref02.csv');
-    expect(instance.type).toBe('rsdtdsp_blk_pos');
+    expect(instance.type).toBe('rsdtdsp_rsdt');
     expect(instance.fields).toEqual([
       DataField.LG_CODE,
       DataField.TOWN_ID,
