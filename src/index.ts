@@ -217,7 +217,7 @@ export const main = async (
             choices: [
               OutputFormat.CSV,
               OutputFormat.JSON,
-              OutputFormat.NDGEOJSON,
+              OutputFormat.NDJSON,
               OutputFormat.GEOJSON,
               OutputFormat.NDGEOJSON
             ],
