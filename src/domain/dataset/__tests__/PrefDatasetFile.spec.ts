@@ -14,7 +14,7 @@ describe('PrefDatasetFile', () => {
     };
 
     const istreamReady: IStreamReady = {
-      name: 'mt_city_all.csv',
+      name: 'mt_pref_all.csv',
       crc32: 123456,
       contentLength: 123456,
       lastModified: 123456,
@@ -42,11 +42,11 @@ describe('PrefDatasetFile', () => {
       type: 'city',
       fileArea: 'all',
       path: 'dummy',
-      filename: 'mt_city_all.csv',
+      filename: 'mt_pref_all.csv',
     };
 
     const istreamReady: IStreamReady = {
-      name: 'mt_city_all.csv',
+      name: 'mt_pref_all.csv',
       crc32: 123456,
       contentLength: 123456,
       lastModified: 123456,
