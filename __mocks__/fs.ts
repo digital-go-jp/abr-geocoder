@@ -12,9 +12,9 @@ export const promises = {
   rm: jest.fn(async () => {
     return Promise.resolve();
   }),
-  readFile: (filename: string) => {
-    console.log(`--->filename=${filename}`);
-  },
+  readFile: jest.fn(async () => {
+    return Promise.resolve();
+  }),
 };
 
 export const createWriteStream = jest.fn(() => {
