@@ -19,6 +19,7 @@ module.exports = {
   ],
   moduleNameMapper: {
     'node:fs': '<rootDir>/__mocks__/fs.ts',
+    'node:os': '<rootDir>/__mocks__/os.ts',
   },
   roots: ['<rootDir>/src/','<rootDir>/__mocks__'],
   testRegex: './src/.*\\.(test|spec)?\\.ts$',
