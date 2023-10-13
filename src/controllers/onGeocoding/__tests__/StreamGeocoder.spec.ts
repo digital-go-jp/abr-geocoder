@@ -25,8 +25,8 @@ const mockedJisKanji = JisKanji as jest.Mocked<typeof JisKanji>;
 mockedJisKanji.replaceAll.mockReturnValue('');
 
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
+import { default as MockedBetterSqlite3 } from '../../../../__mocks__/better-sqlite3';
 import { Readable } from 'node:stream';
-import { PrefectureName } from '../../../domain/types/';
 import * as PATCHES from '../../../settings/patchPatterns';
 import {
   getCityPatternsForEachPrefecture as getCityP,
@@ -34,7 +34,7 @@ import {
   getPrefecturesFromDB as getPrefs,
   getSameNamedPrefecturePatterns as getSamePrefs
 } from '../../../usecase';
-import { StreamGeocoder } from '../StreamGeocoder.class';
+import { StreamGeocoder } from '../StreamGeocoder';
 
 // getPrefecturesFromDB
 const mockedGetPrefs = getPrefs as jest.Mocked<typeof getPrefs>;
@@ -99,28 +99,38 @@ const mockedPatches = PATCHES as jest.MockedObject<typeof PATCHES>;
 mockedPatches.default = [];
 
 // BetterSqlite3.Database
-const MockedDB = Database as unknown as jest.Mock;
-MockedDB.mockImplementation(() => {
-  return {
-    prepare: (sql: string) => {
-      return {
-        all: (params: { prefecture: PrefectureName; city: string }) => {
-          return [];
-        },
-      };
-    },
-  };
-});
+// const MockedDB = Database as unknown as jest.Mock;
+// MockedDB.mockImplementation(() => {
+//   return {
+//     prepare: (sql: string) => {
+//       return {
+//         all: (params: { prefecture: PrefectureName; city: string }) => {
+//           return [];
+//         },
+//       };
+//     },
+//   };
+// });
+jest.dontMock('../StreamGeocoder');
+
+const createDB = () => {
+  return new MockedBetterSqlite3('<no sql file>', {
+    all: [],
+  });
+}
 describe('StreamGeocoder', () => {
 
-  const mockedDB = new Database('<no sql file>');
-  beforeEach(() => {
-    MockedDB.mockReset();
-    mockedGetPrefs.mockReset();
-    mockedGetPreRegP.mockReset();
-  })
   describe('(internal) wildCardHelper', () => {
+    //
+    // Do not run these test concurrenctly.
+    //
+    
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
     it('Fuzzyを指定しない場合、同じ値を返す', async () => {
+      const mockedDB = createDB();
       await StreamGeocoder.create(mockedDB);
       expect(mockedGetPreRegP).toHaveBeenCalled();
       const args = mockedGetPreRegP.mock.calls[0];
@@ -130,6 +140,7 @@ describe('StreamGeocoder', () => {
 
     it('Fuzzyを指定した場合、正規表現を書き換える', async () => {
       const fuzzy = '●';
+      const mockedDB = createDB();
       await StreamGeocoder.create(mockedDB, fuzzy);
       expect(mockedGetPreRegP).toHaveBeenCalled();
       const args = mockedGetPreRegP.mock.calls[0];

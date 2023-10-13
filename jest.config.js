@@ -2,8 +2,8 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  "moduleFileExtensions": ["js", "ts"],
-  "transform": {
+  moduleFileExtensions: ["js", "ts"],
+  transform: {
     "^.+\\.ts$": [
       "ts-jest",
       {
@@ -11,12 +11,16 @@ module.exports = {
       }
     ]
   },
-  "moduleDirectories": [
+  moduleDirectories: [
     "node_modules",
     "src",
-    "settings"
+    "settings",
+    "__mocks__",
   ],
-  roots: ['<rootDir>/src/'],
+  moduleNameMapper: {
+    'node:fs': '<rootDir>/__mocks__/fs.ts',
+  },
+  roots: ['<rootDir>/src/','<rootDir>/__mocks__'],
   testRegex: './src/.*\\.(test|spec)?\\.ts$',
   testPathIgnorePatterns: [
     "lib/", 

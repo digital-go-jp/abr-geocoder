@@ -5,8 +5,7 @@ import { Database } from 'better-sqlite3';
 import byline from 'byline';
 import fs from 'node:fs';
 import path from 'node:path';
-import { Transform, Writable } from 'node:stream';
-import { DependencyContainer } from 'tsyringe';
+import stream, { Transform, Writable } from 'node:stream';
 import {
   AbrgError,
   AbrgErrorLevel,
@@ -20,24 +19,35 @@ import {
   JsonTransform,
   NdGeoJsonTransform,
   NdJsonTransform,
+  setupContainer,
 } from '../../interface-adapter';
 import { getReadStreamFromSource } from '../../usecase/';
-import { StreamGeocoder } from './StreamGeocoder.class';
-import { SINGLE_DASH_ALTERNATIVE } from '../../settings/constantValues';
+import { StreamGeocoder } from './StreamGeocoder';
+
+export enum ON_GECODING_RESULT {
+  SUCCESS = 0,
+}
 
 export const onGeocoding = async ({
-  source,
+  ckanId,
+  dataDir,
   destination,
   format,
   fuzzy,
-  container,
+  source,
 }: {
-  source: string;
+  ckanId: string;
+  dataDir: string;
   destination?: string;
   format: OutputFormat;
   fuzzy?: string;
-  container: DependencyContainer;
+  source: string;
 }) => {
+  const container = await setupContainer({
+    dataDir,
+    ckanId,
+  });
+
   // データベースのインスタンスを取得
   const db: Database = container.resolve(DI_TOKEN.DATABASE);
 
@@ -60,11 +70,11 @@ export const onGeocoding = async ({
         return container.resolve<GeoJsonTransform>(DI_TOKEN.GEOJSON_FORMATTER);
 
       case OutputFormat.NDJSON:
-        return container.resolve<NdJsonTransform>(DI_TOKEN.ND_JSON_FORMATTER);
+        return container.resolve<NdJsonTransform>(DI_TOKEN.NDJSON_FORMATTER);
 
       case OutputFormat.NDGEOJSON:
         return container.resolve<NdGeoJsonTransform>(
-          DI_TOKEN.ND_GEOJSON_FORMATTER
+          DI_TOKEN.NDGEOJSON_FORMATTER
         );
 
       default:
@@ -77,24 +87,22 @@ export const onGeocoding = async ({
 
   // 出力先（ファイル or stdout）の選択
   const outputStream: Writable = (destination => {
-    if (
-      destination === SINGLE_DASH_ALTERNATIVE ||
-      destination === '' ||
-      destination === undefined
-    ) {
+    if (destination === '' || destination === undefined) {
       return process.stdout;
     }
-
-    return fs.createWriteStream(path.normalize(destination), 'utf8');
+    const result = fs.createWriteStream(path.normalize(destination), 'utf8');
+    return result;
   })(destination);
 
   // メイン処理
-  getReadStreamFromSource(source)
-    .pipe(lineStream)
-    .pipe(geocoder)
-    .pipe(formatter)
-    .pipe(outputStream)
-    .on('end', () => {
-      db.close();
-    });
+  await stream.promises.pipeline(
+    getReadStreamFromSource(source),
+    lineStream,
+    geocoder,
+    formatter,
+    outputStream
+  );
+  db.close();
+
+  return ON_GECODING_RESULT.SUCCESS;
 };

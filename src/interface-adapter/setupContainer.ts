@@ -1,3 +1,5 @@
+// reflect-metadata is necessary for DI
+import 'reflect-metadata';
 import { MultiBar, SingleBar } from 'cli-progress';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -105,7 +107,7 @@ export const setupContainer = async ({
       return GeoJsonTransform.create();
     },
   });
-  myContainer.register<NdGeoJsonTransform>(DI_TOKEN.ND_GEOJSON_FORMATTER, {
+  myContainer.register<NdGeoJsonTransform>(DI_TOKEN.NDGEOJSON_FORMATTER, {
     useFactory: () => {
       return NdGeoJsonTransform.create();
     },
@@ -115,7 +117,7 @@ export const setupContainer = async ({
       return JsonTransform.create();
     },
   });
-  myContainer.register<NdJsonTransform>(DI_TOKEN.ND_JSON_FORMATTER, {
+  myContainer.register<NdJsonTransform>(DI_TOKEN.NDJSON_FORMATTER, {
     useFactory: () => {
       return NdJsonTransform.create();
     },

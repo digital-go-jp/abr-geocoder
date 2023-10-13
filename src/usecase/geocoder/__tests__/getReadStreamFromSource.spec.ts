@@ -1,8 +1,11 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import fs from "node:fs";
 import { AbrgError, AbrgErrorLevel, AbrgMessage } from "../../../domain";
 import { SINGLE_DASH_ALTERNATIVE } from "../../../settings/constantValues";
 import { getReadStreamFromSource } from '../../../usecase';
+import mockedFs from '../../../../__mocks__/fs';
+const fs = jest.requireActual('fs');
+
+jest.dontMock('../getReadStreamFromSource');
 
 describe('getReadStreamFromSource', () => {
   it('should return process.stdin if the command is involved by "abrg -"', () => {
@@ -42,11 +45,6 @@ describe('getReadStreamFromSource', () => {
     Reflect.deleteProperty(orgStdIn, 'isTTY');
   });
 
-  it('should return fs.ReadStream if source is a valid file', () => {
-    const result = getReadStreamFromSource(__filename);
-    expect(result).toBeInstanceOf(fs.ReadStream);
-  });
-
   it('should occur an error if source is invalid file path.', () => {
     expect(() => {
       getReadStreamFromSource('somewhere');
@@ -54,5 +52,11 @@ describe('getReadStreamFromSource', () => {
       messageId: AbrgMessage.CANNOT_FIND_INPUT_FILE,
       level: AbrgErrorLevel.ERROR,
     }));
+  });
+
+  it('should return fs.ReadStream if source is a valid file', () => {
+    mockedFs.existsSync.mockReturnValue(true);
+    const result = getReadStreamFromSource(__filename);
+    expect(result).toBeInstanceOf((fs as typeof import('fs')).ReadStream);
   });
 })

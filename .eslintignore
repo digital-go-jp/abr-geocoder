@@ -6,4 +6,6 @@ build
 **/*.test.ts
 **/__test__
 **/__tests__
+**/__mock__
+**/__mocks__
 experimental/

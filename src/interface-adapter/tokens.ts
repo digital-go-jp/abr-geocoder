@@ -8,7 +8,7 @@ export enum DI_TOKEN {
   MULTI_PROGRESS_BAR = 'multi_progress_bar',
   CSV_FORMATTER = 'csv-formatter',
   GEOJSON_FORMATTER = 'geojson-formatter',
-  ND_GEOJSON_FORMATTER = 'ndgeojson-formatter',
+  NDGEOJSON_FORMATTER = 'ndgeojson-formatter',
   JSON_FORMATTER = 'json-formatter',
-  ND_JSON_FORMATTER = 'ndjson-formatter',
+  NDJSON_FORMATTER = 'ndjson-formatter',
 }

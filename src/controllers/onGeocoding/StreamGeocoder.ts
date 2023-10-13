@@ -18,7 +18,7 @@ import {
   getPrefectureRegexPatterns,
   getPrefecturesFromDB,
   getSameNamedPrefecturePatterns,
-} from '../../usecase/';
+} from '../../usecase';
 import { GeocodingStep1 } from './step1-transform';
 import { GeocodingStep2 } from './step2-transform';
 import { GeocodingStep3 } from './step3-transform';
@@ -79,7 +79,10 @@ export class StreamGeocoder extends Transform {
       );
     };
     const passThrough = (pattern: string) => pattern;
-    const wildcardHelper = fuzzy ? insertWildcardMatching : passThrough;
+    const wildcardHelper =
+      fuzzy !== undefined && fuzzy !== null
+        ? insertWildcardMatching
+        : passThrough;
 
     /**
      * regexpPattern = ^東京都? を作成する

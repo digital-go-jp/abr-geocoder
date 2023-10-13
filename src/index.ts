@@ -16,11 +16,7 @@ import {
   OutputFormat,
   bubblingFindFile,
 } from './domain';
-import {
-  packageJsonMeta,
-  parsePackageJson,
-  setupContainer,
-} from './interface-adapter';
+import { packageJsonMeta, parsePackageJson } from './interface-adapter';
 import {
   DEFAULT_FUZZY_CHAR,
   SINGLE_DASH_ALTERNATIVE,
@@ -140,14 +136,9 @@ export const main = async (
           });
       },
       async argv => {
-        const ckanId = argv.resource;
-        const container = await setupContainer({
-          dataDir: argv.dataDir,
-          ckanId,
-        });
         await onUpdateCheck({
-          container,
-          ckanId,
+          ckanId: argv.resource,
+          dataDir: argv.dataDir,
         });
       }
     )
@@ -179,14 +170,8 @@ export const main = async (
           });
       },
       async argv => {
-        const ckanId = argv.resource;
-        const container = await setupContainer({
-          dataDir: argv.dataDir,
-          ckanId,
-        });
         await onDownload({
-          container,
-          ckanId,
+          ckanId: argv.resource,
           dataDir: argv.dataDir,
         });
       }
@@ -270,18 +255,13 @@ export const main = async (
         if (!argv['inputFile']) {
           return;
         }
-
-        const container = await setupContainer({
-          dataDir: argv.dataDir,
-          ckanId: argv.resource,
-        });
-
         await onGeocoding({
           source: argv['inputFile'] as string,
           destination: argv['outputFile'] as string | undefined,
           format: argv.format as OutputFormat,
           fuzzy: argv.fuzzy,
-          container,
+          dataDir: argv.dataDir,
+          ckanId: argv.resource,
         });
       }
     )

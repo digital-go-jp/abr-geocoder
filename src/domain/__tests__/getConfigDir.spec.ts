@@ -1,8 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
-import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { getDataDir } from '../getDataDir';
+
+jest.unmock('fs');
+const fs = require('fs');
 
 describe('getDataDir', () => {
   it.concurrent('should create a directory if not existed', async () => {

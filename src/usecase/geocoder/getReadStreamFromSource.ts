@@ -16,7 +16,8 @@ export const getReadStreamFromSource = (
     return process.stdin;
   }
 
-  if (fs.existsSync(source)) {
+  const exists = fs.existsSync(source);
+  if (exists) {
     return fs.createReadStream(source);
   }
   throw new AbrgError({
