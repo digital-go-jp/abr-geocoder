@@ -211,7 +211,7 @@ export const main = async (
           .option('format', {
             alias: 'f',
             type: 'string',
-            default: OutputFormat.CSV,
+            default: OutputFormat.JSON,
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_GEOCODE_FORMAT_OPTION
             ),

@@ -147,7 +147,7 @@ describe('cli', () => {
           ckanId: 'ba000001',
           dataDir: expect.any(String),
           source: inputFile,
-          format: expect.any(String),
+          format: OutputFormat.JSON,
           destination: undefined,
           fuzzy: undefined,
         });
@@ -168,17 +168,17 @@ describe('cli', () => {
         });
       });
 
-      it.concurrent('case: abrg -f json --fuzzy ● <inputFile>', async () => {
+      it.concurrent('case: abrg -f csv --fuzzy ● <inputFile>', async () => {
         const inputFile = './somewhere/query.txt';
 
         const fuzzyChar = '●';
-        await runCommand('-f', OutputFormat.JSON, '--fuzzy', fuzzyChar, inputFile);
+        await runCommand('-f', OutputFormat.CSV, '--fuzzy', fuzzyChar, inputFile);
 
         expect(onGeocoding).toBeCalledWith({
           ckanId: 'ba000001',
           dataDir: expect.any(String),
           source: inputFile,
-          format: OutputFormat.JSON,
+          format: OutputFormat.CSV,
           destination: undefined,
           fuzzy: fuzzyChar,
         });
@@ -209,7 +209,7 @@ describe('cli', () => {
           ckanId: 'ba000001',
           dataDir: expect.any(String),
           source: inputFile,
-          format: OutputFormat.CSV,
+          format: OutputFormat.JSON,
           destination: undefined,
           fuzzy: undefined,
         });
@@ -235,7 +235,7 @@ describe('cli', () => {
         const inputFile = './somewhere/query.txt';
         const outputFile = './somewhere/result.csv';
 
-        await runCommand('-f', 'csv', inputFile, outputFile);
+        await runCommand('-f', OutputFormat.CSV, inputFile, outputFile);
 
         expect(onGeocoding).toBeCalledWith({
           ckanId: 'ba000001',
@@ -265,7 +265,7 @@ describe('cli', () => {
         ckanId: 'ba000001',
         dataDir: expect.any(String),
         source: SINGLE_DASH_ALTERNATIVE,
-        format: OutputFormat.CSV,
+        format: OutputFormat.JSON,
         destination: undefined,
         fuzzy: undefined,
       });
