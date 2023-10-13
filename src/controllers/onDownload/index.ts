@@ -2,7 +2,7 @@
 import 'reflect-metadata';
 
 import { Database } from 'better-sqlite3';
-import fs from 'fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import { Logger } from 'winston';
 import { AbrgMessage, saveKeyAndValue } from '../../domain';
@@ -13,8 +13,8 @@ import { loadDatasetHistory } from './loadDatasetHistory';
 import { loadDatasetProcess } from './loadDatasetProcess';
 
 export enum ON_DOWNLOAD_RESULT {
-  UPDATED = 0,
-  NO_UPDATE_IS_AVAILABLE = 1,
+  UPDATED = 1,
+  NO_UPDATE_IS_AVAILABLE = 2,
   CAN_NOT_ACCESS_TO_DATASET_ERROR = -1,
 }
 export const onDownload = async ({
@@ -31,7 +31,7 @@ export const onDownload = async ({
 
   const logger = container.resolve<Logger | undefined>(DI_TOKEN.LOGGER);
 
-  const downloadDir = path.join(dataDir, 'download');
+  const downloadDir = path.join(dataDir, 'download', ckanId);
   if (!fs.existsSync(downloadDir)) {
     await fs.promises.mkdir(downloadDir);
   }

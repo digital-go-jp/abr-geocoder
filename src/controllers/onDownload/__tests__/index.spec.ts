@@ -1,9 +1,10 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { default as BetterSqlite3 } from 'better-sqlite3';
-import { existsSync as MockedExistsSync } from '../../../../__mocks__/fs';
+import mockedFs from '../../../../__mocks__/fs';
 import { ON_DOWNLOAD_RESULT, onDownload } from '../index';
 
 jest.mock('fs');
+jest.mock('node:fs');
 jest.mock('winston');
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 jest.mock('../../../interface-adapter/setupContainer');
@@ -18,9 +19,8 @@ jest.mock('../extractDatasetProcess');
 describe('onDownload', () => {
   it.concurrent('should return "UPDATED" if update is available', async () => {
 
-    MockedExistsSync.mockImplementationOnce(() => {
-      return true;
-    });
+    const existsSync = mockedFs.existsSync;
+    existsSync.mockReturnValueOnce(true);
 
     const result = await onDownload({
       ckanId: 'first access',
@@ -28,7 +28,7 @@ describe('onDownload', () => {
     });
 
     expect(result).toBe(ON_DOWNLOAD_RESULT.UPDATED);
-
+    expect(existsSync).toBeCalledWith('somewhere/download/first access');
   });
 
 })
