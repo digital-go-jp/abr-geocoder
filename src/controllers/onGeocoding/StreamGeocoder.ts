@@ -43,7 +43,7 @@ export class StreamGeocoder extends Transform {
     encoding: BufferEncoding,
     callback: TransformCallback
   ): void {
-    const input = line.toString();
+    const input = line.toString().trim();
 
     // コメント行は無視する
     if (input.startsWith('#') || input.startsWith('//')) {
