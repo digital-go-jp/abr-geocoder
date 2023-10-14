@@ -21,6 +21,7 @@ import {
   DEFAULT_FUZZY_CHAR,
   SINGLE_DASH_ALTERNATIVE,
 } from './settings/constantValues';
+import { exit } from 'node:process';
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);
@@ -279,6 +280,10 @@ export const main = async (
 
       // Otherwise, show the error message
       console.error(`[error] ${msg}`);
+
+      if (process.env.NODE_ENV !== 'test') {
+        exit(1);
+      }
     })
     .parse(hideBin(parsedArgs));
 };

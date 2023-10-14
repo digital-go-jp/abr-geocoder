@@ -6,8 +6,5 @@ jest.mock<BetterSqlite3.Database>('better-sqlite3');
 const MockedDB = Database as unknown as jest.Mock;
 
 describe('CkanDownloader', () => {
-  it.concurrent('getDatasetMetadata',async () => {
-    
-  });
-  
+  it.todo('getDatasetMetadata');
 });

@@ -51,7 +51,7 @@ jobs:
           token: ${{ secrets.WORKFLOW_TOKEN }}
 
       - name: Run tests
-        run: npm test
+        run: npm test:ci
 
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main
@@ -72,4 +72,9 @@ jobs:
         shell: bash
         run: |
           npm run build
+      
+      - name: run systen test
+        shell: bash
+        run: |
+          npm run test:system
       

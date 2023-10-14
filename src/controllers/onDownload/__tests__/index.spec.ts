@@ -27,7 +27,7 @@ describe('onDownload', () => {
       dataDir: 'somewhere',
     });
 
-    expect(result).toBe(ON_DOWNLOAD_RESULT.UPDATED);
+    expect(result).toBe(ON_DOWNLOAD_RESULT.SUCCESS);
     expect(existsSync).toBeCalledWith('somewhere/download/first access');
   });
 

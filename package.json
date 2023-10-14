@@ -22,7 +22,9 @@
     "start": "ts-node src/index.ts",
     "build": "tsc",
     "clean": "tsc --build --clean",
-    "test": "jest --runInBand",
+    "test": "jest --maxWorker=25%",
+    "test:ci": "jest --runInBand",
+    "test:system": "node --loader ts-node/esm spec/execution-test.spec.js",
     "lint": "eslint . --ext .ts",
     "lint-and-fix": "eslint . --ext .ts --fix"
   },
@@ -51,7 +53,8 @@
     "prettier": "^3.0.3",
     "ts-jest": "29.0.5",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "zx": "^7.2.3"
   },
   "dependencies": {
     "@geolonia/japanese-numeral": "^0.1.16",

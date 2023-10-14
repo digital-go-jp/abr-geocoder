@@ -13,9 +13,9 @@ import { loadDatasetHistory } from './loadDatasetHistory';
 import { loadDatasetProcess } from './loadDatasetProcess';
 
 export enum ON_DOWNLOAD_RESULT {
-  UPDATED = 1,
-  NO_UPDATE_IS_AVAILABLE = 2,
-  CAN_NOT_ACCESS_TO_DATASET_ERROR = -1,
+  SUCCESS = 0,
+  NO_UPDATE_IS_AVAILABLE = 1,
+  CAN_NOT_ACCESS_TO_DATASET_ERROR = 2,
 }
 export const onDownload = async ({
   ckanId,
@@ -95,5 +95,5 @@ export const onDownload = async ({
   // 展開したzipファイルのディレクトリを削除
   await fs.promises.rm(extractDir, { recursive: true });
 
-  return ON_DOWNLOAD_RESULT.UPDATED;
+  return ON_DOWNLOAD_RESULT.SUCCESS;
 };

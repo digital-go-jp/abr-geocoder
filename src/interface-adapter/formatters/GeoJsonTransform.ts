@@ -28,7 +28,7 @@ export class GeoJsonTransform extends Stream.Transform {
     if (this.lineNum > 0) {
       this.buffer = ',';
     } else {
-      this.buffer = '[';
+      this.buffer = '{"type":"FeatureCollection", "features":[';
     }
     this.lineNum++;
     this.buffer += JSON.stringify({
@@ -63,7 +63,7 @@ export class GeoJsonTransform extends Stream.Transform {
 
   _final(callback: (error?: Error | null | undefined) => void): void {
     this.emit('data', this.buffer);
-    this.emit('data', ']');
+    this.emit('data', ']}');
     callback();
   }
 
