@@ -22,7 +22,7 @@
     "start": "ts-node src/index.ts",
     "build": "tsc",
     "clean": "tsc --build --clean",
-    "test": "jest",
+    "test": "jest --maxWorkers=50%",
     "lint": "eslint . --ext .ts",
     "lint-and-fix": "eslint . --ext .ts --fix"
   },
