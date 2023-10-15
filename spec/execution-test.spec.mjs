@@ -79,7 +79,7 @@ test.before(async () => {
   assert.equal(result.exitCode, 0, `The exit code should be 0`);
 })
 
-test('test: 標準入力を指定した場合', async () => {
+test(`'echo "<input data>" | abrg - -f csv' should return the expected results as CSV format`, async () => {
 
   const input = `
   //
@@ -102,7 +102,7 @@ test('test: 標準入力を指定した場合', async () => {
 
 
 
-test('test: 無効な値を指定した場合', async () => {
+test(`'echo "<input data>" | abrg - -f csv' should be error because "brabrabra" is unknown file.` , async () => {
 
   const input = `東京都千代田区紀尾井町1-3`;
 
@@ -113,7 +113,7 @@ test('test: 無効な値を指定した場合', async () => {
   await tester.validate('brabrabra -f csv', input, expectExitCode, expectResult);
 })
 
-test('test: jsonが出力されるはず', async () => {
+test(`'echo "<input data>" | abrg - -f json' should return the expected results as JSON format`, async () => {
 
   const input = `東京都千代田区紀尾井町1-3`;
 
@@ -145,7 +145,7 @@ test('test: jsonが出力されるはず', async () => {
   await tester.validate('- -f json', input, expectExitCode, expectResult);
 });
 
-test('test: ndjsonが出力されるはず', async () => {
+test(`'echo "<input data>" | abrg - -f ndjson' should return the expected results as JSON format on each line`, async () => {
 
   const input = `東京都千代田区紀尾井町1-3`;
 
@@ -178,7 +178,7 @@ test('test: ndjsonが出力されるはず', async () => {
 });
 
 
-test('test: geojsonが出力されるはず', async () => {
+test(`'echo "<input data>" | abrg - -f geojson' should return the expected results as GEO-JSON format`, async () => {
 
   const input = trimLines(`東京都千代田区紀尾井町1-3`);
 
@@ -223,7 +223,7 @@ test('test: geojsonが出力されるはず', async () => {
   await tester.validate('- -f geojson', input, expectExitCode, expectResult);
 });
 
-test('test: ndgeojsonが出力されるはず', async () => {
+test(`'echo "<input data>" | abrg - -f ndgeojson' should return the expected results as GEO-JSON format on each line`, async () => {
 
   const input = trimLines(`東京都千代田区紀尾井町1-3`);
 
