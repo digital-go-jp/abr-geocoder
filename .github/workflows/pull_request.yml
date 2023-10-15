@@ -53,6 +53,16 @@ jobs:
       - name: Run tests
         run: npm run test:ci
 
+      - name: build test
+        shell: bash
+        run: |
+          npm run build
+      
+      - name: run system test
+        shell: bash
+        run: |
+          npm run test:system
+      
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main
         with:
@@ -67,14 +77,3 @@ jobs:
           junitxml-path: ./coverage/junit.xml
           coverage-title: Coverage Details
           coverage-path: ./coverage/coverage.txt
-  
-      - name: build test
-        shell: bash
-        run: |
-          npm run build
-      
-      - name: run system test
-        shell: bash
-        run: |
-          npm run test:system
-      
