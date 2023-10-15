@@ -1,10 +1,10 @@
-import { describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { FromStep3Type, InterpolatePattern, PrefectureName, Query } from '../../../domain';
+import { InterpolatePattern, PrefectureName, Query } from '../../../domain';
+import { MatchLevel } from '../../../domain/matchLevel.enum';
 import { GeocodingStep4 } from '../step4-transform';
 import { WritableStreamToArray } from './stream-to-array';
-import { MatchLevel } from '../../../domain/matchLevel.enum';
 
 describe('step4-transform', () => {
 
