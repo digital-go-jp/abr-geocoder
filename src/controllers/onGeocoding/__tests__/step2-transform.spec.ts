@@ -102,8 +102,25 @@ const prefPatterns: InterpolatePattern[] = [
  * step2は都道府県名と同一名称の市町村名に対しての処理のみ
  */
 describe('step2transform', () => {
-  const doProcess = async (input: Query, expectValues: Query[]) => {
-    const source = Stream.Readable.from([input], {
+  const outputWrite = new WritableStreamToArray<Query>();
+  const source: Query[] = [
+    // "長崎" 県 "長崎" 市と同一名称を含むケース
+    Query.create(`長崎市魚の町4${DASH}1`),
+
+    // "長崎" 県 "長崎" 市と同一名称を含むケース
+    Query.create('石川郡平田村大字永田字切田116番地'),
+
+    // step2ではマッチしないケース
+    Query.create('東彼杵郡東彼杵町蔵本郷1850番地6'),
+
+    // 都道府県名を含むケース
+    Query.create(`東京都千代田区紀尾井町1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`).copy({
+      tempAddress: `東京都千代田区紀尾井町1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`,
+    })
+  ];
+
+  beforeAll(async () => {
+    const sourceStream = Stream.Readable.from(source, {
       objectMode: true,
     });
 
@@ -111,62 +128,55 @@ describe('step2transform', () => {
       prefPatterns,
       sameNamedPrefPatterns,
     });
-    const outputWrite = new WritableStreamToArray<Query>();
-    await Stream.promises.pipeline(source, target, outputWrite);
+    await Stream.promises.pipeline(
+      sourceStream,
+      target,
+      outputWrite,
+    );
+  })
 
-    const actualValues = outputWrite.toArray();
-
-    expect(actualValues.length).toBe(expectValues.length);
-    expect(actualValues).toEqual(expectValues);
-  };
-
-  it.concurrent('"長崎" 県 "長崎" 市と同一名称を含むケース', async () => {
-    const input = Query.create(`長崎市魚の町4${DASH}1`);
-    const expectValues = [
-      Query.create(`長崎市魚の町4${DASH}1`).copy({
-        prefecture: PrefectureName.NAGASAKI,
-        tempAddress: `魚の町4${DASH}1`,
-        city: '長崎市',
-        match_level: MatchLevel.ADMINISTRATIVE_AREA,
-      }),
-    ];
-    await doProcess(input, expectValues);
-  });
-
-  it.concurrent('他都道府県名を含む市町村名のケース', async () => {
-    const input = Query.create('石川郡平田村大字永田字切田116番地');
-    const expectValues = [
-      Query.create('石川郡平田村大字永田字切田116番地').copy({
-        prefecture: PrefectureName.FUKUSHIMA,
-        tempAddress: '大字永田字切田116番地',
-        city: '石川郡平田村',
-        match_level: MatchLevel.ADMINISTRATIVE_AREA,
-      }),
-    ];
-    await doProcess(input, expectValues);
-  });
-
-  it.concurrent('step2ではマッチしないケース', async () => {
-    const input = Query.create('東彼杵郡東彼杵町蔵本郷1850番地6');
-    const expectValues = [input];
-    await doProcess(input, expectValues);
-  });
-
-  it.concurrent('都道府県名を含むケース', async () => {
-    // オリジナルの住所
-    const inputAddress = '東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階';
-
-    // Step1で 1-3 の「-(ハイフン)」は DASHに置き換えられている
-    const input = Query.create(inputAddress).copy({
-      tempAddress: `東京都千代田区紀尾井町1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`,
+  it('"長崎" 県 "長崎" 市と同一名称を含むケース', async () => {
+    const expectResult = Query.create(`長崎市魚の町4${DASH}1`).copy({
+      prefecture: PrefectureName.NAGASAKI,
+      tempAddress: `魚の町4${DASH}1`,
+      city: '長崎市',
+      match_level: MatchLevel.ADMINISTRATIVE_AREA,
     });
-    const expectValues = [
-      Query.create(inputAddress).copy({
-        prefecture: PrefectureName.TOKYO,
-        tempAddress: `千代田区紀尾井町1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`,
-        match_level: MatchLevel.PREFECTURE,
-      }),
-    ];
-    await doProcess(input, expectValues);
+
+    const results = outputWrite.toArray();
+    expect(results.length).toBe(source.length);
+    expect(results[0]).toEqual(expectResult);
+  });
+
+  it('他都道府県名を含む市町村名のケース', async () => {
+    const expectResult = Query.create('石川郡平田村大字永田字切田116番地').copy({
+      prefecture: PrefectureName.FUKUSHIMA,
+      tempAddress: '大字永田字切田116番地',
+      city: '石川郡平田村',
+      match_level: MatchLevel.ADMINISTRATIVE_AREA,
+    });
+    
+    const results = outputWrite.toArray();
+    expect(results.length).toBe(source.length);
+    expect(results[1]).toEqual(expectResult);
+  });
+
+  it('step2ではマッチしないケース', async () => {
+    const results = outputWrite.toArray();
+    expect(results.length).toBe(source.length);
+    expect(results[2]).toEqual(source[2]);
+  });
+
+  it('都道府県名を含むケース', async () => {
+    
+    const expectResult = Query.create(`東京都千代田区紀尾井町1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`).copy({
+      prefecture: PrefectureName.TOKYO,
+      tempAddress: `千代田区紀尾井町1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`,
+      match_level: MatchLevel.PREFECTURE,
+    });
+
+    const results = outputWrite.toArray();
+    expect(results.length).toBe(source.length);
+    expect(results[3]).toEqual(expectResult);
   });
 });
