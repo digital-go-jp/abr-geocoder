@@ -31,6 +31,9 @@ describe('NdGeoJsonTransform', () => {
     )
     
     const result = buffer.join('');
-    expect(result.trim()).toEqual(expectJson.trim())
+    const expects = expectJson.trim().split('\n').map(line => JSON.parse(line));
+    const results = result.trim().split('\n').map(line => JSON.parse(line));
+
+    expect(results).toEqual(expects);
   });
 });
