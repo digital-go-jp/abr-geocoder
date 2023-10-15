@@ -2,6 +2,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  testRunner: 'jest-circus/runner',
   moduleFileExtensions: ["js", "ts"],
   transform: {
     "^.+\\.ts$": [
