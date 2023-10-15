@@ -3,7 +3,7 @@ import Stream from 'node:stream';
 import { DASH } from '../../../settings/constantValues';
 import { InterpolatePattern, PrefectureName, Query } from '../../../domain/';
 import { GeocodingStep2 } from '../step2-transform';
-import { WritableStreamToArray } from './stream-to-array';
+import { WritableStreamToArray } from './stream-to-array.skip';
 import { MatchLevel } from '../../../domain/matchLevel.enum';
 
 const sameNamedPrefPatterns: InterpolatePattern[] = [

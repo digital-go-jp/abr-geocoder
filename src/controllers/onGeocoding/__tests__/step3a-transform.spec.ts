@@ -4,8 +4,8 @@ import { pipeline } from 'node:stream/promises';
 import { getCityPatternsForEachPrefecture } from '../../../usecase/';
 import { Query, FromStep3Type, FromStep3aType, PrefectureName } from '../../../domain/';
 import { GeocodingStep3A } from '../step3a-transform';
-import { dummyPrefectures } from './dummyPrefectures';
-import { WritableStreamToArray } from './stream-to-array';
+import { dummyPrefectures } from './dummyPrefectures.skip';
+import { WritableStreamToArray } from './stream-to-array.skip';
 import { MatchLevel } from '../../../domain/matchLevel.enum';
 
 describe('step3a-transform', () => {

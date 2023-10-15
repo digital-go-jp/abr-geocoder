@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
-import { DASH, SPACE } from '../../../settings/constantValues';
 import { Query } from '../../../domain';
+import { DASH } from '../../../settings/constantValues';
 import { GeocodingStep1 } from '../step1-transform';
-import { WritableStreamToArray } from './stream-to-array';
+import { WritableStreamToArray } from './stream-to-array.skip';
 
 describe('step1-transform', () => {
   const target = new GeocodingStep1();

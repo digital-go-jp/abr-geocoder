@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { getPrefectureRegexPatterns } from '../../../usecase/';
-import { dummyPrefectures } from './dummyPrefectures';
+import { dummyPrefectures } from './dummyPrefectures.skip';
 import { PrefectureName } from '../../../domain';
 
 describe('getPrefectureRegexPatterns', () => {

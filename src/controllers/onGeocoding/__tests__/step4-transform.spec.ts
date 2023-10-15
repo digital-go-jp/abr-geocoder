@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import { InterpolatePattern, PrefectureName, Query } from '../../../domain';
 import { MatchLevel } from '../../../domain/matchLevel.enum';
 import { GeocodingStep4 } from '../step4-transform';
-import { WritableStreamToArray } from './stream-to-array';
+import { WritableStreamToArray } from './stream-to-array.skip';
 
 describe('step4-transform', () => {
 

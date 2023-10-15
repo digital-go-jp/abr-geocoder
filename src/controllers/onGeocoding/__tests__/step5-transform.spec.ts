@@ -1,13 +1,12 @@
 import { describe, expect, it, jest } from '@jest/globals';
+import Database from 'better-sqlite3';
 import Stream, { PassThrough } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { FromStep3Type, InterpolatePattern, PrefectureName, Query } from '../../../domain';
-import { GeocodingStep5 } from '../step5-transform';
-import { WritableStreamToArray } from './stream-to-array';
-import { AddressFinderForStep3and5 } from '../../../usecase/geocoder/AddressFinderForStep3and5';
-import Database from 'better-sqlite3';
+import { PrefectureName, Query } from '../../../domain';
 import { MatchLevel } from '../../../domain/matchLevel.enum';
-import { async } from 'node-stream-zip';
+import { AddressFinderForStep3and5 } from '../../../usecase/geocoder/AddressFinderForStep3and5';
+import { GeocodingStep5 } from '../step5-transform';
+import { WritableStreamToArray } from './stream-to-array.skip';
 
 jest.mock<AddressFinderForStep3and5>('../../../usecase/geocoder/AddressFinderForStep3and5');
 jest.mock('better-sqlite3');

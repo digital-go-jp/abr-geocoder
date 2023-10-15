@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { InterpolatePattern, PrefectureName } from "../../../domain";
 import { getCityPatternsForEachPrefecture } from '../../../usecase/';
-import { dummyPrefectures } from './dummyPrefectures';
+import { dummyPrefectures } from './dummyPrefectures.skip';
 
 describe('getCityPatternsForEachPrefecture', () => {
   it('都道府県ごとに市町村名にマッチする正規表現パターンを作成する', () => {

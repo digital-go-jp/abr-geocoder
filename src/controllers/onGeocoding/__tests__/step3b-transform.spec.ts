@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import { AddressFinderForStep3and5 } from '../../../usecase/geocoder/AddressFinderForStep3and5';
 import { Query, FromStep3Type, PrefectureName } from '../../../domain';
 import { GeocodingStep3B } from '../step3b-transform';
-import { WritableStreamToArray } from './stream-to-array';
+import { WritableStreamToArray } from './stream-to-array.skip';
 import { MatchLevel } from '../../../domain/matchLevel.enum';
 import Database from 'better-sqlite3';
 

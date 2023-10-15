@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { getSameNamedPrefecturePatterns } from '../../../usecase/';
-import { dummyPrefectures } from './dummyPrefectures';
+import { dummyPrefectures } from './dummyPrefectures.skip';
 
 describe('getSameNamedPrefecturePatterns', () => {
   it('都道府県名と同じ名前の市区町村を検出するためのパターンを生成する', () => {
