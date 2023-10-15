@@ -45,8 +45,8 @@ export class StreamGeocoder extends Transform {
   ): void {
     const input = line.toString().trim();
 
-    // コメント行は無視する
-    if (input.startsWith('#') || input.startsWith('//')) {
+    // コメント行と空行は無視する
+    if (input.startsWith('#') || input.startsWith('//') || input === '') {
       callback();
       return;
     }
