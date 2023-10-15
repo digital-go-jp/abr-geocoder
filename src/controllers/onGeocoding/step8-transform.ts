@@ -27,6 +27,7 @@ export class GeocodingStep8 extends Transform {
   private restore(address: string): string {
     return address
       .replace(RegExpEx.create(DASH, 'g'), '-')
-      .replace(RegExpEx.create(SPACE, 'g'), ' ');
+      .replace(RegExpEx.create(SPACE, 'g'), ' ')
+      .trim();
   }
 }

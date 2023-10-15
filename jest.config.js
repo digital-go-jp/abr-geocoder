@@ -28,7 +28,7 @@ module.exports = {
     "lib/", 
     "build/",
     "node_modules/", 
-    "\\.skip\\.ts",
+    "\\.skip\\.ts$",
   ],
   collectCoverage: true,
   reporters: ['default', ['jest-junit', { outputDirectory: 'coverage' }]],

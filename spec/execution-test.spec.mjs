@@ -85,13 +85,13 @@ test(`'echo "<input data>" | abrg - -f csv' should return the expected results a
   //
   // サンプルデータ ('#' または // で始まる行はコメント行として処理します)
   //
-  東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 16階、19階、20階
+  東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階
   東京都千代田区九段南1丁目2-1
   `;
 
   const expectResult = `
     input, match_level, lg_code, prefecture, city, town, block, addr1, addr2, other, lat, lon
-    "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 16階、19階、20階",8,131016,東京都,千代田区,紀尾井町,1,3,, 東京ガーデンテラス紀尾井町 16階、19階、20階,35.679107172,139.736394597
+    "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階",8,131016,東京都,千代田区,紀尾井町,1,3,,東京ガーデンテラス紀尾井町 19階、20階,35.679107172,139.736394597
     "東京都千代田区九段南1丁目2-1",3,131016,東京都,千代田区,九段南一丁目,,,,,35.693972,139.753265
   `;
 
@@ -104,7 +104,7 @@ test(`'echo "<input data>" | abrg - -f csv' should return the expected results a
 
 test(`'echo "<input data>" | abrg - -f csv' should be error because "brabrabra" is unknown file.` , async () => {
 
-  const input = `東京都千代田区紀尾井町1-3`;
+  const input = `東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階`;
 
   const expectResult = `[error] Can not open the source file`;
 
@@ -115,11 +115,11 @@ test(`'echo "<input data>" | abrg - -f csv' should be error because "brabrabra" 
 
 test(`'echo "<input data>" | abrg - -f json' should return the expected results as JSON format`, async () => {
 
-  const input = `東京都千代田区紀尾井町1-3`;
+  const input = `東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階`;
 
   const expectResult = [
     {
-      "query": { "input": "東京都千代田区紀尾井町1-3" },
+      "query": { "input": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階" },
       "result": {
         "prefecture": "東京都",
         "match_level": 8,
@@ -127,7 +127,7 @@ test(`'echo "<input data>" | abrg - -f json' should return the expected results 
         "town": "紀尾井町",
         "town_id": "0056000",
         "lg_code": "131016",
-        "other": "",
+        "other": "東京ガーデンテラス紀尾井町 19階、20階",
         "lat": 35.679107172,
         "lon": 139.736394597,
         "block": "1",
@@ -147,11 +147,11 @@ test(`'echo "<input data>" | abrg - -f json' should return the expected results 
 
 test(`'echo "<input data>" | abrg - -f ndjson' should return the expected results as JSON format on each line`, async () => {
 
-  const input = `東京都千代田区紀尾井町1-3`;
+  const input = `東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階`;
 
   const expectResult = {
     "query": {
-      "input": "東京都千代田区紀尾井町1-3",
+      "input": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
     },
     "result": {
       "prefecture": "東京都",
@@ -160,7 +160,7 @@ test(`'echo "<input data>" | abrg - -f ndjson' should return the expected result
       "town": "紀尾井町",
       "town_id": "0056000",
       "lg_code": "131016",
-      "other": "",
+      "other": "東京ガーデンテラス紀尾井町 19階、20階",
       "lat": 35.679107172,
       "lon": 139.736394597,
       "block": "1",
@@ -180,7 +180,7 @@ test(`'echo "<input data>" | abrg - -f ndjson' should return the expected result
 
 test(`'echo "<input data>" | abrg - -f geojson' should return the expected results as GEO-JSON format`, async () => {
 
-  const input = trimLines(`東京都千代田区紀尾井町1-3`);
+  const input = trimLines(`東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階`);
 
   const expectResult = {
     "type": "FeatureCollection",
@@ -196,7 +196,7 @@ test(`'echo "<input data>" | abrg - -f geojson' should return the expected resul
         },
         "properties": {
           "query": {
-            "input": "東京都千代田区紀尾井町1-3"
+            "input": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階"
           },
           "result": {
             "match_level": 8,
@@ -205,7 +205,7 @@ test(`'echo "<input data>" | abrg - -f geojson' should return the expected resul
             "town": "紀尾井町",
             "town_id": "0056000",
             "lg_code": "131016",
-            "other": "",
+            "other": "東京ガーデンテラス紀尾井町 19階、20階",
             "block": "1",
             "block_id": "001",
             "addr1": "3",
@@ -225,7 +225,7 @@ test(`'echo "<input data>" | abrg - -f geojson' should return the expected resul
 
 test(`'echo "<input data>" | abrg - -f ndgeojson' should return the expected results as GEO-JSON format on each line`, async () => {
 
-  const input = trimLines(`東京都千代田区紀尾井町1-3`);
+  const input = trimLines(`東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階`);
 
   const expectResult = {
     "type": "Feature",
@@ -238,7 +238,7 @@ test(`'echo "<input data>" | abrg - -f ndgeojson' should return the expected res
     },
     "properties": {
       "query": {
-        "input": "東京都千代田区紀尾井町1-3"
+        "input": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階"
       },
       "result": {
         "match_level": 8,
@@ -247,7 +247,7 @@ test(`'echo "<input data>" | abrg - -f ndgeojson' should return the expected res
         "town": "紀尾井町",
         "town_id": "0056000",
         "lg_code": "131016",
-        "other": "",
+        "other": "東京ガーデンテラス紀尾井町 19階、20階",
         "block": "1",
         "block_id": "001",
         "addr1": "3",
