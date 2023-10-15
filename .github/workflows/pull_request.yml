@@ -73,7 +73,7 @@ jobs:
         run: |
           npm run build
       
-      - name: run systen test
+      - name: run system test
         shell: bash
         run: |
           npm run test:system
