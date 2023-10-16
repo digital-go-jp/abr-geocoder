@@ -1,4 +1,4 @@
-import StreamZip from "node-stream-zip";
+import StreamZip from 'node-stream-zip';
 import { IStreamReady } from './istream-ready';
 
 export class StreamReady implements IStreamReady {

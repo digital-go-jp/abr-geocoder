@@ -1,4 +1,4 @@
-import { IStreamReady } from "./istream-ready";
+import { IStreamReady } from './istream-ready';
 
 export interface IDatasetFileMeta {
   fileArea: string;

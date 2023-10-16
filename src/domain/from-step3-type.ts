@@ -1,5 +1,5 @@
-import { TransformCallback } from "node:stream";
-import { Query } from "./query";
+import { TransformCallback } from 'node:stream';
+import { Query } from './query';
 
 export type FromStep3Type = {
   query: Query;

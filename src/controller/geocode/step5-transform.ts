@@ -1,12 +1,13 @@
 import { number2kanji } from '@geolonia/japanese-numeral';
 import { Transform, TransformCallback } from 'node:stream';
-import { AddressFinderForStep3and5, MatchLevel, Query, RegExpEx, kan2num } from '../../domain';
 import {
-  DASH,
-  J_DASH,
-  NUMRIC_AND_KANJI_SYMBOLS,
-  SPACE,
-} from '../../settings/';
+  AddressFinderForStep3and5,
+  MatchLevel,
+  Query,
+  RegExpEx,
+  kan2num,
+} from '../../domain';
+import { DASH, J_DASH, NUMRIC_AND_KANJI_SYMBOLS, SPACE } from '../../settings/';
 
 export class GeocodingStep5 extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {

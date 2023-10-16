@@ -1,4 +1,4 @@
-import { PrefectureName } from "./prefecture-name";
+import { PrefectureName } from './prefecture-name';
 
 export interface IAddressPatch {
   prefecture: PrefectureName;

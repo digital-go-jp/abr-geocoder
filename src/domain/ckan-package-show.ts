@@ -1,4 +1,4 @@
-import { CKANPackageResource } from "./ckan-package-resource";
+import { CKANPackageResource } from './ckan-package-resource';
 
 export type CKANPackageShow = {
   id: string;

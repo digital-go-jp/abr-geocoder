@@ -1,5 +1,5 @@
-import {PrefectureName} from "./prefecture-name";
-import {ICity} from "./city";
+import { PrefectureName } from './prefecture-name';
+import { ICity } from './city';
 
 export interface IPrefecture {
   cities: ICity[];

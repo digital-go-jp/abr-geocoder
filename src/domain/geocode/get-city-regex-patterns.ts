@@ -1,4 +1,4 @@
-import { ICity, IPrefecture, InterpolatePattern} from "../../domain"
+import { ICity, IPrefecture, InterpolatePattern } from '../../domain';
 import { toRegexPattern } from './to-regex-pattern';
 
 /**

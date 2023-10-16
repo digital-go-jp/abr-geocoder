@@ -20,7 +20,7 @@ import {
   JsonTransform,
   NdGeoJsonTransform,
   NdJsonTransform,
-  setupContainer
+  setupContainer,
 } from '../../interface-adapter';
 import { StreamGeocoder } from './stream-geocoder';
 

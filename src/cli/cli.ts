@@ -8,8 +8,8 @@ import { exit } from 'node:process';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { downloadDataset, geocode, updateCheck } from '../controller';
-import { 
-  AbrgError, 
+import {
+  AbrgError,
   AbrgErrorLevel,
   AbrgMessage,
   OutputFormat,
@@ -17,10 +17,7 @@ import {
   packageJsonMeta,
   parsePackageJson,
 } from '../domain';
-import {
-  DEFAULT_FUZZY_CHAR,
-  SINGLE_DASH_ALTERNATIVE,
-} from '../settings/';
+import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '../settings/';
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);

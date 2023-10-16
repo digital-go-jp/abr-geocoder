@@ -4,7 +4,11 @@ import 'reflect-metadata';
 import { DependencyContainer } from 'tsyringe';
 import CLIInfinityProgress from 'cli-infinity-progress';
 import path from 'node:path';
-import { DatasetRow, IStreamReady, findTargetFilesInZipFiles } from '../../../domain';
+import {
+  DatasetRow,
+  IStreamReady,
+  findTargetFilesInZipFiles,
+} from '../../../domain';
 import { DI_TOKEN } from '../../../interface-adapter';
 
 export const extractDatasetProcess = async ({

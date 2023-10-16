@@ -1,4 +1,9 @@
-import { DatasetFileParams, IDatasetFile, IDatasetFileMeta, IStreamReady } from '../';
+import {
+  DatasetFileParams,
+  IDatasetFile,
+  IDatasetFileMeta,
+  IStreamReady,
+} from '../';
 import { DataField } from './data-field';
 import { DataForPosFile } from './dataset-file';
 

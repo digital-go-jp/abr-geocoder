@@ -13,7 +13,7 @@ import { GeocodingStep5 } from './step5-transform';
 import { GeocodingStep6 } from './step6-transform';
 import { GeocodingStep7 } from './step7-transform';
 import { GeocodingStep8 } from './step8-transform';
-import { 
+import {
   Query,
   IAddressPatch,
   IPrefecture,

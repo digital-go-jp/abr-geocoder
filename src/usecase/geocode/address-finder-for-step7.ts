@@ -1,5 +1,11 @@
 import { Database, Statement } from 'better-sqlite3';
-import { DataField, MatchLevel, PrefectureName, Query, RegExpEx } from '../../domain';
+import {
+  DataField,
+  MatchLevel,
+  PrefectureName,
+  Query,
+  RegExpEx,
+} from '../../domain';
 import { DASH } from '../../settings/constant-values';
 
 export type TownBlock = {
