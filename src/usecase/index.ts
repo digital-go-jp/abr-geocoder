@@ -1,2 +1,1 @@
-export * from './geocoder/';
-export * from './downloader/';
+export * from './ckan-downloader';

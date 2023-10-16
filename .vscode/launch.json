@@ -15,7 +15,6 @@
       "args": [
         "${workspaceFolder}/src/index.ts",
         "${workspaceFolder}/.vscode/sample-data.txt",
-        "-r ba000001-v1.1"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -121,7 +120,6 @@
       "args": [
         "${workspaceFolder}/src/index.ts",
         "download",
-        "-f"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

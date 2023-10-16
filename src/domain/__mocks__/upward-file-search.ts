@@ -1,0 +1,1 @@
+export const upwardFileSearch = jest.fn().mockResolvedValue('somewhere');

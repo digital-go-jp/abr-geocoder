@@ -1,2 +1,2 @@
-export * from './getRequest';
-export * from './headRequest';
+export * from './get-request';
+export * from './head-request';
