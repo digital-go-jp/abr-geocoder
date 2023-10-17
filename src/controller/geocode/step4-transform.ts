@@ -1,10 +1,5 @@
 import { Transform, TransformCallback } from 'node:stream';
-import {
-  InterpolatePattern,
-  MatchLevel,
-  PrefectureName,
-  Query,
-} from '@domain';
+import { InterpolatePattern, MatchLevel, PrefectureName, Query } from '@domain';
 
 export class GeocodingStep4 extends Transform {
   private readonly cityPatternsForEachPrefecture: Map<

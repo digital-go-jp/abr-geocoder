@@ -7,12 +7,7 @@ import {
   isKanjiNumberFollewedByCho,
   kan2num,
 } from '@domain';
-import {
-  DASH,
-  DASH_SYMBOLS,
-  J_DASH,
-  KANJI_1to10_SYMBOLS,
-} from '@settings';
+import { DASH, DASH_SYMBOLS, J_DASH, KANJI_1to10_SYMBOLS } from '@settings';
 import { toRegexPattern } from './to-regex-pattern';
 
 export type TownRow = {
