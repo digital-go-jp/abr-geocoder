@@ -36,7 +36,7 @@ import { DI_TOKEN } from '@interface-adapter/tokens';
 import { Database } from 'better-sqlite3';
 import { MultiBar } from 'cli-progress';
 import csvParser from 'csv-parser';
-import { Stream, pipeline } from 'node:stream';
+import { Stream } from 'node:stream';
 import { DependencyContainer } from 'tsyringe';
 import { Logger } from 'winston';
 
@@ -207,7 +207,7 @@ export const loadDatasetProcess = async ({
     },
   });
 
-  await pipeline(filesStream, fileParseStream, loadDataStream);
+  await Stream.promises.pipeline(filesStream, fileParseStream, loadDataStream);
 
   loadDataProgress?.stop();
   if (loadDataProgress) {
