@@ -1,4 +1,4 @@
-import { DatasetFileParams, IDatasetFileMeta, IStreamReady } from '..';
+import { DatasetFileParams, IDatasetFileMeta, IStreamReady } from '@domain';
 import { DataField } from './data-field';
 import { DataWithDateFile } from './dataset-file';
 

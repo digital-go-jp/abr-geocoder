@@ -1,4 +1,4 @@
-import { IDatasetFileMeta } from '..';
+import { IDatasetFileMeta } from '@domain';
 import { IStreamReady } from '../istream-ready';
 import { DataField } from './data-field';
 import { DataWithDateFile } from './dataset-file';

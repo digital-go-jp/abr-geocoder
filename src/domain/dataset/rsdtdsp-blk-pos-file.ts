@@ -3,7 +3,7 @@ import {
   IDatasetFile,
   IDatasetFileMeta,
   IStreamReady,
-} from '../';
+} from '@domain';
 import { DataField } from './data-field';
 import { DataForPosFile } from './dataset-file';
 
