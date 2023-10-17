@@ -1,5 +1,6 @@
+import { DatasetRow } from "@domain";
+import { jest } from '@jest/globals';
 import { Database } from "better-sqlite3";
-import { DatasetRow } from "../../../../domain";
 
 export const loadDatasetHistory = jest.fn(async (params: {
   db: Database,

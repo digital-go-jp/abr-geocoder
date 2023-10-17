@@ -1,9 +1,9 @@
 import { Database } from 'better-sqlite3';
 import { SingleBar } from 'cli-progress';
 import { DependencyContainer } from 'tsyringe';
-import { DatasetMetadata } from '../../../domain';
-import { DI_TOKEN } from '../../../interface-adapter';
-import { CkanDownloader, CkanDownloaderEvent } from '../../../usecase';
+import { DatasetMetadata } from '@domain';
+import { DI_TOKEN } from '@interface-adapter';
+import { CkanDownloader, CkanDownloaderEvent } from '@usecase';
 
 export const downloadProcess = async ({
   container,

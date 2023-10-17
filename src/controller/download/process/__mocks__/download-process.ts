@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { DependencyContainer } from 'tsyringe';
-import { DatasetMetadata } from '../../../../domain';
+import { DatasetMetadata } from '@domain';
 
 export const downloadProcess = jest.fn(async (params: {
   ckanId: string;

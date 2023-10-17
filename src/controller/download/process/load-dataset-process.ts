@@ -16,8 +16,8 @@ import {
   TownDatasetFile,
   TownPosDatasetFile,
   parseFilename,
-} from '../../../domain';
-import { DI_TOKEN } from '../../../interface-adapter';
+} from '@domain';
+import { DI_TOKEN } from '@interface-adapter';
 
 export const loadDatasetProcess = async ({
   db,

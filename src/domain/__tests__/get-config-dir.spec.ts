@@ -1,9 +1,9 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import os from 'node:os';
 import path from 'node:path';
 import { getDataDir } from '../get-data-dir';
-import mockedFs from '../../../__mocks__/fs';
-import mockedOs from '../../../__mocks__/os';
+import mockedFs from '@mock/fs';
+import mockedOs from '@mock/os';
 
 jest.mock('fs');
 jest.mock('os');

@@ -1,5 +1,5 @@
 import { Database } from 'better-sqlite3';
-import { DatasetRow } from '../../../domain/';
+import { DatasetRow } from '@domain';
 
 export const loadDatasetHistory = async ({
   db,

@@ -8,8 +8,8 @@ import {
   DatasetRow,
   IStreamReady,
   findTargetFilesInZipFiles,
-} from '../../../domain';
-import { DI_TOKEN } from '../../../interface-adapter';
+} from '@domain';
+import { DI_TOKEN } from '@interface-adapter';
 
 export const extractDatasetProcess = async ({
   container,

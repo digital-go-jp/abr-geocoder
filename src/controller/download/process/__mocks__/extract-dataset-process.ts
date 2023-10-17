@@ -1,8 +1,9 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
+import { jest } from '@jest/globals';
 import { DependencyContainer } from "tsyringe";
 import stream from 'node:stream';
-import { DatasetRow, IStreamReady } from "../../../../domain";
+import { DatasetRow, IStreamReady } from "@domain";
 
 export const extractDatasetProcess = jest.fn(async (params: {
   srcFile: string;
