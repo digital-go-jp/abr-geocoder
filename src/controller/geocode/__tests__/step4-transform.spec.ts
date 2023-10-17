@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { InterpolatePattern, PrefectureName, Query, MatchLevel } from '../../../domain';
+import { InterpolatePattern, PrefectureName, Query, MatchLevel } from '@domain';
 import { GeocodingStep4 } from '../step4-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 

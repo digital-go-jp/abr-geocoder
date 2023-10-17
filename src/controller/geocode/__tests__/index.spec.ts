@@ -2,11 +2,11 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import 'reflect-metadata';
 const { GEOCODE_RESULT, geocode } = require('../index');
-const { OutputFormat } = require('../../../domain');
+const { OutputFormat } = require('@domain');
 
 jest.mock('fs');
-jest.mock('../../../domain/geocode/get-read-stream-from-source');
-jest.mock('../../../interface-adapter/setup-container');
+jest.mock('@domain/geocode/get-read-stream-from-source');
+jest.mock('@interface-adapter/setup-container');
 jest.mock('../stream-geocoder');
 
 describe('geocoding', () => {

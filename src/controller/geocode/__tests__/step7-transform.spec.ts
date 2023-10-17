@@ -1,12 +1,12 @@
 import { describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { PrefectureName, Query } from '../../../domain';
-import { AddressFinderForStep7 } from '../../../domain/geocode/__mocks__/address-finder-for-step7';
+import { PrefectureName, Query } from '@domain';
+import { AddressFinderForStep7 } from '@domain/geocode/__mocks__/address-finder-for-step7';
 import { GeocodingStep7 } from '../step7-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 
-jest.mock('../../../domain/geocode/address-finder-for-step7');
+jest.mock('@domain/geocode/address-finder-for-step7');
 
 describe('step7-transform', () => {
   const outputWrite = new WritableStreamToArray<Query>();

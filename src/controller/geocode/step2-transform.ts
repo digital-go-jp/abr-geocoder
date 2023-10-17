@@ -1,5 +1,5 @@
 import { Transform, TransformCallback } from 'node:stream';
-import { InterpolatePattern, MatchLevel, Query, RegExpEx } from '../../domain';
+import { InterpolatePattern, MatchLevel, Query, RegExpEx } from '@domain';
 
 export class GeocodingStep2 extends Transform {
   constructor(

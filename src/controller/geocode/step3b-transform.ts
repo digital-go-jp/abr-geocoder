@@ -1,6 +1,5 @@
+import { AddressFinderForStep3and5, FromStep3aType, MatchLevel } from '@domain';
 import { Transform, TransformCallback } from 'node:stream';
-import { AddressFinderForStep3and5, FromStep3aType } from '../../domain';
-import { MatchLevel } from '../../domain/';
 
 export class GeocodingStep3B extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {

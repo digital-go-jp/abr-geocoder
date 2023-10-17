@@ -1,7 +1,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { FromStep3Type, Query } from '../../../domain';
+import { FromStep3Type, Query } from '@domain';
 import { GeocodingStep3Final } from '../step3final-transform';
 
 describe('GeocodingStep3Final', () => {

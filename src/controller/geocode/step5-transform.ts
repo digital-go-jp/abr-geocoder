@@ -6,8 +6,8 @@ import {
   Query,
   RegExpEx,
   kan2num,
-} from '../../domain';
-import { DASH, J_DASH, NUMRIC_AND_KANJI_SYMBOLS, SPACE } from '../../settings/';
+} from '@domain';
+import { DASH, J_DASH, NUMRIC_AND_KANJI_SYMBOLS, SPACE } from '@settings';
 
 export class GeocodingStep5 extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {

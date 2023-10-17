@@ -1,8 +1,8 @@
-import { describe, expect, it } from '@jest/globals';
+import { beforeAll, describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { Query } from '../../../domain';
-import { DASH, SPACE } from '../../../settings/constant-values';
+import { Query } from '@domain';
+import { DASH, SPACE } from '@settings/constant-values';
 import { GeocodingStep8 } from '../step8-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 

@@ -12,7 +12,7 @@ import {
   AbrgMessage,
   OutputFormat,
   getReadStreamFromSource,
-} from '../../domain';
+} from '@domain';
 import {
   CsvTransform,
   DI_TOKEN,
@@ -21,7 +21,7 @@ import {
   NdGeoJsonTransform,
   NdJsonTransform,
   setupContainer,
-} from '../../interface-adapter';
+} from '@interface-adapter';
 import { StreamGeocoder } from './stream-geocoder';
 
 export enum GEOCODE_RESULT {

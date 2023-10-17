@@ -1,10 +1,10 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import Stream, { TransformCallback } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { Query, FromStep3Type, FromStep3aType, PrefectureName, MatchLevel, getCityPatternsForEachPrefecture } from '../../../domain/';
+import { Query, FromStep3Type, FromStep3aType, PrefectureName, MatchLevel, getCityPatternsForEachPrefecture } from '@domain';
 import { GeocodingStep3A } from '../step3a-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
-import { dummyPrefectures } from '../../../domain/geocode/__tests__/dummy-prefectures.skip';
+import { dummyPrefectures } from '@domain/geocode/__tests__/dummy-prefectures.skip';
 
 describe('step3a-transform', () => {
   const cityPatternsForEachPrefecture =

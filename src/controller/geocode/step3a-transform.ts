@@ -4,8 +4,8 @@ import {
   InterpolatePattern,
   FromStep3Type,
   Step3aMatchedPatternType,
-} from '../../domain';
-import { MatchLevel } from '../../domain';
+} from '@domain';
+import { MatchLevel } from '@domain';
 
 export class GeocodingStep3A extends Transform {
   constructor(

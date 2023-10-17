@@ -1,7 +1,7 @@
 import { Database } from 'better-sqlite3';
 import { Readable, Transform, Writable } from 'node:stream';
 import { TransformCallback } from 'stream';
-import PATCH_PATTERNS from '../../settings/patch-patterns';
+import PATCH_PATTERNS from '@settings/patch-patterns';
 import { GeocodingStep1 } from './step1-transform';
 import { GeocodingStep2 } from './step2-transform';
 import { GeocodingStep3 } from './step3-transform';
@@ -27,7 +27,7 @@ import {
   PrefectureName,
   AddressFinderForStep7,
   GeocodeResult,
-} from '../../domain';
+} from '@domain';
 
 export class StreamGeocoder extends Transform {
   private constructor(private stream: Readable) {
