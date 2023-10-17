@@ -1,33 +1,71 @@
 {
   "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
-    "outDir": "./build",                        /* Redirect output structure to the directory. */
-    "lib": ["ES2021"],
-
-    /* Strict Type-Checking Options */
-    "strict": true,                           /* Enable all strict type-checking options. */
-    "esModuleInterop": true,                  /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+    "outDir": "./build",
+    "lib": [
+      "ES2021"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
     "sourceMap": true,
     "typeRoots": [
       "./node_modules/@types",
       "./node_modules/@jest"
     ],
-
-    /* For tsyringe */
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node"],
-
-    /* For loading json file */
+    "types": [
+      "node"
+    ],
     "resolveJsonModule": true,
     "moduleResolution": "nodenext",
+    "baseUrl": ".",
+    "paths": {
+      "@mock/*": ["__mocks__/*"],
+
+      "@cli": ["src/cli/index"],
+      "@cli/*": ["src/cli/*"],
+
+      "@domain": ["src/domain/index"],
+      "@domain/*": ["src/domain/*"],
+
+      "@controller": ["src/controller/index"],
+      "@controller/*": ["src/controller/*"],
+
+      "@interface-adapter": ["src/interface-adapter/index"],
+      "@interface-adapter/*": ["src/interface-adapter/*"],
+
+      "@usecase": ["src/usecase/index"],
+      "@usecase/*": ["src/usecase/*"],
+      
+      "@settings": ["src/settings/index"],
+      "@settings/*": ["src/settings/*"],
+      
+      "@process": ["src/controller/download/process/index"],
+      "@process/*": ["src/controller/download/process/*"]
+    },
+    "removeComments": true,
+    "isolatedModules": false,
+    "plugins": [
+      {
+        "transform": "typescript-transform-paths"
+      },
+      {
+        "transform": "typescript-transform-paths",
+        "afterDeclarations": true
+      }
+    ]
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "require": [
+      "typescript-transform-paths/register"
+    ]
   },
   "include": [
-    "src/**/*.ts",
+    "src/**/*.ts"
   ],
   "exclude": [
-    "src/**/__tests__/*",
-    "src/**/__mocks__/*",
-    "node_modules/**/*"
+    "node_modules"
   ]
 }

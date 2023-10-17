@@ -2,19 +2,19 @@
 import 'reflect-metadata';
 
 import { beforeAll, describe, expect, it, jest } from '@jest/globals';
-import { AbrgMessage, OutputFormat, upwardFileSearch } from '../../domain';
-import { getPackageInfo, parseHelper, main } from '../cli';
-import { updateCheck, downloadDataset, geocode } from '../../controller';
-import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '../../settings';
+import { AbrgMessage, OutputFormat, upwardFileSearch } from '@domain';
+import { getPackageInfo, parseHelper, main } from '@cli';
+import { updateCheck, downloadDataset, geocode } from '@controller';
+import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@settings';
 
-jest.mock('../../controller', () => ({
+jest.mock('@controller', () => ({
   updateCheck: jest.fn(),
   geocode: jest.fn(),
   downloadDataset: jest.fn(),
 }));
 
-jest.mock('../../domain/upward-file-search');
-jest.mock('../../domain/parse-package-json');
+jest.mock('@domain/upward-file-search');
+jest.mock('@domain/parse-package-json');
 
 describe('cli', () => {
   describe('getPackageInfo', () => {

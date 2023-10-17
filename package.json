@@ -20,11 +20,10 @@
   },
   "scripts": {
     "start": "ts-node src/index.ts",
-    "build": "tsc",
-    "clean": "tsc --build --clean",
+    "build": "tspc -p tsconfig.build.json",
     "test": "jest --maxWorker=25%",
     "test:ci": "jest --runInBand",
-    "test:system": "node  spec/execution-test.spec.mjs",
+    "test:system": "node spec/execution-test.spec.mjs",
     "lint": "eslint . --ext .ts",
     "lint-and-fix": "eslint . --ext .ts --fix"
   },
@@ -57,7 +56,9 @@
     "prettier": "^3.0.3",
     "ts-jest": "29.0.5",
     "ts-node": "^10.9.1",
+    "ts-patch": "^3.0.2",
     "typescript": "^5.2.2",
+    "typescript-transform-paths": "^3.4.6",
     "uvu": "^0.5.6",
     "zx": "^7.2.3"
   },

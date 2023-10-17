@@ -1,4 +1,6 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
+const { compilerOptions } = require('./tsconfig.json')
+const { pathsToModuleNameMapper } = require('ts-jest')
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
@@ -18,9 +20,11 @@ module.exports = {
     "settings",
     "__mocks__",
   ],
+  modulePaths: [compilerOptions.baseUrl],
   moduleNameMapper: {
     'node:fs': '<rootDir>/__mocks__/fs.ts',
     'node:os': '<rootDir>/__mocks__/os.ts',
+    ...pathsToModuleNameMapper(compilerOptions.paths),
   },
   roots: ['<rootDir>/src/','<rootDir>/__mocks__'],
   testRegex: './src/.*\\.(test|spec)?\\.ts$',
