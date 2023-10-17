@@ -10,7 +10,7 @@ import {
   JsonTransform,
   NdGeoJsonTransform,
   NdJsonTransform,
-} from '../interface-adapter/formatters';
+} from '@interface-adapter/formatters';
 import {
   provideDatabase,
   provideLogger,
@@ -23,7 +23,7 @@ import {
   AbrgErrorLevel,
   AbrgMessage,
   upwardFileSearch,
-} from '../domain';
+} from '@domain';
 import CLIInfinityProgress from 'cli-infinity-progress';
 import { DI_TOKEN } from './tokens';
 

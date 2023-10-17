@@ -3,7 +3,8 @@ import StreamZip from 'node-stream-zip';
 import fs from 'node:fs';
 import path from 'node:path';
 import StringHash from 'string-hash';
-import { IStreamReady, StreamReady } from '.';
+import { IStreamReady } from './istream-ready';
+import { StreamReady } from './stream-ready';
 import { DatasetRow } from './dataset';
 
 export const findTargetFilesInZipFiles = async ({

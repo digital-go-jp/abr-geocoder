@@ -1,5 +1,5 @@
 import { Stream } from 'node:stream';
-import { GeocodeResult, GeocodeResultFields } from '../../domain';
+import { GeocodeResult, GeocodeResultFields } from '@domain';
 import { TransformCallback } from 'stream';
 
 export class CsvTransform extends Stream.Transform {

@@ -1,5 +1,5 @@
 import { RegExpEx } from './reg-exp-ex';
-import oldKanji_to_newKanji_table from '../settings/jis-kanji-table';
+import oldKanji_to_newKanji_table from '@settings/jis-kanji-table';
 /*
  * オリジナルコード
  * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/dict.ts#L1-L23

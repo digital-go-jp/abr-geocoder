@@ -1,5 +1,5 @@
 import { Stream } from 'node:stream';
-import { GeocodeResult } from '../../domain';
+import { GeocodeResult } from '@domain';
 import { TransformCallback } from 'stream';
 
 export class NdGeoJsonTransform extends Stream.Transform {
