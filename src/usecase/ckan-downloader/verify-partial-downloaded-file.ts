@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import fs from 'node:fs';
-import { DatasetMetadata, getRequest } from '../../domain';
+import { DatasetMetadata, getRequest } from '@domain';
 
 export const verifyPartialDownloadedFile = async ({
   metadata,

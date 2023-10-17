@@ -16,7 +16,7 @@ import {
   getValueWithKey,
   headRequest,
   saveKeyAndValue,
-} from '../../domain';
+} from '@domain';
 import { verifyPartialDownloadedFile } from './verify-partial-downloaded-file';
 
 export interface CkanDownloaderParams {

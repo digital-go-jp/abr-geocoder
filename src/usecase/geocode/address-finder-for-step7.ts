@@ -5,8 +5,8 @@ import {
   PrefectureName,
   Query,
   RegExpEx,
-} from '../../domain';
-import { DASH } from '../../settings/constant-values';
+} from '@domain';
+import { DASH } from '@settings/constant-values';
 
 export type TownBlock = {
   lg_code: string;

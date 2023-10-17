@@ -7,13 +7,13 @@ import {
   isKanjiNumberFollewedByCho,
   kan2num,
   toRegexPattern,
-} from '../../domain';
+} from '@domain';
 import {
   DASH,
   DASH_SYMBOLS,
   J_DASH,
   KANJI_1to10_SYMBOLS,
-} from '../../settings/';
+} from '@settings';
 
 export type TownRow = {
   lg_code: string;
