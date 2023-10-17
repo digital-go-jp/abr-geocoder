@@ -11,13 +11,13 @@ const __dirname = path.dirname(__filename);
 const { test } = await import('uvu');
 const assert = await import('uvu/assert');
 const jsonDiff = (await import('json-diff')).default;
-
-$.cwd = __dirname;
+const fs = (await import('node:fs')).default;
+const which = (await import('which')).default;
 
 class Test {
 
   async execute(args, input) {
-    const p = $`node ../build/index.js ${args} --dataDir ./ --resource demo`.quiet().stdio('pipe');
+    const p = $`node ${__dirname}/../build/cli/cli.js ${args} --dataDir ${__dirname} --resource demo`.quiet().stdio('pipe');
     p.stdin.write(input);
     p.stdin.end();
     return await p;
@@ -73,10 +73,16 @@ class CsvTest extends Test {
   }
 }
 
-test.before(async () => {
-  $`rm -f demo.sqlite`.quiet();
-  const result = await $`sqlite3 demo.sqlite < demo.sql`.quiet();
-  assert.equal(result.exitCode, 0, `The exit code should be 0`);
+test('setup', async () => {
+  const sqlite3Path = await which('sqlite3', {
+    nothrow: true,
+  });
+  assert.not.equal(sqlite3Path, null, '[error] sqlite3 is not installed')
+  
+  if (!fs.existsSync(`${__dirname}/demo.sqlite`)) {
+    const result = await $`sqlite3 ${__dirname}/demo.sqlite < ${__dirname}/demo.sql`.quiet();
+    assert.equal(result.exitCode, 0, `The exit code should be 0`);
+  }
 })
 
 test(`'echo "<input data>" | abrg - -f csv' should return the expected results as CSV format`, async () => {
@@ -262,10 +268,5 @@ test(`'echo "<input data>" | abrg - -f ndgeojson' should return the expected res
   const tester = new JsonTest();
   await tester.validate('- -f ndgeojson', input, expectExitCode, expectResult);
 });
-
-
-test.after(async () => {
-  $`rm -f demo.sqlite`.quiet();
-})
 
 test.run();
