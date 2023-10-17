@@ -6,7 +6,7 @@ import {
   IPrefecture,
   Prefecture,
   PrefectureName,
-} from '../../domain';
+} from '@domain';
 
 export const getPrefecturesFromDB = async ({
   db,

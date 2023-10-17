@@ -2,7 +2,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { toRegexPattern } from '../to-regex-pattern';
 
 
-jest.mock('../../../domain/jis-kanji')
+jest.mock('@domain/jis-kanji')
 describe('toRegexPattern', () => {
   it.concurrent('cases for the 三栄町|四谷三栄町', async () => {
     expect(toRegexPattern('東京都新宿区四谷三栄町')).toEqual('東京都新宿区(三栄町|四谷三栄町)');

@@ -3,7 +3,7 @@ import {
   InterpolatePattern,
   PrefectureName,
   RegExpEx,
-} from '../../domain/';
+} from '@domain';
 
 class Trie {
   children = new Map<string, Trie>();

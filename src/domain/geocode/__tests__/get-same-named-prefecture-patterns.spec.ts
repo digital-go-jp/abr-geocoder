@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { getSameNamedPrefecturePatterns } from '../..';
+import { getSameNamedPrefecturePatterns } from '@domain';
 import { dummyPrefectures } from './dummy-prefectures.skip';
 
 describe('getSameNamedPrefecturePatterns', () => {

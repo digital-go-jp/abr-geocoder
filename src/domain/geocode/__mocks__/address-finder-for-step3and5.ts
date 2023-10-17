@@ -1,4 +1,5 @@
-import { PrefectureName } from '../../../domain/prefecture-name';
+import { jest } from '@jest/globals';
+import { PrefectureName } from '@domain/prefecture-name';
 import { FindParameters } from '../address-finder-for-step3and5';
 
 export const AddressFinderForStep3and5 = jest.fn().mockImplementation(() => {

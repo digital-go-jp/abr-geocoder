@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { InterpolatePattern, PrefectureName, getCityPatternsForEachPrefecture } from "../..";
+import { InterpolatePattern, PrefectureName, getCityPatternsForEachPrefecture } from "@domain";
 import { dummyPrefectures } from './dummy-prefectures.skip';
 
 describe('getCityPatternsForEachPrefecture', () => {

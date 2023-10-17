@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { PrefectureName, getPrefectureRegexPatterns } from '../..';
+import { PrefectureName, getPrefectureRegexPatterns } from '@domain';
 import { dummyPrefectures } from './dummy-prefectures.skip';
 
 describe('getPrefectureRegexPatterns', () => {

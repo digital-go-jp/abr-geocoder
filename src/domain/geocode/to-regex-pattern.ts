@@ -1,4 +1,4 @@
-import { RegExpEx, jisKanji } from '../';
+import { RegExpEx, jisKanji } from '@domain';
 
 /**
  * オリジナルコード

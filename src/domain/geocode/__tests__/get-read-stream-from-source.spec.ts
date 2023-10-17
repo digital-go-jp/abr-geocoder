@@ -1,8 +1,8 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { AbrgError, AbrgErrorLevel, AbrgMessage } from "../../";
-import { getReadStreamFromSource } from "../";
-import mockedFs from '../../../../__mocks__/fs';
-import { SINGLE_DASH_ALTERNATIVE } from '../../../settings';
+import { AbrgError, AbrgErrorLevel, AbrgMessage } from "@domain";
+import { getReadStreamFromSource } from "@domain/geocode";
+import mockedFs from '@mock/fs';
+import { SINGLE_DASH_ALTERNATIVE } from '@settings';
 const fs = jest.requireActual('fs');
 
 jest.dontMock('../get-read-stream-from-source');

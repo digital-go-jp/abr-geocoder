@@ -1,7 +1,7 @@
 import fs from 'node:fs';
-import { SINGLE_DASH_ALTERNATIVE } from '../../settings/constant-values';
-import { AbrgMessage } from '../abrg-message';
-import { AbrgError, AbrgErrorLevel } from '../abrg-error';
+import { SINGLE_DASH_ALTERNATIVE } from '@settings/constant-values';
+import { AbrgMessage } from '@abrg-message';
+import { AbrgError, AbrgErrorLevel } from '@abrg-error';
 
 export const getReadStreamFromSource = (
   source: string

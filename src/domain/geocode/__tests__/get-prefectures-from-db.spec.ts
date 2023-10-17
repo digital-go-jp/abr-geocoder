@@ -1,7 +1,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { getPrefecturesFromDB } from '../../';
+import { getPrefecturesFromDB } from '@domain';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
-import { City, Prefecture, PrefectureName } from '../../../domain';
+import { City, Prefecture, PrefectureName } from '@domain';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 

@@ -1,4 +1,4 @@
-import { IPrefecture, InterpolatePattern } from '../../';
+import { IPrefecture, InterpolatePattern } from '@domain';
 
 /**
  *  オリジナルコード

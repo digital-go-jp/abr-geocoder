@@ -6,13 +6,13 @@ import {
   RegExpEx,
   isKanjiNumberFollewedByCho,
   kan2num,
-} from '../../domain';
+} from '@domain';
 import {
   DASH,
   DASH_SYMBOLS,
   J_DASH,
   KANJI_1to10_SYMBOLS,
-} from '../../settings/';
+} from '@settings';
 import { toRegexPattern } from './to-regex-pattern';
 
 export type TownRow = {

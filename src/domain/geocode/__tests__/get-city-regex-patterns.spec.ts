@@ -1,5 +1,6 @@
 import { describe, it } from '@jest/globals';
-import { Prefecture, PrefectureName } from '../../../';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Prefecture } from '@domain/prefecture';
 import {  getCityRegexPatterns } from '../get-city-regex-patterns';
 
 jest.mock('../to-regex-pattern');

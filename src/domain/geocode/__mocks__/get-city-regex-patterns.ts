@@ -1,4 +1,4 @@
-import { PrefectureName } from "../../prefecture-name";
+import { PrefectureName } from "@domain/prefecture-name";
 
 export const getCityRegexPatterns = jest.fn()
 .mockReturnValueOnce([

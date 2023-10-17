@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
-import { AddressFinderForStep3and5, PrefectureName, TownRow } from '../../../domain';
-import { DASH } from '../../../settings';
+import { AddressFinderForStep3and5, PrefectureName, TownRow } from '@domain';
+import { DASH } from '@settings';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 
