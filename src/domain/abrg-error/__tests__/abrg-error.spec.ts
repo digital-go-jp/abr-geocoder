@@ -1,8 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 import { AbrgError, AbrgErrorLevel } from '../abrg-error';
-import { AbrgMessage } from '../../abrg-message';
-import enMessage from '../../abrg-message/locales/en';
-import jaMessage from '../../abrg-message/locales/ja';
+import { AbrgMessage } from '@abrg-message';
+import enMessage from '@abrg-message/locales/en';
+import jaMessage from '@abrg-message/locales/ja';
 
 describe('AbrgError', () => {
   it.concurrent('message should be written in Japanese', async () => {

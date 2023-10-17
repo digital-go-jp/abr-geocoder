@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
-import { IDatasetFileMeta, IStreamReady, TownDatasetFile } from '../..';
-import { DataField } from '../data-field';
+import { IDatasetFileMeta, IStreamReady, TownDatasetFile } from '@domain';
+import { DataField } from '@domain/dataset/data-field';
 
 describe('TownDatasetFile', () => {
   it.concurrent('should create an instance', async () => {

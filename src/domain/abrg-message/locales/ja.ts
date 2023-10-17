@@ -1,4 +1,4 @@
-import { AbrgMessage } from '../abrg-message';
+import { AbrgMessage } from '@abrg-message/abrg-message';
 
 const messages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_COMMON_DATADIR_OPTION]:
