@@ -1,5 +1,5 @@
+import { Query } from '@domain/query';
 import Stream, { Transform, TransformCallback } from 'node:stream';
-import { Query } from '@domain';
 
 export class GeocodingStep3 extends Transform {
   constructor(private otherReadable: Stream.Readable) {

@@ -1,4 +1,4 @@
-import { AbrgMessage } from '@abrg-message';
+import { AbrgMessage } from '@abrg-message/abrg-message';
 
 export enum AbrgErrorLevel {
   DEBUG = 'debug',

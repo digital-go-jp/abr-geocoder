@@ -1,5 +1,5 @@
+import { FromStep3Type } from '@domain/from-step3-type';
 import { Writable } from 'node:stream';
-import { FromStep3Type } from '@domain';
 
 export class GeocodingStep3Final extends Writable {
   constructor() {

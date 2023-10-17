@@ -1,23 +1,25 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
+import { AbrgError, AbrgErrorLevel } from '@abrg-error/abrg-error';
+import { AbrgMessage } from '@abrg-message/abrg-message';
+import { downloadDataset } from '@controller/download/download-dataset';
+import { geocode } from '@controller/geocode/geocode';
+import { updateCheck } from '@controller/update-check/update-check';
+import { OutputFormat } from '@domain/output-format';
+import { packageJsonMeta } from '@domain/package-json-meta';
+import { parsePackageJson } from '@domain/parse-package-json';
+import { upwardFileSearch } from '@domain/upward-file-search';
+import {
+  DEFAULT_FUZZY_CHAR,
+  SINGLE_DASH_ALTERNATIVE,
+} from '@settings/constant-values';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { exit } from 'node:process';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { downloadDataset, geocode, updateCheck } from '@controller/index';
-import {
-  AbrgError,
-  AbrgErrorLevel,
-  AbrgMessage,
-  OutputFormat,
-  upwardFileSearch,
-  packageJsonMeta,
-  parsePackageJson,
-} from '@domain/index';
-import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@settings/index';
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.abr-geocoder');
 const terminalWidth = Math.min(yargs.terminalWidth(), 120);

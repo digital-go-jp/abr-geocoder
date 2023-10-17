@@ -1,8 +1,10 @@
+import { AbrgError, AbrgErrorLevel } from '@abrg-error/abrg-error';
+import { AbrgMessage } from '@abrg-message/abrg-message';
 import { describe, expect, it, jest } from '@jest/globals';
-import { AbrgError, AbrgErrorLevel, AbrgMessage } from "@domain";
-import { getReadStreamFromSource } from "@domain/geocode";
 import mockedFs from '@mock/fs';
-import { SINGLE_DASH_ALTERNATIVE } from '@settings';
+import { SINGLE_DASH_ALTERNATIVE } from '@settings/constant-values';
+import { getReadStreamFromSource } from '../get-read-stream-from-source';
+
 const fs = jest.requireActual('fs');
 
 jest.dontMock('../get-read-stream-from-source');

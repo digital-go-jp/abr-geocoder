@@ -1,6 +1,7 @@
-import { Transform, TransformCallback } from 'node:stream';
-import { Query, RegExpEx } from '@domain';
+import { Query } from '@domain/query';
+import { RegExpEx } from '@domain/reg-exp-ex';
 import { DASH, SPACE } from '@settings/constant-values';
+import { Transform, TransformCallback } from 'node:stream';
 
 export class GeocodingStep8 extends Transform {
   constructor() {

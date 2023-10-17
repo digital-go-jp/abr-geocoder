@@ -1,7 +1,10 @@
+import { InterpolatePattern } from '@domain/interpolate-pattern';
+import { MatchLevel } from '@domain/match-level';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Query } from '@domain/query';
 import { beforeAll, describe, expect, it } from '@jest/globals';
+import { DASH } from '@settings/constant-values';
 import Stream from 'node:stream';
-import { DASH } from '@settings';
-import { InterpolatePattern, PrefectureName, Query, MatchLevel } from '@domain';
 import { GeocodingStep2 } from '../step2-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 

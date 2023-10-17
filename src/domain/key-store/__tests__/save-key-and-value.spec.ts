@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
-import {saveKeyAndValue} from '../';
+import {saveKeyAndValue} from '../save-key-and-value';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 jest.mock('string-hash')

@@ -1,5 +1,6 @@
+import { AddressFinderForStep7 } from '@domain/geocode/address-finder-for-step7';
+import { Query } from '@domain/query';
 import { Transform, TransformCallback } from 'node:stream';
-import { AddressFinderForStep7, Query } from '@domain';
 
 export class GeocodingStep7 extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep7) {

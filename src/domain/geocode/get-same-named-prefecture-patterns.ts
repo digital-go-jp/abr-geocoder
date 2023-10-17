@@ -1,9 +1,7 @@
-import {
-  IPrefecture,
-  InterpolatePattern,
-  PrefectureName,
-  RegExpEx,
-} from '@domain';
+import { InterpolatePattern } from '@domain/interpolate-pattern';
+import { IPrefecture } from '@domain/prefecture';
+import { PrefectureName } from '@domain/prefecture-name';
+import { RegExpEx } from '@domain/reg-exp-ex';
 
 class Trie {
   children = new Map<string, Trie>();

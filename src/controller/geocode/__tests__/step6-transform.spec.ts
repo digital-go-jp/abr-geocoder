@@ -1,7 +1,9 @@
+import { IAddressPatch } from '@domain/iaddress-patch';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Query } from '@domain/query';
 import { describe, expect, it } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { IAddressPatch, PrefectureName, Query } from '@domain';
 import { GeocodingStep6 } from '../step6-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 

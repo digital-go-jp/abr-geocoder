@@ -1,4 +1,5 @@
-import { IPrefecture, InterpolatePattern } from '@domain';
+import { InterpolatePattern } from '@domain/interpolate-pattern';
+import { IPrefecture } from '@domain/prefecture';
 
 /**
  *  オリジナルコード

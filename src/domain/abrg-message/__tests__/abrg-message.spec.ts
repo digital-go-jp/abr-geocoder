@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { AbrgMessage } from '..';
+import { AbrgMessage } from '../abrg-message';
 import enMessages from '../locales/en';
 import jaMessages from '../locales/ja';
 

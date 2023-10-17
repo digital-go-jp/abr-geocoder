@@ -1,4 +1,6 @@
-import { IPrefecture, InterpolatePattern, PrefectureName } from '@domain';
+import { InterpolatePattern } from '@domain/interpolate-pattern';
+import { IPrefecture } from '@domain/prefecture';
+import { PrefectureName } from '@domain/prefecture-name';
 import { getCityRegexPatterns } from './get-city-regex-patterns';
 
 export const getCityPatternsForEachPrefecture = (

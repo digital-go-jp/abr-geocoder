@@ -1,5 +1,7 @@
+import { getCityPatternsForEachPrefecture } from '@domain/geocode/get-city-patterns-for-each-prefecture';
+import { InterpolatePattern } from '@domain/interpolate-pattern';
+import { PrefectureName } from '@domain/prefecture-name';
 import { describe, expect, it } from '@jest/globals';
-import { InterpolatePattern, PrefectureName, getCityPatternsForEachPrefecture } from "@domain";
 import { dummyPrefectures } from './dummy-prefectures.skip';
 
 describe('getCityPatternsForEachPrefecture', () => {

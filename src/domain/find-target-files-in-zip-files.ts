@@ -5,7 +5,7 @@ import path from 'node:path';
 import StringHash from 'string-hash';
 import { IStreamReady } from './istream-ready';
 import { StreamReady } from './stream-ready';
-import { DatasetRow } from './dataset';
+import { DatasetRow } from './dataset/dataset-row';
 
 export const findTargetFilesInZipFiles = async ({
   srcDir,

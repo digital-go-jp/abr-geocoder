@@ -1,5 +1,5 @@
-import { Transform, TransformCallback } from 'node:stream';
-import { Query, RegExpEx } from '@domain';
+import { Query } from '@domain/query';
+import { RegExpEx } from '@domain/reg-exp-ex';
 import {
   ALPHA_NUMERIC_SYMBOLS,
   DASH,
@@ -9,6 +9,7 @@ import {
   SPACE,
   SPACE_SYMBOLS,
 } from '@settings/constant-values';
+import { Transform, TransformCallback } from 'node:stream';
 
 export class GeocodingStep1 extends Transform {
   constructor() {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { isKanjiNumberFollewedByCho } from '@domain';
+import { isKanjiNumberFollewedByCho } from '../is-kanji-number-follewed-by-cho';
 
 describe('isKanjiNumberFollewedByCho', () => {
   it.concurrent('trueを返すケース', async () => {

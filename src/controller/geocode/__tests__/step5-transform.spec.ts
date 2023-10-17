@@ -1,9 +1,11 @@
-import { describe, expect, it, jest } from '@jest/globals';
+import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
+import { MatchLevel } from '@domain/match-level';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Query } from '@domain/query';
+import { beforeAll, describe, expect, it, jest } from '@jest/globals';
 import Database from 'better-sqlite3';
 import Stream, { PassThrough } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { MatchLevel, PrefectureName, Query } from '@domain';
-import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
 import { GeocodingStep5 } from '../step5-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 

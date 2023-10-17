@@ -1,11 +1,9 @@
+import { FromStep3Type } from '@domain/from-step3-type';
+import { InterpolatePattern } from '@domain/interpolate-pattern';
+import { MatchLevel } from '@domain/match-level';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Step3aMatchedPatternType } from '@domain/step3a-matched-pattern-type';
 import { Transform, TransformCallback } from 'node:stream';
-import {
-  PrefectureName,
-  InterpolatePattern,
-  FromStep3Type,
-  Step3aMatchedPatternType,
-} from '@domain';
-import { MatchLevel } from '@domain';
 
 export class GeocodingStep3A extends Transform {
   constructor(

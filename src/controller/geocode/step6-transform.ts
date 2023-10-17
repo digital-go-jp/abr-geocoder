@@ -1,5 +1,7 @@
+import { IAddressPatch } from '@domain/iaddress-patch';
+import { Query } from '@domain/query';
+import { RegExpEx } from '@domain/reg-exp-ex';
 import { Transform, TransformCallback } from 'node:stream';
-import { IAddressPatch, Query, RegExpEx } from '@domain';
 
 export class GeocodingStep6 extends Transform {
   constructor(private readonly addressPatches: IAddressPatch[]) {

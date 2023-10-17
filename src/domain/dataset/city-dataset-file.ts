@@ -1,5 +1,6 @@
-import { DatasetFileParams, IDatasetFileMeta, IStreamReady } from '@domain';
-import { DataField } from './data-field';
+import { DatasetFileParams, IDatasetFileMeta } from '@domain/dataset-file';
+import { DataField } from '@domain/dataset/data-field';
+import { IStreamReady } from '@domain/istream-ready';
 import { DataWithDateFile } from './dataset-file';
 
 export class CityDatasetFile

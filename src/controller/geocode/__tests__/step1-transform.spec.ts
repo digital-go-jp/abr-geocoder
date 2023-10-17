@@ -1,7 +1,7 @@
+import { Query } from '@domain/query';
 import { beforeEach, describe, expect, it } from '@jest/globals';
+import { DASH } from '@settings/constant-values';
 import Stream from 'node:stream';
-import { Query } from '@domain';
-import { DASH } from '@settings';
 import { GeocodingStep1 } from '../step1-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 

@@ -1,5 +1,5 @@
+import { GeocodeResult } from '@domain/geocode-result';
 import { Stream } from 'node:stream';
-import { GeocodeResult } from '@domain';
 import { TransformCallback } from 'stream';
 
 export class JsonTransform extends Stream.Transform {

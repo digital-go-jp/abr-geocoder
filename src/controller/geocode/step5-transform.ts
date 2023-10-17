@@ -1,13 +1,16 @@
+import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
+import { kan2num } from '@domain/kan2num';
+import { MatchLevel } from '@domain/match-level';
+import { Query } from '@domain/query';
+import { RegExpEx } from '@domain/reg-exp-ex';
 import { number2kanji } from '@geolonia/japanese-numeral';
-import { Transform, TransformCallback } from 'node:stream';
 import {
-  AddressFinderForStep3and5,
-  MatchLevel,
-  Query,
-  RegExpEx,
-  kan2num,
-} from '@domain';
-import { DASH, J_DASH, NUMRIC_AND_KANJI_SYMBOLS, SPACE } from '@settings';
+  DASH,
+  J_DASH,
+  NUMRIC_AND_KANJI_SYMBOLS,
+  SPACE,
+} from '@settings/constant-values';
+import { Transform, TransformCallback } from 'node:stream';
 
 export class GeocodingStep5 extends Transform {
   constructor(private readonly addressFinder: AddressFinderForStep3and5) {

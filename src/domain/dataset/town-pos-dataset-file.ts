@@ -2,8 +2,8 @@ import {
   DatasetFileParams,
   IDatasetFile,
   IDatasetFileMeta,
-  IStreamReady,
-} from '@domain';
+} from '@domain/dataset-file';
+import { IStreamReady } from '@domain/istream-ready';
 import { DataField } from './data-field';
 import { DataForPosFile } from './dataset-file';
 

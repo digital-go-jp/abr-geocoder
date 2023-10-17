@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { AbrgError, AbrgErrorLevel } from '../abrg-error';
-import { AbrgMessage } from '@abrg-message';
+import { AbrgMessage } from '@abrg-message/abrg-message';
 import enMessage from '@abrg-message/locales/en';
 import jaMessage from '@abrg-message/locales/ja';
 

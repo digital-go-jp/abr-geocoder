@@ -1,18 +1,19 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
+import { AbrgMessage } from '@abrg-message/abrg-message';
+import { getPackageInfo, main, parseHelper } from '@cli/cli';
+import { downloadDataset } from '@controller/download/download-dataset';
+import { geocode } from '@controller/geocode/geocode';
+import { updateCheck } from '@controller/update-check/update-check';
+import { OutputFormat } from '@domain/output-format';
+import { upwardFileSearch, } from '@domain/upward-file-search';
 import { beforeAll, describe, expect, it, jest } from '@jest/globals';
-import { AbrgMessage, OutputFormat, upwardFileSearch } from '@domain';
-import { getPackageInfo, parseHelper, main } from '@cli';
-import { updateCheck, downloadDataset, geocode } from '@controller';
-import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@settings';
+import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@settings/constant-values';
 
-jest.mock('@controller', () => ({
-  updateCheck: jest.fn(),
-  geocode: jest.fn(),
-  downloadDataset: jest.fn(),
-}));
-
+jest.mock('@controller/update-check/update-check');
+jest.mock('@controller/geocode/geocode');
+jest.mock('@controller/download/download-dataset');
 jest.mock('@domain/upward-file-search');
 jest.mock('@domain/parse-package-json');
 

@@ -1,7 +1,7 @@
-import { describe, it } from '@jest/globals';
-import { PrefectureName } from '@domain/prefecture-name';
 import { Prefecture } from '@domain/prefecture';
-import {  getCityRegexPatterns } from '../get-city-regex-patterns';
+import { PrefectureName } from '@domain/prefecture-name';
+import { describe, expect, it, jest } from '@jest/globals';
+import { getCityRegexPatterns } from '../get-city-regex-patterns';
 
 jest.mock('../to-regex-pattern');
 

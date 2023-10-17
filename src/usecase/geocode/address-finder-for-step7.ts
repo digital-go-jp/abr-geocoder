@@ -1,12 +1,10 @@
-import { Database, Statement } from 'better-sqlite3';
-import {
-  DataField,
-  MatchLevel,
-  PrefectureName,
-  Query,
-  RegExpEx,
-} from '@domain';
+import { DataField } from '@domain/dataset/data-field';
+import { MatchLevel } from '@domain/match-level';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Query } from '@domain/query';
+import { RegExpEx } from '@domain/reg-exp-ex';
 import { DASH } from '@settings/constant-values';
+import { Database, Statement } from 'better-sqlite3';
 
 export type TownBlock = {
   lg_code: string;

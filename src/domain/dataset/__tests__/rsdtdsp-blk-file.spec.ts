@@ -1,7 +1,8 @@
-import { describe, expect, it } from '@jest/globals';
-import { IDatasetFileMeta, IStreamReady, RsdtdspBlkFile } from '@domain';
+import { IDatasetFileMeta } from '@domain/dataset-file';
 import { DataField } from '@domain/dataset/data-field';
-
+import { RsdtdspBlkFile } from '../rsdtdsp-blk-file';
+import { IStreamReady } from '@domain/istream-ready';
+import { describe, expect, it } from '@jest/globals';
 describe('RsdtdspBlkFile', () => {
   it.concurrent('should create an instance', async () => {
     const fileMeta: IDatasetFileMeta = {

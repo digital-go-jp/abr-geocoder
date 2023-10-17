@@ -1,10 +1,11 @@
 // reflect-metadata is necessary for DI
 import { describe, expect, it, jest } from '@jest/globals';
 import 'reflect-metadata';
-import { UPDATE_CHECK_RESULT, updateCheck } from '../index';
+import { updateCheck } from '../update-check';
+import { UPDATE_CHECK_RESULT } from '../update-check-result';
 
-jest.mock('../../../interface-adapter/setup-container');
-jest.mock('../../../usecase/ckan-downloader/ckan-downloader');
+jest.mock('@interface-adapter/setup-container');
+jest.mock('@usecase/ckan-downloader/ckan-downloader');
 
 describe('onUpdateCheck', () => {
   it.concurrent('should return "NEW_DATASET_IS_AVAILABLE" if update is available', async () => {

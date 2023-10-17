@@ -1,4 +1,4 @@
-import { DatasetRow } from "@domain";
+import { DatasetRow } from "@domain/dataset/dataset-row";
 import { jest } from '@jest/globals';
 import { Database } from "better-sqlite3";
 

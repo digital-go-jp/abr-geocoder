@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { IDatasetFileMeta } from '@domain/dataset-file';
 import { IStreamReady } from '@domain/istream-ready';
 import { DataField } from '@domain/dataset/data-field';
-import { PrefDatasetFile } from '@domain/dataset/pref-dataset-file';
+import { PrefDatasetFile } from '../pref-dataset-file';
 
 describe('PrefDatasetFile', () => {
   it.concurrent('should create an instance', async () => {

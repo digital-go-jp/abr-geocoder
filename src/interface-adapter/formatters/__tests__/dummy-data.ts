@@ -1,4 +1,4 @@
-import { GeocodeResult } from '@domain';
+import { GeocodeResult } from '@domain/geocode-result';
 
 export const dummyData = [
   new GeocodeResult(

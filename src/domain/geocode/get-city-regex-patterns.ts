@@ -1,5 +1,7 @@
-import { ICity, IPrefecture, InterpolatePattern } from '@domain';
+import { InterpolatePattern } from '@domain/interpolate-pattern';
+import { IPrefecture } from '@domain/prefecture';
 import { toRegexPattern } from './to-regex-pattern';
+import { ICity } from '@domain/city';
 
 /**
  * オリジナルコード

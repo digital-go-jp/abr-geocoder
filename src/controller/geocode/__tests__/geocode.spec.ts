@@ -1,9 +1,8 @@
-// reflect-metadata is necessary for DI
+import { OutputFormat } from '@domain/output-format';
 import { describe, expect, it, jest } from '@jest/globals';
-import 'reflect-metadata';
-const { GEOCODE_RESULT, geocode } = require('../index');
-const { OutputFormat } = require('@domain');
+import { GEOCODE_RESULT, geocode } from '../geocode';
 
+jest.dontMock('../geocode');
 jest.mock('fs');
 jest.mock('@domain/geocode/get-read-stream-from-source');
 jest.mock('@interface-adapter/setup-container');

@@ -1,7 +1,10 @@
+import { AddressFinderForStep7 } from '@domain/geocode/address-finder-for-step7';
+import { MatchLevel } from '@domain/match-level';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Query } from '@domain/query';
 import { describe, expect, it, jest } from '@jest/globals';
+import { DASH } from '@settings/constant-values';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
-import { AddressFinderForStep7, MatchLevel, PrefectureName, Query } from '@domain';
-import { DASH } from '@settings';
 import dummyBlockList from './dummyBlockList.json';
 import dummyRsdtList from './dummyRsdtList.json';
 

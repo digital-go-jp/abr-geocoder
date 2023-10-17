@@ -1,4 +1,5 @@
-import { IPrefecture, PrefectureName } from "@domain";
+import { IPrefecture } from "@domain/prefecture";
+import { PrefectureName } from "@domain/prefecture-name";
 
 export const dummyPrefectures: IPrefecture[] = [
   {

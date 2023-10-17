@@ -6,22 +6,18 @@ import byline from 'byline';
 import fs from 'node:fs';
 import path from 'node:path';
 import stream, { Transform, Writable } from 'node:stream';
-import {
-  AbrgError,
-  AbrgErrorLevel,
-  AbrgMessage,
-  OutputFormat,
-  getReadStreamFromSource,
-} from '@domain';
-import {
-  CsvTransform,
-  DI_TOKEN,
-  GeoJsonTransform,
-  JsonTransform,
-  NdGeoJsonTransform,
-  NdJsonTransform,
-  setupContainer,
-} from '@interface-adapter';
+
+import { AbrgError, AbrgErrorLevel } from '@abrg-error/abrg-error';
+import { AbrgMessage } from '@abrg-message/abrg-message';
+import { getReadStreamFromSource } from '@domain/geocode/get-read-stream-from-source';
+import { OutputFormat } from '@domain/output-format';
+import { CsvTransform } from '@interface-adapter/formatters/csv-transform';
+import { GeoJsonTransform } from '@interface-adapter/formatters/geo-json-transform';
+import { JsonTransform } from '@interface-adapter/formatters/json-transform';
+import { NdGeoJsonTransform } from '@interface-adapter/formatters/nd-geo-json-transform';
+import { NdJsonTransform } from '@interface-adapter/formatters/nd-json-transform';
+import { setupContainer } from '@interface-adapter/setup-container';
+import { DI_TOKEN } from '@interface-adapter/tokens';
 import { StreamGeocoder } from './stream-geocoder';
 
 export enum GEOCODE_RESULT {

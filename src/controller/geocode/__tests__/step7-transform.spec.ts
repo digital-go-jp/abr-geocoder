@@ -1,8 +1,9 @@
+import { AddressFinderForStep7 } from '@domain/geocode/__mocks__/address-finder-for-step7';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Query } from '@domain/query';
 import { beforeAll, describe, expect, it, jest } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { PrefectureName, Query } from '@domain';
-import { AddressFinderForStep7 } from '@domain/geocode/__mocks__/address-finder-for-step7';
 import { GeocodingStep7 } from '../step7-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 

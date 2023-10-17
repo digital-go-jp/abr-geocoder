@@ -1,3 +1,12 @@
+import { AbrgError, AbrgErrorLevel } from '@abrg-error/abrg-error';
+import { AbrgMessage } from '@abrg-message/abrg-message';
+import { CKANPackageShow } from '@domain/ckan-package-show';
+import { CKANResponse } from '@domain/ckan-response';
+import { DatasetMetadata } from '@domain/dataset-metadata';
+import { getRequest } from '@domain/http/get-request';
+import { headRequest } from '@domain/http/head-request';
+import { getValueWithKey } from '@domain/key-store/get-value-with-key';
+import { saveKeyAndValue } from '@domain/key-store/save-key-and-value';
 import { Database } from 'better-sqlite3';
 import { StatusCodes } from 'http-status-codes';
 import EventEmitter from 'node:events';
@@ -5,18 +14,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Writable } from 'node:stream';
 import { Client } from 'undici';
-import {
-  AbrgError,
-  AbrgErrorLevel,
-  AbrgMessage,
-  CKANPackageShow,
-  CKANResponse,
-  DatasetMetadata,
-  getRequest,
-  getValueWithKey,
-  headRequest,
-  saveKeyAndValue,
-} from '@domain';
 import { verifyPartialDownloadedFile } from './verify-partial-downloaded-file';
 
 export interface CkanDownloaderParams {

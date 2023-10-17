@@ -1,11 +1,13 @@
 // reflect-metadata is necessary for DI
 import 'reflect-metadata';
 
-import { DependencyContainer } from 'tsyringe';
+import { DatasetRow } from '@domain/dataset/dataset-row';
+import { findTargetFilesInZipFiles } from '@domain/find-target-files-in-zip-files';
+import { IStreamReady } from '@domain/istream-ready';
+import { DI_TOKEN } from '@interface-adapter/tokens';
 import CLIInfinityProgress from 'cli-infinity-progress';
 import path from 'node:path';
-import { DatasetRow, IStreamReady, findTargetFilesInZipFiles } from '@domain';
-import { DI_TOKEN } from '@interface-adapter';
+import { DependencyContainer } from 'tsyringe';
 
 export const extractDatasetProcess = async ({
   container,

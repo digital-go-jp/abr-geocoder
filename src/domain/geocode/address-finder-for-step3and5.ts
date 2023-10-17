@@ -1,13 +1,16 @@
-import { Database, Statement } from 'better-sqlite3';
+import { DataField } from '@domain/dataset/data-field';
+import { isKanjiNumberFollewedByCho } from '@domain/is-kanji-number-follewed-by-cho';
+import { kan2num } from '@domain/kan2num';
+import { RegExpEx } from '@domain/reg-exp-ex';
 import {
-  DataField,
-  ITown,
-  PrefectureName,
-  RegExpEx,
-  isKanjiNumberFollewedByCho,
-  kan2num,
-} from '@domain';
-import { DASH, DASH_SYMBOLS, J_DASH, KANJI_1to10_SYMBOLS } from '@settings';
+  DASH,
+  DASH_SYMBOLS,
+  J_DASH,
+  KANJI_1to10_SYMBOLS,
+} from '@settings/constant-values';
+import { Database, Statement } from 'better-sqlite3';
+import { PrefectureName } from '../prefecture-name';
+import { ITown } from '../town';
 import { toRegexPattern } from './to-regex-pattern';
 
 export type TownRow = {

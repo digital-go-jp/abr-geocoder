@@ -1,9 +1,12 @@
+import { DatasetMetadata } from '@domain/dataset-metadata';
+import { DI_TOKEN } from '@interface-adapter/tokens';
+import {
+  CkanDownloader,
+  CkanDownloaderEvent,
+} from '@usecase/ckan-downloader/ckan-downloader';
 import { Database } from 'better-sqlite3';
 import { SingleBar } from 'cli-progress';
 import { DependencyContainer } from 'tsyringe';
-import { DatasetMetadata } from '@domain';
-import { DI_TOKEN } from '@interface-adapter';
-import { CkanDownloader, CkanDownloaderEvent } from '@usecase';
 
 export const downloadProcess = async ({
   container,

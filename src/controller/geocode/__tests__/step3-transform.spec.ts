@@ -1,7 +1,9 @@
+import { FromStep3Type } from '@domain/from-step3-type';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Query } from '@domain/query';
 import { describe, expect, it, jest } from '@jest/globals';
 import Stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { FromStep3Type, PrefectureName, Query } from '@domain';
 import { GeocodingStep3 } from '../step3-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 

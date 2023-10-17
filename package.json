@@ -16,7 +16,7 @@
     "node": ">=18"
   },
   "bin": {
-    "abrg": "build/index.js"
+    "abrg": "build/cli/cli.js"
   },
   "scripts": {
     "start": "ts-node src/index.ts",

@@ -1,11 +1,11 @@
-import proj4 from 'proj4';
-import { DataField } from './data-field';
 import {
   DatasetFileParams,
   IDatasetFile,
   IDatasetFileMeta,
-  IStreamReady,
-} from '@domain';
+} from '@domain/dataset-file';
+import { IStreamReady } from '@domain/istream-ready';
+import proj4 from 'proj4';
+import { DataField } from './data-field';
 
 proj4.defs('EPSG:4612', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 proj4.defs('EPSG:6668', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');

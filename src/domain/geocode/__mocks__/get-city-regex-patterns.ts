@@ -1,4 +1,5 @@
 import { PrefectureName } from "@domain/prefecture-name";
+import { jest } from '@jest/globals';
 
 export const getCityRegexPatterns = jest.fn()
 .mockReturnValueOnce([

@@ -1,17 +1,16 @@
-// reflect-metadata is necessary for DI
-import 'reflect-metadata';
-
+import { AbrgMessage } from '@abrg-message/abrg-message';
+import { saveKeyAndValue } from '@domain/key-store/save-key-and-value';
+import { setupContainer } from '@interface-adapter/setup-container';
+import { DI_TOKEN } from '@interface-adapter/tokens';
 import { Database } from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Logger } from 'winston';
-import { AbrgMessage, saveKeyAndValue } from '@domain';
-import { DI_TOKEN, setupContainer } from '@interface-adapter';
+import { DOWNLOAD_DATASET_RESULT } from './download-dataset-result';
 import { downloadProcess } from './process/download-process';
 import { extractDatasetProcess } from './process/extract-dataset-process';
 import { loadDatasetHistory } from './process/load-dataset-history';
 import { loadDatasetProcess } from './process/load-dataset-process';
-import { DOWNLOAD_DATASET_RESULT } from './download-dataset-result';
 
 export const downloadDataset = async ({
   ckanId,

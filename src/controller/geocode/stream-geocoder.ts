@@ -1,7 +1,20 @@
+import { GeocodeResult } from '@domain/geocode-result';
+import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
+import { AddressFinderForStep7 } from '@domain/geocode/address-finder-for-step7';
+import { getCityPatternsForEachPrefecture } from '@domain/geocode/get-city-patterns-for-each-prefecture';
+import { getPrefectureRegexPatterns } from '@domain/geocode/get-prefecture-regex-patterns';
+import { getPrefecturesFromDB } from '@domain/geocode/get-prefectures-from-db';
+import { getSameNamedPrefecturePatterns } from '@domain/geocode/get-same-named-prefecture-patterns';
+import { IAddressPatch } from '@domain/iaddress-patch';
+import { InterpolatePattern } from '@domain/interpolate-pattern';
+import { IPrefecture } from '@domain/prefecture';
+import { PrefectureName } from '@domain/prefecture-name';
+import { Query } from '@domain/query';
+import { RegExpEx } from '@domain/reg-exp-ex';
+import PATCH_PATTERNS from '@settings/patch-patterns';
 import { Database } from 'better-sqlite3';
 import { Readable, Transform, Writable } from 'node:stream';
 import { TransformCallback } from 'stream';
-import PATCH_PATTERNS from '@settings/patch-patterns';
 import { GeocodingStep1 } from './step1-transform';
 import { GeocodingStep2 } from './step2-transform';
 import { GeocodingStep3 } from './step3-transform';
@@ -13,21 +26,6 @@ import { GeocodingStep5 } from './step5-transform';
 import { GeocodingStep6 } from './step6-transform';
 import { GeocodingStep7 } from './step7-transform';
 import { GeocodingStep8 } from './step8-transform';
-import {
-  Query,
-  IAddressPatch,
-  IPrefecture,
-  getPrefecturesFromDB,
-  RegExpEx,
-  InterpolatePattern,
-  getPrefectureRegexPatterns,
-  getSameNamedPrefecturePatterns,
-  getCityPatternsForEachPrefecture,
-  AddressFinderForStep3and5,
-  PrefectureName,
-  AddressFinderForStep7,
-  GeocodeResult,
-} from '@domain';
 
 export class StreamGeocoder extends Transform {
   private constructor(private stream: Readable) {

@@ -22,32 +22,14 @@
     "baseUrl": ".",
     "paths": {
       "@mock/*": ["__mocks__/*"],
-
-      "@cli": ["src/cli/index"],
       "@cli/*": ["src/cli/*"],
-
-      "@domain": ["src/domain/index"],
       "@domain/*": ["src/domain/*"],
-
-      "@controller": ["src/controller/index"],
       "@controller/*": ["src/controller/*"],
-
-      "@interface-adapter": ["src/interface-adapter/index"],
       "@interface-adapter/*": ["src/interface-adapter/*"],
-
-      "@usecase": ["src/usecase/index"],
       "@usecase/*": ["src/usecase/*"],
-      
-      "@settings": ["src/settings/index"],
       "@settings/*": ["src/settings/*"],
-      
-      "@process": ["src/controller/download/process/index"],
       "@process/*": ["src/controller/download/process/*"],
-
-      "@abrg-message": ["src/domain/abrg-message/index"],
       "@abrg-message/*": ["src/domain/abrg-message/*"],
-      
-      "@abrg-error": ["src/domain/abrg-error/index"],
       "@abrg-error/*": ["src/domain/abrg-error/*"]
     },
     "removeComments": true,

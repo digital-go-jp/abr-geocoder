@@ -1,23 +1,21 @@
+import { CityDatasetFile } from '@domain/dataset/city-dataset-file';
+import { DatasetFile } from '@domain/dataset/dataset-file';
+import { parseFilename } from '@domain/dataset/parse-filename';
+import { PrefDatasetFile } from '@domain/dataset/pref-dataset-file';
+import { RsdtdspBlkFile } from '@domain/dataset/rsdtdsp-blk-file';
+import { RsdtdspBlkPosFile } from '@domain/dataset/rsdtdsp-blk-pos-file';
+import { RsdtdspRsdtFile } from '@domain/dataset/rsdtdsp-rsdt-file';
+import { RsdtdspRsdtPosFile } from '@domain/dataset/rsdtdsp-rsdt-pos-file';
+import { TownDatasetFile } from '@domain/dataset/town-dataset-file';
+import { TownPosDatasetFile } from '@domain/dataset/town-pos-dataset-file';
+import { IStreamReady } from '@domain/istream-ready';
+import { DI_TOKEN } from '@interface-adapter/tokens';
 import { Database } from 'better-sqlite3';
 import { MultiBar } from 'cli-progress';
 import csvParser from 'csv-parser';
 import { Stream, pipeline } from 'node:stream';
 import { DependencyContainer } from 'tsyringe';
 import { Logger } from 'winston';
-import {
-  CityDatasetFile,
-  DatasetFile,
-  IStreamReady,
-  PrefDatasetFile,
-  RsdtdspBlkFile,
-  RsdtdspBlkPosFile,
-  RsdtdspRsdtFile,
-  RsdtdspRsdtPosFile,
-  TownDatasetFile,
-  TownPosDatasetFile,
-  parseFilename,
-} from '@domain';
-import { DI_TOKEN } from '@interface-adapter';
 
 export const loadDatasetProcess = async ({
   db,

@@ -1,6 +1,7 @@
+import { DatasetMetadata } from '@domain/dataset-metadata';
+import { getRequest } from '@domain/http/get-request';
 import { StatusCodes } from 'http-status-codes';
 import fs from 'node:fs';
-import { DatasetMetadata, getRequest } from '@domain';
 
 export const verifyPartialDownloadedFile = async ({
   metadata,

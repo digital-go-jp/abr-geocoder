@@ -1,31 +1,24 @@
 // reflect-metadata is necessary for DI
-import 'reflect-metadata';
+import { AbrgError, AbrgErrorLevel } from '@abrg-error/abrg-error';
+import { AbrgMessage } from '@abrg-message/abrg-message';
+import { DI_TOKEN } from '@interface-adapter/tokens';
+import CLIInfinityProgress from 'cli-infinity-progress';
 import { MultiBar, SingleBar } from 'cli-progress';
 import fs from 'node:fs';
 import path from 'node:path';
+import 'reflect-metadata';
 import { DependencyContainer, container } from 'tsyringe';
-import {
-  CsvTransform,
-  GeoJsonTransform,
-  JsonTransform,
-  NdGeoJsonTransform,
-  NdJsonTransform,
-} from '@interface-adapter/formatters';
-import {
-  provideDatabase,
-  provideLogger,
-  provideMultiProgressBar,
-  provideProgressBar,
-  provideInifinityProgressBar,
-} from './providers';
-import {
-  AbrgError,
-  AbrgErrorLevel,
-  AbrgMessage,
-  upwardFileSearch,
-} from '@domain';
-import CLIInfinityProgress from 'cli-infinity-progress';
-import { DI_TOKEN } from './tokens';
+import { CsvTransform } from './formatters/csv-transform';
+import { GeoJsonTransform } from './formatters/geo-json-transform';
+import { JsonTransform } from './formatters/json-transform';
+import { NdGeoJsonTransform } from './formatters/nd-geo-json-transform';
+import { NdJsonTransform } from './formatters/nd-json-transform';
+import { provideDatabase } from './providers/provide-database';
+import { provideInifinityProgressBar } from './providers/provide-inifinity-progress-bar';
+import { provideLogger } from './providers/provide-logger';
+import { provideMultiProgressBar } from './providers/provide-multi-progress-bar';
+import { provideProgressBar } from './providers/provide-progress-bar';
+import { upwardFileSearch } from '@domain/upward-file-search';
 
 export interface setupContainerParams {
   dataDir: string;
