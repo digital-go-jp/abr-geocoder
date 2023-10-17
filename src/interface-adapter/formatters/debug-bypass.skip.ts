@@ -1,5 +1,4 @@
 import { GeocodeResult } from '@domain/geocode-result';
-import { BREAK_AT_EOF } from '@settings/constant-values';
 import { Stream } from 'node:stream';
 import { TransformCallback } from 'stream';
 
