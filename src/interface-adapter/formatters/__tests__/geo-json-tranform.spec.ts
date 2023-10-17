@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { Stream } from 'node:stream';
 import { GeoJsonTransform } from '../geo-json-transform';
 import { dummyData } from './dummy-data';
+import { BREAK_AT_EOF } from '@settings/constant-values';
 
 describe('GeoJsonTransform', () => {
   it('should output rows with expected JSON format()', async () => {
@@ -173,6 +174,9 @@ describe('GeoJsonTransform', () => {
       writable,
     )
     
+    expect(buffer.at(-1)).toEqual(BREAK_AT_EOF);
+    buffer.pop();
+
     const result = JSON.parse(buffer.join(''));
     expect(result).toEqual(expectJson)
   });

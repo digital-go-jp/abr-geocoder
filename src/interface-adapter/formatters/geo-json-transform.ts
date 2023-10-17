@@ -1,4 +1,5 @@
 import { GeocodeResult } from '@domain/geocode-result';
+import { BREAK_AT_EOF } from '@settings/constant-values';
 import { Stream } from 'node:stream';
 import { TransformCallback } from 'stream';
 
@@ -64,6 +65,7 @@ export class GeoJsonTransform extends Stream.Transform {
   _final(callback: (error?: Error | null | undefined) => void): void {
     this.emit('data', this.buffer);
     this.emit('data', ']}');
+    this.emit('data', BREAK_AT_EOF); // ファイルの最後に改行を入れる
     callback();
   }
 

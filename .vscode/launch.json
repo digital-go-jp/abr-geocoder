@@ -13,7 +13,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/src/cli/cli.ts",
         "${workspaceFolder}/.vscode/sample-data.txt",
       ],
       "console": "integratedTerminal",
@@ -28,7 +28,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/src/cli/cli.ts",
         "${workspaceFolder}/.vscode/sample-data.txt",
         "${workspaceFolder}/.vscode/result.csv",
         "-f",
@@ -46,7 +46,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/src/cli/cli.ts",
         "${workspaceFolder}/.vscode/sample-data.txt",
         "${workspaceFolder}/.vscode/result.json",
         "-f",
@@ -64,7 +64,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/src/cli/cli.ts",
         "${workspaceFolder}/.vscode/sample-data.txt",
         "${workspaceFolder}/.vscode/result.nd.json",
         "--format",
@@ -82,7 +82,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/src/cli/cli.ts",
         "-f",
         "geojson",
         "${workspaceFolder}/.vscode/sample-data.txt",
@@ -100,7 +100,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/src/cli/cli.ts",
         "-f",
         "ndgeojson",
         "${workspaceFolder}/.vscode/sample-data.txt",
@@ -118,7 +118,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/src/cli/cli.ts",
         "download",
       ],
       "console": "integratedTerminal",
@@ -134,7 +134,7 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/index.ts",
+        "${workspaceFolder}/src/cli/cli.ts",
         "update-check"
       ],
       "console": "integratedTerminal",

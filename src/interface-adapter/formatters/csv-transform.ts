@@ -1,4 +1,5 @@
 import { GeocodeResult, GeocodeResultFields } from '@domain/geocode-result';
+import { BREAK_AT_EOF } from '@settings/constant-values';
 import { Stream } from 'node:stream';
 import { TransformCallback } from 'stream';
 
@@ -94,6 +95,11 @@ export class CsvTransform extends Stream.Transform {
     this.rows.length = 0;
 
     callback(null, csvLines);
+  }
+
+  _final(callback: (error?: Error | null | undefined) => void): void {
+    // this.emit('data', BREAK_AT_EOF); // _transform で改行を付けているので、改行を入れない
+    callback();
   }
 
   static DEFAULT_COLUMNS = [

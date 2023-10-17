@@ -1,8 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
+import csvtojson from 'csvtojson';
 import { Stream } from 'node:stream';
 import { CsvTransform } from '../csv-transform';
 import { dummyData } from './dummy-data';
-import csvtojson from 'csvtojson';
 
 describe('CsvTransform', () => {
   it('should output rows with expected CSV format()', async () => {
@@ -16,8 +16,7 @@ input, match_level, lg_code, prefecture, city, town, block, addr1, addr2, other,
 "東京都千代田区紀尾井町1",3,131016,東京都,千代田区,紀尾井町,,,,,35.681411,139.73495
 "山形県山形市旅篭町二丁目3番25号",8,062014,山形県,山形市,旅篭町二丁目,3,25,,,38.255437,140.339126
 "山形市旅篭町二丁目3番25号",8,062014,山形県,山形市,旅篭町二丁目,3,25,,,38.255437,140.339126
-"東京都町田市森野2-2-22",8,132098,東京都,町田市,森野二丁目,2,22,,,35.548247,139.440264
-`.trim());
+"東京都町田市森野2-2-22",8,132098,東京都,町田市,森野二丁目,2,22,,,35.548247,139.440264`.trim());
 
     const buffer: string[] = [];
     const writable = new Stream.Writable({
