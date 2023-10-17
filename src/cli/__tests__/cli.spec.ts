@@ -33,6 +33,7 @@ import { OutputFormat } from '@domain/output-format';
 import { upwardFileSearch, } from '@domain/upward-file-search';
 import { beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@settings/constant-values';
+import fs from 'node:fs';
 
 jest.mock('@controller/update-check/update-check');
 jest.mock('@controller/geocode/geocode');
@@ -41,6 +42,16 @@ jest.mock('@domain/upward-file-search');
 jest.mock('@domain/parse-package-json');
 
 describe('cli', () => {
+  describe('cli.ts', () => {
+    it('should start with "#!/usr/bin/env node"', () => {
+      const buffer = Buffer.alloc(50); // 50 Bytes
+      const fd = fs.openSync(`${__dirname}/../cli.ts`, 'r');
+      fs.readSync(fd, buffer, 0, buffer.length, 0);
+      fs.closeSync(fd);
+      expect(buffer.toString().startsWith('#!/usr/bin/env node')).toBe(true);
+    });
+  });
+
   describe('getPackageInfo', () => {
     it('should return expected values', async () => {
 

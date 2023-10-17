@@ -53,8 +53,11 @@ export const downloadDataset = async ({
   const logger = container.resolve<Logger | undefined>(DI_TOKEN.LOGGER);
 
   const downloadDir = path.join(dataDir, 'download', ckanId);
-  if (!fs.existsSync(downloadDir)) {
-    await fs.promises.mkdir(downloadDir);
+  const exists = fs.existsSync(downloadDir);
+  if (!exists) {
+    await fs.promises.mkdir(downloadDir, {
+      recursive: true,
+    });
   }
 
   const downloadInfo = await downloadProcess({

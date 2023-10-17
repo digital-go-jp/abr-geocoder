@@ -302,7 +302,7 @@ export const main = async (
       }
 
       // Otherwise, show the error message
-      console.error(`[error] ${msg}`);
+      console.error('[error] }', e, msg);
 
       if (process.env.NODE_ENV !== 'test') {
         exit(1);
