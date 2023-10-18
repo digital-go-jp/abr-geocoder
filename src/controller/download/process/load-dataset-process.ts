@@ -81,9 +81,6 @@ export const loadDatasetProcess = async ({
   const filesStream = Stream.Readable.from(csvFiles, {
     objectMode: true,
   });
-  filesStream.on('finish', () => {
-    logger?.info('fileStream is finished');
-  });
 
   const fileParseProgresss = multiProgressBar?.create(csvFiles.length, 0, {
     filename: 'analysis...',
@@ -214,30 +211,3 @@ export const loadDatasetProcess = async ({
     multiProgressBar?.remove(loadDataProgress);
   }
 };
-// const test = async () => {
-//   const downloadDir = '/Users/maskatsum/.abr-geocoder/download';
-//   const tmpDir = await fs.promises.mkdtemp(downloadDir);
-//   const fileLoadingProgress = new CLIInfinityProgress();
-//   fileLoadingProgress.setHeader('Finding dataset files...');
-//   fileLoadingProgress.start();
-//   const csvFiles = await fsIterator(
-//     tmpDir,
-//     downloadDir,
-//     '.csv',
-//     fileLoadingProgress
-//   );
-//   fileLoadingProgress.remove();
-
-//   const db = await provideDatabase({
-//     sqliteFilePath: '/Users/maskatsum/.abr-geocoder/download.sqlite',
-//     schemaFilePath:
-//       '/Volumes/digital/abr-geocoder/src/cli/interface-adapter/schema.sql',
-//   });
-
-//   await loadDatasetProcess({
-//     db,
-//     csvFiles,
-//     multiProgressBar: provideMultiProgressBar(),
-//   });
-// };
-// test();
