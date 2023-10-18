@@ -38,7 +38,7 @@ export const setupContainer = jest.fn().mockImplementation(() => {
     resolve: (target: DI_TOKEN) => {
       switch (target) {
         case DI_TOKEN.LOGGER:
-          return new Logger();
+          return undefined;
 
         case DI_TOKEN.DATABASE:
           return new Database('dummy');

@@ -145,6 +145,20 @@ export const loadDatasetProcess = async ({
       // CSVファイルの読み込み
       const statement = db.prepare(datasetFile.sql);
 
+      const errorHandler = (error: unknown) => {
+        if (db.inTransaction) {
+          db.exec('ROLLBACK');
+        }
+
+        if (error instanceof Error) {
+          callback(error);
+        } else if (typeof error === 'string') {
+          callback(new Error(error));
+        } else {
+          callback(new Error('unknown error'));
+        }
+      };
+
       // DBに登録
       db.exec('BEGIN');
       datasetFile.csvFile.getStream().then(fileStream => {
@@ -158,9 +172,13 @@ export const loadDatasetProcess = async ({
             new Stream.Writable({
               objectMode: true,
               write(chunk, encoding, next) {
-                const processed = datasetFile.process(chunk);
-                statement.run(processed);
-                next(null);
+                try {
+                  const processed = datasetFile.process(chunk);
+                  statement.run(processed);
+                  next(null);
+                } catch (error) {
+                  errorHandler(error);
+                }
               },
             })
           )
@@ -195,10 +213,7 @@ export const loadDatasetProcess = async ({
             callback(null);
           })
           .on('error', (error: Error) => {
-            if (db.inTransaction) {
-              db.exec('ROLLBACK');
-            }
-            callback(error);
+            errorHandler(error);
           });
       });
     },

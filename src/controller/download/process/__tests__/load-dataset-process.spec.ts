@@ -25,7 +25,7 @@
 import { DummyCsvFile } from "@domain/dataset/__mocks__/dummy-csv.skip";
 import { setupContainer } from "@interface-adapter/__mocks__/setup-container";
 import { describe, expect, it, jest } from "@jest/globals";
-import Database from 'better-sqlite3';
+import MockedDB from '@mock/better-sqlite3';
 import Stream from "node:stream";
 import { DependencyContainer } from "tsyringe";
 import { loadDatasetProcess } from "../load-dataset-process";
@@ -308,23 +308,22 @@ const mt_city_all_csv = () => {
 
 describe('load-dataset-process', () => {
   const container = setupContainer() as DependencyContainer;
-  const db = new Database("dummy db");
-  const csvFiles = [
-    mt_city_all_csv(),
-    mt_pref_all_csv(),
-    mt_rsdtdsp_blk_pref01_csv(),
-    mt_rsdtdsp_blk_pos_pref01_csv(),
-    mt_rsdtdsp_rsdt_pref01_csv(),
-    mt_rsdtdsp_rsdt_pos_pref01_csv(),
-    mt_town_all_csv(),
-    mt_town_pos_pref01_csv(),
-  ];		
 
   it('should return csv file list', async () => { 
+    const db = new MockedDB("dummy db");
     await loadDatasetProcess({
       db,
       container,
-      csvFiles,
+      csvFiles: [
+        mt_city_all_csv(),
+        mt_pref_all_csv(),
+        mt_rsdtdsp_blk_pref01_csv(),
+        mt_rsdtdsp_blk_pos_pref01_csv(),
+        mt_rsdtdsp_rsdt_pref01_csv(),
+        mt_rsdtdsp_rsdt_pos_pref01_csv(),
+        mt_town_all_csv(),
+        mt_town_pos_pref01_csv(),
+      ],
     });
     expect(db.exec).toBeCalledWith("BEGIN");
     expect(db.prepare).toBeCalledWith("CityDatasetFile sql");
@@ -336,5 +335,32 @@ describe('load-dataset-process', () => {
     expect(db.prepare).toBeCalledWith("TownDatasetFile sql");
     expect(db.prepare).toBeCalledWith("TownPosDatasetFile sql");
     expect(db.exec).toBeCalledWith("COMMIT");
+  })
+
+  it('should rollback if an error has been occurred during the process', async () => { 
+    const db = new MockedDB("dummy db");
+    db.inTransaction = true;
+    db.prepare.mockImplementation((sql: string) => {
+      return {
+        run: jest.fn().mockImplementation(() => {
+          if (sql !== 'PrefDatasetFile sql') {
+            return;
+          }
+          throw new Error('Error!');
+        })
+      }
+    })
+    await expect(loadDatasetProcess({
+      db,
+      container,
+      csvFiles: [
+        mt_pref_all_csv(),
+      ],
+    })).rejects.toThrow();
+
+    expect(db.exec).toBeCalledWith("BEGIN");
+    expect(db.prepare).toBeCalledWith("PrefDatasetFile sql");
+    expect(db.exec).not.toBeCalledWith("COMMIT");
+    expect(db.exec).toBeCalledWith("ROLLBACK");
   })
 });
