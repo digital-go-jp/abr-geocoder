@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+import { AbrgMessage } from '@domain/abrg-message/abrg-message';
 import { DatasetRow } from '@domain/dataset/dataset-row';
 import { findTargetFilesInZipFiles } from '@domain/find-target-files-in-zip-files';
 import { IStreamReady } from '@domain/istream-ready';
@@ -44,7 +45,9 @@ export const extractDatasetProcess = async ({
   const fileLoadingProgress = container.resolve<
     CLIInfinityProgress | undefined
   >(DI_TOKEN.INFINITY_PROGRESS_BAR);
-  fileLoadingProgress?.setHeader('Finding dataset files...');
+  fileLoadingProgress?.setHeader(
+    AbrgMessage.toString(AbrgMessage.FINDING_THE_DATASET_FILES)
+  );
   fileLoadingProgress?.start();
   const csvFiles = await findTargetFilesInZipFiles({
     srcDir: path.dirname(srcFile),
