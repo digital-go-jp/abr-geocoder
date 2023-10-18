@@ -7,15 +7,138 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "download command",
+      "name": "geocoding(default)",
       "runtimeArgs": [
-          "-r",
-          "ts-node/register"
+        "--require",
+        "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli.ts",
-        "download"
-      ]
+        "${workspaceFolder}/src/cli/cli.ts",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(csv)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.csv",
+        "-f",
+        "csv",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(json)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.json",
+        "-f",
+        "json",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(ndjson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.nd.json",
+        "--format",
+        "ndjson",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(geojson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "-f",
+        "geojson",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.geo.json",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(ndgeojson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "-f",
+        "ndgeojson",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.nd.geo.json",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "download command",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "download",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "update-check",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "update-check"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
     }
   ]
 }

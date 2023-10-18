@@ -1,143 +1,155 @@
 CREATE TABLE IF NOT EXISTS "pref" (
-  "code" TEXT,
-  "都道府県名" TEXT,
-  "都道府県名_カナ" TEXT,
-  "都道府県名_英字" TEXT,
-  "効力発生日" TEXT,
-  "廃止日" TEXT,
-  "備考" TEXT
+  "lg_code" TEXT,
+  "pref_name" TEXT,
+  "pref_name_kana" TEXT,
+  "pref_name_roma" TEXT,
+  "efct_date" TEXT,
+  "ablt_date" TEXT,
+  "remarks" TEXT
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "pref_code" ON "pref" ("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "pref_code" ON "pref" ("lg_code");
 
 CREATE TABLE IF NOT EXISTS "city" (
-  "code" TEXT,
-  "都道府県名" TEXT,
-  "都道府県名_カナ" TEXT,
-  "都道府県名_英字" TEXT,
-  "郡名" TEXT,
-  "郡名_カナ" TEXT,
-  "郡名_英字" TEXT,
-  "市区町村名" TEXT,
-  "市区町村名_カナ" TEXT,
-  "市区町村名_英字" TEXT,
-  "政令市区名" TEXT,
-  "政令市区名_カナ" TEXT,
-  "政令市区名_英字" TEXT,
-  "効力発生日" TEXT,
-  "廃止日" TEXT,
-  "備考" TEXT
+  "lg_code" TEXT,
+  "pref_name" TEXT,
+  "pref_name_kana" TEXT,
+  "pref_name_roma" TEXT,
+  "county_name" TEXT,
+  "county_name_kana" TEXT,
+  "county_name_roma" TEXT,
+  "city_name" TEXT,
+  "city_name_kana" TEXT,
+  "city_name_roma" TEXT,
+  "od_city_name" TEXT,
+  "od_city_name_kana" TEXT,
+  "od_city_name_roma" TEXT,
+  "efct_date" TEXT,
+  "ablt_date" TEXT,
+  "remarks" TEXT
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "city_code" ON "city" ("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "city_code" ON "city" ("lg_code");
 
 CREATE TABLE IF NOT EXISTS "town" (
-  "code" TEXT,
+  "lg_code" TEXT,
   "town_id" TEXT,
-  "町字区分コード" TEXT,
-  "都道府県名" TEXT,
-  "都道府県名_カナ" TEXT,
-  "都道府県名_英字" TEXT,
-  "郡名" TEXT,
-  "郡名_カナ" TEXT,
-  "郡名_英字" TEXT,
-  "市区町村名" TEXT,
-  "市区町村名_カナ" TEXT,
-  "市区町村名_英字" TEXT,
-  "政令市区名" TEXT,
-  "政令市区名_カナ" TEXT,
-  "政令市区名_英字" TEXT,
-  "大字・町名" TEXT,
-  "大字・町名_カナ" TEXT,
-  "大字・町名_英字" TEXT,
-  "丁目名" TEXT,
-  "丁目名_カナ" TEXT,
-  "丁目名_数字" TEXT,
-  "小字名" TEXT,
-  "小字名_カナ" TEXT,
-  "小字名_英字" TEXT,
-  "住居表示フラグ" TEXT,
-  "住居表示方式コード" TEXT,
-  "大字・町名_通称フラグ" TEXT,
-  "小字名_通称フラグ" TEXT,
-  "大字・町名_電子国土基本図外字" TEXT,
-  "小字名_電子国土基本図外字" TEXT,
-  "状態フラグ" TEXT,
-  "起番フラグ" TEXT,
-  "効力発生日" TEXT,
-  "廃止日" TEXT,
-  "原典資料コード" TEXT,
-  "郵便番号" TEXT,
-  "備考" TEXT,
+  "town_code" TEXT,
+  "pref_name" TEXT,
+  "pref_name_kana" TEXT,
+  "pref_name_roma" TEXT,
+  "county_name" TEXT,
+  "county_name_kana" TEXT,
+  "county_name_roma" TEXT,
+  "city_name" TEXT,
+  "city_name_kana" TEXT,
+  "city_name_roma" TEXT,
+  "od_city_name" TEXT,
+  "od_city_name_kana" TEXT,
+  "od_city_name_roma" TEXT,
+  "oaza_town_name" TEXT,
+  "oaza_town_name_kana" TEXT,
+  "oaza_town_name_roma" TEXT,
+  "chome_name" TEXT,
+  "chome_name_kana" TEXT,
+  "chome_name_number" TEXT,
+  "koaza_name" TEXT,
+  "koaza_name_kana" TEXT,
+  "koaza_name_roma" TEXT,
+  "rsdt_addr_flg" TEXT,
+  "rsdt_addr_mtd_code" TEXT,
+  "oaza_town_alt_name_flg" TEXT,
+  "koaza_alt_name_flg" TEXT,
+  "oaza_frn_ltrs_flg" TEXT,
+  "koaza_frn_ltrs_flg" TEXT,
+  "status_flg" TEXT,
+  "wake_num_flg" TEXT,
+  "efct_date" TEXT,
+  "ablt_date" TEXT,
+  "src_code" TEXT,
+  "post_code" TEXT,
+  "remarks" TEXT,
 
   -- mt_town_pos_prefXX から結合
-  "代表点_経度" REAL DEFAULT null,
-  "代表点_緯度" REAL DEFAULT null
+  "rep_pnt_lon" REAL DEFAULT null,
+  "rep_pnt_lat" REAL DEFAULT null
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "town_code" ON "town" ("code", "town_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "town_code" ON "town" ("lg_code", "town_id");
 
 CREATE TABLE IF NOT EXISTS "rsdtdsp_blk" (
-  "code" TEXT,
+  "lg_code" TEXT,
   "town_id" TEXT,
   "blk_id" TEXT,
-  "市区町村名" TEXT,
-  "政令市区名" TEXT,
-  "大字・町名" TEXT,
-  "丁目名" TEXT,
-  "小字名" TEXT,
-  "街区符号" TEXT,
-  "住居表示フラグ" TEXT,
-  "住居表示方式コード" TEXT,
-  "大字・町名_電子国土基本図外字" TEXT,
-  "小字名_電子国土基本図外字" TEXT,
-  "状態フラグ" TEXT,
-  "効力発生日" TEXT,
-  "廃止日" TEXT,
-  "原典資料コード" TEXT,
-  "備考" TEXT,
+  "city_name" TEXT,
+  "od_city_name" TEXT,
+  "oaza_town_name" TEXT,
+  "chome_name" TEXT,
+  "koaza_name" TEXT,
+  "blk_num" TEXT,
+  "rsdt_addr_flg" TEXT,
+  "rsdt_addr_mtd_code" TEXT,
+  "oaza_frn_ltrs_flg" TEXT,
+  "koaza_frn_ltrs_flg" TEXT,
+  "status_flg" TEXT,
+  "efct_date" TEXT,
+  "ablt_date" TEXT,
+  "src_code" TEXT,
+  "remarks" TEXT,
 
   -- mt_rsdtdsp_blk_pos_prefXX から結合
-  "代表点_経度" REAL,
-  "代表点_緯度" REAL
+  "rep_pnt_lon" REAL,
+  "rep_pnt_lat" REAL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_blk_code" ON "rsdtdsp_blk" ("code", "town_id", "blk_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_blk_code" ON "rsdtdsp_blk" ("lg_code", "town_id", "blk_id");
 
 CREATE TABLE IF NOT EXISTS "rsdtdsp_rsdt" (
-  "code" TEXT,
+  "lg_code" TEXT,
   "town_id" TEXT,
   "blk_id" TEXT,
   "addr_id" TEXT,
   "addr2_id" TEXT,
-  "市区町村名" TEXT,
-  "政令市区名" TEXT,
-  "大字・町名" TEXT,
-  "丁目名" TEXT,
-  "小字名" TEXT,
-  "街区符号" TEXT,
-  "住居番号" TEXT,
-  "住居番号2" TEXT,
-  "基礎番号・住居番号区分" TEXT,
-  "住居表示フラグ" TEXT,
-  "住居表示方式コード" TEXT,
-  "大字・町名_電子国土基本図外字" TEXT,
-  "小字名_電子国土基本図外字" TEXT,
-  "状態フラグ" TEXT,
-  "効力発生日" TEXT,
-  "廃止日" TEXT,
-  "原典資料コード" TEXT,
-  "備考" TEXT,
+  "city_name" TEXT,
+  "od_city_name" TEXT,
+  "oaza_town_name" TEXT,
+  "chome_name" TEXT,
+  "koaza_name" TEXT,
+  "blk_num" TEXT,
+  "rsdt_num" TEXT,
+  "rsdt_num2" TEXT,
+  "basic_rsdt_div" TEXT,
+  "rsdt_addr_flg" TEXT,
+  "rsdt_addr_mtd_code" TEXT,
+  "oaza_frn_ltrs_flg" TEXT,
+  "koaza_frn_ltrs_flg" TEXT,
+  "status_flg" TEXT,
+  "efct_date" TEXT,
+  "ablt_date" TEXT,
+  "src_code" TEXT,
+  "remarks" TEXT,
 
   -- mt_rsdtdsp_rsdt_pos_prefXX から結合
-  "代表点_経度" REAL,
-  "代表点_緯度" REAL
+  "rep_pnt_lon" REAL,
+  "rep_pnt_lat" REAL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_rsdt_code" ON "rsdtdsp_rsdt" ("code", "town_id", "blk_id", "addr_id", "addr2_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "rsdtdsp_rsdt_code" ON "rsdtdsp_rsdt" (
+  "lg_code", "town_id", "blk_id", "addr_id", "addr2_id"
+);
 
 CREATE TABLE IF NOT EXISTS "metadata" (
   "key" TEXT,
   "value" TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "metadata_key" ON "metadata" ("key");
+
+
+CREATE TABLE IF NOT EXISTS "dataset" (
+  "key" TEXT,
+  "type" TEXT,
+  "content_length" NUMBER,
+  "crc32" NUMBER,
+  "last_modified" NUMBER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "dataset_key" ON "dataset" ("key");

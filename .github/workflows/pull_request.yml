@@ -1,20 +1,21 @@
 ## This workflow has been disabled for now, because the CKAN API is blocking our requests.
 ## Re-enable when we can package test data inside this repository.
 
-name: "Linter"
+name: "PR check"
 
 on:
   pull_request:
     branches:
+      - main
       - develop
 
 jobs:
-  build:
+  lint_and_build:
     runs-on: ubuntu-latest
 
     # Set up concurrency so the SQLite cache can be reused between nodejs matrix versions
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+    # concurrency:
+    #   group: ${{ github.workflow }}-${{ github.ref }}
 
     steps:
       - uses: actions/checkout@v3
@@ -22,53 +23,58 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 16
-
-      - uses: pnpm/action-setup@v2
-        name: Install pnpm
-        id: pnpm-install
-        with:
-          version: 8
-          run_install: false
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+          node-version: 20
 
       - uses: actions/cache@v3
-        name: Setup pnpm cache
+        name: Setup npm cache
+        id: node_modules
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
+          path: node_modules/
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
 
       - name: Install dependencies
-        run: pnpm install
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: |
+          npm install --global yarn
+          yarn install
 
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          filters: |
-            target:
-              - 'src/**'
-              - '.eslintrc*'
-
-      # run eslint on all files if eslintrc changes
-      - name: Run eslint on changed files
-        if: steps.filter.outputs.target == 'false'
+      - name: Run eslint
         uses: sibiraj-s/action-eslint@v3
         with:
-          eslint-args: '--ignore-path=.gitignore --quiet'
           extensions: 'ts'
-          annotations: true
           ignore-path: .eslintignore
           ignore-patterns: |
             build/
-      
+            node_modules/
+          token: ${{ secrets.WORKFLOW_TOKEN }}
+
+      - name: Run tests
+        run: npm run test:ci
+
       - name: build test
         shell: bash
         run: |
-          pnpm run build
+          npm run build
+      
+      - name: run system test
+        shell: bash
+        run: |
+          npm run test:system
+      
+      - name: create test report
+        uses: MishaKav/jest-coverage-comment@main
+        with:
+          github-token: ${{ secrets.WORKFLOW_TOKEN }}
+          summary-title: Coverage Summary
+          badge-title: Coverage
+          hide-comment: false
+          create-new-comment: false
+          hide-summary: false
+          coverage-summary-path: ./coverage/coverage-summary.json
+          junitxml-title: JUnit
+          junitxml-path: ./coverage/junit.xml
+          coverage-title: Coverage Details
+          coverage-path: ./coverage/coverage.txt
+          coverage-path-prefix: './src/'

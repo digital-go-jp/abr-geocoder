@@ -12,7 +12,6 @@
       "prettier"
     ],
     "rules": {
-      "prettier/prettier": "error",
       "block-scoped-var": "error",
       "eqeqeq": "error",
       "no-var": "error",
@@ -40,7 +39,8 @@
       ],
       "no-underscore-dangle": [
         "error"
-      ]
+      ],
+      "prettier/prettier": "error"
     },
     "overrides": [
       {
@@ -52,6 +52,7 @@
           "plugin:@typescript-eslint/recommended"
         ],
         "rules": {
+          "@typescript-eslint/no-namespace": "off",
           "@typescript-eslint/no-explicit-any": "warn",
           "@typescript-eslint/no-non-null-assertion": "off",
           "@typescript-eslint/no-use-before-define": "off",

@@ -1,21 +1,59 @@
 {
   "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
-    "outDir": "./build",                        /* Redirect output structure to the directory. */
-    "lib": ["dom"],
-
-    /* Strict Type-Checking Options */
-    "strict": true,                           /* Enable all strict type-checking options. */
-    "esModuleInterop": true,                  /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+    "outDir": "./build",
+    "lib": [
+      "ES2021"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
     "sourceMap": true,
     "typeRoots": [
-        "../node_modules/@types"
+      "./node_modules/@types",
+      "./node_modules/@jest"
+    ],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": [
+      "node"
+    ],
+    "resolveJsonModule": true,
+    "moduleResolution": "nodenext",
+    "baseUrl": ".",
+    "paths": {
+      "@mock/*": ["__mocks__/*"],
+      "@cli/*": ["src/cli/*"],
+      "@domain/*": ["src/domain/*"],
+      "@controller/*": ["src/controller/*"],
+      "@interface-adapter/*": ["src/interface-adapter/*"],
+      "@usecase/*": ["src/usecase/*"],
+      "@settings/*": ["src/settings/*"],
+      "@process/*": ["src/controller/download/process/*"],
+      "@abrg-message/*": ["src/domain/abrg-message/*"],
+      "@abrg-error/*": ["src/domain/abrg-error/*"]
+    },
+    "removeComments": true,
+    "isolatedModules": false,
+    "plugins": [
+      {
+        "transform": "typescript-transform-paths"
+      },
+      {
+        "transform": "typescript-transform-paths",
+        "afterDeclarations": true
+      }
+    ]
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "require": [
+      "typescript-transform-paths/register"
     ]
   },
   "include": [
     "src/**/*.ts"
   ],
   "exclude": [
-    "node_modules/**/*"
+    "node_modules"
   ]
 }
