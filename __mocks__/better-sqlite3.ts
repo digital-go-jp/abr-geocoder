@@ -1,15 +1,12 @@
 export default jest.fn().mockImplementation(
-  (
-    _: string,
-    values: {
-      all: undefined;
-    }
-  ) => {
+  () => {
     return {
       prepare: jest.fn().mockImplementation(() => ({
-        all: jest.fn().mockReturnValue(values.all),
+        run: jest.fn(),
+        all: jest.fn().mockReturnValue([]),
       })),
       close: jest.fn(),
+      exec: jest.fn(),
     };
   }
 );

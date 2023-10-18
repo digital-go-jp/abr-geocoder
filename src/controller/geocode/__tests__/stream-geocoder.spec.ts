@@ -115,9 +115,7 @@ mockedPatches.default = [];
 
 
 const createDB = () => {
-  return new MockedBetterSqlite3('<no sql file>', {
-    all: [],
-  });
+  return new MockedBetterSqlite3('<no sql file>');
 }
 describe('StreamGeocoder', () => {
 
