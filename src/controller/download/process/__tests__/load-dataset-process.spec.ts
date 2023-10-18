@@ -29,7 +29,6 @@ import Database from 'better-sqlite3';
 import Stream from "node:stream";
 import { DependencyContainer } from "tsyringe";
 import { loadDatasetProcess } from "../load-dataset-process";
-import mockedDb from "@mock/better-sqlite3";
 
 jest.mock("@domain/dataset/pref-dataset-file");
 jest.mock("@domain/dataset/city-dataset-file");
