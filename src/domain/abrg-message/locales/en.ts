@@ -68,5 +68,6 @@ const messages: Record<AbrgMessage, string> = {
     'Can not file the required file "package.json"',
   [AbrgMessage.PROMPT_CONTINUE_TO_DOWNLOAD]: 'Continue to download?',
   [AbrgMessage.DOWNLOAD_ERROR]: 'Download error',
+  [AbrgMessage.FINDING_THE_DATASET_FILES]: 'Finding dataset files...',
 };
 export default messages;

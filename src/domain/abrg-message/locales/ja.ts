@@ -70,5 +70,7 @@ const messages: Record<AbrgMessage, string> = {
   [AbrgMessage.PROMPT_CONTINUE_TO_DOWNLOAD]:
     '続けてデータをダウンロードしますか？',
   [AbrgMessage.DOWNLOAD_ERROR]: 'ダウンロードエラー',
+  [AbrgMessage.FINDING_THE_DATASET_FILES]:
+    'データセットファイルを探しています...',
 };
 export default messages;
