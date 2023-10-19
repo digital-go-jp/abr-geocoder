@@ -3,7 +3,7 @@ name: NPM latest publish
 on:
   pull_request:
     branches:
-      - develop
+      - master
   push:
     branches:
       - develop
@@ -19,7 +19,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
       - uses: actions/cache@v3
         name: Setup npm cache
