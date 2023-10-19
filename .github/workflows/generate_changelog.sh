@@ -7,11 +7,12 @@ last_commit_iso8601=$(git show -s --format="%cI" $last_commit_hash |tail -n 1 | 
 name_with_owner=$(gh repo view --json nameWithOwner -q ".nameWithOwner" | tr -d '\n')
 pr_list=$(gh pr list --search "merged:>${last_commit_iso8601}" --repo ${name_with_owner})
 
-echo "# release notes" > release_notes/${version}.md
-echo "- version: ${version}" >> release_notes/${version}.md
+mkdir change_notes
+echo "# release notes" > change_notes/${version}.md
+echo "- version: ${version}" >> change_notes/${version}.md
 IFS=$'\n'
 for line in $pr_list; do
   ticket=$(echo ${line} | cut -f 1)
   title=$(echo ${line} | cut -f 2)
-  echo "[#${ticket}](https://github.com/${name_with_owner}/pull/${ticket})  ${title}" >> release_notes/${version}.md
+  echo "[#${ticket}](https://github.com/${name_with_owner}/pull/${ticket})  ${title}" >> change_notes/${version}.md
 done
