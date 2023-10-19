@@ -38,11 +38,7 @@ jobs:
         run: |
           npm run test
           npm run test:system
-        
-      - name: bump up
-        run: |
-          npm version preminor
-
+          
       - name: create changelog.md
         run: |
           bash ./.github/workflows/generate_changelog.sh
@@ -50,9 +46,12 @@ jobs:
           git config --global user.name "github actions"
           git add .
           git commit -m "create changelog.md"
+          
+      - name: bump up
+        run: |
+          npm version preminor
       
       - name: Publish
-        if: steps.cache.outputs.cache-hit != 'true'
         run: npm publish --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

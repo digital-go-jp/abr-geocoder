@@ -48,7 +48,7 @@ jobs:
           ignore-patterns: |
             build/
             node_modules/
-          # token: ${{ secrets.WORKFLOW_TOKEN }}
+          token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
 
       - name: Run tests
         run: npm run test:ci
@@ -66,7 +66,7 @@ jobs:
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main
         with:
-          github-token: ${{ secrets.WORKFLOW_TOKEN }}
+          github-token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
           summary-title: Coverage Summary
           badge-title: Coverage
           hide-comment: false
