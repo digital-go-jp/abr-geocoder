@@ -39,6 +39,11 @@ jobs:
           npm run test
           npm run test:system
           
+      - name: git setup
+        run: |
+          git config --global user.email "no-reply@digital.go.jp"
+          git config --global user.name "github actions"
+          
       - name: bump up (on master)
         if: github.ref == 'refs/heads/master'
         run: |
@@ -56,8 +61,6 @@ jobs:
       - name: create changelog.md
         run: |
           bash ./.github/workflows/generate_changelog.sh
-          git config --global user.email "no-reply@digital.go.jp"
-          git config --global user.name "github actions"
           git add .
           git commit -m "create changelog.md"
       
@@ -65,8 +68,17 @@ jobs:
         run: |
           version=$(cat package.json | jq -r '.version')
           tgz=$(npm pack | tail -n1 | tr -d '\n')
+      
+      - name: github release (on master)
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          gh release create $version $tgz --notes change_notes/${version}.md
+    
+      - name: github release (on develop)
+        if: github.ref == 'refs/heads/develop'
+        run: |
           gh release create $version $tgz --draft --notes change_notes/${version}.md
-          
+
       - name: NPM publish
         run: npm publish --dry-run
         env:
