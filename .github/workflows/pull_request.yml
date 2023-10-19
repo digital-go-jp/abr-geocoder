@@ -48,7 +48,7 @@ jobs:
           ignore-patterns: |
             build/
             node_modules/
-          token: ${{ secrets.WORKFLOW_TOKEN }}
+          # token: ${{ secrets.WORKFLOW_TOKEN }}
 
       - name: Run tests
         run: npm run test:ci
