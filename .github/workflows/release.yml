@@ -1,0 +1,58 @@
+name: NPM latest publish
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - uses: actions/cache@v3
+        name: Setup npm cache
+        id: node_modules
+        with:
+          path: node_modules/
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+
+      - name: Install dependencies
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: |
+          npm install --global yarn
+          yarn install
+
+      - name: Build
+        run: npm run build
+
+      - name: test
+        run: |
+          npm run test
+          npm run test:system
+        
+      - name: bump up
+        run: |
+          npm version preminor
+
+      - name: create changelog.md
+        run: |
+          bash ./.github/workflows/generate_changelog.sh
+          git config --global user.email "no-reply@digital.go.jp"
+          git config --global user.name "github actions"
+          git add .
+          git commit -m "create changelog.md"
+      
+      - name: Publish
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm publish --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
