@@ -19,7 +19,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 18
 
       - uses: actions/cache@v3
         name: Setup npm cache
@@ -81,8 +81,8 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           git push
-          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes change_notes/${{ steps.prepare.outputs.version }}.md
-          npm publish --dry-run
+          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
+          npm publish
         env:
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
@@ -90,7 +90,7 @@ jobs:
       - name: github & npm release (on develop)
         if: github.ref == 'refs/heads/develop'
         run: |
-          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes change_notes/${{ steps.prepare.outputs.version }}.md
+          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
           npm publish --dry-run
         env:
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
