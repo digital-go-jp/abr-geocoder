@@ -1,0 +1,10 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
+{
+  "name": "abrg-dev",
+  "dockerFile": "Dockerfile",
+  "mounts": [
+    //"source=${localEnv:HOME}/ba000001.sqlite,target=/root/.abr-geocoder/ba000001.sqlite,type=bind",
+    "target=${containerWorkspaceFolder}/node_modules,type=volume"
+  ]
+}
