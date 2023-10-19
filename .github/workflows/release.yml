@@ -39,6 +39,20 @@ jobs:
           npm run test
           npm run test:system
           
+      - name: bump up (on master)
+        if: github.ref == 'refs/heads/master'
+        run: |
+          npm version minor
+        env:
+          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+
+      - name: bump up (on develop)
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          npm version prepatch
+        env:
+          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+
       - name: create changelog.md
         run: |
           bash ./.github/workflows/generate_changelog.sh
@@ -46,14 +60,14 @@ jobs:
           git config --global user.name "github actions"
           git add .
           git commit -m "create changelog.md"
-        env:
-          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-          
-      - name: bump up
-        run: |
-          npm version preminor
       
-      - name: Publish
+      - name: Github publish
+        run: |
+          version=$(cat package.json | jq -r '.version')
+          tgz=$(npm pack | tail -n1 | tr -d '\n')
+          gh release create $version $tgz --draft --notes change_notes/${version}.md
+          
+      - name: NPM publish
         run: npm publish --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

@@ -8,3 +8,4 @@ experimental/
 node_modules*/
 test/result*
 spec/*.sqlite
+*.tgz
