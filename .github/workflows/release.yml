@@ -47,20 +47,6 @@ jobs:
           git config --global user.email "no-reply@digital.go.jp"
           git config --global user.name "github actions"
           
-      - name: npm version preminor (trigger / workflow_dispatch)
-        if: github.event_name == 'workflow_dispatch' 
-        run: |
-          npm version preminor
-        env:
-          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-
-      - name: npm version minor (trigger /tag push)
-        if: github.event_name != 'workflow_dispatch' 
-        run: |
-          npm version minor
-        env:
-          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-
       - name: create changelog.md
         if: github.event_name != 'workflow_dispatch' 
         id: prepare
@@ -79,6 +65,7 @@ jobs:
       - name: github draft release  (trigger / workflow_dispatch)
         if: github.event_name == 'workflow_dispatch' 
         run: |
+          npm version preminor
           gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
           npm publish . --dry-run
           env:
@@ -87,6 +74,7 @@ jobs:
       - name: github & npm release (trigger /tag push)
         if: github.event_name != 'workflow_dispatch' 
         run: |
+          npm version minor
           git push
           gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
