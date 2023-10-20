@@ -49,8 +49,8 @@ jobs:
           git config --global user.email "no-reply@digital.go.jp"
           git config --global user.name "github actions"
           
-      - name: bump up (on master)
-        if: github.ref == 'refs/heads/master'
+      - name: bump up (on main)
+        if: github.ref == 'refs/heads/main'
         run: |
           npm version minor
         env:
@@ -77,8 +77,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
       
-      - name: github & npm release (on master)
-        if: github.ref == 'refs/heads/master'
+      - name: github & npm release (on main)
+        if: github.ref == 'refs/heads/main'
         run: |
           git push
           gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
