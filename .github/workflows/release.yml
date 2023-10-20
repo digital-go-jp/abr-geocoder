@@ -49,19 +49,19 @@ jobs:
           git config --global user.email "no-reply@digital.go.jp"
           git config --global user.name "github actions"
           
-      - name: bump up (on main)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          npm version minor
-        env:
-          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+      # - name: bump up (on main)
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     npm version minor
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
 
-      - name: bump up (on develop)
-        if: github.ref == 'refs/heads/develop'
-        run: |
-          npm version prepatch
-        env:
-          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+      # - name: bump up (on develop)
+      #   if: github.ref == 'refs/heads/develop'
+      #   run: |
+      #     npm version prepatch
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
 
       - name: create changelog.md
         id: prepare
@@ -80,12 +80,12 @@ jobs:
       - name: github & npm release (on main)
         if: github.ref == 'refs/heads/main'
         run: |
-          git push
-          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
+          # git push
+          # gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
           npm publish
         env:
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     
       - name: github & npm release (on develop)
         if: github.ref == 'refs/heads/develop'
@@ -94,4 +94,4 @@ jobs:
           npm publish --dry-run
         env:
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
