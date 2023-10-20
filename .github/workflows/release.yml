@@ -82,10 +82,11 @@ jobs:
         run: |
           # git push
           # gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
-          npm publish
-        env:
-          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          npm publish . --access public
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+        #   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     
       - name: github & npm release (on develop)
         if: github.ref == 'refs/heads/develop'
