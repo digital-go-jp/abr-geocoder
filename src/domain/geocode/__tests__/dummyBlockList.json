@@ -1,0 +1,79 @@
+[
+    {
+        "blk": "1",
+        "blk_id": "001",
+        "city": "千代田区",
+        "lat": null,
+        "lg_code": "131016",
+        "lon": null,
+        "pref": "東京都",
+        "town": "紀尾井町",
+        "town_id": "0056000"
+    },
+    {
+        "blk": "2",
+        "blk_id": "002",
+        "city": "千代田区",
+        "lat": null,
+        "lg_code": "131016",
+        "lon": null,
+        "pref": "東京都",
+        "town": "紀尾井町",
+        "town_id": "0056000"
+    },
+    {
+        "blk": "3",
+        "blk_id": "003",
+        "city": "千代田区",
+        "lat": null,
+        "lg_code": "131016",
+        "lon": null,
+        "pref": "東京都",
+        "town": "紀尾井町",
+        "town_id": "0056000"
+    },
+    {
+        "blk": "4",
+        "blk_id": "004",
+        "city": "千代田区",
+        "lat": null,
+        "lg_code": "131016",
+        "lon": null,
+        "pref": "東京都",
+        "town": "紀尾井町",
+        "town_id": "0056000"
+    },
+    {
+        "blk": "5",
+        "blk_id": "005",
+        "city": "千代田区",
+        "lat": null,
+        "lg_code": "131016",
+        "lon": null,
+        "pref": "東京都",
+        "town": "紀尾井町",
+        "town_id": "0056000"
+    },
+    {
+        "blk": "6",
+        "blk_id": "006",
+        "city": "千代田区",
+        "lat": null,
+        "lg_code": "131016",
+        "lon": null,
+        "pref": "東京都",
+        "town": "紀尾井町",
+        "town_id": "0056000"
+    },
+    {
+        "blk": "7",
+        "blk_id": "007",
+        "city": "千代田区",
+        "lat": null,
+        "lg_code": "131016",
+        "lon": null,
+        "pref": "東京都",
+        "town": "紀尾井町",
+        "town_id": "0056000"
+    }
+]

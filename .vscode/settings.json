@@ -1,0 +1,10 @@
+{
+  "i18n-ally.localesPaths": [
+    "src/cli/i18n",
+    "src/cli/i18n/locales"
+  ],
+  "exportall.config.relExclusion": [
+    "/src/index.ts"
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

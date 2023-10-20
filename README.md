@@ -7,101 +7,164 @@ Address Base Registry Geocoder by Japan Digital Agency
 - Normalizes address strings.
 - Outputs latitude and longitude pair with matched level.
 
+## Index
+- [abr-geocoder](#abr-geocoder)
+  - [Index](#index)
+  - [Documents](#documents)
+  - [Requirement](#requirement)
+  - [Build and Installation](#build-and-installation)
+  - [Usage](#usage)
+    - [`download`](#download)
+    - [`update-check`](#update-check)
+    - [`geocode` (without command is specified)](#geocode-without-command-is-specified)
+  - [Output Formats](#output-formats)
+    - [`json`](#json)
+    - [`geojson`](#geojson)
+    - [Matching Levels](#matching-levels)
+
+## Documents
+- [Contributing this project](docs/CONTRIBUTING.md)
+
+-------
+
 ## Requirement
 
 This command requires **node.js version 18 or above**.
 
+## Build and Installation
+
+Since we are still working on, no `npm` package is available at this moment.
+To install, build from source code on your PC.
+
+```
+$ git clone git@github.com:digital-go-jp/abr-geocoder.git
+$ cd abr-geocoder
+$ npm i
+$ npm run build
+```
+
+Then you need to install globally,
+
+```
+(global install)
+$ npm -g install .
+$ abrg --version
+```
+
+or use with `npx`.
+```
+(local usage)
+$ npx abrg --version
+```
+
 ## Usage
 
 ```
-$ yarn global add digital-go-jp/abr-geocoder
-$ abr-geocoder download # Download data from the address base registry and create a database.
-$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
+$ abrg download # Download data from the address base registry and create a database.
+$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
 ```
 
 ### `download`
 
-Obtains the latest data from server.
+  Obtains the latest data from server.
 
-```
-$ abr-geocoder download
-```
+  ```
+  $ abrg download
+  ```
 
-Downloads the public data from the address base registry ["全アドレスデータ"](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) into the `$HOME/.abr-geocoder` directory,
-then creates a local database using SQLite.
+  Downloads the public data from the address base registry ["全アドレスデータ"](https://catalog.registries.digital.go.jp/rc/dataset/ba000001) into the `$HOME/.abr-geocoder` directory,
+  then creates a local database using SQLite.
 
-To update the local database, runs `abr-geocoder download`.
+  To update the local database, runs `abrg download`.
 
 ### `update-check`
 
-Checks the new update data.
+  Checks the new update data.
+
+  ```
+  $ abrg update-check
+  ```
+
+  Returns `0` if the local database is the latest.
+
+  Returns `1` if new data in CKAN is available. there is no local database, returns `1` and exits. In that case, runs `download` command.
+
+### `geocode` (without command is specified)
+
+Geocodes from the `<inputFile>`. 
+You can also specify `-` for stdin.
 
 ```
-$ abr-geocoder update-check
+$ abrg <inputFile> [<outputFile>] [options]
 ```
 
-Returns `0` if the local database is the latest.
+- `<inputFile>`
+  - case: Specifies a query file path:
+    Geocodes from the `<inputFile>`. The input file must have Japanese address each line.
 
-Returns `1` if new data in CKAN is available. there is no local database, returns `1` and exits. In that case, runs `download` command.
+    For example:
+    ```
+    abrg ./sample.txt
+    ```
 
-### `normalize`
+    ```sample.txt
+    東京都千代田区紀尾井町1-3
+    東京都千代田区永田町1-10-1
+    ...
+    東京都千代田区永田町一丁目7番1号
+    ```
 
-Geocodes Japanese addresses.
+  - case: Specifies `-`:
+    You can also pass the input query through `pipe` command. `-` denotes `stdin`.
 
-```
-$ abr-geocoder normalize [options] <inputFile>
-```
+    ```
+    echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg -
+    ```
 
-Geocodes from the `<inputFile>`. The input file must have Japanese address each line.
+- `<outputFile>`
+  Specifies the file path to save the output.
+  If you ommit, the command prints out to stdout.
 
-For example:
-
-```sample.txt
-東京都千代田区紀尾井町1-3
-東京都千代田区永田町1-10-1
-...
-東京都千代田区永田町一丁目7番1号
-```
-
-You can also pass the input query through `pipe` command. `-` denotes `stdin`.
-
-```
-echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abr-geocoder normalize -
-```
-
-#### Available options
+  For example：
+  ```
+  abrg ./sample.txt ./output.csv
+  echo "東京都千代田区紀尾井町1-3" | abrg - ./output.csv
+  cat ./sample.txt | abrg - | jq
+  ```
 
 - `-f`, `--format`
 
-   Specifies output format. Default is `table` which draws an output table on CLI.
-   You can also specify `json` or `geojson`.
+  Specifies output format. Default is `json`.
+  | format  | 説明                                               |
+  |---------|---------------------------------------------------|
+  | csv     |Output results in comma-separated csv format.      |
+  | json    |Output results in json format.                     |
+  | ndjson  |Output results in json format as stream output.    |
+  | geojson |Output results in geo-json format.                 |
+  | ndjson  |Output results in geo-json format as stream output.|
 
 - `--fuzzy`
 
-   Allows `?` characters for wildcard matching.
+  - case: just `--fuzzy`
+    Allows `?` character for wildcard matching.
+    
+    For example:
+    ```
+    echo "東京都町?市森野2-2-22" | abrg - --fuzzy
+    ```
+
+  - case: `--fuzzy` with `(a)`
+  
+    Allows `(a)` character for wildcard matching.
+
+    For example:
+    ```
+    echo "東京都町●市森野2-2-22" | abrg - --fuzzy ●
+    ```
   
 - `-h`, `--help`
 
    Displays this command usage.
-
-
-#### `nd` prefix
-
-If you specify format with prefix `nd`, i.e. `ndjson`, outputs geocoding results for each query Japanese address.
-
-Without the `nd` prefix, the command outputs the results after all processes are done.
-
-### Fuzzy Match
-
-You can include `?` character for wildcard matching with `--fuzzy` option.
-
-```
-$ echo '東京都千代?区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --format=ndjson -
-{"pref":"東京都","city":"","town":"","other":"千代?区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階","lat":null,"lon":null,"level":1}
-
-$ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾井町 19階、20階' | abr-geocoder normalize --fuzzy --format=ndjson -
-{"pref":"東京都","city":"千代田区","lg_code":"131016","town":"紀尾井町","town_id":"0056000","other":"東京ガーデンテラス紀尾井町 19階、20階","lat":35.679107172,"lon":139.736394597,"level":8,"addr1":"3","blk":"1","blk_id":"001","addr1_id":"003","addr2":"","addr2_id":""}
-```
 
 ## Output Formats
 
@@ -167,7 +230,7 @@ $ echo '東京都千代田区紀尾?町1-3　東京ガーデンテラス紀尾�
 
 ### Matching Levels
 
-The `level` property denotes the address maching level. Only in the `json` or `geojson` formats are available.
+The `level` property denotes the address maching level. 
 
 | level | description |
 |-------|-------------|

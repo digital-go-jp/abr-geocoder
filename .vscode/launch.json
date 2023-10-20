@@ -1,0 +1,144 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(default)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(csv)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.csv",
+        "-f",
+        "csv",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(json)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.json",
+        "-f",
+        "json",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(ndjson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.nd.json",
+        "--format",
+        "ndjson",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(geojson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "-f",
+        "geojson",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.geo.json",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding(ndgeojson)",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "-f",
+        "ndgeojson",
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.nd.geo.json",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "download command",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "download",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "update-check",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/cli/cli.ts",
+        "update-check"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    }
+  ]
+}
