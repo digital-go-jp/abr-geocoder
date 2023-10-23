@@ -78,7 +78,7 @@ test('setup', async () => {
     nothrow: true,
   });
   assert.not.equal(sqlite3Path, null, '[error] sqlite3 is not installed')
-  
+
   if (!fs.existsSync(`${__dirname}/demo.sqlite`)) {
     const result = await $`sqlite3 ${__dirname}/demo.sqlite < ${__dirname}/demo.sql`.quiet();
     assert.equal(result.exitCode, 0, `The exit code should be 0`);
@@ -96,9 +96,9 @@ test(`'echo "<input data>" | abrg - -f csv' should return the expected results a
   `;
 
   const expectResult = `
-    input, match_level, lg_code, prefecture, city, town, block, addr1, addr2, other, lat, lon
-    "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階",8,131016,東京都,千代田区,紀尾井町,1,3,,東京ガーデンテラス紀尾井町 19階、20階,35.679107172,139.736394597
-    "東京都千代田区九段南1丁目2-1",3,131016,東京都,千代田区,九段南一丁目,,,,,35.693972,139.753265
+    input, match_level, lg_code, prefecture, city, town, town_id, block, block_id, addr1, addr1_id, addr2, addr2_id, other, lat, lon
+    "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階",8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,,東京ガーデンテラス紀尾井町 19階、20階,35.679107172,139.736394597
+    "東京都千代田区九段南1丁目2-1",3,131016,東京都,千代田区,九段南一丁目,0008001,,,,,,,,35.693972,139.753265
   `;
 
   const expectExitCode = 0;

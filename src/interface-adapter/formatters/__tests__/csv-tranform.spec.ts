@@ -34,12 +34,12 @@ describe('CsvTransform', () => {
     const expectCsv = await csvtojson({
       output: 'csv',
     }).fromString(`
-input, match_level, lg_code, prefecture, city, town, block, addr1, addr2, other, lat, lon
-"東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階",8,131016,東京都,千代田区,紀尾井町,1,3,, 東京ガーデンテラス紀尾井町 19階、20階,35.681411,139.73495
-"東京都千代田区紀尾井町1",3,131016,東京都,千代田区,紀尾井町,,,,,35.681411,139.73495
-"山形県山形市旅篭町二丁目3番25号",8,062014,山形県,山形市,旅篭町二丁目,3,25,,,38.255437,140.339126
-"山形市旅篭町二丁目3番25号",8,062014,山形県,山形市,旅篭町二丁目,3,25,,,38.255437,140.339126
-"東京都町田市森野2-2-22",8,132098,東京都,町田市,森野二丁目,2,22,,,35.548247,139.440264`.trim());
+input, match_level, lg_code, prefecture, city, town, town_id, block, block_id, addr1, addr1_id, addr2, addr2_id, other, lat, lon
+"東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階",8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,,東京ガーデンテラス紀尾井町 19階、20階,35.681411,139.73495
+"東京都千代田区紀尾井町1",3,131016,東京都,千代田区,紀尾井町,0056000,,,,,,,,35.681411,139.73495
+"山形県山形市旅篭町二丁目3番25号",8,062014,山形県,山形市,旅篭町二丁目,0247002,3,003,25,025,,,,38.255437,140.339126
+"山形市旅篭町二丁目3番25号",8,062014,山形県,山形市,旅篭町二丁目,0247002,3,003,25,025,,,,38.255437,140.339126
+"東京都町田市森野2-2-22",8,132098,東京都,町田市,森野二丁目,0006002,2,002,22,022,,,,35.548247,139.440264`.trim());
 
     const buffer: string[] = [];
     const writable = new Stream.Writable({
@@ -56,11 +56,11 @@ input, match_level, lg_code, prefecture, city, town, block, addr1, addr2, other,
       transform,
       writable,
     )
-    
+
     const resultCSV = await csvtojson({
       output: 'csv',
     }).fromString(buffer.join('').trim());
-    
+
     expect(resultCSV).toEqual(expectCsv);
   });
 });
