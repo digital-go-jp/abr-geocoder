@@ -5,7 +5,7 @@
   "author": "Japan Digital Agency (デジタル庁)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/digital-go-jp/abr-geocoder.git"
+    "url": "git+https://github.com/digital-go-jp/abr-geocoder.git"
   },
   "bugs": {
     "url": "https://github.com/digital-go-jp/abr-geocoder/issues"
