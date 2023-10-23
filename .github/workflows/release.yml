@@ -2,12 +2,15 @@ name: NPM latest publish
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 1.*
+  workflow_dispatch:
+    
 
 jobs:
   release_when_tag_is_assigned:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +68,6 @@ jobs:
       - name: github draft release  (trigger / workflow_dispatch)
         if: github.event_name == 'workflow_dispatch' 
         run: |
-          npm version preminor
           gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
           npm publish . --dry-run
           env:
@@ -74,7 +76,6 @@ jobs:
       - name: github & npm release (trigger /tag push)
         if: github.event_name != 'workflow_dispatch' 
         run: |
-          npm version minor
           git push
           gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
