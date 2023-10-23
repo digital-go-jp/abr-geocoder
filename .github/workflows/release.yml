@@ -1,15 +1,16 @@
 name: NPM latest publish
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types:
-      - closed
+    tags:
+      - 1.*
+  workflow_dispatch:
+    
 
 jobs:
-  if_merged:
-    if: github.event.pull_request.merged == true
+  release_when_tag_is_assigned:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,21 +50,8 @@ jobs:
           git config --global user.email "no-reply@digital.go.jp"
           git config --global user.name "github actions"
           
-      # - name: bump up (on main)
-      #   if: github.ref == 'refs/heads/main'
-      #   run: |
-      #     npm version minor
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-
-      # - name: bump up (on develop)
-      #   if: github.ref == 'refs/heads/develop'
-      #   run: |
-      #     npm version prepatch
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-
       - name: create changelog.md
+        if: github.event_name != 'workflow_dispatch' 
         id: prepare
         run: |
           bash ./.github/workflows/generate_changelog.sh
@@ -76,23 +64,22 @@ jobs:
 
         env:
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-      
-      - name: github & npm release (on main)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          # git push
-          # gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-          npm publish . --access public
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-        #   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-    
-      - name: github & npm release (on develop)
-        if: github.ref == 'refs/heads/develop'
+
+      - name: github draft release  (trigger / workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch' 
         run: |
           gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
-          npm publish --dry-run
+          npm publish . --dry-run
+          env:
+            GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+        
+      - name: github & npm release (trigger /tag push)
+        if: github.event_name != 'workflow_dispatch' 
+        run: |
+          git push
+          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          npm publish . --access public
         env:
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          
