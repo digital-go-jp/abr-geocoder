@@ -31,7 +31,7 @@
 ## インストール
 
 ```
-$ npm i @digital-go-jp/abr-geocoder
+$ npm install @digital-go-jp/abr-geocoder
 ```
 
 ## 使い方
