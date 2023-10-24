@@ -9,7 +9,7 @@
   - [インデックス](#インデックス)
   - [ドキュメント](#ドキュメント)
   - [使用環境](#使用環境)
-  - [ビルドとインストール](#ビルドとインストール)
+  - [インストール](#インストール)
   - [使い方](#使い方)
     - [`download`](#download)
     - [`update-check`](#update-check)
@@ -28,36 +28,17 @@
 
 コマンドを実行するためには **node.js version 18以上** が必要です。
 
-## ビルドとインストール
-
-まだ開発中なため、現時点では `npm`パッケージを提供していません。
-インストールするためには、あなたのPC上でソースコードからビルドする必要があります。
+## インストール
 
 ```
-$ git clone git@github.com:digital-go-jp/abr-geocoder.git
-$ cd abr-geocoder
-$ npm i
-$ npm run build
-```
-
-グローバルにインストールする場合
-```
-(global install)
-$ npm -g install .
-$ abrg --version
-```
-
-または `npx` コマンドを併用する場合
-```
-(local usage)
-$ npx abrg --version
+$ npm install @digital-go-jp/abr-geocoder
 ```
 
 ## 使い方
 
 ```
 $ abrg download # アドレス・ベース・レジストリのデータをダウンロードし、データベース作成を行う
-$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg normalize -
+$ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階" | abrg -
 ```
 
 ### `download`
@@ -163,21 +144,26 @@ $ abrg <inputFile> [<outputFile>] [options]
 ```
 [
   {
-    "pref": "東京都", // 都道府県名
-    "city": "千代田区", // 市区町村名
-    "lg_code": "131016", // 全国地方公共団体コード
-    "town": "紀尾井町", // 町字
-    "town_id": "0056000", // 町字ID
-    "blk": "1", // 街区符号
-    "blk_id": "001", // 街区ID
-    "addr1": "3", // 住居番号
-    "addr1_id": "003",// 住居ID
-    "addr2": "", // 住居番号2
-    "addr2_id": "", // 住居2ID
-    "other": "東京ガーデンテラス紀尾井町 19階、20階", // 正規化できなかった部分
-    "level": 8, // マッチングレベル
-    "lat": 35.679107172, // 代表点_緯度
-    "lon": 139.736394597 // 代表点_経度
+    "query": {
+      "input": "東京都千代田区紀尾井町1-3"
+    },
+    "result": {
+      "prefecture": "東京都",
+      "match_level": 8,
+      "city": "千代田区",
+      "town": "紀尾井町",
+      "town_id": "0056000",
+      "lg_code": "131016",
+      "other": "",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "block": "1",
+      "block_id": "001",
+      "addr1": "3",
+      "addr1_id": "003",
+      "addr2": "",
+      "addr2_id": ""
+    }
   }
 ]
 ```
@@ -198,20 +184,24 @@ $ abrg <inputFile> [<outputFile>] [options]
         ]
       },
       "properties": {
-        "title": "東京都千代田区紀尾井町1-3",
-        "level": 8,
-        "pref": "東京都",
-        "city": "千代田区",
-        "lg_code": "131016",
-        "town": "紀尾井町",
-        "town_id": "0056000",
-        "blk": "1",
-        "blk_id": "001",
-        "addr1": "3",
-        "addr1_id": "003",
-        "addr2": "",
-        "addr2_id": "",
-        "other": "東京ガーデンテラス紀尾井町 19階、20階"
+        "query": {
+          "input": "東京都千代田区紀尾井町1-3"
+        },
+        "result": {
+          "match_level": 8,
+          "prefecture": "東京都",
+          "city": "千代田区",
+          "town": "紀尾井町",
+          "town_id": "0056000",
+          "lg_code": "131016",
+          "other": "",
+          "block": "1",
+          "block_id": "001",
+          "addr1": "3",
+          "addr1_id": "003",
+          "addr2": "",
+          "addr2_id": ""
+        }
       }
     }
   ]
