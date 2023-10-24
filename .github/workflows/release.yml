@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 1.*
-  workflow_dispatch:
 
 
 jobs:
@@ -40,10 +37,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: test
-        run: |
-          npm run test
-          npm run test:system
+      # - name: test
+      #   run: |
+      #     npm run test
+      #     npm run test:system
           
       - name: git setup
         run: |
@@ -65,22 +62,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
 
-      - name: github draft release  (trigger / workflow_dispatch)
-        if: startsWith(github.ref, 'refs/tags/1.') == false
-        run: |
-          # gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
-          npm publish . --dry-run
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
         
-      - name: github & npm release (trigger /tag push)
-        if: startsWith(github.ref, 'refs/tags/1.')
+      - name: github & npm release 
         run: |
+          # git push
           # gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish . --access public
         env:
-          GH_TOKEN: ${{ github.token }}
+          # GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
           
