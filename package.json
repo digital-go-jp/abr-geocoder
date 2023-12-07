@@ -19,7 +19,7 @@
     "abrg": "build/cli/cli.js"
   },
   "scripts": {
-    "start": "ts-node src/index.ts",
+    "start": "ts-node src/cli/cli.ts",
     "build": "tspc -p tsconfig.build.json",
     "test": "jest --maxWorker=25%",
     "test:ci": "jest --runInBand",
