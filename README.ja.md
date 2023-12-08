@@ -121,7 +121,7 @@ $ abrg <inputFile> [<outputFile>] [options]
    | json    |json形式で結果を出力します                                          |
    | ndjson  |1住所のクエリ毎にjson形式で結果を出力します（ストリーム形式で出力します）   |
    | geojson |geojson形式で結果を出力します                                       |
-   | ndjson  |1住所のクエリ毎にgeojson形式で結果を出力します（ストリーム形式で出力します）|
+   | ndgeojson  |1住所のクエリ毎にgeojson形式で結果を出力します（ストリーム形式で出力します）|
 
 - `--fuzzy`
 
