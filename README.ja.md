@@ -107,8 +107,8 @@ $ abrg <inputFile> [<outputFile>] [options]
 
     例：
     ```
-    abrg ./sample.txt ./output.csv
-    echo "東京都千代田区紀尾井町1-3" | abrg - ./output.csv
+    abrg ./sample.txt ./output.json
+    echo "東京都千代田区紀尾井町1-3" | abrg - ./output.json
     cat ./sample.txt | abrg - | jq
     ```
     
