@@ -107,8 +107,8 @@ $ abrg <inputFile> [<outputFile>] [options]
 
   For example：
   ```
-  abrg ./sample.txt ./output.csv
-  echo "東京都千代田区紀尾井町1-3" | abrg - ./output.csv
+  abrg ./sample.txt ./output.json
+  echo "東京都千代田区紀尾井町1-3" | abrg - ./output.json
   cat ./sample.txt | abrg - | jq
   ```
 
@@ -121,7 +121,7 @@ $ abrg <inputFile> [<outputFile>] [options]
   | json    |Output results in json format.                     |
   | ndjson  |Output results in json format as stream output.    |
   | geojson |Output results in geo-json format.                 |
-  | ndjson  |Output results in geo-json format as stream output.|
+  | ndgeojson  |Output results in geo-json format as stream output.|
 
 - `--fuzzy`
 
