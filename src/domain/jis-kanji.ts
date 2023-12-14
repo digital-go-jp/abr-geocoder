@@ -28,26 +28,25 @@ import oldKanji_to_newKanji_table from '@settings/jis-kanji-table';
  * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/dict.ts#L1-L23
  */
 export class JisKanji {
-  private JIS_KANJI_REGEX_PATTERNS: [regexp: RegExp, replaceTo: string][] = [];
+  private JIS_KANJI_MAP: Map<String, String>;
 
   private constructor() {
-    for (const [oldKanji, newKanji] of Object.entries(
+    this.JIS_KANJI_MAP = new Map<String, String>(Object.entries(
       oldKanji_to_newKanji_table
-    )) {
-      const pattern = `${oldKanji}|${newKanji}`;
-
-      this.JIS_KANJI_REGEX_PATTERNS.push([
-        RegExpEx.create(pattern, 'g'),
-        `(${oldKanji}|${newKanji})`,
-      ]);
-    }
+    ))
   }
 
   replaceAll(target: string): string {
-    for (const [regExp, replaceTo] of this.JIS_KANJI_REGEX_PATTERNS) {
-      target = target.replace(regExp, replaceTo);
+    const results: String[] = [];
+    for (const char of target) {
+      if (!this.JIS_KANJI_MAP.has(char)) {
+        results.push(char);
+        continue;
+      }
+      const newKanji = this.JIS_KANJI_MAP.get(char)!;
+      results.push(`(${char}|${newKanji})`)
     }
-    return target;
+    return results.join('');
   }
 
   private static instnace: JisKanji = new JisKanji();
