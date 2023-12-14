@@ -27,23 +27,31 @@ import oldKanji_to_newKanji_table from '@settings/jis-kanji-table';
  * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/dict.ts#L1-L23
  */
 export class JisKanji {
-  private JIS_KANJI_MAP: Map<String, String>;
+  private JIS_KANJI_MAP: Map<string, number>;
+  private PATTERN_MAP: string[] = [];
 
   private constructor() {
-    this.JIS_KANJI_MAP = new Map<String, String>(
-      Object.entries(oldKanji_to_newKanji_table)
-    );
+    this.JIS_KANJI_MAP = new Map();
+
+    for (const [oldKanji, newKanji] of Object.entries(
+      oldKanji_to_newKanji_table
+    )) {
+      const result = `(${oldKanji}|${newKanji})`;
+      this.JIS_KANJI_MAP.set(oldKanji, this.PATTERN_MAP.length);
+      this.JIS_KANJI_MAP.set(newKanji, this.PATTERN_MAP.length);
+      this.PATTERN_MAP.push(result);
+    }
   }
 
   replaceAll(target: string): string {
     const results: String[] = [];
     for (const char of target) {
-      if (!this.JIS_KANJI_MAP.has(char)) {
+      const resultIdx = this.JIS_KANJI_MAP.get(char)!;
+      if (resultIdx === undefined) {
         results.push(char);
         continue;
       }
-      const newKanji = this.JIS_KANJI_MAP.get(char)!;
-      results.push(`(${char}|${newKanji})`);
+      results.push(this.PATTERN_MAP[resultIdx]);
     }
     return results.join('');
   }
