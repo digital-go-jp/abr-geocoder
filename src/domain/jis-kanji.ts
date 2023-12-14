@@ -21,33 +21,39 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { RegExpEx } from './reg-exp-ex';
 import oldKanji_to_newKanji_table from '@settings/jis-kanji-table';
 /*
  * オリジナルコード
  * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/dict.ts#L1-L23
  */
 export class JisKanji {
-  private JIS_KANJI_REGEX_PATTERNS: [regexp: RegExp, replaceTo: string][] = [];
+  private JIS_KANJI_MAP: Map<string, number>;
+  private PATTERN_MAP: string[] = [];
 
   private constructor() {
+    this.JIS_KANJI_MAP = new Map();
+
     for (const [oldKanji, newKanji] of Object.entries(
       oldKanji_to_newKanji_table
     )) {
-      const pattern = `${oldKanji}|${newKanji}`;
-
-      this.JIS_KANJI_REGEX_PATTERNS.push([
-        RegExpEx.create(pattern, 'g'),
-        `(${oldKanji}|${newKanji})`,
-      ]);
+      const result = `(${oldKanji}|${newKanji})`;
+      this.JIS_KANJI_MAP.set(oldKanji, this.PATTERN_MAP.length);
+      this.JIS_KANJI_MAP.set(newKanji, this.PATTERN_MAP.length);
+      this.PATTERN_MAP.push(result);
     }
   }
 
   replaceAll(target: string): string {
-    for (const [regExp, replaceTo] of this.JIS_KANJI_REGEX_PATTERNS) {
-      target = target.replace(regExp, replaceTo);
+    const results: String[] = [];
+    for (const char of target) {
+      const resultIdx = this.JIS_KANJI_MAP.get(char)!;
+      if (resultIdx === undefined) {
+        results.push(char);
+        continue;
+      }
+      results.push(this.PATTERN_MAP[resultIdx]);
     }
-    return target;
+    return results.join('');
   }
 
   private static instnace: JisKanji = new JisKanji();
