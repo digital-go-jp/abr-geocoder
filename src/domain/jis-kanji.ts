@@ -30,9 +30,9 @@ export class JisKanji {
   private JIS_KANJI_MAP: Map<String, String>;
 
   private constructor() {
-    this.JIS_KANJI_MAP = new Map<String, String>(Object.entries(
-      oldKanji_to_newKanji_table
-    ))
+    this.JIS_KANJI_MAP = new Map<String, String>(
+      Object.entries(oldKanji_to_newKanji_table)
+    );
   }
 
   replaceAll(target: string): string {
@@ -43,7 +43,7 @@ export class JisKanji {
         continue;
       }
       const newKanji = this.JIS_KANJI_MAP.get(char)!;
-      results.push(`(${char}|${newKanji})`)
+      results.push(`(${char}|${newKanji})`);
     }
     return results.join('');
   }
