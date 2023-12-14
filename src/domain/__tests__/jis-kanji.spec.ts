@@ -21,40 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { describe, expect, it } from '@jest/globals';
+import { jisKanji } from '../jis-kanji';
 import oldKanji_to_newKanji_table from '@settings/jis-kanji-table';
-/*
- * オリジナルコード
- * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/dict.ts#L1-L23
- */
-export class JisKanji {
-  private JIS_KANJI_MAP: Map<String, String>;
 
-  private constructor() {
-    this.JIS_KANJI_MAP = new Map<String, String>(Object.entries(
-      oldKanji_to_newKanji_table
-    ))
-  }
+describe('JisKanji', () => {
 
-  replaceAll(target: string): string {
-    const results: String[] = [];
-    for (const char of target) {
-      if (!this.JIS_KANJI_MAP.has(char)) {
-        results.push(char);
-        continue;
-      }
-      const newKanji = this.JIS_KANJI_MAP.get(char)!;
-      results.push(`(${char}|${newKanji})`)
+  it('should replace old Chinese characters(aka. Kanji) with new characters', async () => {
+    const buf1: string[] = [];
+    const buf2: string[] = [];
+    for (const [oldChar, newChar] of Object.entries(oldKanji_to_newKanji_table)) {
+      buf1.push(oldChar);
+      buf2.push(`(${oldChar}|${newChar})`);
     }
-    return results.join('');
-  }
+    const input = buf1.join('');
+    const expectedResult = buf2.join('');
+    const result = jisKanji(input);
+    expect(result).toEqual(expectedResult);
+  });
 
-  private static instnace: JisKanji = new JisKanji();
-
-  static replaceAll(target: string): string {
-    return JisKanji.instnace.replaceAll(target);
-  }
-}
-
-export const jisKanji = (target: string): string => {
-  return JisKanji.replaceAll(target);
-};
+});
