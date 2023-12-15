@@ -47,6 +47,7 @@ export class DebugBypass extends Stream.Transform {
       null,
       `new GeocodeResult(\n
       '${result.input}',
+      '${result.output || ''}',
       ${result.match_level},
       ${result.lat || null},
       ${result.lon || null},

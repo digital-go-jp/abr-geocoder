@@ -60,6 +60,7 @@ export class JsonTransform extends Stream.Transform {
         input: result.input,
       },
       result: {
+        output: result.output,
         prefecture: result.prefecture?.toString(),
         match_level: result.match_level,
         city: result.city,

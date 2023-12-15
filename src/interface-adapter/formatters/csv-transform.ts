@@ -46,7 +46,7 @@ export class CsvTransform extends Stream.Transform {
     if (this.options.skipHeader) {
       return;
     }
-    this.rows.push(options.columns.map(column => column.toString()).join(', '));
+    this.rows.push(options.columns.map(column => column.toString()).join(','));
   }
 
   _transform(
@@ -59,6 +59,9 @@ export class CsvTransform extends Stream.Transform {
         switch (column) {
           case GeocodeResultFields.INPUT:
             return `"${result.input}"`;
+
+          case GeocodeResultFields.OUTPUT:
+            return `"${result.output || ''}"`;
 
           case GeocodeResultFields.MATCH_LEVEL:
             return result.match_level.toString();
@@ -127,6 +130,7 @@ export class CsvTransform extends Stream.Transform {
   static DEFAULT_COLUMNS = [
     // 出力するCSVカラムの順番
     GeocodeResultFields.INPUT,
+    GeocodeResultFields.OUTPUT,
     GeocodeResultFields.MATCH_LEVEL,
     GeocodeResultFields.LG_CODE,
     GeocodeResultFields.PREFECTURE,

@@ -331,24 +331,24 @@ export class StreamGeocoder extends Transform {
 
             query.next(
               null,
-              new GeocodeResult(
-                query.input,
-                query.match_level,
-                query.lat,
-                query.lon,
-                query.tempAddress,
-                query.prefecture,
-                query.city,
-                query.town,
-                query.town_id,
-                query.lg_code,
-                query.block,
-                query.block_id,
-                query.addr1,
-                query.addr1_id,
-                query.addr2,
-                query.addr2_id
-              )
+              GeocodeResult.create({
+                input: query.input,
+                match_level: query.match_level,
+                lat: query.lat,
+                lon: query.lon,
+                other: query.tempAddress,
+                prefecture: query.prefecture,
+                city: query.city,
+                town: query.town,
+                town_id: query.town_id,
+                lg_code: query.lg_code,
+                block: query.block,
+                block_id: query.block_id,
+                addr1: query.addr1,
+                addr1_id: query.addr1_id,
+                addr2: query.addr2,
+                addr2_id: query.addr2_id,
+              })
             );
           },
         })
