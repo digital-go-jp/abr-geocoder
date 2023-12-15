@@ -66,6 +66,7 @@ export class GeoJsonTransform extends Stream.Transform {
           input: result.input,
         },
         result: {
+          output: result.output,
           match_level: result.match_level,
           prefecture: result.prefecture?.toString(),
           city: result.city,
