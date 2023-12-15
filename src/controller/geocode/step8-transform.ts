@@ -25,8 +25,14 @@ import { Query } from '@domain/query';
 import { RegExpEx } from '@domain/reg-exp-ex';
 import { DASH, SPACE } from '@settings/constant-values';
 import { Transform, TransformCallback } from 'node:stream';
+import { setFlagsFromString } from 'v8';
+import { runInNewContext } from 'vm';
+setFlagsFromString('--expose_gc');
+const gc = runInNewContext('gc');
 
 export class GeocodingStep8 extends Transform {
+  private cnt: number = 0;
+
   constructor() {
     super({
       objectMode: true,
@@ -44,6 +50,13 @@ export class GeocodingStep8 extends Transform {
     query = query.copy({
       tempAddress: this.restore(query.tempAddress),
     });
+
+    // 100件ごとに GCを行う
+    this.cnt++;
+    if (this.cnt === 100) {
+      gc();
+      this.cnt = 0;
+    }
 
     callback(null, query);
   }
