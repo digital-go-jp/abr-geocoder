@@ -79,5 +79,5 @@ export const SINGLE_DASH_ALTERNATIVE: string = '<stdin>';
 // 出力の最後に改行を追加するためのマーク
 export const BREAK_AT_EOF = '\n';
 
-export const SINGLE_QUOTATION = `'`;
-export const DOUBLE_QUOTATION = `"`;
+export const SINGLE_QUOTATION = "'";
+export const DOUBLE_QUOTATION = '"';
