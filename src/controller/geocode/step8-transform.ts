@@ -27,7 +27,6 @@ import { DASH, SPACE } from '@settings/constant-values';
 import { Transform, TransformCallback } from 'node:stream';
 
 export class GeocodingStep8 extends Transform {
-
   constructor() {
     super({
       objectMode: true,

@@ -25,15 +25,14 @@
  * 正規表現をキャッシュするためのクラス
  * RegExpEx.create() で new RegExp() と同じように使用する
  */
-import LRUCache from 'lru-native2';
+import { LRUCache } from 'lru-cache';
 
-export class RegExpEx  {
-
-  private static staticCache = new LRUCache<RegExp>({
+export class RegExpEx {
+  private static staticCache = new LRUCache<string, RegExp>({
     // ソースコード全体として RegExpEx.create() を呼び出しているのが、90箇所弱である。
     // キャッシュを働かせるために、約3倍程度の余裕をもたせる。
     // (偏りがない住所3000件で試したところ, 3倍程度が一番良さそうであった)
-    maxElements: 300
+    max: 300,
   });
 
   private static getKey(pattern: string, flag: string = ''): string {
@@ -49,7 +48,7 @@ export class RegExpEx  {
     if (result) {
       return result;
     }
-    
+
     const instance = new RegExp(patternStr, flag);
     RegExpEx.staticCache.set(key, instance);
     return instance;
