@@ -25,6 +25,7 @@ import { MatchLevel } from './match-level';
 
 export enum GeocodeResultFields {
   INPUT = 'input',
+  OUTPUT = 'output',
   MATCH_LEVEL = 'match_level',
   LATITUDE = 'lat',
   LONGITUDE = 'lon',
@@ -43,8 +44,9 @@ export enum GeocodeResultFields {
 }
 
 export class GeocodeResult {
-  constructor(
+  private constructor(
     public readonly input: string,
+    public readonly output: string,
     public readonly match_level: MatchLevel,
     public readonly lat: number | null,
     public readonly lon: number | null,
@@ -63,4 +65,74 @@ export class GeocodeResult {
   ) {
     Object.freeze(this);
   }
+
+  static readonly create = (params: {
+    input: string;
+    match_level: MatchLevel;
+    lat: number | null;
+    lon: number | null;
+    other: string;
+    prefecture?: string;
+    city?: string;
+    town?: string;
+    town_id?: string;
+    lg_code?: string;
+    block?: string;
+    block_id?: string;
+    addr1?: string;
+    addr1_id?: string;
+    addr2?: string;
+    addr2_id?: string;
+  }): GeocodeResult => {
+    //
+    // outputを生成する
+    //
+    const output: string[] = [];
+    if (params.prefecture) {
+      output.push(params.prefecture);
+    }
+    if (params.city) {
+      output.push(params.city);
+    }
+    if (params.town) {
+      output.push(params.town);
+    }
+    if (params.block) {
+      output.push(params.block);
+
+      if (params.addr1) {
+        output.push('-');
+        output.push(params.addr1);
+
+        if (params.addr2) {
+          output.push('-');
+          output.push(params.addr2);
+        }
+      }
+    }
+    if (params.other) {
+      output.push(' ');
+      output.push(params.other.trim());
+    }
+
+    return new GeocodeResult(
+      params.input,
+      output.join(''),
+      params.match_level,
+      params.lat,
+      params.lon,
+      params.other,
+      params.prefecture,
+      params.city,
+      params.town,
+      params.town_id,
+      params.lg_code,
+      params.block,
+      params.block_id,
+      params.addr1,
+      params.addr1_id,
+      params.addr2,
+      params.addr2_id
+    );
+  };
 }

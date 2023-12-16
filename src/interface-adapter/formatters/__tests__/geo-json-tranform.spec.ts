@@ -48,6 +48,7 @@ describe('GeoJsonTransform', () => {
               "input": "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階"
             },
             "result": {
+              "output": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
               "match_level": 8,
               "prefecture": "東京都",
               "city": "千代田区",
@@ -78,6 +79,7 @@ describe('GeoJsonTransform', () => {
               "input": "東京都千代田区紀尾井町1"
             },
             "result": {
+              "output": "東京都千代田区紀尾井町",
               "match_level": 3,
               "prefecture": "東京都",
               "city": "千代田区",
@@ -102,6 +104,7 @@ describe('GeoJsonTransform', () => {
               "input": "山形県山形市旅篭町二丁目3番25号"
             },
             "result": {
+              "output": "山形県山形市旅篭町二丁目3-25",
               "match_level": 8,
               "prefecture": "山形県",
               "city": "山形市",
@@ -132,6 +135,7 @@ describe('GeoJsonTransform', () => {
               "input": "山形市旅篭町二丁目3番25号"
             },
             "result": {
+              "output": "山形県山形市旅篭町二丁目3-25",
               "match_level": 8,
               "prefecture": "山形県",
               "city": "山形市",
@@ -162,6 +166,7 @@ describe('GeoJsonTransform', () => {
               "input": "東京都町田市森野2-2-22"
             },
             "result": {
+              "output": "東京都町田市森野二丁目2-22",
               "match_level": 8,
               "prefecture": "東京都",
               "city": "町田市",
@@ -201,6 +206,6 @@ describe('GeoJsonTransform', () => {
     buffer.pop();
 
     const result = JSON.parse(buffer.join(''));
-    expect(result).toEqual(expectJson)
+    expect(result).toEqual(expectJson);
   });
 });

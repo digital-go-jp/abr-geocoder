@@ -37,6 +37,7 @@ describe('JsonTransform', () => {
           "input": "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階"
         },
         "result": {
+          "output": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
           "prefecture": "東京都",
           "match_level": 8,
           "city": "千代田区",
@@ -59,6 +60,7 @@ describe('JsonTransform', () => {
           "input": "東京都千代田区紀尾井町1"
         },
         "result": {
+          "output": "東京都千代田区紀尾井町",
           "prefecture": "東京都",
           "match_level": 3,
           "city": "千代田区",
@@ -75,6 +77,7 @@ describe('JsonTransform', () => {
           "input": "山形県山形市旅篭町二丁目3番25号"
         },
         "result": {
+          "output": "山形県山形市旅篭町二丁目3-25",
           "prefecture": "山形県",
           "match_level": 8,
           "city": "山形市",
@@ -97,6 +100,7 @@ describe('JsonTransform', () => {
           "input": "山形市旅篭町二丁目3番25号"
         },
         "result": {
+          "output": "山形県山形市旅篭町二丁目3-25",
           "prefecture": "山形県",
           "match_level": 8,
           "city": "山形市",
@@ -119,6 +123,7 @@ describe('JsonTransform', () => {
           "input": "東京都町田市森野2-2-22"
         },
         "result": {
+          "output": "東京都町田市森野二丁目2-22",
           "prefecture": "東京都",
           "match_level": 8,
           "city": "町田市",

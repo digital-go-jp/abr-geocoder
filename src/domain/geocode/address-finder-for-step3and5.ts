@@ -133,6 +133,9 @@ export class AddressFinderForStep3and5 {
     for (const regexPrefix of regexPrefixes) {
       for (const { town, pattern } of townPatterns) {
         const modifiedPattern = this.wildcardHelper(pattern);
+        if (modifiedPattern === undefined) {
+          continue;
+        }
         const regex = RegExpEx.create(`${regexPrefix}${modifiedPattern}`);
         const match = address.match(regex);
         if (!match) {
