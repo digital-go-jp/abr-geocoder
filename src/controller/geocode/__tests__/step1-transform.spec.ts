@@ -39,6 +39,7 @@ describe('step1-transform', () => {
   it('全角英数字・全角スペースを半角にする', async () => {
     const source = Stream.Readable.from(
       [
+        Query.create(`"1-2-3"`),
         Query.create('1-2-3'),
         Query.create('１−２−３'),
         Query.create('ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ'),
@@ -54,6 +55,7 @@ describe('step1-transform', () => {
 
     const actualValues = outputWrite.toArray();
     const expectValues = [
+      ['1', DASH, '2', DASH, '3'].join(''),
       ['1', DASH, '2', DASH, '3'].join(''),
       ['1', DASH, '2', DASH, '3'].join(''),
       'abcdefghijklmnopqrstuvwxyz',

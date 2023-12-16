@@ -27,8 +27,10 @@ import {
   ALPHA_NUMERIC_SYMBOLS,
   DASH,
   DASH_SYMBOLS,
+  DOUBLE_QUOTATION,
   J_DASH,
   NUMRIC_AND_KANJI_SYMBOLS,
+  SINGLE_QUOTATION,
   SPACE,
   SPACE_SYMBOLS,
 } from '@settings/constant-values';
@@ -67,6 +69,14 @@ export class GeocodingStep1 extends Transform {
     //
     let tempAddress = query.tempAddress.normalize('NFC');
 
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`^[${SINGLE_QUOTATION}|${DOUBLE_QUOTATION}]`, 'g'),
+      ''
+    );
+    tempAddress = tempAddress.replace(
+      RegExpEx.create(`[${SINGLE_QUOTATION}|${DOUBLE_QUOTATION}]$`, 'g'),
+      ''
+    );
     tempAddress = tempAddress.replace(
       RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),
       SPACE
