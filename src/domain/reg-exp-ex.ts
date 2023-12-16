@@ -25,24 +25,32 @@
  * 正規表現をキャッシュするためのクラス
  * RegExpEx.create() で new RegExp() と同じように使用する
  */
-export class RegExpEx extends RegExp {
-  private constructor(pattern: string, flag: string | undefined) {
-    super(pattern, flag);
-  }
+import LRUCache from 'lru-native2';
 
-  private static staticCache = new Map<string, RegExpEx>();
+export class RegExpEx  {
+
+  private static staticCache = new LRUCache<RegExp>({
+    // ソースコード全体として RegExpEx.create() を呼び出しているのが、90箇所弱である。
+    // キャッシュを働かせるために、約3倍程度の余裕をもたせる。
+    // (偏りがない住所3000件で試したところ, 3倍程度が一番良さそうであった)
+    maxElements: 300
+  });
 
   private static getKey(pattern: string, flag: string = ''): string {
     return `${pattern}_${flag}`;
   }
 
-  static create(pattern: string, flag: string = ''): RegExpEx {
+  // 同じ正規表現を何度もコンパイルすることによるパフォーマンスの低下を避けるため、
+  // LRUキャッシュを用いて（ちょっとだけ）高速化している
+  static create(pattern: string, flag: string = ''): RegExp {
     const patternStr = pattern.toString();
     const key = RegExpEx.getKey(patternStr, flag);
-    if (RegExpEx.staticCache.has(key)) {
-      return RegExpEx.staticCache.get(key)!;
+    const result = RegExpEx.staticCache.get(key);
+    if (result) {
+      return result;
     }
-    const instance = new RegExpEx(patternStr, flag);
+    
+    const instance = new RegExp(patternStr, flag);
     RegExpEx.staticCache.set(key, instance);
     return instance;
   }
