@@ -8,13 +8,15 @@
       "type": "node",
       "request": "launch",
       "name": "geocoding(default)",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
       "runtimeArgs": [
+        "--trace-warnings",
         "--require",
-        "ts-node/register"
+        "ts-node/register",
       ],
       "args": [
-        "${workspaceFolder}/src/cli/cli.ts",
-        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/sample-data.txt"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -23,12 +25,13 @@
       "type": "node",
       "request": "launch",
       "name": "geocoding(csv)",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/cli.ts",
         "${workspaceFolder}/.vscode/sample-data.txt",
         "${workspaceFolder}/.vscode/result.csv",
         "-f",
@@ -41,12 +44,13 @@
       "type": "node",
       "request": "launch",
       "name": "geocoding(json)",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/cli.ts",
         "${workspaceFolder}/.vscode/sample-data.txt",
         "${workspaceFolder}/.vscode/result.json",
         "-f",
@@ -59,12 +63,13 @@
       "type": "node",
       "request": "launch",
       "name": "geocoding(ndjson)",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/cli.ts",
         "${workspaceFolder}/.vscode/sample-data.txt",
         "${workspaceFolder}/.vscode/result.nd.json",
         "--format",
@@ -77,12 +82,13 @@
       "type": "node",
       "request": "launch",
       "name": "geocoding(geojson)",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/cli.ts",
         "-f",
         "geojson",
         "${workspaceFolder}/.vscode/sample-data.txt",
@@ -95,12 +101,13 @@
       "type": "node",
       "request": "launch",
       "name": "geocoding(ndgeojson)",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/cli.ts",
         "-f",
         "ndgeojson",
         "${workspaceFolder}/.vscode/sample-data.txt",
@@ -113,12 +120,13 @@
       "type": "node",
       "request": "launch",
       "name": "download command",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/cli.ts",
         "download",
       ],
       "console": "integratedTerminal",
@@ -129,12 +137,13 @@
       "type": "node",
       "request": "launch",
       "name": "update-check",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/src/cli/cli.ts",
         "update-check"
       ],
       "console": "integratedTerminal",
