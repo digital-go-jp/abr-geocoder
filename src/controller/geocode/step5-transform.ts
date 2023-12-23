@@ -147,7 +147,7 @@ export class GeocodingStep5 extends Transform {
     );
 
     tempAddress = tempAddress.replace(
-      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)`),
+      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)$`),
       s => {
         // `串本町串本１２３４` のようなケース
         return kan2num(s);

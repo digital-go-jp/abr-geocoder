@@ -101,6 +101,7 @@ describe('step5-transform', () => {
         town_id: '0302000',
       }),
 
+      // 「二十二番地」の部分が、「22」になることを期待
       Query.create('東京都府中市宮西町二丁目二十二番地').copy({
         city: '府中市',
         lat: 35.669764,
@@ -111,6 +112,20 @@ describe('step5-transform', () => {
         tempAddress: '二十二番地',
         town: '宮西町二丁目',
         town_id: '0015002',
+      }),
+
+      // 「1丁目3番地」の部分が、「一丁目3」になることを期待
+      // https://github.com/digital-go-jp/abr-geocoder/issues/86
+      Query.create('東京都千代田区紀尾井町1丁目3番地').copy({
+        city: '千代田区',
+        lat: 35.681411,
+        lg_code: '131016',
+        lon: 139.73495,
+        match_level: 3,
+        prefecture: PrefectureName.TOKYO,
+        tempAddress: '1丁目3番地',
+        town: '紀尾井町',
+        town_id: '0056000',
       }),
     ];
 
@@ -150,6 +165,19 @@ describe('step5-transform', () => {
           tempAddress: '22',
           town: '宮西町二丁目',
           town_id: '0015002',
+        }),
+      )
+      expect(results[3]).toEqual(
+        Query.create('東京都千代田区紀尾井町1丁目3番地').copy({
+          city: '千代田区',
+          lat: 35.681411,
+          lg_code: '131016',
+          lon: 139.73495,
+          match_level: 3,
+          prefecture: PrefectureName.TOKYO,
+          tempAddress: '一丁目3',
+          town: '紀尾井町',
+          town_id: '0056000',
         }),
       )
     });
