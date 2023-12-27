@@ -39,6 +39,7 @@ import { GeoJsonTransform } from '@interface-adapter/formatters/geo-json-transfo
 import { JsonTransform } from '@interface-adapter/formatters/json-transform';
 import { NdGeoJsonTransform } from '@interface-adapter/formatters/nd-geo-json-transform';
 import { NdJsonTransform } from '@interface-adapter/formatters/nd-json-transform';
+import { NormalizeTransform } from '@interface-adapter/formatters/normalize-transform';
 import { setupContainer } from '@interface-adapter/setup-container';
 import { DI_TOKEN } from '@interface-adapter/tokens';
 import { StreamGeocoder } from './stream-geocoder';
@@ -95,6 +96,9 @@ export const geocode = async ({
         return container.resolve<NdGeoJsonTransform>(
           DI_TOKEN.NDGEOJSON_FORMATTER
         );
+
+      case OutputFormat.NORMALIZE:
+        return container.resolve<NormalizeTransform>(DI_TOKEN.NORMALIZE_FORMATTER);
 
       default:
         throw new AbrgError({

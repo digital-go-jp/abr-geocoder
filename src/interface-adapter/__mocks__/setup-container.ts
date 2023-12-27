@@ -64,15 +64,18 @@ export const setupContainer = jest.fn().mockImplementation(() => {
         case DI_TOKEN.NDJSON_FORMATTER:
           return new PassThrough();
 
+          case DI_TOKEN.NORMALIZE_FORMATTER:
+          return new PassThrough();
+
         case DI_TOKEN.MULTI_PROGRESS_BAR:
           return undefined;
 
         case DI_TOKEN.INFINITY_PROGRESS_BAR:
           return undefined;
-      
+
         case DI_TOKEN.PROGRESS_BAR:
           return undefined;
-          
+
         default:
           throw(`Not implemented : ${target}`)
       }

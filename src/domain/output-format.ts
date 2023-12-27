@@ -27,4 +27,5 @@ export enum OutputFormat {
   GEOJSON = 'geojson',
   NDJSON = 'ndjson',
   NDGEOJSON = 'ndgeojson',
+  NORMALIZE = "normalize"
 }

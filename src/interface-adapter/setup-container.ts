@@ -43,6 +43,7 @@ import { provideLogger } from './providers/provide-logger';
 import { provideMultiProgressBar } from './providers/provide-multi-progress-bar';
 import { provideProgressBar } from './providers/provide-progress-bar';
 import { upwardFileSearch } from '@domain/upward-file-search';
+import { NormalizeTransform } from './formatters/normalize-transform';
 
 export interface setupContainerParams {
   dataDir: string;
@@ -137,6 +138,11 @@ export const setupContainer = async ({
   myContainer.register<NdJsonTransform>(DI_TOKEN.NDJSON_FORMATTER, {
     useFactory: () => {
       return NdJsonTransform.create();
+    },
+  });
+  myContainer.register<NormalizeTransform>(DI_TOKEN.NORMALIZE_FORMATTER, {
+    useFactory: () => {
+      return NormalizeTransform.create();
     },
   });
 
