@@ -98,7 +98,9 @@ export const geocode = async ({
         );
 
       case OutputFormat.NORMALIZE:
-        return container.resolve<NormalizeTransform>(DI_TOKEN.NORMALIZE_FORMATTER);
+        return container.resolve<NormalizeTransform>(
+          DI_TOKEN.NORMALIZE_FORMATTER
+        );
 
       default:
         throw new AbrgError({

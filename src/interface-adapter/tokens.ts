@@ -34,5 +34,5 @@ export enum DI_TOKEN {
   NDGEOJSON_FORMATTER = 'ndgeojson-formatter',
   JSON_FORMATTER = 'json-formatter',
   NDJSON_FORMATTER = 'ndjson-formatter',
-  NORMALIZE_FORMATTER = "normalize_formatter"
+  NORMALIZE_FORMATTER = 'normalize_formatter',
 }
