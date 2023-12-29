@@ -122,6 +122,7 @@ $ abrg <inputFile> [<outputFile>] [options]
   | ndjson  |Output results in json format as stream output.    |
   | geojson |Output results in geo-json format.                 |
   | ndgeojson  |Output results in geo-json format as stream output.|
+  | normalize  |Output results in normalized address.       |
 
 - `--fuzzy`
 
