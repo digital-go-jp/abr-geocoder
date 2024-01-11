@@ -9,3 +9,6 @@ node_modules*/
 test/result*
 spec/*.sqlite
 *.tgz
+.pnpm-store/
+pnpm-lock.yaml
+.vscode/result.*

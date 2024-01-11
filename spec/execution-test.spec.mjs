@@ -107,6 +107,26 @@ test(`'echo "<input data>" | abrg - -f csv' should return the expected results a
 })
 
 
+test(`'echo "<input data>" | abrg - -f normalize' should return the expected results as CSV format`, async () => {
+
+  const input = `
+  //
+  // サンプルデータ ('#' または // で始まる行はコメント行として処理します)
+  //
+  東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階
+  東京都千代田区九段南1丁目2-1
+  `;
+
+  const expectResult = `
+  input,output,match_level
+  "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階","東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",8
+  "東京都千代田区九段南1丁目2-1","東京都千代田区九段南一丁目",3
+  `;
+
+  const expectExitCode = 0;
+  const tester = new CsvTest();
+  await tester.validate('- -f normalize', input, expectExitCode, expectResult)
+})
 
 test(`'echo "<input data>" | abrg - -f csv' should be error because "brabrabra" is unknown file.` , async () => {
 

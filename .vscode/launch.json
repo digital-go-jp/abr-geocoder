@@ -119,6 +119,25 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "geocoding(normalize)",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/.vscode/sample-data.txt",
+        "${workspaceFolder}/.vscode/result.csv",
+        "-f",
+        "normalize",
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "download command",
       "program": "${workspaceFolder}/src/cli/cli.ts",
       "preLaunchTask": "npm: build",
