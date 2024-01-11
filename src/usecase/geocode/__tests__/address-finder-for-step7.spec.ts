@@ -29,6 +29,7 @@ import { DASH } from '@settings/constant-values';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
 import dummyBlockList from '../../../domain/geocode/__tests__/dummyBlockList.json';
 import dummyRsdtList from '../../../domain/geocode/__tests__/dummyRsdtList.json';
+import dummySmallBlockList from '../../../domain/geocode/__tests__/dummySmallBlockList.json';
 import { AddressFinderForStep7 } from '../address-finder-for-step7';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
@@ -44,17 +45,15 @@ MockedDB.mockImplementation(() => {
           city?: string;
           town?: string;
         }) => {
-          // ダミーデータは紀尾井町のデータだけなので、それ以外は空リストを返す
-          if (params.prefecture !== PrefectureName.TOKYO) {
-            return [];
-          }
-
           // statementに合わせてデータを返す
-          if (/unit\s+test:\s+getBlockListStatement/i.test(sql)) {
+          if (sql.includes('/* unit test: getBlockListStatement */')) {
             return dummyBlockList;
           }
-          if (/unit\s+test:\s+getRsdtListStatement/i.test(sql)) {
+          if (sql.includes('/* unit test: getRsdtListStatement */')) {
             return dummyRsdtList;
+          }
+          if (sql.includes('/* unit test: getSmallBlockListStatement */')) {
+            return dummySmallBlockList;
           }
           throw new Error('Unexpected sql was given');
         }
@@ -123,5 +122,28 @@ describe('AddressFinderForStep7', () => {
 
     const result = await addressFinder.find(query);
     expect(result).toEqual(query);
+  })
+
+  it.concurrent('小字を含むケース', async () => {
+    const inputAddress = `岩手県盛岡市飯岡新田４地割１００１ 河南自治公民館`;
+    const query = Query.create(inputAddress).copy({
+      prefecture: PrefectureName.IWATE,
+      city: '盛岡市',
+      town: '飯岡新田',
+      tempAddress: '4地割1001 河南自治公民館',
+      match_level: MatchLevel.TOWN_LOCAL,
+    });
+
+    const result = await addressFinder.findForKoaza(query);
+    expect(result).toEqual(Query.create(inputAddress).copy({
+      prefecture: PrefectureName.IWATE,
+      city: '盛岡市',
+      town: '飯岡新田',
+      addr1: '4地割',
+      tempAddress: '1001 河南自治公民館',
+      town_id: '0007105',
+      lg_code: '032018',
+      match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
+    }));
   })
 });
