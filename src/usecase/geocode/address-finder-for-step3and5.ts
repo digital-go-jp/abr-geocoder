@@ -21,20 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Database, Statement } from 'better-sqlite3';
+import { DataField } from '@domain/dataset/data-field';
+import { toRegexPattern } from '@domain/geocode/to-regex-pattern';
+import { isKanjiNumberFollewedByCho } from '@domain/is-kanji-number-follewed-by-cho';
+import { kan2num } from '@domain/kan2num';
+import { PrefectureName } from '@domain/prefecture-name';
+import { RegExpEx } from '@domain/reg-exp-ex';
+import { ITown } from '@domain/town';
 import {
   DASH,
   DASH_SYMBOLS,
   J_DASH,
   KANJI_1to10_SYMBOLS,
 } from '@settings/constant-values';
-import { ITown } from '@domain/town';
-import { PrefectureName } from '@domain/prefecture-name';
-import { DataField } from '@domain/dataset/data-field';
-import { RegExpEx } from '@domain/reg-exp-ex';
-import { isKanjiNumberFollewedByCho } from '@domain/is-kanji-number-follewed-by-cho';
-import { toRegexPattern } from '@domain/geocode/to-regex-pattern';
-import { kan2num } from '@domain/kan2num';
+import { Database, Statement } from 'better-sqlite3';
 
 export type TownRow = {
   lg_code: string;
@@ -133,6 +133,9 @@ export class AddressFinderForStep3and5 {
     for (const regexPrefix of regexPrefixes) {
       for (const { town, pattern } of townPatterns) {
         const modifiedPattern = this.wildcardHelper(pattern);
+        if (modifiedPattern === undefined) {
+          continue;
+        }
         const regex = RegExpEx.create(`${regexPrefix}${modifiedPattern}`);
         const match = address.match(regex);
         if (!match) {

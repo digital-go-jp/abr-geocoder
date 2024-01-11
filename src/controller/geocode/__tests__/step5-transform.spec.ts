@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
+import { AddressFinderForStep3and5 } from '@usecase/geocode/address-finder-for-step3and5';
 import { MatchLevel } from '@domain/match-level';
 import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
@@ -32,7 +32,7 @@ import { pipeline } from 'node:stream/promises';
 import { GeocodingStep5 } from '../step5-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 
-jest.mock<AddressFinderForStep3and5>('@domain/geocode/address-finder-for-step3and5');
+jest.mock<AddressFinderForStep3and5>('@usecase/geocode/address-finder-for-step3and5');
 jest.mock('better-sqlite3');
 
 const createWriteStream = () => {

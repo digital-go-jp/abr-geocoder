@@ -21,8 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AddressFinderForStep7 } from '@domain/geocode/address-finder-for-step7';
+import { MatchLevel } from '@domain/match-level';
 import { Query } from '@domain/query';
+import { AddressFinderForStep7 } from '@usecase/geocode/address-finder-for-step7';
 import { Transform, TransformCallback } from 'node:stream';
 
 export class GeocodingStep7 extends Transform {
@@ -48,7 +49,30 @@ export class GeocodingStep7 extends Transform {
     }
 
     this.addressFinder.find(query).then((updatedQuery: Query) => {
-      callback(null, updatedQuery);
+      // RESIDENTIAL_BLOCK(7) or RESIDENTIAL_DETAIL(8) の場合は、
+      // 既に細かい住所まで判定できているので、これ以上のチェックは必要ない
+      //
+      // tempAddress に何も残っていないなら、調べようがないので、
+      // このステップを終了する
+      if (
+        updatedQuery.match_level !== MatchLevel.TOWN_LOCAL || 
+        updatedQuery.tempAddress === ''
+      ) {
+        callback(null, updatedQuery);
+        return;
+      }
+
+      // tempAddress に残っている場合、「小字」の可能性がある
+      //
+      // 例：福島県いわき市山玉町脇川
+      //   pref = "福島県"
+      //   city = "いわき市"
+      //   town = "山玉町"
+      //   tempAddress = "脇川"  <-- 小字
+      this.addressFinder.findForKoaza(query).then((result: Query) => {
+        callback(null, result);
+        return;
+      });
     });
   }
 }

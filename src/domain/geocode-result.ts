@@ -21,7 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { SPACE, SPACE_SYMBOLS } from '@settings/constant-values';
 import { MatchLevel } from './match-level';
+import { RegExpEx } from './reg-exp-ex';
+import { zen2HankakuNum } from './zen2hankaku-num';
 
 export enum GeocodeResultFields {
   INPUT = 'input',
@@ -43,7 +46,27 @@ export enum GeocodeResultFields {
   ADDR2_ID = 'addr2_id',
 }
 
-export class GeocodeResult {
+export interface IGeocodeResult {
+  input: string;
+  output: string;
+  match_level: MatchLevel;
+  lat: number | null;
+  lon: number | null;
+  other: string;
+  prefecture?: string;
+  city?: string;
+  town?: string;
+  town_id?: string;
+  lg_code?: string;
+  block?: string;
+  block_id?: string;
+  addr1?: string;
+  addr1_id?: string;
+  addr2?: string;
+  addr2_id?: string;
+}
+
+export class GeocodeResult implements IGeocodeResult {
   private constructor(
     public readonly input: string,
     public readonly output: string,
@@ -64,6 +87,28 @@ export class GeocodeResult {
     public readonly addr2_id?: string
   ) {
     Object.freeze(this);
+  }
+
+  toJSON(): IGeocodeResult {
+    return {
+      input: this.input,
+      output: this.output,
+      match_level: this.match_level,
+      lat: this.lat,
+      lon: this.lon,
+      other: this.other,
+      prefecture: this.prefecture,
+      city: this.city,
+      town: this.town,
+      town_id: this.town_id,
+      lg_code: this.lg_code,
+      block: this.block,
+      block_id: this.block_id,
+      addr1: this.addr1,
+      addr1_id: this.addr1_id,
+      addr2: this.addr2,
+      addr2_id: this.addr2_id
+    };
   }
 
   static readonly create = (params: {
@@ -109,10 +154,29 @@ export class GeocodeResult {
           output.push(params.addr2);
         }
       }
+    } else {
+      // 大字・小字を含む住所
+      if (params.addr1) {
+        output.push(params.addr1);
+        if (params.addr2) {
+          output.push(params.addr2);
+        }
+      }
     }
     if (params.other) {
-      output.push(' ');
-      output.push(params.other.trim());
+      // otherに残っているのは、ジオコードできなかった部分（番地など）。
+      // 与えられたクエリ(params.input) を参照して、other で残っている部分の前に
+      // 空白があれば挿入する
+      const tmp = zen2HankakuNum(params.input).replace(
+        RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),
+        ' ',
+      )
+      const other = params.other.trim();
+      const pos = tmp.indexOf(other);
+      if ((pos > 0) && (tmp[pos - 1] === ' ')) {
+        output.push(' ');
+      }
+      output.push(other);
     }
 
     return new GeocodeResult(

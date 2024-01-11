@@ -26,8 +26,20 @@ import { MatchLevel } from '@domain/match-level';
 import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
 import { RegExpEx } from '@domain/reg-exp-ex';
+import { zen2HankakuNum } from '@domain/zen2hankaku-num';
 import { DASH } from '@settings/constant-values';
 import { Database, Statement } from 'better-sqlite3';
+
+export type TownSmallBlock = {
+  lg_code: string;
+  town_id: string;
+  koaza_name: string;
+  pref: string;
+  city: string;
+  town: string;
+  lat: number;
+  lon: number;
+};
 
 export type TownBlock = {
   lg_code: string;
@@ -63,6 +75,7 @@ export type RsdtAddr = {
 export class AddressFinderForStep7 {
   private readonly getBlockListStatement: Statement;
   private readonly getRsdtListStatement: Statement;
+  private readonly getSmallBlockListStatement: Statement;
 
   constructor(db: Database) {
     this.getBlockListStatement = db.prepare(`
@@ -144,12 +157,100 @@ export class AddressFinderForStep7 {
           rsdt.${DataField.RSDT_NUM2.dbColumn} is not null
         )
     `);
+
+    this.getSmallBlockListStatement  = db.prepare(`
+      /* unit test: getSmallBlockListStatement */
+
+      select
+        "town".${DataField.LG_CODE.dbColumn},
+        "town".${DataField.TOWN_ID.dbColumn},
+        city.${DataField.PREF_NAME.dbColumn} as "pref",
+        (
+          city.${DataField.COUNTY_NAME.dbColumn} ||
+          city.${DataField.CITY_NAME.dbColumn} ||
+          city.${DataField.OD_CITY_NAME.dbColumn}
+        ) as "city",
+        (
+          town.${DataField.OAZA_TOWN_NAME.dbColumn} ||
+          town.${DataField.CHOME_NAME.dbColumn}
+        ) as "town",
+        town.${DataField.KOAZA_NAME.dbColumn},
+        town.${DataField.REP_PNT_LAT.dbColumn} as "lat",
+        town.${DataField.REP_PNT_LON.dbColumn} as "lon"
+      from
+        "city"
+        left join "town" on
+        "town".${DataField.LG_CODE.dbColumn} = city.${DataField.LG_CODE.dbColumn} and
+          (town.${DataField.OAZA_TOWN_NAME.dbColumn} || town.${DataField.CHOME_NAME.dbColumn} = @town)
+      where
+        city.${DataField.PREF_NAME.dbColumn} = @prefecture AND 
+        (
+          "city".${DataField.COUNTY_NAME.dbColumn} ||
+          "city".${DataField.CITY_NAME.dbColumn} ||
+          "city".${DataField.OD_CITY_NAME.dbColumn}
+        ) = @city AND
+        "town".${DataField.KOAZA_NAME.dbColumn} like @koaza
+      order by
+        length(town.${DataField.KOAZA_NAME.dbColumn}) desc,
+        town.${DataField.KOAZA_NAME.dbColumn} desc
+    `);
+  }
+
+  // 小字を検索する
+  async findForKoaza(query: Query): Promise<Query> {
+    const koaza = ((addr: string) => {
+      const temp: string[] = addr.split(/\d/);
+      return temp[0];
+    })(query.tempAddress);
+
+    const cityBlocks = await this.getSmallBlockList({
+      prefecture: query.prefecture!,
+      city: query.city!,
+      town: query.town!,
+      koaza,
+    });
+
+    if (cityBlocks.length === 0) {
+      return query;
+    }
+
+    const tempAddress = query.tempAddress.replace(RegExpEx.create(`^${koaza}`), '');
+    if (cityBlocks.length === 1) {
+      const koaza_name = zen2HankakuNum(cityBlocks[0].koaza_name);
+      const result = cityBlocks[0];
+      return query.copy({
+        addr1: result.koaza_name,
+        town_id: result.town_id,
+        lg_code: result.lg_code,
+        lat: result.lat,
+        lon: result.lon,
+        match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
+        tempAddress: tempAddress.replace(RegExpEx.create(`^${koaza_name}`), ''),
+      });
+    }
+
+    for (let cityBlock of cityBlocks) {
+      const koaza_name = zen2HankakuNum(cityBlock.koaza_name);
+      if (tempAddress.startsWith(koaza_name)) {
+        return query.copy({
+          addr1: koaza_name,
+          town_id: cityBlock.town_id,
+          lg_code: cityBlock.lg_code,
+          lat: cityBlock.lat,
+          lon: cityBlock.lon,
+          match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
+          tempAddress: tempAddress.replace(RegExpEx.create(`^${koaza_name}`), ''),
+        });
+      }
+    }
+
+    return query;
   }
 
   async find(query: Query): Promise<Query> {
     /*
      * オリジナルコード
-     * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L133-L164
+     * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L177-L256
      */
 
     const townBlocks = await this.getBlockList({
@@ -273,6 +374,26 @@ export class AddressFinderForStep7 {
       match_level: MatchLevel.RESIDENTIAL_BLOCK,
     });
   }
+  private async getSmallBlockList({
+    prefecture,
+    city,
+    town,
+    koaza,
+  }: {
+    prefecture: PrefectureName;
+    city: string;
+    town: string;
+    koaza: string;
+  }): Promise<TownSmallBlock[]> {
+    const results = await this.getSmallBlockListStatement.all({
+      prefecture,
+      city,
+      town,
+      koaza: `${koaza}%`,
+    }) as TownSmallBlock[];
+
+    return Promise.resolve(results);
+  }
 
   /**
    * SQLを実行する
@@ -292,7 +413,7 @@ export class AddressFinderForStep7 {
     city: string;
     town: string;
   }): Promise<TownBlock[]> {
-    const results = this.getBlockListStatement.all({
+    const results = await this.getBlockListStatement.all({
       prefecture,
       city,
       town,

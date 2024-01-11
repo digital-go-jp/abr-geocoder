@@ -21,7 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
 import { kan2num } from '@domain/kan2num';
 import { MatchLevel } from '@domain/match-level';
 import { Query } from '@domain/query';
@@ -33,6 +32,7 @@ import {
   NUMRIC_AND_KANJI_SYMBOLS,
   SPACE,
 } from '@settings/constant-values';
+import { AddressFinderForStep3and5 } from '@usecase/geocode/address-finder-for-step3and5';
 import { Transform, TransformCallback } from 'node:stream';
 
 export class GeocodingStep5 extends Transform {

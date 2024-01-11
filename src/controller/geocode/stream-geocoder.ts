@@ -22,8 +22,6 @@
  * SOFTWARE.
  */
 import { GeocodeResult } from '@domain/geocode-result';
-import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
-import { AddressFinderForStep7 } from '@domain/geocode/address-finder-for-step7';
 import { getCityPatternsForEachPrefecture } from '@domain/geocode/get-city-patterns-for-each-prefecture';
 import { getPrefectureRegexPatterns } from '@domain/geocode/get-prefecture-regex-patterns';
 import { getPrefecturesFromDB } from '@domain/geocode/get-prefectures-from-db';
@@ -35,6 +33,8 @@ import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
 import { RegExpEx } from '@domain/reg-exp-ex';
 import PATCH_PATTERNS from '@settings/patch-patterns';
+import { AddressFinderForStep3and5 } from '@usecase/geocode/address-finder-for-step3and5';
+import { AddressFinderForStep7 } from '@usecase/geocode/address-finder-for-step7';
 import { Database } from 'better-sqlite3';
 import { Readable, Transform, Writable } from 'node:stream';
 import { TransformCallback } from 'stream';

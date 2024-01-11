@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 import { GeocodeResult } from '@domain/geocode-result';
-import { Query } from '@domain/query';
 
 export const dummyData = [
   GeocodeResult.create({

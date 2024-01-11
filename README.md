@@ -227,5 +227,6 @@ The `level` property denotes the address maching level.
 | 1 | Could detect only prefecture level. |
 | 2 | Could detect prefecture and city levels. |
 | 3 | Could detect prefecture, city, and a town ID. |
+| 4 | Could detect prefecture, city, a town ID, and a small town ID (aka, koaza). |
 | 7 | Could detect prefecture, city, a town ID, and street name level. |
 | 8 | Could detect prefecture, city, a town ID, street name, and extra information, such as suite number. |

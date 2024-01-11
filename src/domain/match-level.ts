@@ -34,6 +34,9 @@ export enum MatchLevel {
   // 町字まで判別できた
   TOWN_LOCAL = 3,
 
+  // 町字 + 小字まで判別できた
+  TOWN_LOCAL_PARTIAL = 4,
+
   // 住居表示の街区までの判別ができた
   RESIDENTIAL_BLOCK = 7,
 

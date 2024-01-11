@@ -21,15 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AddressFinderForStep7 } from '@domain/geocode/address-finder-for-step7';
 import { MatchLevel } from '@domain/match-level';
 import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
 import { describe, expect, it, jest } from '@jest/globals';
 import { DASH } from '@settings/constant-values';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
-import dummyBlockList from './dummyBlockList.json';
-import dummyRsdtList from './dummyRsdtList.json';
+import dummyBlockList from '../../../domain/geocode/__tests__/dummyBlockList.json';
+import dummyRsdtList from '../../../domain/geocode/__tests__/dummyRsdtList.json';
+import { AddressFinderForStep7 } from '../address-finder-for-step7';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 
