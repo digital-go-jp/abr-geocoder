@@ -55,7 +55,7 @@ export class GeocodingStep7 extends Transform {
       // tempAddress に何も残っていないなら、調べようがないので、
       // このステップを終了する
       if (
-        updatedQuery.match_level !== MatchLevel.TOWN_LOCAL || 
+        updatedQuery.match_level !== MatchLevel.TOWN_LOCAL ||
         updatedQuery.tempAddress === ''
       ) {
         callback(null, updatedQuery);

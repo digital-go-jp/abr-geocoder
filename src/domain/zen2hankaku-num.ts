@@ -29,4 +29,4 @@ export const zen2HankakuNum = (str: string): string => {
   return str.replace(regex, s => {
     return String.fromCharCode(s.charCodeAt(0) - 0xfee0);
   });
-}
+};

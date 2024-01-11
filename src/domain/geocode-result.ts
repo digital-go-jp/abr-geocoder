@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { SPACE, SPACE_SYMBOLS } from '@settings/constant-values';
+import { SPACE_SYMBOLS } from '@settings/constant-values';
 import { MatchLevel } from './match-level';
 import { RegExpEx } from './reg-exp-ex';
 import { zen2HankakuNum } from './zen2hankaku-num';
@@ -107,7 +107,7 @@ export class GeocodeResult implements IGeocodeResult {
       addr1: this.addr1,
       addr1_id: this.addr1_id,
       addr2: this.addr2,
-      addr2_id: this.addr2_id
+      addr2_id: this.addr2_id,
     };
   }
 
@@ -169,11 +169,11 @@ export class GeocodeResult implements IGeocodeResult {
       // 空白があれば挿入する
       const tmp = zen2HankakuNum(params.input).replace(
         RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),
-        ' ',
-      )
+        ' '
+      );
       const other = params.other.trim();
       const pos = tmp.indexOf(other);
-      if ((pos > 0) && (tmp[pos - 1] === ' ')) {
+      if (pos > 0 && tmp[pos - 1] === ' ') {
         output.push(' ');
       }
       output.push(other);

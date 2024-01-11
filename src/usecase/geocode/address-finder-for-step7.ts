@@ -158,7 +158,7 @@ export class AddressFinderForStep7 {
         )
     `);
 
-    this.getSmallBlockListStatement  = db.prepare(`
+    this.getSmallBlockListStatement = db.prepare(`
       /* unit test: getSmallBlockListStatement */
 
       select
@@ -214,7 +214,10 @@ export class AddressFinderForStep7 {
       return query;
     }
 
-    const tempAddress = query.tempAddress.replace(RegExpEx.create(`^${koaza}`), '');
+    const tempAddress = query.tempAddress.replace(
+      RegExpEx.create(`^${koaza}`),
+      ''
+    );
     if (cityBlocks.length === 1) {
       const koaza_name = zen2HankakuNum(cityBlocks[0].koaza_name);
       const result = cityBlocks[0];
@@ -229,7 +232,7 @@ export class AddressFinderForStep7 {
       });
     }
 
-    for (let cityBlock of cityBlocks) {
+    for (const cityBlock of cityBlocks) {
       const koaza_name = zen2HankakuNum(cityBlock.koaza_name);
       if (tempAddress.startsWith(koaza_name)) {
         return query.copy({
@@ -239,7 +242,10 @@ export class AddressFinderForStep7 {
           lat: cityBlock.lat,
           lon: cityBlock.lon,
           match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
-          tempAddress: tempAddress.replace(RegExpEx.create(`^${koaza_name}`), ''),
+          tempAddress: tempAddress.replace(
+            RegExpEx.create(`^${koaza_name}`),
+            ''
+          ),
         });
       }
     }
@@ -385,12 +391,12 @@ export class AddressFinderForStep7 {
     town: string;
     koaza: string;
   }): Promise<TownSmallBlock[]> {
-    const results = await this.getSmallBlockListStatement.all({
+    const results = (await this.getSmallBlockListStatement.all({
       prefecture,
       city,
       town,
       koaza: `${koaza}%`,
-    }) as TownSmallBlock[];
+    })) as TownSmallBlock[];
 
     return Promise.resolve(results);
   }
@@ -413,11 +419,11 @@ export class AddressFinderForStep7 {
     city: string;
     town: string;
   }): Promise<TownBlock[]> {
-    const results = await this.getBlockListStatement.all({
+    const results = (await this.getBlockListStatement.all({
       prefecture,
       city,
       town,
-    }) as TownBlock[];
+    })) as TownBlock[];
 
     return Promise.resolve(results);
   }
