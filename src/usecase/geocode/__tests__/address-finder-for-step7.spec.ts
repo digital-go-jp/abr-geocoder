@@ -25,7 +25,7 @@ import { MatchLevel } from '@domain/match-level';
 import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
 import { describe, expect, it, jest } from '@jest/globals';
-import { DASH } from '@settings/constant-values';
+import { DASH, SPACE } from '@settings/constant-values';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
 import dummyBlockList from '../../../domain/geocode/__tests__/dummyBlockList.json';
 import dummyRsdtList from '../../../domain/geocode/__tests__/dummyRsdtList.json';
@@ -53,7 +53,28 @@ MockedDB.mockImplementation(() => {
             return dummyRsdtList;
           }
           if (sql.includes('/* unit test: getSmallBlockListStatement */')) {
-            return dummySmallBlockList;
+
+            switch (params.prefecture) {
+              case PrefectureName.IWATE:
+                return dummySmallBlockList;
+              
+              case PrefectureName.FUKUSHIMA:
+                return [
+                  {
+                    "lg_code": "072044",
+                    "town_id": "0113116",
+                    "pref": "福島県",
+                    "city": "いわき市",
+                    "town": "山玉町",
+                    "koaza_name": "脇川",
+                    "lat": 36.901176,
+                    "lon": 140.725118
+                  }
+                ];
+
+              default:
+                throw new Error('Unexpected sql was given');
+            }
           }
           throw new Error('Unexpected sql was given');
         }
@@ -124,13 +145,38 @@ describe('AddressFinderForStep7', () => {
     expect(result).toEqual(query);
   })
 
-  it.concurrent('小字を含むケース', async () => {
-    const inputAddress = `岩手県盛岡市飯岡新田４地割１００１ 河南自治公民館`;
+  it.concurrent('小字が1件しかマッチしないケース', async () => {
+    const inputAddress = `いわき市山玉町脇川2${SPACE}いわき市役所${SPACE}水道局${SPACE}山玉浄水場`;
+    const query = Query.create(inputAddress).copy({
+      prefecture: PrefectureName.FUKUSHIMA,
+      city: 'いわき市',
+      town: '山玉町',
+      tempAddress: `脇川2${SPACE}いわき市役所${SPACE}水道局${SPACE}山玉浄水場`,
+      match_level: MatchLevel.TOWN_LOCAL,
+    });
+
+    const result = await addressFinder.findForKoaza(query);
+    expect(result).toEqual(Query.create(inputAddress).copy({
+      prefecture: PrefectureName.FUKUSHIMA,
+      city: 'いわき市',
+      town: '山玉町',
+      addr1: '脇川',
+      tempAddress: `2${SPACE}いわき市役所${SPACE}水道局${SPACE}山玉浄水場`,
+      lat: 36.901176,
+      lg_code: '072044',
+      lon: 140.725118,
+      town_id: '0113116',
+      match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
+    }));
+  })
+
+  it.concurrent('小字が複数マッチするケース', async () => {
+    const inputAddress = `岩手県盛岡市飯岡新田４地割１００１${SPACE}河南自治公民館`;
     const query = Query.create(inputAddress).copy({
       prefecture: PrefectureName.IWATE,
       city: '盛岡市',
       town: '飯岡新田',
-      tempAddress: '4地割1001 河南自治公民館',
+      tempAddress: `4地割1001${SPACE}河南自治公民館`,
       match_level: MatchLevel.TOWN_LOCAL,
     });
 
@@ -140,10 +186,11 @@ describe('AddressFinderForStep7', () => {
       city: '盛岡市',
       town: '飯岡新田',
       addr1: '4地割',
-      tempAddress: '1001 河南自治公民館',
+      tempAddress: `1001${SPACE}河南自治公民館`,
       town_id: '0007105',
       lg_code: '032018',
       match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
     }));
   })
+
 });

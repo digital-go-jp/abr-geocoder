@@ -191,7 +191,6 @@ export class AddressFinderForStep7 {
         ) = @city AND
         "town".${DataField.KOAZA_NAME.dbColumn} like @koaza
       order by
-        length(town.${DataField.KOAZA_NAME.dbColumn}) desc,
         town.${DataField.KOAZA_NAME.dbColumn} desc
     `);
   }
