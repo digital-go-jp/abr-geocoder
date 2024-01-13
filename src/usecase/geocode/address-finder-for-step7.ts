@@ -221,12 +221,12 @@ export class AddressFinderForStep7 {
       const koaza_name = zen2HankakuNum(cityBlocks[0].koaza_name);
       const result = cityBlocks[0];
       return query.copy({
-        addr1: result.koaza_name,
+        town: `${query.town}${result.koaza_name}`,
         town_id: result.town_id,
         lg_code: result.lg_code,
         lat: result.lat,
         lon: result.lon,
-        match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
+        match_level: MatchLevel.TOWN_LOCAL,
         tempAddress: tempAddress.replace(RegExpEx.create(`^${koaza_name}`), ''),
       });
     }
@@ -235,12 +235,12 @@ export class AddressFinderForStep7 {
       const koaza_name = zen2HankakuNum(cityBlock.koaza_name);
       if (tempAddress.startsWith(koaza_name)) {
         return query.copy({
-          addr1: koaza_name,
+          town: `${query.town}${koaza_name}`,
           town_id: cityBlock.town_id,
           lg_code: cityBlock.lg_code,
           lat: cityBlock.lat,
           lon: cityBlock.lon,
-          match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
+          match_level: MatchLevel.TOWN_LOCAL,
           tempAddress: tempAddress.replace(
             RegExpEx.create(`^${koaza_name}`),
             ''

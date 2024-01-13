@@ -159,14 +159,13 @@ describe('AddressFinderForStep7', () => {
     expect(result).toEqual(Query.create(inputAddress).copy({
       prefecture: PrefectureName.FUKUSHIMA,
       city: 'いわき市',
-      town: '山玉町',
-      addr1: '脇川',
+      town: '山玉町脇川',
       tempAddress: `2${SPACE}いわき市役所${SPACE}水道局${SPACE}山玉浄水場`,
       lat: 36.901176,
       lg_code: '072044',
       lon: 140.725118,
       town_id: '0113116',
-      match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
+      match_level: MatchLevel.TOWN_LOCAL,
     }));
   })
 
@@ -184,12 +183,11 @@ describe('AddressFinderForStep7', () => {
     expect(result).toEqual(Query.create(inputAddress).copy({
       prefecture: PrefectureName.IWATE,
       city: '盛岡市',
-      town: '飯岡新田',
-      addr1: '4地割',
+      town: '飯岡新田4地割',
       tempAddress: `1001${SPACE}河南自治公民館`,
       town_id: '0007105',
       lg_code: '032018',
-      match_level: MatchLevel.TOWN_LOCAL_PARTIAL,
+      match_level: MatchLevel.TOWN_LOCAL,
     }));
   })
 
