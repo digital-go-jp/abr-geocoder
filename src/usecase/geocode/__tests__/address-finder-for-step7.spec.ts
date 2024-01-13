@@ -47,7 +47,13 @@ MockedDB.mockImplementation(() => {
         }) => {
           // statementに合わせてデータを返す
           if (sql.includes('/* unit test: getBlockListStatement */')) {
-            return dummyBlockList;
+            switch(params.prefecture) {
+              case PrefectureName.TOKYO:
+                return dummyBlockList;
+              
+              default:
+                return [];
+            }
           }
           if (sql.includes('/* unit test: getRsdtListStatement */')) {
             return dummyRsdtList;
@@ -73,7 +79,7 @@ MockedDB.mockImplementation(() => {
                 ];
 
               default:
-                throw new Error('Unexpected sql was given');
+                return [];
             }
           }
           throw new Error('Unexpected sql was given');
@@ -160,7 +166,8 @@ describe('AddressFinderForStep7', () => {
       prefecture: PrefectureName.FUKUSHIMA,
       city: 'いわき市',
       town: '山玉町脇川',
-      tempAddress: `2${SPACE}いわき市役所${SPACE}水道局${SPACE}山玉浄水場`,
+      block: '2',
+      tempAddress: `いわき市役所${SPACE}水道局${SPACE}山玉浄水場`,
       lat: 36.901176,
       lg_code: '072044',
       lon: 140.725118,
@@ -184,7 +191,8 @@ describe('AddressFinderForStep7', () => {
       prefecture: PrefectureName.IWATE,
       city: '盛岡市',
       town: '飯岡新田4地割',
-      tempAddress: `1001${SPACE}河南自治公民館`,
+      block: '1001',
+      tempAddress: `河南自治公民館`,
       town_id: '0007105',
       lg_code: '032018',
       match_level: MatchLevel.TOWN_LOCAL,

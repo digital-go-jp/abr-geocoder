@@ -27,7 +27,7 @@ import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
 import { RegExpEx } from '@domain/reg-exp-ex';
 import { zen2HankakuNum } from '@domain/zen2hankaku-num';
-import { DASH } from '@settings/constant-values';
+import { DASH, SPACE } from '@settings/constant-values';
 import { Database, Statement } from 'better-sqlite3';
 
 export type TownSmallBlock = {
@@ -220,36 +220,65 @@ export class AddressFinderForStep7 {
     if (cityBlocks.length === 1) {
       const koaza_name = zen2HankakuNum(cityBlocks[0].koaza_name);
       const result = cityBlocks[0];
-      return query.copy({
-        town: `${query.town}${result.koaza_name}`,
-        town_id: result.town_id,
-        lg_code: result.lg_code,
-        lat: result.lat,
-        lon: result.lon,
-        match_level: MatchLevel.TOWN_LOCAL,
-        tempAddress: tempAddress.replace(RegExpEx.create(`^${koaza_name}`), ''),
-      });
-    }
 
-    for (const cityBlock of cityBlocks) {
-      const koaza_name = zen2HankakuNum(cityBlock.koaza_name);
-      if (tempAddress.startsWith(koaza_name)) {
-        return query.copy({
-          town: `${query.town}${koaza_name}`,
-          town_id: cityBlock.town_id,
-          lg_code: cityBlock.lg_code,
-          lat: cityBlock.lat,
-          lon: cityBlock.lon,
+      return this.parseBlockNumbers(
+        query.copy({
+          town: `${query.town}${result.koaza_name}`,
+          town_id: result.town_id,
+          lg_code: result.lg_code,
+          lat: result.lat,
+          lon: result.lon,
           match_level: MatchLevel.TOWN_LOCAL,
           tempAddress: tempAddress.replace(
             RegExpEx.create(`^${koaza_name}`),
             ''
           ),
-        });
+        })
+      );
+    }
+
+    for (const cityBlock of cityBlocks) {
+      const koaza_name = zen2HankakuNum(cityBlock.koaza_name);
+      if (tempAddress.startsWith(koaza_name)) {
+        return this.parseBlockNumbers(
+          query.copy({
+            town: `${query.town}${koaza_name}`,
+            town_id: cityBlock.town_id,
+            lg_code: cityBlock.lg_code,
+            lat: cityBlock.lat,
+            lon: cityBlock.lon,
+            match_level: MatchLevel.TOWN_LOCAL,
+            tempAddress: tempAddress.replace(
+              RegExpEx.create(`^${koaza_name}`),
+              ''
+            ),
+          })
+        );
       }
     }
 
     return query;
+  }
+
+  private parseBlockNumbers(query: Query): Query {
+    const match = query.tempAddress.match(
+      RegExpEx.create(
+        `^([1-9][0-9]*)(?:${DASH}([1-9][0-9]*))?(?:${DASH}([1-9][0-9]*))?`
+      )
+    );
+    if (!match) {
+      return query;
+    }
+    const tempAddress = query.tempAddress.replace(
+      RegExpEx.create(`^${match[0]}${SPACE}*`),
+      ''
+    );
+    return query.copy({
+      block: match[1],
+      addr1: match[2],
+      addr2: match[3],
+      tempAddress,
+    });
   }
 
   async find(query: Query): Promise<Query> {
