@@ -28,6 +28,7 @@ import { kan2num } from '@domain/kan2num';
 import { PrefectureName } from '@domain/prefecture-name';
 import { RegExpEx } from '@domain/reg-exp-ex';
 import { ITown } from '@domain/town';
+import { zen2HankakuNum } from '@domain/zen2hankaku-num';
 import {
   DASH,
   DASH_SYMBOLS,
@@ -115,6 +116,38 @@ export class AddressFinderForStep3and5 {
       prefecture,
       city,
     });
+    // console.log(JSON.stringify(towns, null, 2));
+
+    // // Trie木を作成
+    // const townTree = this.buildTrieTreeForTownRow(towns);
+    // const n = address.length;
+    // let head : TrieNode | undefined = new TrieNode(0, townTree);
+    // let tail : TrieNode | undefined = head;
+
+    // while (head) {
+    //   const current = head;
+    //   head = head.next;
+
+    //   if (n == current.position) {
+    //     const info = current.trie.info;
+    //     if (!info) {
+    //       continue;
+    //     }
+    //     // 条件に一致するtownが見つかったケース
+    //     return {
+    //       lg_code: info.lg_code,
+    //       lat: info.lat,
+    //       lon: info.lon,
+    //       originalName: town.originalName,
+    //       town_id: info.town_id,
+    //       koaza: info.koaza,
+    //       name: info.name,
+    //       tempAddress: '',
+    //     };
+    //   }
+    //   const char = address[current.position];
+    //   if (current.position)
+    // }
 
     // データベースから取得したリストから、マッチしそうな正規表現パターンを作成する
     const searchPatterns = this.createSearchPatterns({
@@ -355,6 +388,12 @@ export class AddressFinderForStep3and5 {
       city,
     }) as TownRow[];
 
-    return Promise.resolve(results);
+    return Promise.resolve(
+      results.map(townRow => {
+        townRow.name = zen2HankakuNum(townRow.name);
+        townRow.koaza = zen2HankakuNum(townRow.koaza);
+        return townRow;
+      })
+    );
   }
 }

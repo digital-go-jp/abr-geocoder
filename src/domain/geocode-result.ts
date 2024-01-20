@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { SPACE_SYMBOLS } from '@settings/constant-values';
+import { DASH_SYMBOLS, SPACE_SYMBOLS } from '@settings/constant-values';
 import { MatchLevel } from './match-level';
 import { RegExpEx } from './reg-exp-ex';
 import { zen2HankakuNum } from './zen2hankaku-num';
@@ -166,17 +166,19 @@ export class GeocodeResult implements IGeocodeResult {
     if (params.other) {
       // otherに残っているのは、ジオコードできなかった部分（番地など）。
       // 与えられたクエリ(params.input) を参照して、other で残っている部分の前に
-      // 空白があれば挿入する
-      const tmp = zen2HankakuNum(params.input).replace(
-        RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),
-        ' '
-      );
-      const other = params.other.trim();
+      // 空白 or ハイフンがあれば挿入する
+      const tmp = zen2HankakuNum(params.input)
+        .replace(RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'), ' ')
+        .replace(RegExpEx.create(`[${DASH_SYMBOLS}]+`, 'g'), '-');
+      const other = params.other
+        .trim()
+        .replace(RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'), ' ')
+        .replace(RegExpEx.create(`[${DASH_SYMBOLS}]+`, 'g'), '-');
       const pos = tmp.indexOf(other);
-      if (pos > 0 && tmp[pos - 1] === ' ') {
-        output.push(' ');
+      if (pos > 0 && (tmp[pos - 1] === ' ' || tmp[pos - 1] === '-')) {
+        output.push(tmp[pos - 1]);
       }
-      output.push(other);
+      output.push(params.other.trim());
     }
 
     return new GeocodeResult(

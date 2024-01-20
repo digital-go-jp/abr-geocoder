@@ -51,6 +51,7 @@ export class GeocodingStep2 extends Transform {
     // オリジナルコード
     // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L316-L326
     //
+    // console.log(JSON.stringify(this.params.sameNamedPrefPatterns, null, 2));
     for (const pattern of this.params.sameNamedPrefPatterns) {
       const match = query.tempAddress.match(
         RegExpEx.create(pattern.regExpPattern)

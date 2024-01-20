@@ -98,7 +98,7 @@ test(`'echo "<input data>" | abrg - -f csv' should return the expected results a
   const expectResult = `
     input,match_level,lg_code,prefecture,city,town,town_id,block,block_id,addr1,addr1_id,addr2,addr2_id,other,lat,lon
     "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階","東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,,東京ガーデンテラス紀尾井町 19階、20階,35.679107172,139.736394597
-    "東京都千代田区九段南1丁目2-1","東京都千代田区九段南一丁目",3,131016,東京都,千代田区,九段南一丁目,0008001,,,,,,,,35.693972,139.753265
+    "東京都千代田区九段南1丁目2-1","東京都千代田区九段南一丁目2-1",7,131016,東京都,千代田区,九段南一丁目,0008001,2,002,,,,,-1,35.693948,139.753535
   `;
 
   const expectExitCode = 0;
@@ -120,7 +120,7 @@ test(`'echo "<input data>" | abrg - -f normalize' should return the expected res
   const expectResult = `
   input,output,match_level
   "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階","東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",8
-  "東京都千代田区九段南1丁目2-1","東京都千代田区九段南一丁目",3
+  "東京都千代田区九段南1丁目2-1","東京都千代田区九段南一丁目2-1",7
   `;
 
   const expectExitCode = 0;

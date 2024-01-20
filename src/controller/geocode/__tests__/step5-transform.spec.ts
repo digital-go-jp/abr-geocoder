@@ -175,7 +175,7 @@ describe('step5-transform', () => {
           lon: 139.73495,
           match_level: 3,
           prefecture: PrefectureName.TOKYO,
-          tempAddress: '一丁目3',
+          tempAddress: '1丁目3',
           town: '紀尾井町',
           town_id: '0056000',
         }),

@@ -13,7 +13,25 @@
       "runtimeArgs": [
         "--trace-warnings",
         "--require",
-        "ts-node/register",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/.vscode/sample-data.txt"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "geocoding | jq",
+      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeExecutable" : "${workspaceFolder}/.vscode/debug-with-jq.sh",
+      "runtimeArgs": [
+        "--trace-warnings",
+        "--require",
+        "ts-node/register"
       ],
       "args": [
         "${workspaceFolder}/.vscode/sample-data.txt"

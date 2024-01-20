@@ -48,31 +48,42 @@ export class GeocodingStep7 extends Transform {
       return callback(null, query);
     }
 
-    this.addressFinder.find(query).then((updatedQuery: Query) => {
-      // RESIDENTIAL_BLOCK(7) or RESIDENTIAL_DETAIL(8) の場合は、
-      // 既に細かい住所まで判定できているので、これ以上のチェックは必要ない
-      //
-      // tempAddress に何も残っていないなら、調べようがないので、
-      // このステップを終了する
-      if (
-        updatedQuery.match_level !== MatchLevel.TOWN_LOCAL ||
-        updatedQuery.tempAddress === ''
-      ) {
-        callback(null, updatedQuery);
-        return;
+    this.addressFinder.find(query).then(async (result: Query) => {
+      switch (result.match_level) {
+        case MatchLevel.RESIDENTIAL_BLOCK:
+          return callback(null, await this.addressFinder.findDetail(result));
+
+        case MatchLevel.TOWN_LOCAL:
+          return callback(null, await this.addressFinder.findForKoaza(result));
+
+        default:
+          return callback(null, query);
       }
 
-      // tempAddress に残っている場合、「小字」の可能性がある
-      //
-      // 例：福島県いわき市山玉町脇川
-      //   pref = "福島県"
-      //   city = "いわき市"
-      //   town = "山玉町"
-      //   tempAddress = "脇川"  <-- 小字
-      this.addressFinder.findForKoaza(query).then((result: Query) => {
-        callback(null, result);
-        return;
-      });
+      // // RESIDENTIAL_BLOCK(7) or RESIDENTIAL_DETAIL(8) の場合は、
+      // // 既に細かい住所まで判定できているので、これ以上のチェックは必要ない
+      // //
+      // // tempAddress に何も残っていないなら、調べようがないので、
+      // // このステップを終了する
+      // if (
+      //   updatedQuery.match_level !== MatchLevel.TOWN_LOCAL ||
+      //   updatedQuery.tempAddress === ''
+      // ) {
+      //   callback(null, updatedQuery);
+      //   return;
+      // }
+
+      // // tempAddress に残っている場合、「小字」の可能性がある
+      // //
+      // // 例：福島県いわき市山玉町脇川
+      // //   pref = "福島県"
+      // //   city = "いわき市"
+      // //   town = "山玉町"
+      // //   tempAddress = "脇川"  <-- 小字
+      // this.addressFinder.findForKoaza(query).then((result: Query) => {
+      //   callback(null, result);
+      //   return;
+      // });
     });
   }
 }
