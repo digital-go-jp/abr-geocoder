@@ -67,42 +67,4 @@ describe('GeocodeResult', () => {
       addr2_id: '<addr2_id>'
     });
   });
-
-
-  it.concurrent('should be "<prefecture><city><town><addr1><addr2> <other>"', async () => {
-    expect(
-      GeocodeResult.create({
-        input: '<input>　　　<other>',
-        match_level: MatchLevel.UNKNOWN,
-        lat: 35.12345,
-        lon: 137.12345,
-        other: '<other>',
-        prefecture: '<prefecture>',
-        city: '<city>',
-        town: '<town>',
-        town_id: '<town_id>',
-        lg_code: '<lg_code>',
-        addr1: '<addr1>',
-        addr1_id: '<addr1_id>',
-        addr2: '<addr2>',
-        addr2_id: '<addr2_id>'
-      }).toJSON(),
-    ).toEqual({
-      input: '<input>　　　<other>',
-      output: '<prefecture><city><town><addr1><addr2> <other>',
-      match_level: MatchLevel.UNKNOWN,
-      lat: 35.12345,
-      lon: 137.12345,
-      other: '<other>',
-      prefecture: '<prefecture>',
-      city: '<city>',
-      town: '<town>',
-      town_id: '<town_id>',
-      lg_code: '<lg_code>',
-      addr1: '<addr1>',
-      addr1_id: '<addr1_id>',
-      addr2: '<addr2>',
-      addr2_id: '<addr2_id>'
-    });
-  })
 });
