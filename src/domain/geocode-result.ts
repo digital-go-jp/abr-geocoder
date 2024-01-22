@@ -154,14 +154,6 @@ export class GeocodeResult implements IGeocodeResult {
           output.push(params.addr2);
         }
       }
-    } else {
-      // 大字・小字を含む住所
-      if (params.addr1) {
-        output.push(params.addr1);
-        if (params.addr2) {
-          output.push(params.addr2);
-        }
-      }
     }
     if (params.other) {
       // otherに残っているのは、ジオコードできなかった部分（番地など）。
