@@ -11,3 +11,4 @@ spec/*.sqlite
 *.tgz
 .pnpm-store/
 pnpm-lock.yaml
+.vscode/result.*

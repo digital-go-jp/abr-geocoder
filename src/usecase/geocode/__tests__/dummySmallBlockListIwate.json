@@ -1,0 +1,112 @@
+[
+  {
+    "lg_code": "032018",
+    "town_id": "0007102",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "１０地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007110",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "９地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007109",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "８地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007108",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "７地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007107",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "６地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007106",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "５地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007105",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "４地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007104",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "３地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007103",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "２地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007101",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "１地割",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "lg_code": "032018",
+    "town_id": "0007000",
+    "pref": "岩手県",
+    "city": "盛岡市",
+    "town": "飯岡新田",
+    "koaza_name": "",
+    "lat": 39.665898,
+    "lon": 141.137034
+  }
+]

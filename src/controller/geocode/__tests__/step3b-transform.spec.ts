@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { FromStep3Type } from '@domain/from-step3-type';
-import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
+import { AddressFinderForStep3and5 } from '@usecase/geocode/address-finder-for-step3and5';
 import { MatchLevel } from '@domain/match-level';
 import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
@@ -33,7 +33,7 @@ import { pipeline } from 'node:stream/promises';
 import { GeocodingStep3B } from '../step3b-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
 
-jest.mock<AddressFinderForStep3and5>('@domain/geocode/address-finder-for-step3and5');
+jest.mock<AddressFinderForStep3and5>('@usecase/geocode/address-finder-for-step3and5');
 jest.mock('better-sqlite3');
 
 describe('step3b-transform', () => {

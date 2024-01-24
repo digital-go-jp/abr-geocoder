@@ -27,7 +27,7 @@ import { Stream } from 'node:stream';
 import { NormalizeTransform } from '../normalize-transform';
 import { dummyData } from './dummy-data';
 
-describe('CsvTransform', () => {
+describe('NormalizeTransform', () => {
   it('should output rows with expected CSV format()', async () => {
     const transform = NormalizeTransform.create(NormalizeTransform.DEFAULT_COLUMNS);
 
@@ -42,8 +42,8 @@ describe('CsvTransform', () => {
       ],
       [
         '"東京都千代田区紀尾井町1"',
-        '"東京都千代田区紀尾井町"',
-        '3',
+        '"東京都千代田区紀尾井町1"',
+        '7',
       ],
       [
         '"山形県山形市旅篭町二丁目3番25号"',

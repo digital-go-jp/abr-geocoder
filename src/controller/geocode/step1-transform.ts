@@ -23,6 +23,7 @@
  */
 import { Query } from '@domain/query';
 import { RegExpEx } from '@domain/reg-exp-ex';
+import { zen2HankakuNum } from '@domain/zen2hankaku-num';
 import {
   ALPHA_NUMERIC_SYMBOLS,
   DASH,
@@ -40,15 +41,6 @@ export class GeocodingStep1 extends Transform {
   constructor() {
     super({
       objectMode: true,
-    });
-  }
-
-  private zenkakuToHankaku(str: string): string {
-    // ロジック的に 'Ａ-Ｚａ-ｚ０-９' の順番に依存しているので、
-    // ここではコードに直接書く
-    const regex = RegExpEx.create('[Ａ-Ｚａ-ｚ０-９]', 'g');
-    return str.replace(regex, s => {
-      return String.fromCharCode(s.charCodeAt(0) - 0xfee0);
     });
   }
 
@@ -85,7 +77,7 @@ export class GeocodingStep1 extends Transform {
       RegExpEx.create(`([${ALPHA_NUMERIC_SYMBOLS}]+)`, 'g'),
       match => {
         // 全角のアラビア数字は問答無用で半角にする
-        return this.zenkakuToHankaku(match);
+        return zen2HankakuNum(match);
       }
     );
 

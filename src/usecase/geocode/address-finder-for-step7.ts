@@ -22,12 +22,26 @@
  * SOFTWARE.
  */
 import { DataField } from '@domain/dataset/data-field';
+import { isDigit } from '@domain/is-digit';
 import { MatchLevel } from '@domain/match-level';
 import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
 import { RegExpEx } from '@domain/reg-exp-ex';
-import { DASH } from '@settings/constant-values';
+import { Trie } from '@domain/trie';
+import { zen2HankakuNum } from '@domain/zen2hankaku-num';
+import { DASH, SPACE } from '@settings/constant-values';
 import { Database, Statement } from 'better-sqlite3';
+
+export type TownSmallBlock = {
+  lg_code: string;
+  town_id: string;
+  koaza_name: string;
+  pref: string;
+  city: string;
+  town: string;
+  lat: number;
+  lon: number;
+};
 
 export type TownBlock = {
   lg_code: string;
@@ -62,7 +76,8 @@ export type RsdtAddr = {
  */
 export class AddressFinderForStep7 {
   private readonly getBlockListStatement: Statement;
-  private readonly getRsdtListStatement: Statement;
+  private readonly getRsdtListStatement2: Statement;
+  private readonly getSmallBlockListStatement: Statement;
 
   constructor(db: Database) {
     this.getBlockListStatement = db.prepare(`
@@ -80,7 +95,8 @@ export class AddressFinderForStep7 {
         ) as "city",
         (
           town.${DataField.OAZA_TOWN_NAME.dbColumn} ||
-          town.${DataField.CHOME_NAME.dbColumn}
+          town.${DataField.CHOME_NAME.dbColumn} ||
+          town.${DataField.KOAZA_NAME.dbColumn}
         ) as "town",
         blk.${DataField.BLK_NUM.dbColumn} as "blk",
         blk.${DataField.REP_PNT_LAT.dbColumn} as "lat",
@@ -103,83 +119,153 @@ export class AddressFinderForStep7 {
         blk.${DataField.BLK_NUM.dbColumn} is not null
     `);
 
-    this.getRsdtListStatement = db.prepare(`
-      /* unit test: getRsdtListStatement */
+    this.getRsdtListStatement2 = db.prepare(`
+      /* unit test: getRsdtListStatement2 */
 
       select
-        "rsdt".${DataField.LG_CODE.dbColumn},
-        "rsdt".${DataField.TOWN_ID.dbColumn},
-        "rsdt".${DataField.BLK_ID.dbColumn},
-        "rsdt".${DataField.ADDR_ID.dbColumn} as "addr1_id",
-        "rsdt".${DataField.ADDR2_ID.dbColumn},
-        blk.${DataField.BLK_NUM.dbColumn} as "blk",
-        rsdt.${DataField.RSDT_NUM.dbColumn} as "addr1",
-        rsdt.${DataField.RSDT_NUM2.dbColumn} as "addr2",
-        rsdt.${DataField.REP_PNT_LAT.dbColumn} as "lat",
-        rsdt.${DataField.REP_PNT_LON.dbColumn} as "lon"
-      from "city"
-        left join "town" on 
-          town.${DataField.LG_CODE.dbColumn} = city.${DataField.LG_CODE.dbColumn} and
-          (
-            town.${DataField.OAZA_TOWN_NAME.dbColumn} ||
-            town.${DataField.CHOME_NAME.dbColumn} = @town
-          )
-        left join "rsdtdsp_blk" "blk" on
-          blk.${DataField.LG_CODE.dbColumn} = city.${DataField.LG_CODE.dbColumn} and
-          blk.${DataField.TOWN_ID.dbColumn} = town.${DataField.TOWN_ID.dbColumn}
-        left join "rsdtdsp_rsdt" "rsdt" on
-          rsdt.${DataField.LG_CODE.dbColumn} = city.${DataField.LG_CODE.dbColumn} and
-          rsdt.${DataField.TOWN_ID.dbColumn} = town.${DataField.TOWN_ID.dbColumn} and
-          rsdt.${DataField.BLK_ID.dbColumn} = blk.${DataField.BLK_ID.dbColumn}
+        ${DataField.ADDR_ID.dbColumn} as "addr1_id",
+        ${DataField.ADDR2_ID.dbColumn} as "addr2_id",
+        ${DataField.RSDT_NUM.dbColumn} as "addr1",
+        ${DataField.RSDT_NUM2.dbColumn} as "addr2",
+        ${DataField.REP_PNT_LAT.dbColumn} as "lat",
+        ${DataField.REP_PNT_LON.dbColumn} as "lon"
+      from
+        "rsdtdsp_rsdt"
       where
-        city.${DataField.PREF_NAME.dbColumn} = @prefecture AND
+        ${DataField.LG_CODE.dbColumn} = @lg_code and
+        ${DataField.TOWN_ID.dbColumn} = @town_id and
+        ${DataField.BLK_ID.dbColumn} = @block_id
+      order by
+        ${DataField.RSDT_NUM.dbColumn} desc,
+        ${DataField.RSDT_NUM2.dbColumn} desc
+    `);
+
+    this.getSmallBlockListStatement = db.prepare(`
+      /* unit test: getSmallBlockListStatement */
+
+      select
+        "town".${DataField.LG_CODE.dbColumn},
+        "town".${DataField.TOWN_ID.dbColumn},
+        city.${DataField.PREF_NAME.dbColumn} as "pref",
+        (
+          city.${DataField.COUNTY_NAME.dbColumn} ||
+          city.${DataField.CITY_NAME.dbColumn} ||
+          city.${DataField.OD_CITY_NAME.dbColumn}
+        ) as "city",
+        (
+          town.${DataField.OAZA_TOWN_NAME.dbColumn} ||
+          town.${DataField.CHOME_NAME.dbColumn}
+        ) as "town",
+        town.${DataField.KOAZA_NAME.dbColumn},
+        town.${DataField.REP_PNT_LAT.dbColumn} as "lat",
+        town.${DataField.REP_PNT_LON.dbColumn} as "lon"
+      from
+        "city"
+        left join "town" on
+        "town".${DataField.LG_CODE.dbColumn} = city.${DataField.LG_CODE.dbColumn} and
+          (town.${DataField.OAZA_TOWN_NAME.dbColumn} || town.${DataField.CHOME_NAME.dbColumn} = @town)
+      where
+        city.${DataField.PREF_NAME.dbColumn} = @prefecture AND 
         (
           "city".${DataField.COUNTY_NAME.dbColumn} ||
           "city".${DataField.CITY_NAME.dbColumn} ||
           "city".${DataField.OD_CITY_NAME.dbColumn}
-        ) = @city and
-        blk.${DataField.BLK_NUM.dbColumn} is not null and
-        (
-          rsdt.${DataField.RSDT_NUM.dbColumn} is not null or
-          rsdt.${DataField.RSDT_NUM2.dbColumn} is not null
-        )
+        ) = @city AND
+        "town".${DataField.KOAZA_NAME.dbColumn} like @koaza
+      order by
+        town.${DataField.KOAZA_NAME.dbColumn} desc
     `);
   }
 
-  async find(query: Query): Promise<Query> {
-    /*
-     * オリジナルコード
-     * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L133-L164
-     */
+  // 小字を検索する
+  async findForKoaza(query: Query): Promise<Query> {
+    const koaza = ((addr: string) => {
+      const temp: string[] = addr.split(/\d/);
+      return temp[0];
+    })(query.tempAddress);
 
-    const townBlocks = await this.getBlockList({
+    const cityBlocks = await this.getSmallBlockList({
       prefecture: query.prefecture!,
       city: query.city!,
       town: query.town!,
+      koaza,
     });
+    // console.log(JSON.stringify(cityBlocks, null, 2));
 
-    // 住居表示未整備
-    if (townBlocks.length === 0) {
+    if (cityBlocks.length === 0) {
       return query;
     }
 
-    const rsdtMap = new Map<string, RsdtAddr>();
-    (
-      await this.getRsdtList({
-        prefecture: query.prefecture!,
-        city: query.city!,
-        town: query.town!,
-      })
-    ).forEach((rsdt: RsdtAddr) => {
-      const key = this.formatResidentialSection({
-        blockNum: rsdt.blk,
-        addr1: rsdt.addr1,
-        addr2: rsdt.addr2,
-      });
-      rsdtMap.set(key, rsdt);
-    });
+    const tempAddress = query.tempAddress.replace(
+      RegExpEx.create(`^${koaza}`),
+      ''
+    );
+    if (cityBlocks.length === 1) {
+      const koaza_name = zen2HankakuNum(cityBlocks[0].koaza_name);
+      const result = cityBlocks[0];
 
-    // 番地の取得
+      return this.parseBlockNumbers(
+        query.copy({
+          town: `${query.town}${result.koaza_name}`,
+          town_id: result.town_id,
+          lg_code: result.lg_code,
+          lat: result.lat,
+          lon: result.lon,
+          match_level: MatchLevel.TOWN_LOCAL,
+          tempAddress: tempAddress.replace(
+            RegExpEx.create(`^${koaza_name}`),
+            ''
+          ),
+        })
+      );
+    }
+
+    for (const cityBlock of cityBlocks) {
+      const koaza_name = zen2HankakuNum(cityBlock.koaza_name);
+      // if (
+      //   koaza_name[0] === '字' &&
+      //   tempAddress !== '字' &&
+      //   tempAddress.startsWith(koaza_name.substring(1))
+      // ) {
+      //   return this.parseBlockNumbers(
+      //     query.copy({
+      //       town: `${query.town}${koaza_name}`,
+      //       town_id: cityBlock.town_id,
+      //       lg_code: cityBlock.lg_code,
+      //       lat: cityBlock.lat,
+      //       lon: cityBlock.lon,
+      //       match_level: MatchLevel.TOWN_LOCAL,
+      //       tempAddress: tempAddress.replace(
+      //         RegExpEx.create(`^${koaza_name.substring(1)}`),
+      //         ''
+      //       ),
+      //     })
+      //   );
+      // }
+
+      if (!tempAddress.startsWith(koaza_name)) {
+        continue;
+      }
+      return this.parseBlockNumbers(
+        query.copy({
+          town: `${query.town}${koaza_name}`,
+          town_id: cityBlock.town_id,
+          lg_code: cityBlock.lg_code,
+          lat: cityBlock.lat,
+          lon: cityBlock.lon,
+          match_level: MatchLevel.TOWN_LOCAL,
+          tempAddress: tempAddress.replace(
+            RegExpEx.create(`^${koaza_name}`),
+            ''
+          ),
+        })
+      );
+    }
+
+    return query;
+  }
+
+  private parseBlockNumbers(query: Query): Query {
     const match = query.tempAddress.match(
       RegExpEx.create(
         `^([1-9][0-9]*)(?:${DASH}([1-9][0-9]*))?(?:${DASH}([1-9][0-9]*))?`
@@ -188,90 +274,220 @@ export class AddressFinderForStep7 {
     if (!match) {
       return query;
     }
-    query = query.copy({
-      tempAddress: query.tempAddress.substring(match[0].length),
+    const tempAddress = query.tempAddress.replace(
+      RegExpEx.create(`^${match[0]}${SPACE}*`),
+      ''
+    );
+    return query.copy({
+      block: match[1],
+      addr1: match[2],
+      addr2: match[3],
+      tempAddress,
     });
+  }
 
-    const blockNum: string | undefined = match[1];
-    const addr1: string | undefined = match[2];
-    const addr2: string | undefined = match[3];
+  private getSimplifiedTown(townBlock: TownBlock): string {
+    const buffer: string[] = [];
+    let i = 0;
+    const town = zen2HankakuNum(townBlock.town);
+    const n = town.length;
+    let hasNumber = false;
+    while (i < n) {
+      const char = town[i];
+      if (!isDigit(char)) {
+        const twoChars = town.slice(i, i + 2);
+        if (!hasNumber) {
+          buffer.push(char);
+          i++;
+          continue;
+        }
 
-    // 〇〇県 市〇〇 1-1-1 みたいな感じ
-    const pattern1 = this.formatResidentialSection({
-      blockNum,
-      addr1,
-      addr2,
-    });
-
-    if (rsdtMap.has(pattern1)) {
-      const rsdt: RsdtAddr = rsdtMap.get(pattern1)!;
-      return query.copy({
-        block: blockNum,
-        block_id: rsdt.blk_id,
-        addr1: addr1,
-        addr1_id: rsdt.addr1_id,
-        addr2: addr2 || '',
-        addr2_id: rsdt.addr2_id,
-        lat: rsdt.lat || query.lat,
-        lon: rsdt.lon || query.lon,
-        lg_code: rsdt.lg_code,
-        town_id: rsdt.town_id,
-
-        // 住居表示の街区符号・住居番号までの判別ができた
-        match_level: MatchLevel.RESIDENTIAL_DETAIL,
-      });
+        if (twoChars === '丁目' || twoChars === '番地') {
+          i++;
+        } else if (town[i] !== '号') {
+          buffer.push(char);
+        }
+        i++;
+        continue;
+      }
+      hasNumber = true;
+      buffer.push(char);
+      i++;
     }
+    if (hasNumber) {
+      buffer.push(DASH);
+    }
+    if (townBlock.blk !== '') {
+      buffer.push(townBlock.blk);
+    }
+    return buffer.join('');
+  }
 
-    // 〇〇県 市〇〇 1-1 みたいな感じ
-    const pattern2 = this.formatResidentialSection({
-      blockNum,
-      addr1,
+  private buildTrieTreeForTownBlock(sqlRows: TownBlock[]): Trie<TownBlock> {
+    const townBlockTree = new Trie<TownBlock>();
+    sqlRows.forEach((townBlock: TownBlock) => {
+      let parent = townBlockTree;
+      const simplifiedTown = this.getSimplifiedTown(townBlock);
+
+      for (const char of simplifiedTown) {
+        const trie = parent.children.get(char) || new Trie<TownBlock>();
+        parent.children.set(char, trie);
+        parent = trie;
+      }
+      parent.info = townBlock;
+    });
+    return townBlockTree;
+  }
+
+  private buildMapForRsdtAddr(sqlRows: RsdtAddr[]): Map<string, RsdtAddr> {
+    const result = new Map<string, RsdtAddr>();
+    sqlRows.forEach((addr: RsdtAddr) => {
+      const buffer: string[] = [];
+      if (addr.addr1 !== '') {
+        buffer.push(addr.addr1.toString());
+        if (addr.addr2 !== '') {
+          buffer.push(DASH);
+          buffer.push(addr.addr1.toString());
+        }
+      }
+      const addr1_and_addr2 = buffer.join('');
+      result.set(addr1_and_addr2, addr);
+    });
+    return result;
+  }
+
+  async find(query: Query): Promise<Query> {
+    const townBlocks = await this.getBlockList({
+      prefecture: query.prefecture!,
+      city: query.city!,
+      town: query.town!,
     });
 
-    if (rsdtMap.has(pattern2)) {
-      const rsdt: RsdtAddr = rsdtMap.get(pattern2)!;
-      return query.copy({
-        lg_code: rsdt.lg_code,
-        block: blockNum,
-        block_id: rsdt.blk_id,
-        addr1: addr1,
-        addr1_id: rsdt.addr1_id,
-        addr2: addr2,
-        addr2_id: rsdt.addr2_id,
-        lat: rsdt.lat || query.lat,
-        lon: rsdt.lon || query.lon,
-        town_id: rsdt.town_id,
-        tempAddress: (addr2 ? `${DASH}${addr2}` : '') + query.tempAddress,
+    // console.log(JSON.stringify(townBlocks, null, 2));
+    const townBlockTree: Trie<TownBlock> =
+      this.buildTrieTreeForTownBlock(townBlocks);
 
-        // 住居表示の街区符号・住居番号までの判別ができた
-        match_level: MatchLevel.RESIDENTIAL_DETAIL,
+    query = (query => {
+      const tempAddress = `${query.town}${query.tempAddress}`.replace(
+        RegExpEx.create('([1-9][0-9]?)(丁目|番地|号)'),
+        '$1'
+      );
+
+      let parent = townBlockTree;
+      for (let i = 0; i < tempAddress.length; i++) {
+        const char = tempAddress[i];
+        const child = parent.children.get(char);
+        if (child) {
+          parent = child;
+          continue;
+        }
+
+        if (!parent.info) {
+          // DBにはマッチする街区データがない
+          return query;
+        }
+
+        // 完全一致ではないが、一部見つかった場合
+        // 例：宮城県登米市迫町佐沼字中江1-1-7 のうち、宮城県登米市迫町佐沼字中江1-1 までは見つかるケース
+        break;
+      }
+
+      const info = parent.info;
+      if (!info) {
+        // DBにはマッチする街区データがない
+        return query;
+      }
+
+      // for文を breakしないで最後までループできる場合は、最後まで見つかるケース
+      // 例：東京都千代田区紀尾井町1
+      const result = query.copy({
+        town: info.town,
+        lat: info.lat,
+        lon: info.lon,
+        lg_code: info.lg_code,
+        block: info.blk,
+        block_id: info.blk_id,
+        town_id: info.town_id,
+        tempAddress: tempAddress.substring(info.town.length + 1),
+        match_level: MatchLevel.RESIDENTIAL_BLOCK,
       });
-    }
+      return result;
+    })(query);
 
-    // 番地情報がないケースはそのまま返す
-    if (!rsdtMap.has(blockNum)) {
+    return query;
+  }
+
+  async findDetail(query: Query): Promise<Query> {
+    if (!query.town_id || !query.lg_code) {
       return query;
     }
 
-    // 〇〇県 市〇〇 1 みたいな感じ
-    const rsdt: RsdtAddr = rsdtMap.get(blockNum)!;
-    const otherWithUnmatchedAddrs = [
-      addr1 ? `${DASH}${addr1}` : '',
-      addr2 ? `${DASH}${addr2}` : '',
-      query.tempAddress,
-    ].join('');
-    return query.copy({
-      block: blockNum,
-      block_id: rsdt.blk_id,
-      tempAddress: otherWithUnmatchedAddrs,
-      lat: rsdt.lat || query.lat,
-      lon: rsdt.lon || query.lon,
-      town_id: rsdt.town_id,
-      lg_code: rsdt.lg_code,
+    // 残されている文字列から番地の取得
+    const match = query.tempAddress.match(
+      RegExpEx.create(`^${DASH}?([1-9][0-9]*)(?:${DASH}([1-9][0-9]*))?`)
+    );
+    if (!match) {
+      return query;
+    }
 
-      // 住居表示の街区までの判別ができた
-      match_level: MatchLevel.RESIDENTIAL_BLOCK,
+    const addr1: string = match[1];
+    const addr2: string | undefined = match[2];
+
+    const rsdtList = await this.getRsdtList2({
+      town_id: query.town_id,
+      block_id: query.block_id || '',
+      lg_code: query.lg_code,
     });
+
+    const rsdtHashMap: Map<string, RsdtAddr> =
+      this.buildMapForRsdtAddr(rsdtList);
+    const buffer: string[] = [addr1];
+    if (addr2 !== undefined) {
+      buffer.push(DASH, addr2);
+    }
+    const key = buffer.join('');
+    const rsdt = rsdtHashMap.get(key);
+    if (!rsdt) {
+      return query;
+    }
+
+    return query.copy({
+      addr1: rsdt.addr1,
+      addr1_id: rsdt.addr1_id,
+      addr2: rsdt.addr2,
+      addr2_id: rsdt.addr2_id,
+      lat: rsdt.lat,
+      lon: rsdt.lon,
+      match_level: MatchLevel.RESIDENTIAL_DETAIL,
+      tempAddress: query.tempAddress.substring(match[0].length),
+    });
+  }
+
+  private async getSmallBlockList({
+    prefecture,
+    city,
+    town,
+    koaza,
+  }: {
+    prefecture: PrefectureName;
+    city: string;
+    town: string;
+    koaza: string;
+  }): Promise<TownSmallBlock[]> {
+    const results = (await this.getSmallBlockListStatement.all({
+      prefecture,
+      city,
+      town,
+      koaza: `${koaza}%`,
+    })) as TownSmallBlock[];
+
+    return Promise.resolve(
+      results.map(smallBlock => {
+        smallBlock.koaza_name = zen2HankakuNum(smallBlock.koaza_name);
+        smallBlock.town = zen2HankakuNum(smallBlock.town);
+        return smallBlock;
+      })
+    );
   }
 
   /**
@@ -292,61 +508,37 @@ export class AddressFinderForStep7 {
     city: string;
     town: string;
   }): Promise<TownBlock[]> {
-    const results = this.getBlockListStatement.all({
+    const results = (await this.getBlockListStatement.all({
       prefecture,
       city,
       town,
-    }) as TownBlock[];
+    })) as TownBlock[];
 
-    return Promise.resolve(results);
+    return Promise.resolve(
+      results.map(town => {
+        town.town = zen2HankakuNum(town.town);
+        return town;
+      })
+    );
   }
 
-  /**
-   * SQLを実行する
-   *
-   * better-sqlite3自体はasyncではないが、将来的にTypeORMに変更したいので
-   * asyncで関数を作っておく
-   *
-   * オリジナルコード
-   * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/lib/cacheRegexes.ts#L163-L196
-   */
-  private async getRsdtList({
-    prefecture,
-    city,
-    town,
+  private async getRsdtList2({
+    lg_code,
+    town_id,
+    block_id,
   }: {
-    prefecture: PrefectureName;
-    city: string;
-    town: string;
+    lg_code: string;
+    town_id: string;
+    block_id: string;
   }): Promise<RsdtAddr[]> {
-    const results = this.getRsdtListStatement.all({
-      prefecture,
-      city,
-      town,
+    const results = this.getRsdtListStatement2.all({
+      lg_code,
+      town_id,
+      block_id,
     }) as RsdtAddr[];
 
-    results.sort((a, b) => {
-      return (
-        this.formatResidentialSection(b).length -
-        this.formatResidentialSection(a).length
-      );
-    });
+    // better-sqlite3自体はasyncではないが、将来的にTypeORMに変更したいので
+    // asyncで関数を作っておく
     return Promise.resolve(results);
-  }
-
-  /**
-   * オリジナルコード
-   * https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/formatting.ts#L1-L8
-   */
-  private formatResidentialSection({
-    blockNum,
-    addr1,
-    addr2,
-  }: {
-    blockNum?: string;
-    addr1?: string;
-    addr2?: string;
-  }) {
-    return [blockNum, addr1, addr2].filter(x => !!x).join(DASH);
   }
 }

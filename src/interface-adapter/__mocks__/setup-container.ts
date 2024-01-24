@@ -23,7 +23,6 @@
  */
 import { jest } from '@jest/globals';
 import { DI_TOKEN } from '../tokens';
-import { Logger } from 'winston';
 import { PassThrough } from 'node:stream';
 import { default as Database } from 'better-sqlite3';
 
@@ -64,7 +63,7 @@ export const setupContainer = jest.fn().mockImplementation(() => {
         case DI_TOKEN.NDJSON_FORMATTER:
           return new PassThrough();
 
-          case DI_TOKEN.NORMALIZE_FORMATTER:
+        case DI_TOKEN.NORMALIZE_FORMATTER:
           return new PassThrough();
 
         case DI_TOKEN.MULTI_PROGRESS_BAR:

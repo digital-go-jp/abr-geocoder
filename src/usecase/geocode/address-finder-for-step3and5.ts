@@ -21,20 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Database, Statement } from 'better-sqlite3';
+import { DataField } from '@domain/dataset/data-field';
+import { toRegexPattern } from '@domain/geocode/to-regex-pattern';
+import { isKanjiNumberFollewedByCho } from '@domain/is-kanji-number-follewed-by-cho';
+import { kan2num } from '@domain/kan2num';
+import { PrefectureName } from '@domain/prefecture-name';
+import { RegExpEx } from '@domain/reg-exp-ex';
+import { ITown } from '@domain/town';
+import { zen2HankakuNum } from '@domain/zen2hankaku-num';
 import {
   DASH,
   DASH_SYMBOLS,
   J_DASH,
   KANJI_1to10_SYMBOLS,
 } from '@settings/constant-values';
-import { ITown } from '@domain/town';
-import { PrefectureName } from '@domain/prefecture-name';
-import { DataField } from '@domain/dataset/data-field';
-import { RegExpEx } from '@domain/reg-exp-ex';
-import { isKanjiNumberFollewedByCho } from '@domain/is-kanji-number-follewed-by-cho';
-import { toRegexPattern } from '@domain/geocode/to-regex-pattern';
-import { kan2num } from '@domain/kan2num';
+import { Database, Statement } from 'better-sqlite3';
 
 export type TownRow = {
   lg_code: string;
@@ -115,6 +116,38 @@ export class AddressFinderForStep3and5 {
       prefecture,
       city,
     });
+    // console.log(JSON.stringify(towns, null, 2));
+
+    // // Trie木を作成
+    // const townTree = this.buildTrieTreeForTownRow(towns);
+    // const n = address.length;
+    // let head : TrieNode | undefined = new TrieNode(0, townTree);
+    // let tail : TrieNode | undefined = head;
+
+    // while (head) {
+    //   const current = head;
+    //   head = head.next;
+
+    //   if (n == current.position) {
+    //     const info = current.trie.info;
+    //     if (!info) {
+    //       continue;
+    //     }
+    //     // 条件に一致するtownが見つかったケース
+    //     return {
+    //       lg_code: info.lg_code,
+    //       lat: info.lat,
+    //       lon: info.lon,
+    //       originalName: town.originalName,
+    //       town_id: info.town_id,
+    //       koaza: info.koaza,
+    //       name: info.name,
+    //       tempAddress: '',
+    //     };
+    //   }
+    //   const char = address[current.position];
+    //   if (current.position)
+    // }
 
     // データベースから取得したリストから、マッチしそうな正規表現パターンを作成する
     const searchPatterns = this.createSearchPatterns({
@@ -133,6 +166,9 @@ export class AddressFinderForStep3and5 {
     for (const regexPrefix of regexPrefixes) {
       for (const { town, pattern } of townPatterns) {
         const modifiedPattern = this.wildcardHelper(pattern);
+        if (modifiedPattern === undefined) {
+          continue;
+        }
         const regex = RegExpEx.create(`${regexPrefix}${modifiedPattern}`);
         const match = address.match(regex);
         if (!match) {
@@ -352,6 +388,12 @@ export class AddressFinderForStep3and5 {
       city,
     }) as TownRow[];
 
-    return Promise.resolve(results);
+    return Promise.resolve(
+      results.map(townRow => {
+        townRow.name = zen2HankakuNum(townRow.name);
+        townRow.koaza = zen2HankakuNum(townRow.koaza);
+        return townRow;
+      })
+    );
   }
 }

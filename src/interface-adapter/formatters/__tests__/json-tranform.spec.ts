@@ -26,6 +26,7 @@ import { Stream } from 'node:stream';
 import { JsonTransform } from '../json-transform';
 import { dummyData } from './dummy-data';
 import { BREAK_AT_EOF } from '@settings/constant-values';
+import { MatchLevel } from '@domain/match-level';
 
 describe('JsonTransform', () => {
   it('should output rows with expected JSON format()', async () => {
@@ -39,7 +40,7 @@ describe('JsonTransform', () => {
         "result": {
           "output": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
           "prefecture": "東京都",
-          "match_level": 8,
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
           "city": "千代田区",
           "town": "紀尾井町",
           "town_id": "0056000",
@@ -60,16 +61,18 @@ describe('JsonTransform', () => {
           "input": "東京都千代田区紀尾井町1"
         },
         "result": {
-          "output": "東京都千代田区紀尾井町",
+          "output": "東京都千代田区紀尾井町1",
           "prefecture": "東京都",
-          "match_level": 3,
+          "match_level": MatchLevel.RESIDENTIAL_BLOCK,
           "city": "千代田区",
           "town": "紀尾井町",
           "town_id": "0056000",
           "lg_code": "131016",
           "other": "",
           "lat": 35.681411,
-          "lon": 139.73495
+          "lon": 139.73495,
+          "block": "1",
+          "block_id": "001"
         }
       },
       {
@@ -79,7 +82,7 @@ describe('JsonTransform', () => {
         "result": {
           "output": "山形県山形市旅篭町二丁目3-25",
           "prefecture": "山形県",
-          "match_level": 8,
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
           "city": "山形市",
           "town": "旅篭町二丁目",
           "town_id": "0247002",
@@ -102,7 +105,7 @@ describe('JsonTransform', () => {
         "result": {
           "output": "山形県山形市旅篭町二丁目3-25",
           "prefecture": "山形県",
-          "match_level": 8,
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
           "city": "山形市",
           "town": "旅篭町二丁目",
           "town_id": "0247002",
@@ -125,7 +128,7 @@ describe('JsonTransform', () => {
         "result": {
           "output": "東京都町田市森野二丁目2-22",
           "prefecture": "東京都",
-          "match_level": 8,
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
           "city": "町田市",
           "town": "森野二丁目",
           "town_id": "0006002",

@@ -21,32 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
+export class Trie<T> {
+  public children: Map<string, Trie<T>> = new Map();
 
-jest.mock<BetterSqlite3.Database>('better-sqlite3');
-jest.mock('@domain/http/head-request');
-
-import { CkanDownloader } from '../ckan-downloader'; // adjust this import according to your project structure
-
-describe('CkanDownloader', () => {
-  let ckanDownloader: CkanDownloader;
-
-  beforeEach(() => {
-    ckanDownloader = new CkanDownloader({
-      userAgent: 'testUserAgent',
-      datasetUrl: 'testDatasetUrl',
-      db: new Database('dummy'), // mock this according to your Database implementation
-      ckanId: 'testCkanId',
-      dstDir: 'testDstDir',
-    });
-  });
-
-  it('getDatasetMetadata method should be defined', () => {
-    expect(ckanDownloader.getDatasetMetadata).toBeDefined();
-  });
-
-  it('updateCheck method should be defined', () => {
-    expect(ckanDownloader.updateCheck).toBeDefined();
-  });
-});
+  constructor(public info?: T) {}
+}

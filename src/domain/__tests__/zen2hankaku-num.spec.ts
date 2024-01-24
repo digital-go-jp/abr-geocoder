@@ -21,32 +21,40 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
+import { zen2HankakuNum } from '@domain/zen2hankaku-num';
+import { describe, expect, it } from '@jest/globals';
 
-jest.mock<BetterSqlite3.Database>('better-sqlite3');
-jest.mock('@domain/http/head-request');
+describe('zen2hankaku-num', () => {
+  const queries = [
+    {
+      input: '1-2-3',
+      expected: '1-2-3'
+    },
+    {
+      input: '１−２−３',
+      expected: '1−2−3'
+    },
+    {
+      input: 'ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ',
+      expected: 'abcdefghijklmnopqrstuvwxyz'
+    },
+    {
+      input: 'ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ',
+      expected: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    },
+    {
+      input: '東京都　　　 　渋谷区　３丁目０−０−０',
+      expected: '東京都　　　 　渋谷区　3丁目0−0−0'
+    },
+  ];
 
-import { CkanDownloader } from '../ckan-downloader'; // adjust this import according to your project structure
-
-describe('CkanDownloader', () => {
-  let ckanDownloader: CkanDownloader;
-
-  beforeEach(() => {
-    ckanDownloader = new CkanDownloader({
-      userAgent: 'testUserAgent',
-      datasetUrl: 'testDatasetUrl',
-      db: new Database('dummy'), // mock this according to your Database implementation
-      ckanId: 'testCkanId',
-      dstDir: 'testDstDir',
-    });
-  });
-
-  it('getDatasetMetadata method should be defined', () => {
-    expect(ckanDownloader.getDatasetMetadata).toBeDefined();
-  });
-
-  it('updateCheck method should be defined', () => {
-    expect(ckanDownloader.updateCheck).toBeDefined();
-  });
+  queries.forEach(query => {
+    it.concurrent(`'${query.input}' should be converted to '${query.expected}'`, async () => {
+      expect(
+        zen2HankakuNum(query.input),
+      ).toBe(
+        query.expected,
+      );
+    })
+  })
 });
