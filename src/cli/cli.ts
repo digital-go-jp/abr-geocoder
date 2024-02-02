@@ -31,6 +31,7 @@ import { AbrgMessage } from '@abrg-message/abrg-message';
 import { downloadDataset } from '@controller/download/download-dataset';
 import { geocode } from '@controller/geocode/geocode';
 import { updateCheck } from '@controller/update-check/update-check';
+import { UPDATE_CHECK_RESULT } from '@controller/update-check/update-check-result';
 import { OutputFormat } from '@domain/output-format';
 import { packageJsonMeta } from '@domain/package-json-meta';
 import { parsePackageJson } from '@domain/parse-package-json';
@@ -160,10 +161,13 @@ export const main = async (
           });
       },
       async argv => {
-        await updateCheck({
+        const result = await updateCheck({
           ckanId: argv.resource,
           dataDir: argv.dataDir,
         });
+        if (result === UPDATE_CHECK_RESULT.NEW_DATASET_IS_AVAILABLE) {
+          exit(1);
+        }
       }
     )
 
