@@ -33,6 +33,7 @@ import { OutputFormat } from '@domain/output-format';
 import { upwardFileSearch, } from '@domain/upward-file-search';
 import { beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@settings/constant-values';
+import { UPDATE_CHECK_RESULT } from '@controller/update-check/update-check-result';
 import fs from 'node:fs';
 
 jest.mock('@controller/update-check/update-check');
@@ -131,7 +132,20 @@ describe('cli', () => {
         ckanId: 'something',
       })
     });
+    it.concurrent('should exit with code 1 if NO_UPDATE_IS_AVAILABLE', async () => {
+      (updateCheck as jest.MockedFunction<typeof updateCheck>).mockResolvedValue(UPDATE_CHECK_RESULT.NO_UPDATE_IS_AVAILABLE);
+
+      const originalExit = process.exit;
+      const exitMock = jest.fn();
+      process.exit = exitMock as never;
+
+      await runCommand('update-check');
+
+      expect(exitMock).toHaveBeenCalledWith(1);
+      process.exit = originalExit;
+    });
   });
+
   describe('download', () => {
 
     it.concurrent('should run download command', async () => {
@@ -241,7 +255,7 @@ describe('cli', () => {
           fuzzy: undefined,
         });
       });
-      
+
       it.concurrent('should receive outputFile option', async () => {
         const inputFile = './somewhere/query.txt';
         const outputFile = './somewhere/result.csv';
@@ -315,7 +329,7 @@ describe('cli', () => {
     });
 
     it('should occur an error if input file is invalid', async () => {
-      
+
       const buffer: string[] = [];
       const stdErr = jest.spyOn(console, 'error').mockImplementation(
         (line: string) => {
@@ -329,7 +343,7 @@ describe('cli', () => {
       );
       stdErr.mockRestore();
     });
-    
+
   });
 });
 

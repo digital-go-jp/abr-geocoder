@@ -65,9 +65,9 @@ $ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾
   $ abrg update-check
   ```
 
-  Returns `0` if the local database is the latest.
+  Returns `0` if new data is available in CKAN or if no local database exists. In that case, runs `download` command.
+  Returns `1` if the local database is the latest.
 
-  Returns `1` if new data in CKAN is available. there is no local database, returns `1` and exits. In that case, runs `download` command.
 
 ### `geocode` (without command is specified)
 
@@ -115,33 +115,21 @@ $ abrg <inputFile> [<outputFile>] [options]
 - `-f`, `--format`
 
   Specifies output format. Default is `json`.
-  | format  | 説明                                               |
+  | format  | description                                               |
   |---------|---------------------------------------------------|
   | csv     |Output results in comma-separated csv format.      |
   | json    |Output results in json format.                     |
-  | ndjson  |Output results in json format as stream output.    |
-  | geojson |Output results in geo-json format.                 |
-  | ndgeojson  |Output results in geo-json format as stream output.|
-  | normalize  |Output results in normalized address.       |
+  | ndjson  |Output results in NDJSON.    |
+  | geojson |Output results in GeoJSON format.                 |
+  | ndgeojson  |Output results in NDGeoJSON format.|
 
 - `--fuzzy`
+    - Specifies the character to be used as a wildcard. Default is `?``.
 
-  - case: just `--fuzzy`
-    Allows `?` character for wildcard matching.
-    
-    For example:
-    ```
-    echo "東京都町?市森野2-2-22" | abrg - --fuzzy
-    ```
-
-  - case: `--fuzzy` with `(a)`
-  
-    Allows `(a)` character for wildcard matching.
-
-    For example:
-    ```
-    echo "東京都町●市森野2-2-22" | abrg - --fuzzy ●
-    ```
+  For example:
+  ```
+  echo "東京都町?市森野2-2-22" | abrg - --fuzzy ?
+  ```
   
 - `-h`, `--help`
 
