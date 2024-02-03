@@ -27,9 +27,7 @@ import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 jest.mock('@domain/http/head-request');
 
-const MockedDB = Database as unknown as jest.Mock;
 import { CkanDownloader } from '../ckan-downloader'; // adjust this import according to your project structure
-
 
 describe('CkanDownloader', () => {
   let ckanDownloader: CkanDownloader;

@@ -24,41 +24,41 @@
 import { describe, expect, it } from '@jest/globals';
 import csvtojson from 'csvtojson';
 import { Stream } from 'node:stream';
-import { CsvTransform } from '../csv-transform';
+import { NormalizeTransform } from '../normalize-transform';
 import { dummyData } from './dummy-data';
 
-describe('CsvTransform', () => {
+describe('NormalizeTransform', () => {
   it('should output rows with expected CSV format()', async () => {
-    const transform = CsvTransform.create(CsvTransform.DEFAULT_COLUMNS);
+    const transform = NormalizeTransform.create(NormalizeTransform.DEFAULT_COLUMNS);
 
     const expectCsv = await csvtojson({
       output: 'csv',
     }).fromString([
-      CsvTransform.DEFAULT_COLUMNS.join(','),
+      NormalizeTransform.DEFAULT_COLUMNS.join(','),
       [
         '"東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階"',
         '"東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階"',
-        '8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,,東京ガーデンテラス紀尾井町 19階、20階,35.681411,139.73495'
+        '8'
       ],
       [
         '"東京都千代田区紀尾井町1"',
         '"東京都千代田区紀尾井町1"',
-        '7,131016,東京都,千代田区,紀尾井町,0056000,1,001,,,,,,35.681411,139.73495',
+        '7',
       ],
       [
         '"山形県山形市旅篭町二丁目3番25号"',
         '"山形県山形市旅篭町二丁目3-25"',
-        '8,062014,山形県,山形市,旅篭町二丁目,0247002,3,003,25,025,,,,38.255437,140.339126'
+        '8'
       ],
       [
         '"山形市旅篭町二丁目3番25号"',
         '"山形県山形市旅篭町二丁目3-25"',
-        '8,062014,山形県,山形市,旅篭町二丁目,0247002,3,003,25,025,,,,38.255437,140.339126',
+        '8',
       ],
       [
         '"東京都町田市森野2-2-22"',
         '"東京都町田市森野二丁目2-22"',
-        '8,132098,東京都,町田市,森野二丁目,0006002,2,002,22,022,,,,35.548247,139.440264'
+        '8'
       ]
     ].join("\n").trim());
 

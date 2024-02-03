@@ -21,18 +21,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
 import { kan2num } from '@domain/kan2num';
 import { MatchLevel } from '@domain/match-level';
 import { Query } from '@domain/query';
 import { RegExpEx } from '@domain/reg-exp-ex';
-import { number2kanji } from '@geolonia/japanese-numeral';
 import {
   DASH,
   J_DASH,
   NUMRIC_AND_KANJI_SYMBOLS,
   SPACE,
 } from '@settings/constant-values';
+import { AddressFinderForStep3and5 } from '@usecase/geocode/address-finder-for-step3and5';
 import { Transform, TransformCallback } from 'node:stream';
 
 export class GeocodingStep5 extends Transform {
@@ -72,17 +71,17 @@ export class GeocodingStep5 extends Transform {
     }
 
     // townが取得できた場合にのみ、addrに対する各種の変換処理を行う
-    let tempAddress = query.tempAddress;
+    let tempAddress = kan2num(query.tempAddress);
     tempAddress = tempAddress.replace(RegExpEx.create(`^${DASH}`), '');
 
-    tempAddress = tempAddress.replace(
-      RegExpEx.create('([0-9]+)(丁目)', 'g'),
-      match => {
-        return match.replace(RegExpEx.create('([0-9]+)', 'g'), num => {
-          return number2kanji(Number(num));
-        });
-      }
-    );
+    // tempAddress = tempAddress.replace(
+    //   RegExpEx.create('([0-9]+)(丁目)', 'g'),
+    //   match => {
+    //     return match.replace(RegExpEx.create('([0-9]+)', 'g'), num => {
+    //       return number2kanji(Number(num));
+    //     });
+    //   }
+    // );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(
@@ -147,7 +146,7 @@ export class GeocodingStep5 extends Transform {
     );
 
     tempAddress = tempAddress.replace(
-      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)`),
+      RegExpEx.create(`([${NUMRIC_AND_KANJI_SYMBOLS}]+)$`),
       s => {
         // `串本町串本１２３４` のようなケース
         return kan2num(s);

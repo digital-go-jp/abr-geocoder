@@ -21,11 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AddressFinderForStep3and5, TownRow } from '@domain/geocode/address-finder-for-step3and5';
 import { PrefectureName } from '@domain/prefecture-name';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { DASH } from '@settings/constant-values';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
+import { AddressFinderForStep3and5, TownRow } from '../address-finder-for-step3and5';
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 

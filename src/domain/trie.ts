@@ -21,11 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export enum OutputFormat {
-  JSON = 'json',
-  CSV = 'csv',
-  GEOJSON = 'geojson',
-  NDJSON = 'ndjson',
-  NDGEOJSON = 'ndgeojson',
-  NORMALIZE = 'normalize',
+export class Trie<T> {
+  public children: Map<string, Trie<T>> = new Map();
+
+  constructor(public info?: T) {}
 }

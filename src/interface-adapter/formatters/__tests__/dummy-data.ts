@@ -22,12 +22,12 @@
  * SOFTWARE.
  */
 import { GeocodeResult } from '@domain/geocode-result';
-import { Query } from '@domain/query';
+import { MatchLevel } from '@domain/match-level';
 
 export const dummyData = [
   GeocodeResult.create({
     input: '東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階',
-    match_level: 8,
+    match_level: MatchLevel.RESIDENTIAL_DETAIL,
     lat: 35.681411,
     lon: 139.73495,
     other: ' 東京ガーデンテラス紀尾井町 19階、20階',
@@ -46,7 +46,7 @@ export const dummyData = [
 
   GeocodeResult.create({
     input: '東京都千代田区紀尾井町1',
-    match_level: 3,
+    match_level: MatchLevel.RESIDENTIAL_BLOCK,
     lat: 35.681411,
     lon: 139.73495,
     other: '',
@@ -55,8 +55,8 @@ export const dummyData = [
     town: '紀尾井町',
     town_id: '0056000',
     lg_code: '131016',
-    block: undefined,
-    block_id: undefined,
+    block: '1',
+    block_id: '001',
     addr1: undefined,
     addr1_id: undefined,
     addr2: undefined,
@@ -65,7 +65,7 @@ export const dummyData = [
 
   GeocodeResult.create({
     input: '山形県山形市旅篭町二丁目3番25号',
-    match_level: 8,
+    match_level: MatchLevel.RESIDENTIAL_DETAIL,
     lat: 38.255437,
     lon: 140.339126,
     other: '',
@@ -84,7 +84,7 @@ export const dummyData = [
 
   GeocodeResult.create({
     input: '山形市旅篭町二丁目3番25号',
-    match_level: 8,
+    match_level: MatchLevel.RESIDENTIAL_DETAIL,
     lat: 38.255437,
     lon: 140.339126,
     other: '',
@@ -103,7 +103,7 @@ export const dummyData = [
 
   GeocodeResult.create({
     input: '東京都町田市森野2-2-22',
-    match_level: 8,
+    match_level: MatchLevel.RESIDENTIAL_DETAIL,
     lat: 35.548247,
     lon: 139.440264,
     other: '',

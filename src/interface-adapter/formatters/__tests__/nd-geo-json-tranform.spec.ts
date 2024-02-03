@@ -25,6 +25,7 @@ import { describe, expect, it } from '@jest/globals';
 import { Stream } from 'node:stream';
 import { NdGeoJsonTransform } from '../nd-geo-json-transform';
 import { dummyData } from './dummy-data';
+import { MatchLevel } from '@domain/match-level';
 
 describe('NdGeoJsonTransform', () => {
   it('should output rows with expected JSON format()', async () => {
@@ -43,19 +44,19 @@ describe('NdGeoJsonTransform', () => {
         },
         "result":{
           "output": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
-          "match_level":8,
-          "prefecture":"東京都",
-          "city":"千代田区",
-          "town":"紀尾井町",
-          "town_id":"0056000",
-          "lg_code":"131016",
-          "other":" 東京ガーデンテラス紀尾井町 19階、20階",
-          "block":"1",
-          "block_id":"001",
-          "addr1":"3",
-          "addr1_id":"003",
-          "addr2":"",
-          "addr2_id":""
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+          "prefecture": "東京都",
+          "city": "千代田区",
+          "town": "紀尾井町",
+          "town_id": "0056000",
+          "lg_code": "131016",
+          "other": " 東京ガーデンテラス紀尾井町 19階、20階",
+          "block": "1",
+          "block_id": "001",
+          "addr1": "3",
+          "addr1_id": "003",
+          "addr2": "",
+          "addr2_id": ""
         }
       }
     }));
@@ -70,14 +71,16 @@ describe('NdGeoJsonTransform', () => {
           "input":"東京都千代田区紀尾井町1"
         },
         "result":{
-          "output": "東京都千代田区紀尾井町",
-          "match_level":3,
+          "output": "東京都千代田区紀尾井町1",
+          "match_level": MatchLevel.RESIDENTIAL_BLOCK,
           "prefecture":"東京都",
           "city":"千代田区",
           "town":"紀尾井町",
           "town_id":"0056000",
           "lg_code":"131016",
-          "other":""
+          "other":"",
+          "block": "1",
+          "block_id": "001"
         }
       }
     }));
@@ -94,7 +97,7 @@ describe('NdGeoJsonTransform', () => {
         },
         "result":{
           "output": "山形県山形市旅篭町二丁目3-25",
-          "match_level":8,
+          "match_level":MatchLevel.RESIDENTIAL_DETAIL,
           "prefecture":"山形県",
           "city":"山形市",
           "town":"旅篭町二丁目",
@@ -123,7 +126,7 @@ describe('NdGeoJsonTransform', () => {
         },
         "result":{
           "output":"山形県山形市旅篭町二丁目3-25",
-          "match_level":8,
+          "match_level":MatchLevel.RESIDENTIAL_DETAIL,
           "prefecture":"山形県",
           "city":"山形市",
           "town":"旅篭町二丁目",
@@ -151,7 +154,7 @@ describe('NdGeoJsonTransform', () => {
         },
         "result":{
           "output": "東京都町田市森野二丁目2-22",
-          "match_level":8,
+          "match_level":MatchLevel.RESIDENTIAL_DETAIL,
           "prefecture":"東京都",
           "city":"町田市",
           "town":"森野二丁目",

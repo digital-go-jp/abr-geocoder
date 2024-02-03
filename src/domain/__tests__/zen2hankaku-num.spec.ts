@@ -21,11 +21,40 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export enum OutputFormat {
-  JSON = 'json',
-  CSV = 'csv',
-  GEOJSON = 'geojson',
-  NDJSON = 'ndjson',
-  NDGEOJSON = 'ndgeojson',
-  NORMALIZE = 'normalize',
-}
+import { zen2HankakuNum } from '@domain/zen2hankaku-num';
+import { describe, expect, it } from '@jest/globals';
+
+describe('zen2hankaku-num', () => {
+  const queries = [
+    {
+      input: '1-2-3',
+      expected: '1-2-3'
+    },
+    {
+      input: '１−２−３',
+      expected: '1−2−3'
+    },
+    {
+      input: 'ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ',
+      expected: 'abcdefghijklmnopqrstuvwxyz'
+    },
+    {
+      input: 'ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ',
+      expected: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    },
+    {
+      input: '東京都　　　 　渋谷区　３丁目０−０−０',
+      expected: '東京都　　　 　渋谷区　3丁目0−0−0'
+    },
+  ];
+
+  queries.forEach(query => {
+    it.concurrent(`'${query.input}' should be converted to '${query.expected}'`, async () => {
+      expect(
+        zen2HankakuNum(query.input),
+      ).toBe(
+        query.expected,
+      );
+    })
+  })
+});
