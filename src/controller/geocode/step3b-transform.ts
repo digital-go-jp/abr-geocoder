@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 import { FromStep3aType } from '@domain/from-step3a-type';
-import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
 import { MatchLevel } from '@domain/match-level';
+import { AddressFinderForStep3and5 } from '@usecase/geocode/address-finder-for-step3and5';
 import { Transform, TransformCallback } from 'node:stream';
 
 export class GeocodingStep3B extends Transform {

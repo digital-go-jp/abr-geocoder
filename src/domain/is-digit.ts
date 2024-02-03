@@ -21,11 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export enum OutputFormat {
-  JSON = 'json',
-  CSV = 'csv',
-  GEOJSON = 'geojson',
-  NDJSON = 'ndjson',
-  NDGEOJSON = 'ndgeojson',
-  NORMALIZE = 'normalize',
-}
+export const isDigit = (char: String): boolean => {
+  return char.length === 1 && char >= '0' && char <= '9';
+};

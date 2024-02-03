@@ -249,6 +249,7 @@ export const main = async (
               OutputFormat.NDJSON,
               OutputFormat.GEOJSON,
               OutputFormat.NDGEOJSON,
+              OutputFormat.NORMALIZE,
             ],
           })
           .positional('inputFile', {
