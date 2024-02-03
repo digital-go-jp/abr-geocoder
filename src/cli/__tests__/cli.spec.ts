@@ -31,7 +31,7 @@ import { geocode } from '@controller/geocode/geocode';
 import { updateCheck } from '@controller/update-check/update-check';
 import { OutputFormat } from '@domain/output-format';
 import { upwardFileSearch, } from '@domain/upward-file-search';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@settings/constant-values';
 import { UPDATE_CHECK_RESULT } from '@controller/update-check/update-check-result';
 import fs from 'node:fs';
