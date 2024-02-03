@@ -65,9 +65,9 @@ $ echo "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾
   $ abrg update-check
   ```
 
-  Returns `0` if the local database is the latest.
+  Returns `0` if new data is available in CKAN or if no local database exists. In that case, runs `download` command.
+  Returns `1` if the local database is the latest.
 
-  Returns `1` if new data in CKAN is available. there is no local database, returns `1` and exits. In that case, runs `download` command.
 
 ### `geocode` (without command is specified)
 
