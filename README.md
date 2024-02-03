@@ -115,32 +115,21 @@ $ abrg <inputFile> [<outputFile>] [options]
 - `-f`, `--format`
 
   Specifies output format. Default is `json`.
-  | format  | 説明                                               |
+  | format  | description                                               |
   |---------|---------------------------------------------------|
   | csv     |Output results in comma-separated csv format.      |
   | json    |Output results in json format.                     |
-  | ndjson  |Output results in json format as stream output.    |
-  | geojson |Output results in geo-json format.                 |
-  | ndgeojson  |Output results in geo-json format as stream output.|
+  | ndjson  |Output results in NDJSON.    |
+  | geojson |Output results in GeoJSON format.                 |
+  | ndgeojson  |Output results in NDGeoJSON format.|
 
 - `--fuzzy`
+    - Specifies the character to be used as a wildcard. Default is `?``.
 
-  - case: just `--fuzzy`
-    Allows `?` character for wildcard matching.
-    
-    For example:
-    ```
-    echo "東京都町?市森野2-2-22" | abrg - --fuzzy
-    ```
-
-  - case: `--fuzzy` with `(a)`
-  
-    Allows `(a)` character for wildcard matching.
-
-    For example:
-    ```
-    echo "東京都町●市森野2-2-22" | abrg - --fuzzy ●
-    ```
+  For example:
+  ```
+  echo "東京都町?市森野2-2-22" | abrg - --fuzzy ?
+  ```
   
 - `-h`, `--help`
 
