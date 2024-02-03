@@ -165,7 +165,7 @@ export const main = async (
           ckanId: argv.resource,
           dataDir: argv.dataDir,
         });
-        if (result === UPDATE_CHECK_RESULT.NEW_DATASET_IS_AVAILABLE) {
+        if (result ===  UPDATE_CHECK_RESULT.NO_UPDATE_IS_AVAILABLE) {
           exit(1);
         }
       }
