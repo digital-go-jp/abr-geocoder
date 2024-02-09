@@ -104,8 +104,6 @@ export const parseHelper = (processArgv: string[]): string[] => {
   return result;
 };
 
-
-
 export const getPackageInfo = async (): Promise<packageJsonMeta> => {
   const packageJsonFilePath = await upwardFileSearch(__dirname, 'package.json');
   if (!packageJsonFilePath) {
@@ -215,19 +213,23 @@ export const main = async (
       AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_DESC),
       (yargs: yargs.Argv) => {
         return yargs
-        .option('fuzzy', {
-          type: 'string',
-          describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_OPTION),
-          coerce: fuzzy => {
-            if (fuzzy.length !== 1) {
-              console.error(AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR));
-              if (process.env.NODE_ENV !== 'test') {
-                exit(1);
+          .option('fuzzy', {
+            type: 'string',
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
+            ),
+            coerce: fuzzy => {
+              if (fuzzy.length !== 1) {
+                console.error(
+                  AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR)
+                );
+                if (process.env.NODE_ENV !== 'test') {
+                  exit(1);
+                }
               }
-            }
-            return fuzzy;
-          },
-        })
+              return fuzzy;
+            },
+          })
           .option('dataDir', {
             alias: 'd',
             type: 'string',
