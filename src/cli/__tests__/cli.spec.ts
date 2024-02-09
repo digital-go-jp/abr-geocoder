@@ -31,7 +31,7 @@ import { geocode } from '@controller/geocode/geocode';
 import { updateCheck } from '@controller/update-check/update-check';
 import { OutputFormat } from '@domain/output-format';
 import { upwardFileSearch, } from '@domain/upward-file-search';
-import { beforeAll, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@settings/constant-values';
 import { UPDATE_CHECK_RESULT } from '@controller/update-check/update-check-result';
 import fs from 'node:fs';
@@ -194,10 +194,10 @@ describe('cli', () => {
         });
       });
 
-      it.concurrent('case: abrg -f json -fuzzy <inputFile>', async () => {
+      it.concurrent('case: abrg <inputFile> -f json -fuzzy "?"', async () => {
         const inputFile = './somewhere/query.txt';
 
-        await runCommand('-f', OutputFormat.JSON, '--fuzzy', inputFile);
+        await runCommand('-f', OutputFormat.JSON, '--fuzzy', '?', inputFile);
 
         expect(geocode).toBeCalledWith({
           ckanId: 'ba000001',
@@ -207,6 +207,16 @@ describe('cli', () => {
           destination: undefined,
           fuzzy: DEFAULT_FUZZY_CHAR,
         });
+      });
+
+      it.concurrent('should run geocoding command without fuzzy option', async () => {
+        const inputFile = './somewhere/query.txt';
+
+        await runCommand(inputFile);
+
+        expect(geocode).toBeCalledWith(expect.objectContaining({
+          fuzzy: undefined
+        }));
       });
 
       it.concurrent('case: abrg -f csv --fuzzy ● <inputFile>', async () => {
@@ -344,6 +354,48 @@ describe('cli', () => {
       stdErr.mockRestore();
     });
 
+  });
+});
+
+
+describe('cli › geocoding › special cases › fuzzy option errors', () => {
+  let originalConsoleError: typeof console.error;
+  let originalExit: typeof process.exit;
+  let consoleErrorCalledWith: any;
+  let exitCalledWith: number | undefined;
+
+  beforeEach(() => {
+    originalConsoleError = console.error;
+    originalExit = process.exit;
+    consoleErrorCalledWith = undefined;
+    exitCalledWith = undefined;
+
+    console.error = (...args: any[]) => { consoleErrorCalledWith = args; };
+    process.exit = ((code?: number) => { exitCalledWith = code; }) as unknown as typeof process.exit;
+  });
+
+  afterEach(() => {
+    console.error = originalConsoleError;
+    process.exit = originalExit;
+  });
+
+  const runFuzzyOptionTest = async (fuzzyValue: string) => {
+    const inputFile = './somewhere/query.txt';
+    await runCommand('--fuzzy', fuzzyValue, inputFile);
+  };
+
+  it('should exit with code 1 when fuzzy option is an empty string', async () => {
+    await runFuzzyOptionTest('');
+
+    expect(consoleErrorCalledWith).toContain(AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR));
+    expect(exitCalledWith).toEqual(1);
+  });
+
+  it('should exit with code 1 when fuzzy option has multiple characters', async () => {
+    await runFuzzyOptionTest('??');
+
+    expect(consoleErrorCalledWith).toContain(AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR));
+    expect(exitCalledWith).toEqual(1);
   });
 });
 
