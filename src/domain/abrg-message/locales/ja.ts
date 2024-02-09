@@ -35,6 +35,8 @@ const messages: Record<AbrgMessage, string> = {
     '指定されたファイルに含まれる日本の住所を緯度経度に変換します',
   [AbrgMessage.CLI_GEOCODE_FUZZY_OPTION]:
     '指定した1文字をワイルドカードとして処理します',
+  [AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR]:
+    '--fuzzy オプションは1文字のみを受け付けます。',
   [AbrgMessage.CLI_GEOCODE_INPUT_FILE]:
     "日本の住所を1行ごとに記入したテキストファイルへのパス。'-'を指定すると、標準入力から読み取ります",
   [AbrgMessage.CLI_GEOCODE_OUTPUT_FILE]:

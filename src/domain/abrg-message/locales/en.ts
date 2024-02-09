@@ -35,6 +35,8 @@ const messages: Record<AbrgMessage, string> = {
     'Geocoding for the Japan addresses in the given file',
   [AbrgMessage.CLI_GEOCODE_FUZZY_OPTION]:
     'Treats a given character as wildcard matching',
+  [AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR]:
+    '--fuzzy option accepts only a single character',
   [AbrgMessage.CLI_GEOCODE_INPUT_FILE]:
     "The path for the file which formatted Japanese address each line. Reads from stdin when you give '-'.",
   [AbrgMessage.CLI_GEOCODE_OUTPUT_FILE]:

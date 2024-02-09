@@ -72,25 +72,23 @@ export const parseHelper = (processArgv: string[]): string[] => {
   const buffer: string[] = [];
   while (stack.length > 0) {
     const char = stack.pop()!;
-
     if (char !== SINGLE_SPACE) {
       buffer.unshift(char);
       continue;
     }
-
     if (buffer.length === 0) {
       continue;
     }
-
-    // Special replace cases
     let word = buffer.join('');
+
+    // 特別な置換ケース
     switch (word) {
       case '-':
         word = SINGLE_DASH_ALTERNATIVE;
         break;
 
       case '--fuzzy':
-        if (result.length === 0 || result[0].length !== 1) {
+        if (result.length === 0) {
           result.unshift(DEFAULT_FUZZY_CHAR);
         }
         break;
@@ -102,8 +100,11 @@ export const parseHelper = (processArgv: string[]): string[] => {
     result.unshift(word);
     buffer.length = 0;
   }
+
   return result;
 };
+
+
 
 export const getPackageInfo = async (): Promise<packageJsonMeta> => {
   const packageJsonFilePath = await upwardFileSearch(__dirname, 'package.json');
@@ -214,12 +215,19 @@ export const main = async (
       AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_DESC),
       (yargs: yargs.Argv) => {
         return yargs
-          .option('fuzzy', {
-            type: 'string',
-            describe: AbrgMessage.toString(
-              AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
-            ),
-          })
+        .option('fuzzy', {
+          type: 'string',
+          describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_OPTION),
+          coerce: fuzzy => {
+            if (fuzzy.length !== 1) {
+              console.error(AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR));
+              if (process.env.NODE_ENV !== 'test') {
+                exit(1);
+              }
+            }
+            return fuzzy;
+          },
+        })
           .option('dataDir', {
             alias: 'd',
             type: 'string',
@@ -284,6 +292,7 @@ export const main = async (
         if (!argv['inputFile']) {
           return;
         }
+
         await geocode({
           source: argv['inputFile'] as string,
           destination: argv['outputFile'] as string | undefined,

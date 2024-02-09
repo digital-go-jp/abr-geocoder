@@ -128,7 +128,7 @@ $ abrg <inputFile> [<outputFile>] [options]
   - `--fuzzy` の後ろに、任意の1文字を指定することで、ワイルドカードとして使う文字を変更することが出来ます。デフォルトは`?`です。
     例:
     ```
-    echo "東京都町?市森野2-2-22" | abrg - -f json --fuzzy ?
+    echo "東京都町?市森野2-2-22" | abrg - -f json --fuzzy '?'
     ```
 
 ## 出力結果のフォーマット
