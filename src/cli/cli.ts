@@ -216,10 +216,14 @@ export const main = async (
         return yargs
           .option('fuzzy', {
             type: 'string',
-            describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_OPTION),
+            describe: AbrgMessage.toString(
+              AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
+            ),
             coerce: fuzzy => {
               if (fuzzy.length !== 1) {
-                console.error(AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR));
+                console.error(
+                  AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR)
+                );
                 exit(1);
               }
               return fuzzy;
