@@ -72,16 +72,18 @@ export const parseHelper = (processArgv: string[]): string[] => {
   const buffer: string[] = [];
   while (stack.length > 0) {
     const char = stack.pop()!;
+
     if (char !== SINGLE_SPACE) {
       buffer.unshift(char);
       continue;
     }
+
     if (buffer.length === 0) {
       continue;
     }
-    let word = buffer.join('');
 
-    // 特別な置換ケース
+    // Special replace cases
+    let word = buffer.join('');
     switch (word) {
       case '-':
         word = SINGLE_DASH_ALTERNATIVE;
