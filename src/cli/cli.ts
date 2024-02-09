@@ -102,7 +102,6 @@ export const parseHelper = (processArgv: string[]): string[] => {
     result.unshift(word);
     buffer.length = 0;
   }
-
   return result;
 };
 
@@ -296,7 +295,6 @@ export const main = async (
         if (!argv['inputFile']) {
           return;
         }
-
         await geocode({
           source: argv['inputFile'] as string,
           destination: argv['outputFile'] as string | undefined,
