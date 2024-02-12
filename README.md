@@ -128,7 +128,7 @@ $ abrg <inputFile> [<outputFile>] [options]
 
   For example:
   ```
-  echo "東京都町?市森野2-2-22" | abrg - --fuzzy ?
+  echo "東京都町?市森野2-2-22" | abrg - --fuzzy "?"
   ```
   
 - `-h`, `--help`
