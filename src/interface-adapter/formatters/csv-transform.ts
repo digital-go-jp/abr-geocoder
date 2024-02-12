@@ -58,7 +58,7 @@ export class CsvTransform extends Stream.Transform {
       .map(column => {
         switch (column) {
           case GeocodeResultFields.INPUT:
-            return `"${result.input}"`;
+            return result.input;
 
           case GeocodeResultFields.OUTPUT:
             return `"${result.output || ''}"`;

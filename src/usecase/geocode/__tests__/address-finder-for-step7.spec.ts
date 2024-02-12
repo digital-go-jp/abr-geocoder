@@ -25,13 +25,50 @@ import { MatchLevel } from '@domain/match-level';
 import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
 import { describe, expect, it, jest } from '@jest/globals';
-import { DASH, SINGLE_DASH_ALTERNATIVE, SPACE } from '@settings/constant-values';
+import { DASH, SPACE } from '@settings/constant-values';
 import { default as BetterSqlite3, default as Database } from 'better-sqlite3';
-import dummyBlockList from './dummyBlockList.json';
-import dummyRsdtList2 from './dummyRsdtList2.json';
-import dummySmallBlockListIwate from './dummySmallBlockListIwate.json';
-import dummySmallBlockListMiyagi from './dummySmallBlockListMiyagi.json';
 import { AddressFinderForStep7 } from '../address-finder-for-step7';
+const testDataSets = {
+  [PrefectureName.TOKYO]: {
+    '千代田区': {
+      '紀尾井町': {
+        blockList: require('./dataset/tokyo/chiyoda/kioicho/blockList.json'),
+        rsdtList: require('./dataset/tokyo/chiyoda/kioicho/rsdtList.json'),
+      }
+    },
+    '文京区': {
+      '本駒込': {
+        blockList: require('./dataset/tokyo/bunkyo/honkomagome/2chome/blockList.json'),
+        rsdtList: require('./dataset/tokyo/bunkyo/honkomagome/2chome/rsdtList.json'),
+      },
+      '本駒込二丁目': {
+        blockList: require('./dataset/tokyo/bunkyo/honkomagome/2chome/blockList.json'),
+        rsdtList: require('./dataset/tokyo/bunkyo/honkomagome/2chome/rsdtList.json'),
+      }
+    },
+  },
+  [PrefectureName.IWATE]: {
+    '盛岡市': {
+      '飯岡新田': {
+        smallBlockList: require('./dataset/iwate/morioka/iioka shinden/smallBlockList.json'),
+      }
+    }
+  },
+  [PrefectureName.MIYAGI]: {
+    '登米市': {
+      '迫町佐沼': {
+        rsdtList: require('./dataset/miyagi/tome/hasamachosanuma/rsdtList.json'),
+      }
+    }
+  },
+  [PrefectureName.FUKUSHIMA]: {
+    'いわき市': {
+      '山玉町': {
+        smallBlockList: require('./dataset/fukushima/iwaki/yamadamamachi/smallBlockList.json'),
+      }
+    }
+  }
+}
 
 jest.mock<BetterSqlite3.Database>('better-sqlite3');
 
@@ -46,45 +83,29 @@ MockedDB.mockImplementation(() => {
           city?: string;
           town?: string;
         }) => {
+
+          // データセットを読み込む
+          let parent: any = testDataSets;
+          const keys = [params.prefecture, params.city, params.town];
+          for (const key of keys) {
+            if (!key || !(key in parent)) {
+              return [];
+            }
+            parent = parent[key];
+          }
+          if (parent === undefined) {
+            return [];
+          }
+
           // statementに合わせてデータを返す
           if (sql.includes('/* unit test: getBlockListStatement */')) {
-            switch(params.prefecture) {
-              case PrefectureName.TOKYO:
-                return dummyBlockList;
-              
-              default:
-                return [];
-            }
+            return parent.blockList;
           }
-          if (sql.includes('/* unit test: getRsdtListStatement2 */')) {
-            return dummyRsdtList2;
+          if (sql.includes('/* unit test: getRsdtListStatement */')) {
+            return parent.rsdtList;
           }
           if (sql.includes('/* unit test: getSmallBlockListStatement */')) {
-
-            switch (params.prefecture) {
-              case PrefectureName.MIYAGI:
-                return dummySmallBlockListMiyagi;
-
-              case PrefectureName.IWATE:
-                return dummySmallBlockListIwate;
-              
-              case PrefectureName.FUKUSHIMA:
-                return [
-                  {
-                    "lg_code": "072044",
-                    "town_id": "0113116",
-                    "pref": "福島県",
-                    "city": "いわき市",
-                    "town": "山玉町",
-                    "koaza_name": "脇川",
-                    "lat": 36.901176,
-                    "lon": 140.725118
-                  }
-                ];
-
-              default:
-                return [];
-            }
+            return parent.smallBlockList;
           }
           throw new Error('Unexpected sql was given');
         }
@@ -149,6 +170,31 @@ describe('AddressFinderForStep7', () => {
       }))
     });
 
+    it.concurrent('住居表示の街区までマッチするケース3', async () => {
+      const inputAddress = `東京都文京区本駒込2-28-8`;
+      const query = Query.create(inputAddress).copy({
+        prefecture: PrefectureName.TOKYO,
+        city: '文京区',
+        town: '本駒込',
+        tempAddress: `2${DASH}28${DASH}8`,
+      });
+
+      const result = await addressFinder.find(query);
+      expect(result).toEqual(Query.create(inputAddress).copy({
+        prefecture: PrefectureName.TOKYO,
+        city: '文京区',
+        town: '本駒込二丁目',
+        lg_code: '131059',
+        town_id: '0004002',
+        block_id: '028',
+        block: '28',
+        lat: 35.729262,
+        lon: 139.747234,
+        tempAddress: `${DASH}8`,
+        match_level: MatchLevel.RESIDENTIAL_BLOCK,
+      }))
+    });
+
     it.concurrent('マッチしない場合は、Queryを変更しない', async () => {
       const inputAddress = `広島市佐伯区海老園二丁目5番28号`;
       const query = Query.create(inputAddress).copy({
@@ -179,7 +225,7 @@ describe('AddressFinderForStep7', () => {
   });
 
   describe('findDetail', () => {
-    it.concurrent('住居表示の街区符号・住居番号までの判別ができるケース', async () => {
+    it.concurrent('住居表示の街区符号・住居番号までの判別ができるケース1', async () => {
       const inputAddress = `東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階`;
       const query = Query.create(inputAddress).copy({
         prefecture: PrefectureName.TOKYO,
@@ -214,11 +260,45 @@ describe('AddressFinderForStep7', () => {
         match_level: MatchLevel.RESIDENTIAL_DETAIL,
       }))
     });
+
+    it.concurrent('住居表示の街区符号・住居番号までの判別ができるケース2', async () => {
+      const inputAddress = `東京都文京区本駒込2-28-8`;
+      const query = Query.create(inputAddress).copy({
+        prefecture: PrefectureName.TOKYO,
+        city: '文京区',
+        town: '本駒込二丁目',
+        tempAddress: `${DASH}8`,
+        lg_code: '131059',
+        town_id: '0004002',
+        block_id: '028',
+        block: '28',
+        lat: 35.729262,
+        lon: 139.747234,
+        match_level: MatchLevel.RESIDENTIAL_BLOCK,
+      });
+
+      const result = await addressFinder.findDetail(query);
+      expect(result).toEqual(Query.create(inputAddress).copy({
+        prefecture: PrefectureName.TOKYO,
+        city: '文京区',
+        town: '本駒込二丁目',
+        tempAddress: '',
+        lg_code: '131059',
+        town_id: '0004002',
+        block_id: '028',
+        block: '28',
+        addr1: '8',
+        addr1_id: '008',
+        addr2: '',
+        addr2_id: '',
+        lat: 35.730461969,
+        lon: 139.746687731,
+        match_level: MatchLevel.RESIDENTIAL_DETAIL,
+      }))
+    });
   });
 
-  describe('findForKoaza', () => {
-      
-
+  describe('findForKoaza', () => { 
     it.concurrent('小字が1件しかマッチしないケース', async () => {
       const inputAddress = `いわき市山玉町脇川2${SPACE}いわき市役所${SPACE}水道局${SPACE}山玉浄水場`;
       const query = Query.create(inputAddress).copy({
