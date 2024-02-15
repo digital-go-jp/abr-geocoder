@@ -30,6 +30,25 @@ class CharListNode {
 
     return buffer.join('');
   };
+
+  static readonly release = (node: CharListNode | undefined) => {
+    while (node) {
+      const nextNode = node.next;
+      node.next = undefined;
+      node = nextNode;
+    }
+  };
+}
+
+export class TrieFinderResult<T> {
+  public readonly info: T | undefined;
+  public readonly unmatched: string;
+
+  constructor(params: { info: T | undefined; unmatched: string }) {
+    this.info = params.info;
+    this.unmatched = params.unmatched;
+    Object.freeze(this);
+  }
 }
 
 export class TrieFinder<T> {
@@ -76,12 +95,7 @@ export class TrieFinder<T> {
     return treeTop;
   }
 
-  find({ target }: { target: string }):
-    | {
-        info: T | undefined;
-        unmatched: string;
-      }
-    | undefined {
+  find({ target }: { target: string }): TrieFinderResult<T> | undefined {
     const head = new CharListNode({
       orgChar: '',
       searchChar: '',
@@ -97,10 +111,14 @@ export class TrieFinder<T> {
       tail = tail.next;
     }
 
-    return this.traverse({
+    const result = this.traverse({
       parent: this.root,
       node: head.next,
     });
+
+    CharListNode.release(head);
+
+    return result;
   }
 
   private traverse({
@@ -109,24 +127,34 @@ export class TrieFinder<T> {
   }: {
     parent: Trie<T> | undefined;
     node: CharListNode | undefined;
-  }): {
-    info: T | undefined;
-    unmatched: string;
-  } {
+  }): TrieFinderResult<T> | undefined {
     if (!parent || !node) {
-      // 最後までたどり着いたから、見つかった（かも）
-      return {
-        info: parent?.info,
-        unmatched: CharListNode.toString(node),
-      };
+      if (parent?.info) {
+        return new TrieFinderResult<T>({
+          info: parent.info,
+          unmatched: CharListNode.toString(node),
+        });
+      }
+      return undefined;
     }
 
     // searchChar が parent.children にある場合は、
     // そのまま探索する
     if (parent.children.has(node.searchChar)) {
-      return this.traverse({
+      const result = this.traverse({
         parent: parent.children.get(node.searchChar),
         node: node.next,
+      });
+
+      if (result) {
+        return result;
+      }
+      if (!parent.info) {
+        return undefined;
+      }
+      return new TrieFinderResult<T>({
+        info: parent.info,
+        unmatched: CharListNode.toString(node),
       });
     }
 
@@ -134,10 +162,17 @@ export class TrieFinder<T> {
     if (RegExpEx.create(`[${NUMRIC_SYMBOLS}]`).test(node.searchChar)) {
       const kanjiNum = number2kanji(parseInt(kan2num(node.searchChar)));
 
-      return this.traverse({
+      const result = this.traverse({
         parent: parent.children.get(kanjiNum),
         node: node.next,
       });
+
+      if (result) {
+        return result;
+      }
+
+      // 数字の場合、部分マッチしてしまうので、ここでは情報を返さない
+      return undefined;
     }
 
     // fuzzyが来た場合、全ての可能性を探索する
@@ -147,16 +182,19 @@ export class TrieFinder<T> {
           parent: child,
           node: node.next,
         });
-        if (result?.info) {
+        if (result) {
           return result;
         }
       }
 
       // 見つからなかったら、現在位置までの情報を返す
-      return {
-        info: parent.info,
-        unmatched: CharListNode.toString(node),
-      };
+      if (parent.info) {
+        return new TrieFinderResult<T>({
+          info: parent.info,
+          unmatched: CharListNode.toString(node),
+        });
+      }
+      return undefined;
     }
 
     // DASHが来た場合、「丁目」「丁」「番地」「番」「号」を全部試す
@@ -183,15 +221,18 @@ export class TrieFinder<T> {
       });
 
       // 見つかった
-      if (result?.info) {
+      if (result) {
         return result;
       }
     }
 
     // 見つからなかったら、現在位置までの情報を返す
-    return {
-      info: parent.info,
-      unmatched: CharListNode.toString(node),
-    };
+    if (parent.info) {
+      return new TrieFinderResult<T>({
+        info: parent.info,
+        unmatched: CharListNode.toString(node),
+      });
+    }
+    return undefined;
   }
 }
