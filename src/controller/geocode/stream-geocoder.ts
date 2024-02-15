@@ -301,7 +301,10 @@ export class StreamGeocoder extends Transform {
     // }
     //
     /* eslint-enable no-irregular-whitespace */
-    const addressFinderForStep7 = new AddressFinderForStep7(database);
+    const addressFinderForStep7 = new AddressFinderForStep7({
+      db: database,
+      fuzzy,
+    });
     const step7 = new GeocodingStep7(addressFinderForStep7);
 
     // {SPACE} と {DASH} をもとに戻す

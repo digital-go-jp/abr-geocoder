@@ -25,6 +25,7 @@ import { kan2num } from '@domain/kan2num';
 import { MatchLevel } from '@domain/match-level';
 import { Query } from '@domain/query';
 import { RegExpEx } from '@domain/reg-exp-ex';
+import { number2kanji } from '@geolonia/japanese-numeral';
 import {
   DASH,
   J_DASH,
@@ -71,17 +72,17 @@ export class GeocodingStep5 extends Transform {
     }
 
     // townが取得できた場合にのみ、addrに対する各種の変換処理を行う
-    let tempAddress = kan2num(query.tempAddress);
+    let tempAddress = query.tempAddress;
     tempAddress = tempAddress.replace(RegExpEx.create(`^${DASH}`), '');
 
-    // tempAddress = tempAddress.replace(
-    //   RegExpEx.create('([0-9]+)(丁目)', 'g'),
-    //   match => {
-    //     return match.replace(RegExpEx.create('([0-9]+)', 'g'), num => {
-    //       return number2kanji(Number(num));
-    //     });
-    //   }
-    // );
+    tempAddress = tempAddress.replace(
+      RegExpEx.create('([0-9]+)(丁目)', 'g'),
+      match => {
+        return match.replace(RegExpEx.create('([0-9]+)', 'g'), num => {
+          return number2kanji(Number(num));
+        });
+      }
+    );
 
     tempAddress = tempAddress.replace(
       RegExpEx.create(
