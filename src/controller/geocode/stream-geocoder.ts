@@ -51,6 +51,10 @@ import { GeocodingStep7 } from './step7-transform';
 import { GeocodingStep8 } from './step8-transform';
 
 export class StreamGeocoder extends Transform {
+
+  // 現在のキャレットの位置が、コメントアウトされているかどうか
+  private isCuretInComment: boolean = false;
+
   private constructor(private stream: Readable) {
     super({
       objectMode: true,
@@ -70,8 +74,51 @@ export class StreamGeocoder extends Transform {
       return;
     }
 
+    // /* ... */ の間をコメントとして無視する。複数行にも対応
+    // "//" より後ろは、コメントとして無視する
+    const buffer: string[] = [];
+    let i = 0;
+    const N = input.length;
+    while (i < N) {
+      if (this.isCuretInComment) {
+
+        if ((i + 1 >= N) || (input.substring(i, i + 2) !== '*/')) {
+          i += 1;
+          continue;
+        }
+
+        this.isCuretInComment = false;
+        i += 2;
+        continue;
+      }
+
+      if (i + 1 >= N) {
+        buffer.push(input[i]);
+        i += 1;
+        continue;
+      }
+      const doubleChars = input.substring(i, i + 2);
+      if (doubleChars === '//') {
+        break;
+      }
+      if (doubleChars !== '/*') {
+        buffer.push(input[i]);
+        i += 1;
+        continue;
+      }
+
+      this.isCuretInComment = true;
+      i += 2;
+    }
+    if (buffer.length === 0) {
+      callback()
+      return;
+    }
+    const filteredInput = buffer.join('');
+
+
     // 入力値を最後までキープするため、Queryクラスでラップする
-    this.stream.push(Query.create(input, callback));
+    this.stream.push(Query.create(filteredInput, callback));
   }
 
   static create = async (
