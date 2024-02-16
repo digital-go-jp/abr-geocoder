@@ -102,11 +102,11 @@ export const dummyData = [
   }),
 
   GeocodeResult.create({
-    input: '東京都町田市森野2-2-22',
+    input: '東京都町田市森野2-2-22 町田市役所',
     match_level: MatchLevel.RESIDENTIAL_DETAIL,
     lat: 35.548247,
     lon: 139.440264,
-    other: '',
+    other: '町田市役所',
     prefecture: '東京都',
     city: '町田市',
     town: '森野二丁目',

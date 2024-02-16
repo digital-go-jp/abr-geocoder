@@ -150,17 +150,17 @@ describe('NdGeoJsonTransform', () => {
       },
       "properties":{
         "query":{
-          "input":"東京都町田市森野2-2-22"
+          "input":"東京都町田市森野2-2-22 町田市役所"
         },
         "result":{
-          "output": "東京都町田市森野二丁目2-22",
+          "output": "東京都町田市森野二丁目2-22 町田市役所",
           "match_level":MatchLevel.RESIDENTIAL_DETAIL,
           "prefecture":"東京都",
           "city":"町田市",
           "town":"森野二丁目",
           "town_id":"0006002",
           "lg_code":"132098",
-          "other":"",
+          "other":"町田市役所",
           "block":"2",
           "block_id":"002",
           "addr1":"22",

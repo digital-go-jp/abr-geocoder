@@ -123,17 +123,17 @@ describe('JsonTransform', () => {
       },
       {
         "query": {
-          "input": "東京都町田市森野2-2-22"
+          "input": "東京都町田市森野2-2-22 町田市役所"
         },
         "result": {
-          "output": "東京都町田市森野二丁目2-22",
+          "output": "東京都町田市森野二丁目2-22 町田市役所",
           "prefecture": "東京都",
           "match_level": MatchLevel.RESIDENTIAL_DETAIL,
           "city": "町田市",
           "town": "森野二丁目",
           "town_id": "0006002",
           "lg_code": "132098",
-          "other": "",
+          "other": "町田市役所",
           "lat": 35.548247,
           "lon": 139.440264,
           "block": "2",
