@@ -1,0 +1,54 @@
+//
+// サンプルデータ ('#' または // で始まる行はコメント行として処理します)
+//
+
+// デジタル庁
+東京都千代田区紀尾井町1丁目3番地
+東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階
+東京都千代田区紀尾井町1
+
+// 町田市役所 https://www.city.machida.tokyo.jp/shisei/shiyakusyo/mainoffice/index.html
+東京都町田市森野2-2-22
+町田市森野2-2-22
+
+// 府中市役所 https://www.city.fuchu.tokyo.jp/shisetu/chosha/honcho.html
+東京都府中市宮西町二丁目二十四番地
+
+// 三条児童館 
+八戸市尻内町字下根市25-2
+// 八戸市役所
+青森県八戸市内丸一丁目1番1号
+
+// 与那国町役場 https://www.town.yonaguni.okinawa.jp/
+与那国町字与那国129
+八重山郡与那国町字与那国129
+沖縄県八重山郡与那国町字与那国129
+
+// 登米市役所 https://www.city.tome.miyagi.jp/koshitu/shisetsuannai/kankocho/kan_001.html
+宮城県登米市迫町佐沼字中江二丁目6番地1
+登米市迫町佐沼字中江2-6-1
+
+// 地割（＝字）を含む住所
+盛岡市飯岡新田４地割１００１ 河南自治公民館
+
+// 字を含む住所
+福島県いわき市山玉町脇川
+いわき市山玉町脇川2 いわき市役所 水道局 山玉浄水場
+
+// 開発用ダミー
+#京都府京都市中京区衣棚通姉小路下る突抜町１３２番地　デジタルビル ５号
+
+// 八幡市役所 https://www.city.yawata.kyoto.jp/0000000673.html
+八幡市八幡園内75
+八幡市八幡高畑1番地の1
+京都府八幡市八幡三本橋59番地の9
+
+// 山形市役所 https://www.city.yamagata-yamagata.lg.jp/shiseijoho/soshiki/1006955/1008021.html
+山形県山形市旅篭町2丁目3番25号
+山形市旅篭町二丁目3番25号
+
+// 与論町役場 https://www.yoron.jp/
+鹿児島県大島郡与論町茶花1418-1
+
+// 輪島市役所 https://www.city.wajima.ishikawa.jp/top.html
+石川県輪島市二ツ屋町2字29
