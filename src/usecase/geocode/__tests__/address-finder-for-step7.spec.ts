@@ -34,6 +34,9 @@ const testDataSets = {
       '紀尾井町': {
         blockList: require('./dataset/tokyo/chiyoda/kioicho/blockList.json'),
         rsdtList: require('./dataset/tokyo/chiyoda/kioicho/rsdtList.json'),
+      },
+      '九段南': {
+        blockList: require('./dataset/tokyo/chiyoda/kudanminami/1chome/blockList.json'),
       }
     },
     '文京区': {
@@ -46,6 +49,14 @@ const testDataSets = {
         rsdtList: require('./dataset/tokyo/bunkyo/honkomagome/2chome/rsdtList.json'),
       }
     },
+    '港区': {
+      '三田': {
+        blockList: require('./dataset/tokyo/minato/mita/2chome/blockList.json'),
+      },
+      '三田二丁目': {
+        blockList: require('./dataset/tokyo/minato/mita/2chome/blockList.json'),
+      }
+    }
   },
   [PrefectureName.IWATE]: {
     '盛岡市': {
@@ -117,7 +128,10 @@ MockedDB.mockImplementation(() => {
 // TODO: カバレッジ100%になるテストケースを考える
 describe('AddressFinderForStep7', () => {
   const mockedDB = new Database('<no sql file>');
-  const addressFinder = new AddressFinderForStep7(mockedDB);
+  const addressFinder = new AddressFinderForStep7({
+    fuzzy: '?',
+    db: mockedDB,
+  });
   
   describe('find', () => {
     it.concurrent('住居表示の街区までマッチするケース1', async () => {
@@ -127,6 +141,7 @@ describe('AddressFinderForStep7', () => {
         city: '千代田区',
         town: '紀尾井町',
         tempAddress: `1${DASH}3 東京ガーデンテラス紀尾井町 19階、20階`,
+        match_level: MatchLevel.TOWN_LOCAL,
       });
 
       const result = await addressFinder.find(query);
@@ -152,6 +167,7 @@ describe('AddressFinderForStep7', () => {
         city: '千代田区',
         town: '紀尾井町',
         tempAddress: '1',
+        match_level: MatchLevel.TOWN_LOCAL,
       });
 
       const result = await addressFinder.find(query);
@@ -177,6 +193,7 @@ describe('AddressFinderForStep7', () => {
         city: '文京区',
         town: '本駒込',
         tempAddress: `2${DASH}28${DASH}8`,
+        match_level: MatchLevel.TOWN_LOCAL,
       });
 
       const result = await addressFinder.find(query);
@@ -191,6 +208,32 @@ describe('AddressFinderForStep7', () => {
         lat: 35.729262,
         lon: 139.747234,
         tempAddress: `${DASH}8`,
+        match_level: MatchLevel.RESIDENTIAL_BLOCK,
+      }))
+    });
+
+    it.concurrent('住居表示の街区までマッチするケース4', async () => {
+      const inputAddress = `東京都千代田区九段南1丁目2-1`;
+      const query = Query.create(inputAddress).copy({
+        prefecture: PrefectureName.TOKYO,
+        city: '千代田区',
+        town: '九段南',
+        tempAddress: `1丁目2${DASH}1`,
+        match_level: MatchLevel.TOWN_LOCAL,
+      });
+
+      const result = await addressFinder.find(query);
+      expect(result).toEqual(Query.create(inputAddress).copy({
+        prefecture: PrefectureName.TOKYO,
+        city: '千代田区',
+        town: '九段南一丁目',
+        lg_code: '131016',
+        town_id: '0008001',
+        block_id: '002',
+        block: '2',
+        lat: 35.693948,
+        lon: 139.753535,
+        tempAddress: `${DASH}1`,
         match_level: MatchLevel.RESIDENTIAL_BLOCK,
       }))
     });

@@ -31,6 +31,7 @@ import Stream, { PassThrough } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { GeocodingStep5 } from '../step5-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
+import { DASH } from '@settings/constant-values';
 
 jest.mock<AddressFinderForStep3and5>('@usecase/geocode/address-finder-for-step3and5');
 jest.mock('better-sqlite3');
@@ -127,6 +128,14 @@ describe('step5-transform', () => {
         town: '紀尾井町',
         town_id: '0056000',
       }),
+      
+      // 「三田マンション９９９」がそのまま残ることを期待
+      Query.create('東京都港区三田２－２－１８ 三田マンション９９９').copy({
+        prefecture: PrefectureName.TOKYO,
+        city: '港区',
+        town: '三田',
+        tempAddress: `2${DASH}2${DASH}18 三田マンション９９９`,
+      })
     ];
 
     beforeAll(async () => {
@@ -175,7 +184,7 @@ describe('step5-transform', () => {
           lon: 139.73495,
           match_level: 3,
           prefecture: PrefectureName.TOKYO,
-          tempAddress: '1丁目3',
+          tempAddress: '一丁目3',
           town: '紀尾井町',
           town_id: '0056000',
         }),
