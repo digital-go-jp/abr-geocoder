@@ -43,10 +43,12 @@ export class CsvTransform extends Stream.Transform {
       // Because we output string as Buffer.
       readableObjectMode: false,
     });
-    if (this.options.skipHeader) {
-      return;
+    if (!this.options.skipHeader) {
+      const header = this.options.columns
+        .map(column => `"${column.toString()}"`)
+        .join(',');
+      this.rows.push(header);
     }
-    this.rows.push(options.columns.map(column => column.toString()).join(','));
   }
 
   _transform(
@@ -56,61 +58,16 @@ export class CsvTransform extends Stream.Transform {
   ): void {
     const line = this.options.columns
       .map(column => {
-        switch (column) {
-          case GeocodeResultFields.INPUT:
-            return `"${result.input || ''}"`;
+        let value = result[column];
 
-          case GeocodeResultFields.OUTPUT:
-            return `"${result.output || ''}"`;
-
-          case GeocodeResultFields.MATCH_LEVEL:
-            return result.match_level.toString();
-
-          case GeocodeResultFields.LATITUDE:
-            return result.lat?.toString() || '';
-
-          case GeocodeResultFields.LONGITUDE:
-            return result.lon?.toString() || '';
-
-          case GeocodeResultFields.PREFECTURE:
-            return result.prefecture || '';
-
-          case GeocodeResultFields.CITY:
-            return result.city || '';
-
-          case GeocodeResultFields.LG_CODE:
-            return result.lg_code || '';
-
-          case GeocodeResultFields.TOWN:
-            return result.town || '';
-
-          case GeocodeResultFields.TOWN_ID:
-            return result.town_id || '';
-
-          case GeocodeResultFields.OTHER:
-            return `"${result.other || ''}"`;
-
-          case GeocodeResultFields.BLOCK:
-            return result.block || '';
-
-          case GeocodeResultFields.BLOCK_ID:
-            return result.block_id || '';
-
-          case GeocodeResultFields.ADDR1:
-            return result.addr1?.toString() || '';
-
-          case GeocodeResultFields.ADDR1_ID:
-            return result.addr1_id?.toString() || '';
-
-          case GeocodeResultFields.ADDR2:
-            return result.addr2?.toString() || '';
-
-          case GeocodeResultFields.ADDR2_ID:
-            return result.addr2_id?.toString() || '';
-
-          default:
-            throw new Error(`Unimplemented field : ${column}`);
+        if (value === null || value === undefined) {
+          value = '';
+        } else {
+          value = value.toString();
         }
+
+        const escapedValue = `"${value.replace(/"/g, '""')}"`;
+        return escapedValue;
       })
       .join(',');
 

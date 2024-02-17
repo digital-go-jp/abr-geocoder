@@ -43,10 +43,12 @@ export class NormalizeTransform extends Stream.Transform {
       // Because we output string as Buffer.
       readableObjectMode: false,
     });
-    if (this.options.skipHeader) {
-      return;
+    if (!this.options.skipHeader) {
+      const header = this.options.columns
+        .map(column => `"${column.toString()}"`)
+        .join(',');
+      this.rows.push(header);
     }
-    this.rows.push(options.columns.map(column => column.toString()).join(','));
   }
 
   _transform(
@@ -58,13 +60,14 @@ export class NormalizeTransform extends Stream.Transform {
       .map(column => {
         switch (column) {
           case GeocodeResultFields.INPUT:
-            return `"${result.input}"`;
           case GeocodeResultFields.OUTPUT:
-            return `"${result.output || ''}"`;
-          case GeocodeResultFields.MATCH_LEVEL:
-            return result.match_level.toString();
+          case GeocodeResultFields.MATCH_LEVEL: {
+            const value = result[column] ?? '';
+            const escapedValue = `"${value.toString().replace(/"/g, '""')}"`;
+            return escapedValue;
+          }
           default:
-            throw new Error(`Unimplemented field : ${column}`);
+            throw new Error(`Unimplemented field: ${column}`);
         }
       })
       .join(',');
