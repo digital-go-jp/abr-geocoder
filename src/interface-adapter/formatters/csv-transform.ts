@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 import { GeocodeResult, GeocodeResultFields } from '@domain/geocode-result';
+import { RegExpEx } from '@domain/reg-exp-ex';
+import { DOUBLE_QUOTATION } from '@settings/constant-values';
 import { Stream } from 'node:stream';
 import { TransformCallback } from 'stream';
 
@@ -63,11 +65,12 @@ export class CsvTransform extends Stream.Transform {
         if (value === null || value === undefined) {
           value = '';
         } else {
-          value = value.toString();
+          value = value
+            .toString()
+            .replace(RegExpEx.create(DOUBLE_QUOTATION, 'g'), '""');
         }
 
-        const escapedValue = `"${value.replace(/"/g, '""')}"`;
-        return escapedValue;
+        return `"${value}"`;
       })
       .join(',');
 
