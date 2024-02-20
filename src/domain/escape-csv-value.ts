@@ -21,10 +21,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { PassThrough } from 'node:stream';
 
-export class StreamGeocoder extends PassThrough {
-  static readonly create = async () => {
-    return new PassThrough();
-  };
-}
+import { DOUBLE_QUOTATION } from '@settings/constant-values';
+
+export const escapeCsvValue = (value: string): string => {
+  const hasCommma = value.includes(',');
+  const hasDoubleQuote = value.includes(DOUBLE_QUOTATION);
+  const hasLineBreak = value.includes('\n');
+
+  // ダブルクォーテーションが含まれる場合、CSVでは2回連続させる
+  if (hasDoubleQuote) {
+    const buffer: string[] = [];
+    for (const char of value) {
+      if (char === DOUBLE_QUOTATION) {
+        buffer.push(DOUBLE_QUOTATION);
+      }
+      buffer.push(char);
+    }
+    value = buffer.join('');
+  }
+  if (hasCommma || hasDoubleQuote || hasLineBreak) {
+    value = `"${value}"`;
+  }
+  return value;
+};

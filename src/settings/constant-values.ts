@@ -81,3 +81,6 @@ export const BREAK_AT_EOF = '\n';
 
 export const SINGLE_QUOTATION = "'";
 export const DOUBLE_QUOTATION = '"';
+
+// 出力の空文字
+export const BLANK_CHAR = '';

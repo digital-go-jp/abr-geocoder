@@ -21,10 +21,40 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { PassThrough } from 'node:stream';
+import { escapeCsvValue } from '@domain/escape-csv-value';
+import { describe, expect, it } from '@jest/globals';
 
-export class StreamGeocoder extends PassThrough {
-  static readonly create = async () => {
-    return new PassThrough();
-  };
-}
+describe('escapeCsvValue', () => {
+  const queries = [
+    {
+      input: '1-2-3',
+      expected: '1-2-3'
+    },
+    {
+      input: '1,2,3',
+      expected: '"1,2,3"'
+    },
+    {
+      input: '1-"2"-3',
+      expected: '"1-""2""-3"'
+    },
+    {
+      input: "1-Hello\nWorld-3",
+      expected: '"1-Hello\nWorld-3"'
+    },
+    {
+      input: '"ONLY_DOUBLE_QUOTATION"',
+      expected: '"""ONLY_DOUBLE_QUOTATION"""'
+    },
+  ];
+
+  queries.forEach(query => {
+    it.concurrent(`'${query.input}' should be converted to '${query.expected}'`, async () => {
+      expect(
+        escapeCsvValue(query.input),
+      ).toBe(
+        query.expected,
+      );
+    })
+  })
+});

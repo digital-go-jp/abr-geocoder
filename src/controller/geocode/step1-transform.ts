@@ -28,10 +28,8 @@ import {
   ALPHA_NUMERIC_SYMBOLS,
   DASH,
   DASH_SYMBOLS,
-  DOUBLE_QUOTATION,
   J_DASH,
   NUMRIC_AND_KANJI_SYMBOLS,
-  SINGLE_QUOTATION,
   SPACE,
   SPACE_SYMBOLS,
 } from '@settings/constant-values';
@@ -61,26 +59,21 @@ export class GeocodingStep1 extends Transform {
     //
     let tempAddress = query.tempAddress.normalize('NFC');
 
-    tempAddress = tempAddress.replace(
-      RegExpEx.create(`^[${SINGLE_QUOTATION}|${DOUBLE_QUOTATION}]`, 'g'),
-      ''
-    );
-    tempAddress = tempAddress.replace(
-      RegExpEx.create(`[${SINGLE_QUOTATION}|${DOUBLE_QUOTATION}]$`, 'g'),
-      ''
-    );
+    // 半角スペース、全角スペースは、SPACE に置き換える
     tempAddress = tempAddress.replace(
       RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),
       SPACE
     );
+
+    // 全角のアラビア数字は全て半角にする
     tempAddress = tempAddress.replace(
       RegExpEx.create(`([${ALPHA_NUMERIC_SYMBOLS}]+)`, 'g'),
       match => {
-        // 全角のアラビア数字は問答無用で半角にする
         return zen2HankakuNum(match);
       }
     );
 
+    // "(数字・漢数字)-", "-(数字・漢数字)"のハイフンをDASHにする
     tempAddress = tempAddress.replace(
       RegExpEx.create(
         `([${NUMRIC_AND_KANJI_SYMBOLS}][${DASH_SYMBOLS}])|([${DASH_SYMBOLS}])[${NUMRIC_AND_KANJI_SYMBOLS}]`,
@@ -90,26 +83,27 @@ export class GeocodingStep1 extends Transform {
         return match.replace(RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'), DASH);
       }
     );
+
+    // 町丁目名以前のスペースはすべて削除
     tempAddress = tempAddress.replace(
       RegExpEx.create(`(.+)(丁目?|番(町|地|丁)|条|軒|線|(${J_DASH})町|地割)`),
       match => {
-        // 町丁目名以前のスペースはすべて削除
         return match.replace(RegExpEx.create(SPACE, 'g'), '');
       }
     );
 
+    // 区、郡以前のスペースはすべて削除
     tempAddress = tempAddress.replace(
       RegExpEx.create('(.+)((郡.+(町|村))|((市|巿).+(区|區)))'),
       match => {
-        // 区、郡以前のスペースはすべて削除
         return match.replace(RegExpEx.create(SPACE, 'g'), '');
       }
     );
 
+    // 一番はじめに出てくるアラビア数字以前のスペースを削除
     tempAddress = tempAddress.replace(
       RegExpEx.create(`.+?[${NUMRIC_AND_KANJI_SYMBOLS}]${DASH}`),
       match => {
-        // 1番はじめに出てくるアラビア数字以前のスペースを削除
         return match.replace(RegExpEx.create(SPACE, 'g'), '');
       }
     );

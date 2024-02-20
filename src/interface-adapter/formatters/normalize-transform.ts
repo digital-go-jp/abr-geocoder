@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 import { GeocodeResult, GeocodeResultFields } from '@domain/geocode-result';
+import { escapeCsvValue } from '@domain/escape-csv-value';
 import { Stream } from 'node:stream';
 import { TransformCallback } from 'stream';
 
@@ -43,10 +44,12 @@ export class NormalizeTransform extends Stream.Transform {
       // Because we output string as Buffer.
       readableObjectMode: false,
     });
-    if (this.options.skipHeader) {
-      return;
+    if (!this.options.skipHeader) {
+      const header = this.options.columns
+        .map(column => column.toString())
+        .join(',');
+      this.rows.push(header);
     }
-    this.rows.push(options.columns.map(column => column.toString()).join(','));
   }
 
   _transform(
@@ -58,13 +61,14 @@ export class NormalizeTransform extends Stream.Transform {
       .map(column => {
         switch (column) {
           case GeocodeResultFields.INPUT:
-            return `"${result.input}"`;
           case GeocodeResultFields.OUTPUT:
-            return `"${result.output || ''}"`;
+            return escapeCsvValue(result[column]!);
+
           case GeocodeResultFields.MATCH_LEVEL:
-            return result.match_level.toString();
+            return result[column];
+
           default:
-            throw new Error(`Unimplemented field : ${column}`);
+            throw new Error(`Unimplemented field: ${column}`);
         }
       })
       .join(',');
@@ -82,14 +86,14 @@ export class NormalizeTransform extends Stream.Transform {
     callback();
   }
 
-  static DEFAULT_COLUMNS = [
+  static readonly DEFAULT_COLUMNS = [
     // 出力するCSVカラムの順番
     GeocodeResultFields.INPUT,
     GeocodeResultFields.OUTPUT,
     GeocodeResultFields.MATCH_LEVEL,
   ];
 
-  static create = (
+  static readonly create = (
     columns: GeocodeResultFields[] = this.DEFAULT_COLUMNS
   ): NormalizeTransform => {
     return new NormalizeTransform({

@@ -73,7 +73,7 @@ export class DebugBypass extends Stream.Transform {
     callback();
   }
 
-  static create = (): DebugBypass => {
+  static readonly create = (): DebugBypass => {
     return new DebugBypass();
   };
 }
