@@ -77,6 +77,68 @@ describe('GeoJsonTransform', () => {
           },
           "properties": {
             "query": {
+              "input": '東京都千代田区紀尾井町1-3　"19階、20階"'
+            },
+            "result": {
+              "output": '東京都千代田区紀尾井町1-3 "19階、20階"',
+              "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+              "prefecture": "東京都",
+              "city": "千代田区",
+              "town": "紀尾井町",
+              "town_id": "0056000",
+              "lg_code": "131016",
+              "other": ' "19階、20階"',
+              "block": "1",
+              "block_id": "001",
+              "addr1": "3",
+              "addr1_id": "003",
+              "addr2": "",
+              "addr2_id": ""
+            }
+          }
+        },
+        {
+          "type": "Feature",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              139.73495,
+              35.681411
+            ]
+          },
+          "properties": {
+            "query": {
+              "input": '東京都千代田区紀尾井町1-3　19,20階'
+            },
+            "result": {
+              "output": '東京都千代田区紀尾井町1-3 19,20階',
+              "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+              "prefecture": "東京都",
+              "city": "千代田区",
+              "town": "紀尾井町",
+              "town_id": "0056000",
+              "lg_code": "131016",
+              "other": ' 19,20階',
+              "block": "1",
+              "block_id": "001",
+              "addr1": "3",
+              "addr1_id": "003",
+              "addr2": "",
+              "addr2_id": ""
+            }
+          }
+        },
+        {
+          "type": "Feature",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              139.73495,
+              35.681411
+            ]
+          },
+          "properties": {
+            "query": {
               "input": "東京都千代田区紀尾井町1"
             },
             "result": {
@@ -204,7 +266,7 @@ describe('GeoJsonTransform', () => {
       transform,
       writable,
     )
-    
+
     expect(buffer.at(-1)).toEqual(BREAK_AT_EOF);
     buffer.pop();
 

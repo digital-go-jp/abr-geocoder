@@ -22,8 +22,7 @@
  * SOFTWARE.
  */
 import { GeocodeResult, GeocodeResultFields } from '@domain/geocode-result';
-import { RegExpEx } from '@domain/reg-exp-ex';
-import { DOUBLE_QUOTATION } from '@settings/constant-values';
+import { escapeCsvValue } from '@domain/escape-csv-value';
 import { Stream } from 'node:stream';
 import { TransformCallback } from 'stream';
 
@@ -63,13 +62,11 @@ export class NormalizeTransform extends Stream.Transform {
         switch (column) {
           case GeocodeResultFields.INPUT:
           case GeocodeResultFields.OUTPUT:
-          case GeocodeResultFields.MATCH_LEVEL: {
-            const value = (result[column] ?? '')
-              .toString()
-              .replace(RegExpEx.create(DOUBLE_QUOTATION, 'g'), '""');
-            const escapedValue = `"${value.toString().replace(/"/g, '""')}"`;
-            return escapedValue;
-          }
+            return escapeCsvValue(result[column] ?? '');
+
+          case GeocodeResultFields.MATCH_LEVEL:
+            return result[column];
+
           default:
             throw new Error(`Unimplemented field: ${column}`);
         }

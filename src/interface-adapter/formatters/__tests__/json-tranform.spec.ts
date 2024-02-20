@@ -58,6 +58,52 @@ describe('JsonTransform', () => {
       },
       {
         "query": {
+          "input": '東京都千代田区紀尾井町1-3　"19階、20階"'
+        },
+        "result": {
+          "output": '東京都千代田区紀尾井町1-3 "19階、20階"',
+          "prefecture": "東京都",
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+          "city": "千代田区",
+          "town": "紀尾井町",
+          "town_id": "0056000",
+          "lg_code": "131016",
+          "other": ' "19階、20階"',
+          "lat": 35.681411,
+          "lon": 139.73495,
+          "block": "1",
+          "block_id": "001",
+          "addr1": "3",
+          "addr1_id": "003",
+          "addr2": "",
+          "addr2_id": ""
+        }
+      },
+      {
+        "query": {
+          "input": '東京都千代田区紀尾井町1-3　19,20階'
+        },
+        "result": {
+          "output": '東京都千代田区紀尾井町1-3 19,20階',
+          "prefecture": "東京都",
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+          "city": "千代田区",
+          "town": "紀尾井町",
+          "town_id": "0056000",
+          "lg_code": "131016",
+          "other": ' 19,20階',
+          "lat": 35.681411,
+          "lon": 139.73495,
+          "block": "1",
+          "block_id": "001",
+          "addr1": "3",
+          "addr1_id": "003",
+          "addr2": "",
+          "addr2_id": ""
+        }
+      },
+      {
+        "query": {
           "input": "東京都千代田区紀尾井町1"
         },
         "result": {
@@ -161,7 +207,7 @@ describe('JsonTransform', () => {
       transform,
       writable,
     )
-    
+
     expect(buffer.at(-1)).toEqual(BREAK_AT_EOF);
     buffer.pop();
     const result = JSON.parse(buffer.join(''));

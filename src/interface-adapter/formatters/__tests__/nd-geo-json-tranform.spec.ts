@@ -33,16 +33,16 @@ describe('NdGeoJsonTransform', () => {
 
     const expectJson: string[] = [];
     expectJson.push(JSON.stringify({
-      "type":"Feature",
-      "geometry":{
-        "type":"Point",
-        "coordinates":[139.73495,35.681411]
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [139.73495, 35.681411]
       },
-      "properties":{
-        "query":{
-          "input":"東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階"
+      "properties": {
+        "query": {
+          "input": "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階"
         },
-        "result":{
+        "result": {
           "output": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
           "match_level": MatchLevel.RESIDENTIAL_DETAIL,
           "prefecture": "東京都",
@@ -61,24 +61,80 @@ describe('NdGeoJsonTransform', () => {
       }
     }));
     expectJson.push(JSON.stringify({
-      "type":"Feature",
-      "geometry":{
-        "type":"Point",
-        "coordinates":[139.73495,35.681411]
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [139.73495, 35.681411]
       },
-      "properties":{
-        "query":{
-          "input":"東京都千代田区紀尾井町1"
+      "properties": {
+        "query": {
+          "input": '東京都千代田区紀尾井町1-3　"19階、20階"'
         },
-        "result":{
+        "result": {
+          "output": '東京都千代田区紀尾井町1-3 "19階、20階"',
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+          "prefecture": "東京都",
+          "city": "千代田区",
+          "town": "紀尾井町",
+          "town_id": "0056000",
+          "lg_code": "131016",
+          "other": ' "19階、20階"',
+          "block": "1",
+          "block_id": "001",
+          "addr1": "3",
+          "addr1_id": "003",
+          "addr2": "",
+          "addr2_id": ""
+        }
+      }
+    }));
+    expectJson.push(JSON.stringify({
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [139.73495, 35.681411]
+      },
+      "properties": {
+        "query": {
+          "input": '東京都千代田区紀尾井町1-3　19,20階'
+        },
+        "result": {
+          "output": '東京都千代田区紀尾井町1-3 19,20階',
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+          "prefecture": "東京都",
+          "city": "千代田区",
+          "town": "紀尾井町",
+          "town_id": "0056000",
+          "lg_code": "131016",
+          "other": ' 19,20階',
+          "block": "1",
+          "block_id": "001",
+          "addr1": "3",
+          "addr1_id": "003",
+          "addr2": "",
+          "addr2_id": ""
+        }
+      }
+    }));
+    expectJson.push(JSON.stringify({
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [139.73495, 35.681411]
+      },
+      "properties": {
+        "query": {
+          "input": "東京都千代田区紀尾井町1"
+        },
+        "result": {
           "output": "東京都千代田区紀尾井町1",
           "match_level": MatchLevel.RESIDENTIAL_BLOCK,
-          "prefecture":"東京都",
-          "city":"千代田区",
-          "town":"紀尾井町",
-          "town_id":"0056000",
-          "lg_code":"131016",
-          "other":"",
+          "prefecture": "東京都",
+          "city": "千代田区",
+          "town": "紀尾井町",
+          "town_id": "0056000",
+          "lg_code": "131016",
+          "other": "",
           "block": "1",
           "block_id": "001"
         }
@@ -86,87 +142,87 @@ describe('NdGeoJsonTransform', () => {
     }));
 
     expectJson.push(JSON.stringify({
-      "type":"Feature",
-      "geometry":{
-        "type":"Point",
-        "coordinates":[140.339126,38.255437]
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [140.339126, 38.255437]
       },
-      "properties":{
-        "query":{
-          "input":"山形県山形市旅篭町二丁目3番25号"
+      "properties": {
+        "query": {
+          "input": "山形県山形市旅篭町二丁目3番25号"
         },
-        "result":{
+        "result": {
           "output": "山形県山形市旅篭町二丁目3-25",
-          "match_level":MatchLevel.RESIDENTIAL_DETAIL,
-          "prefecture":"山形県",
-          "city":"山形市",
-          "town":"旅篭町二丁目",
-          "town_id":"0247002",
-          "lg_code":"062014",
-          "other":"",
-          "block":"3",
-          "block_id":"003",
-          "addr1":"25",
-          "addr1_id":"025",
-          "addr2":"",
-          "addr2_id":""
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+          "prefecture": "山形県",
+          "city": "山形市",
+          "town": "旅篭町二丁目",
+          "town_id": "0247002",
+          "lg_code": "062014",
+          "other": "",
+          "block": "3",
+          "block_id": "003",
+          "addr1": "25",
+          "addr1_id": "025",
+          "addr2": "",
+          "addr2_id": ""
         }
       }
     }));
 
     expectJson.push(JSON.stringify({
-      "type":"Feature",
-      "geometry":{
-        "type":"Point",
-        "coordinates":[140.339126,38.255437]
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [140.339126, 38.255437]
       },
-      "properties":{
-        "query":{
-          "input":"山形市旅篭町二丁目3番25号"
+      "properties": {
+        "query": {
+          "input": "山形市旅篭町二丁目3番25号"
         },
-        "result":{
-          "output":"山形県山形市旅篭町二丁目3-25",
-          "match_level":MatchLevel.RESIDENTIAL_DETAIL,
-          "prefecture":"山形県",
-          "city":"山形市",
-          "town":"旅篭町二丁目",
-          "town_id":"0247002",
-          "lg_code":"062014",
-          "other":"",
-          "block":"3",
-          "block_id":"003",
-          "addr1":"25",
-          "addr1_id":"025",
-          "addr2":"",
-          "addr2_id":""
+        "result": {
+          "output": "山形県山形市旅篭町二丁目3-25",
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+          "prefecture": "山形県",
+          "city": "山形市",
+          "town": "旅篭町二丁目",
+          "town_id": "0247002",
+          "lg_code": "062014",
+          "other": "",
+          "block": "3",
+          "block_id": "003",
+          "addr1": "25",
+          "addr1_id": "025",
+          "addr2": "",
+          "addr2_id": ""
         }
       }
     }));
     expectJson.push(JSON.stringify({
-      "type":"Feature",
-      "geometry":{
-        "type":"Point",
-        "coordinates":[139.440264,35.548247]
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [139.440264, 35.548247]
       },
-      "properties":{
-        "query":{
-          "input":"東京都町田市森野2-2-22 町田市役所"
+      "properties": {
+        "query": {
+          "input": "東京都町田市森野2-2-22 町田市役所"
         },
-        "result":{
+        "result": {
           "output": "東京都町田市森野二丁目2-22 町田市役所",
-          "match_level":MatchLevel.RESIDENTIAL_DETAIL,
-          "prefecture":"東京都",
-          "city":"町田市",
-          "town":"森野二丁目",
-          "town_id":"0006002",
-          "lg_code":"132098",
-          "other":"町田市役所",
-          "block":"2",
-          "block_id":"002",
-          "addr1":"22",
-          "addr1_id":"022",
-          "addr2":"",
-          "addr2_id":""
+          "match_level": MatchLevel.RESIDENTIAL_DETAIL,
+          "prefecture": "東京都",
+          "city": "町田市",
+          "town": "森野二丁目",
+          "town_id": "0006002",
+          "lg_code": "132098",
+          "other": "町田市役所",
+          "block": "2",
+          "block_id": "002",
+          "addr1": "22",
+          "addr1_id": "022",
+          "addr2": "",
+          "addr2_id": ""
         }
       }
     }));
@@ -186,7 +242,7 @@ describe('NdGeoJsonTransform', () => {
       transform,
       writable,
     )
-    
+
     const result = buffer.join('');
     const expects = expectJson.map(line => JSON.parse(line));
     const results = result.trim().split('\n').map(line => JSON.parse(line));

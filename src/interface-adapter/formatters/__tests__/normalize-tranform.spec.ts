@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { MatchLevel } from '@domain/match-level';
 import { describe, expect, it } from '@jest/globals';
 import csvtojson from 'csvtojson';
 import { Stream } from 'node:stream';
@@ -36,29 +37,41 @@ describe('NormalizeTransform', () => {
     }).fromString([
       NormalizeTransform.DEFAULT_COLUMNS.join(','),
       [
-        '"東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階"',
-        '"東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階"',
-        '8'
+        '東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階',
+        '東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階',
+        MatchLevel.RESIDENTIAL_DETAIL,
+      ],
+      // CSVの中にダブルクォーテーションが含まれる場合、二重にする
+      [
+        '"東京都千代田区紀尾井町1-3　""19階、20階"""',
+        '"東京都千代田区紀尾井町1-3 ""19階、20階"""',
+        MatchLevel.RESIDENTIAL_DETAIL,
+      ],
+      // コンマを含む値の場合、ダブルクォーテーションでラップされる
+      [
+        '"東京都千代田区紀尾井町1-3　19,20階"',
+        '"東京都千代田区紀尾井町1-3 19,20階"',
+        MatchLevel.RESIDENTIAL_DETAIL,
       ],
       [
-        '"東京都千代田区紀尾井町1"',
-        '"東京都千代田区紀尾井町1"',
-        '7',
+        '東京都千代田区紀尾井町1',
+        '東京都千代田区紀尾井町1',
+        MatchLevel.RESIDENTIAL_BLOCK,
       ],
       [
-        '"山形県山形市旅篭町二丁目3番25号"',
-        '"山形県山形市旅篭町二丁目3-25"',
-        '8'
+        '山形県山形市旅篭町二丁目3番25号',
+        '山形県山形市旅篭町二丁目3-25',
+        MatchLevel.RESIDENTIAL_DETAIL,
       ],
       [
-        '"山形市旅篭町二丁目3番25号"',
-        '"山形県山形市旅篭町二丁目3-25"',
-        '8',
+        '山形市旅篭町二丁目3番25号',
+        '山形県山形市旅篭町二丁目3-25',
+        MatchLevel.RESIDENTIAL_DETAIL,
       ],
       [
-        '"東京都町田市森野2-2-22 町田市役所"',
-        '"東京都町田市森野二丁目2-22 町田市役所"',
-        '8'
+        '東京都町田市森野2-2-22 町田市役所',
+        '東京都町田市森野二丁目2-22 町田市役所',
+        MatchLevel.RESIDENTIAL_DETAIL,
       ]
     ].join("\n").trim());
 
@@ -82,6 +95,6 @@ describe('NormalizeTransform', () => {
       output: 'csv',
     }).fromString(buffer.join('').trim());
 
-    expect(resultCSV).toEqual(expectCsv);
+    expect(resultCSV.toString()).toBe(expectCsv.toString());
   });
 });
