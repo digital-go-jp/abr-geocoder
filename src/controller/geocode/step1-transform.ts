@@ -31,7 +31,7 @@ import {
   J_DASH,
   NUMRIC_AND_KANJI_SYMBOLS,
   SPACE,
-  SPACE_SYMBOLS
+  SPACE_SYMBOLS,
 } from '@settings/constant-values';
 import { Transform, TransformCallback } from 'node:stream';
 
