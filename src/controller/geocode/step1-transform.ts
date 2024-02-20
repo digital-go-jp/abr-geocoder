@@ -61,16 +61,6 @@ export class GeocodingStep1 extends Transform {
     //
     let tempAddress = query.tempAddress.normalize('NFC');
 
-    // 先頭1文字と末尾1文字が同じクォーテーションマークなら、取り除く
-    const firstChar = tempAddress[0];
-    const lastChar = tempAddress[tempAddress.length - 1];
-    if (
-      firstChar === lastChar &&
-      (firstChar === SINGLE_QUOTATION || firstChar === DOUBLE_QUOTATION)
-    ) {
-      tempAddress = tempAddress.substring(1, tempAddress.length - 1);
-    }
-
     // 半角スペース、全角スペースは、SPACE に置き換える
     tempAddress = tempAddress.replace(
       RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),

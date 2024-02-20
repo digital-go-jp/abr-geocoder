@@ -22,76 +22,73 @@
  * SOFTWARE.
  */
 import { describe, expect, it } from '@jest/globals';
-import csvtojson from 'csvtojson';
+import byline from 'byline';
+import { stringify } from 'csv-stringify/sync';
 import { Stream } from 'node:stream';
 import { CsvTransform } from '../csv-transform';
-import { dummyData } from './dummy-data';
+import { expectResults } from './data/expect-results';
+import { testValues } from './data/test-values';
+import { BREAK_AT_EOF } from '@settings/constant-values';
 
 describe('CsvTransform', () => {
   it('should output rows with expected CSV format()', async () => {
     const transform = CsvTransform.create(CsvTransform.DEFAULT_COLUMNS);
 
-    const expectCsv = await csvtojson({
-      output: 'csv',
-    }).fromString([
-      CsvTransform.DEFAULT_COLUMNS.join(','),
-      [
-        '東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階',
-        '東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階',
-        '8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,," 東京ガーデンテラス紀尾井町 19階、20階",35.681411,139.73495'
-      ],
-      [
-        '東京都千代田区紀尾井町1-3　"19階、20階"',
-        '東京都千代田区紀尾井町1-3 "19階、20階"',
-        '8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,," ""19階、20階""",35.681411,139.73495'
-      ],
-      [
-        '"東京都千代田区紀尾井町1-3　19,20階"',
-        '"東京都千代田区紀尾井町1-3 19,20階"',
-        '8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,," 19,20階",35.681411,139.73495'
-      ],
-      [
-        '"東京都千代田区紀尾井町1"',
-        '"東京都千代田区紀尾井町1"',
-        '7,131016,東京都,千代田区,紀尾井町,0056000,1,001,,,,,,35.681411,139.73495',
-      ],
-      [
-        '"山形県山形市旅篭町二丁目3番25号"',
-        '"山形県山形市旅篭町二丁目3-25"',
-        '8,062014,山形県,山形市,旅篭町二丁目,0247002,3,003,25,025,,,,38.255437,140.339126'
-      ],
-      [
-        '"山形市旅篭町二丁目3番25号"',
-        '"山形県山形市旅篭町二丁目3-25"',
-        '8,062014,山形県,山形市,旅篭町二丁目,0247002,3,003,25,025,,,,38.255437,140.339126',
-      ],
-      [
-        '"東京都町田市森野2-2-22 町田市役所"',
-        '"東京都町田市森野二丁目2-22 町田市役所"',
-        '8,132098,東京都,町田市,森野二丁目,0006002,2,002,22,022,,,"町田市役所",35.548247,139.440264'
-      ]
-    ].join("\n").trim());
 
-    const buffer: string[] = [];
+    // 共通する期待値データ（expectResults）から必要なフィールドだけを拾って、
+    // stringifyでCSVに変換。1行毎に区切る。
+    const expectCsvLines = stringify([
+      CsvTransform.DEFAULT_COLUMNS,
+      ...expectResults.map(expVal => {
+        return [
+          expVal.query.input,
+          expVal.result.output,
+          expVal.result.match_level,
+          expVal.result.lg_code,
+          expVal.result.prefecture,
+          expVal.result.city,
+          expVal.result.town,
+          expVal.result.town_id,
+          expVal.result.block,
+          expVal.result.block_id,
+          expVal.result.addr1,
+          expVal.result.addr1_id,
+          expVal.result.addr2,
+          expVal.result.addr2_id,
+          expVal.result.other,
+          expVal.result.lat,
+          expVal.result.lon,
+        ]
+      })
+    ]).split("\n");
+
+    // stringifyが最後に空行を追加するので、排除する
+    expect(expectCsvLines.at(-1)).toEqual('');
+    expectCsvLines.pop();
+
+    // 1行単位で results に溜めていく
+    const results: string[] = [];
     const writable = new Stream.Writable({
       objectMode: true,
       write(chunk, encoding, callback) {
-        buffer.push(chunk.toString());
+        results.push(chunk.toString());
         callback();
       },
     })
-    const readStream = Stream.Readable.from(dummyData);
+    const readStream = Stream.Readable.from(testValues);
 
     await Stream.promises.pipeline(
       readStream,
       transform,
+      byline,
       writable,
     )
 
-    const resultCSV = await csvtojson({
-      output: 'csv',
-    }).fromString(buffer.join('').trim());
+    expect(results.length).toBe(expectCsvLines.length);
 
-    expect(resultCSV).toEqual(expectCsv);
+    // 全体を比較すると検証しにくいので、１行単位で比較していく
+    for (let i = 0; i < expectCsvLines.length; i++) {
+      expect(results[i]).toBe(expectCsvLines[i]);
+    }
   });
 });

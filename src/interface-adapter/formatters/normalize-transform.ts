@@ -46,7 +46,7 @@ export class NormalizeTransform extends Stream.Transform {
     });
     if (!this.options.skipHeader) {
       const header = this.options.columns
-        .map(column => `"${column.toString()}"`)
+        .map(column => column.toString())
         .join(',');
       this.rows.push(header);
     }
@@ -62,7 +62,7 @@ export class NormalizeTransform extends Stream.Transform {
         switch (column) {
           case GeocodeResultFields.INPUT:
           case GeocodeResultFields.OUTPUT:
-            return escapeCsvValue(result[column] ?? '');
+            return escapeCsvValue(result[column]!);
 
           case GeocodeResultFields.MATCH_LEVEL:
             return result[column];
@@ -86,14 +86,14 @@ export class NormalizeTransform extends Stream.Transform {
     callback();
   }
 
-  static DEFAULT_COLUMNS = [
+  static readonly DEFAULT_COLUMNS = [
     // 出力するCSVカラムの順番
     GeocodeResultFields.INPUT,
     GeocodeResultFields.OUTPUT,
     GeocodeResultFields.MATCH_LEVEL,
   ];
 
-  static create = (
+  static readonly create = (
     columns: GeocodeResultFields[] = this.DEFAULT_COLUMNS
   ): NormalizeTransform => {
     return new NormalizeTransform({

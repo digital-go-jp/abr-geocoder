@@ -74,7 +74,7 @@ export class StreamGeocoder extends Transform {
     this.stream.push(Query.create(input, callback));
   }
 
-  static create = async (
+  static readonly create = async (
     database: Database,
     fuzzy?: string
   ): Promise<StreamGeocoder> => {

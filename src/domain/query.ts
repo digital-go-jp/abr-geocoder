@@ -24,6 +24,7 @@
 import { TransformCallback } from 'node:stream';
 import { MatchLevel } from './match-level';
 import { PrefectureName } from './prefecture-name';
+import { SINGLE_QUOTATION, DOUBLE_QUOTATION } from '@settings/constant-values';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）
@@ -171,8 +172,20 @@ export class Query implements IQuery {
     );
   }
 
-  static create = (address: string, next?: TransformCallback): Query => {
+  static readonly create = (address: string, next?: TransformCallback): Query => {
+
     address = address.trim();
+
+    // 先頭1文字と末尾1文字が同じクォーテーションマークなら、取り除く
+    const firstChar = address[0];
+    const lastChar = address[address.length - 1];
+    if (
+      firstChar === lastChar &&
+      (firstChar === SINGLE_QUOTATION || firstChar === DOUBLE_QUOTATION)
+    ) {
+      address = address.substring(1, address.length - 1);
+    }
+    
     return new Query({
       input: address,
       tempAddress: address,

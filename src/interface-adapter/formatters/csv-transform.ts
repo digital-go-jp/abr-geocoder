@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { escapeCsvValue } from '@domain/escape-csv-value';
 import { GeocodeResult, GeocodeResultFields } from '@domain/geocode-result';
-import { RegExpEx } from '@domain/reg-exp-ex';
-import { DOUBLE_QUOTATION } from '@settings/constant-values';
+import { BLANK_CHAR } from '@settings/constant-values';
 import { Stream } from 'node:stream';
 import { TransformCallback } from 'stream';
 
@@ -47,7 +47,7 @@ export class CsvTransform extends Stream.Transform {
     });
     if (!this.options.skipHeader) {
       const header = this.options.columns
-        .map(column => `"${column.toString()}"`)
+        .map(column => column.toString())
         .join(',');
       this.rows.push(header);
     }
@@ -60,17 +60,38 @@ export class CsvTransform extends Stream.Transform {
   ): void {
     const line = this.options.columns
       .map(column => {
-        let value = result[column];
+        switch (column) {
+          case GeocodeResultFields.INPUT:
+          case GeocodeResultFields.OUTPUT:
+          case GeocodeResultFields.LG_CODE:
+          case GeocodeResultFields.PREFECTURE:
+          case GeocodeResultFields.CITY:
+          case GeocodeResultFields.TOWN:
+          case GeocodeResultFields.TOWN_ID:
+          case GeocodeResultFields.BLOCK:
+          case GeocodeResultFields.BLOCK_ID:
+          case GeocodeResultFields.ADDR1:
+          case GeocodeResultFields.ADDR1_ID:
+          case GeocodeResultFields.ADDR2:
+          case GeocodeResultFields.ADDR2_ID:
+          case GeocodeResultFields.OTHER: {
+            const value = result[column];
+            if (value === undefined || value === null) {
+              return BLANK_CHAR;
+            }
+            return escapeCsvValue(value);
+          }
 
-        if (value === null || value === undefined) {
-          value = '';
-        } else {
-          value = value
-            .toString()
-            .replace(RegExpEx.create(DOUBLE_QUOTATION, 'g'), '""');
+          case GeocodeResultFields.MATCH_LEVEL:
+          case GeocodeResultFields.LATITUDE:
+          case GeocodeResultFields.LONGITUDE: {
+            const value = result[column];
+            if (value === undefined || value === null) {
+              return BLANK_CHAR;
+            }
+            return value;
+          }
         }
-
-        return `"${value}"`;
       })
       .join(',');
 
@@ -108,7 +129,7 @@ export class CsvTransform extends Stream.Transform {
     GeocodeResultFields.LONGITUDE,
   ];
 
-  static create = (
+  static readonly create = (
     columns: GeocodeResultFields[] = this.DEFAULT_COLUMNS
   ): CsvTransform => {
     return new CsvTransform({

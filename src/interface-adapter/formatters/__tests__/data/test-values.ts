@@ -23,8 +23,9 @@
  */
 import { GeocodeResult } from '@domain/geocode-result';
 import { MatchLevel } from '@domain/match-level';
+import { BLANK_CHAR } from '@settings/constant-values';
 
-export const dummyData = [
+export const testValues = [
   GeocodeResult.create({
     input: '東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階',
     match_level: MatchLevel.RESIDENTIAL_DETAIL,
@@ -40,8 +41,8 @@ export const dummyData = [
     block_id: '001',
     addr1: '3',
     addr1_id: '003',
-    addr2: '',
-    addr2_id: '',
+    addr2: BLANK_CHAR,
+    addr2_id: BLANK_CHAR,
   }),
 
   GeocodeResult.create({
@@ -59,8 +60,8 @@ export const dummyData = [
     block_id: '001',
     addr1: '3',
     addr1_id: '003',
-    addr2: '',
-    addr2_id: '',
+    addr2: BLANK_CHAR,
+    addr2_id: BLANK_CHAR,
   }),
 
   GeocodeResult.create({
@@ -78,8 +79,8 @@ export const dummyData = [
     block_id: '001',
     addr1: '3',
     addr1_id: '003',
-    addr2: '',
-    addr2_id: '',
+    addr2: BLANK_CHAR,
+    addr2_id: BLANK_CHAR,
   }),
 
   GeocodeResult.create({
@@ -87,7 +88,7 @@ export const dummyData = [
     match_level: MatchLevel.RESIDENTIAL_BLOCK,
     lat: 35.681411,
     lon: 139.73495,
-    other: '',
+    other: BLANK_CHAR,
     prefecture: '東京都',
     city: '千代田区',
     town: '紀尾井町',
@@ -106,7 +107,7 @@ export const dummyData = [
     match_level: MatchLevel.RESIDENTIAL_DETAIL,
     lat: 38.255437,
     lon: 140.339126,
-    other: '',
+    other: BLANK_CHAR,
     prefecture: '山形県',
     city: '山形市',
     town: '旅篭町二丁目',
@@ -116,8 +117,8 @@ export const dummyData = [
     block_id: '003',
     addr1: '25',
     addr1_id: '025',
-    addr2: '',
-    addr2_id: '',
+    addr2: BLANK_CHAR,
+    addr2_id: BLANK_CHAR,
   }),
 
   GeocodeResult.create({
@@ -125,7 +126,7 @@ export const dummyData = [
     match_level: MatchLevel.RESIDENTIAL_DETAIL,
     lat: 38.255437,
     lon: 140.339126,
-    other: '',
+    other: BLANK_CHAR,
     prefecture: '山形県',
     city: '山形市',
     town: '旅篭町二丁目',
@@ -135,8 +136,8 @@ export const dummyData = [
     block_id: '003',
     addr1: '25',
     addr1_id: '025',
-    addr2: '',
-    addr2_id: '',
+    addr2: BLANK_CHAR,
+    addr2_id: BLANK_CHAR,
   }),
 
   GeocodeResult.create({
@@ -154,7 +155,7 @@ export const dummyData = [
     block_id: '002',
     addr1: '22',
     addr1_id: '022',
-    addr2: '',
-    addr2_id: '',
+    addr2: BLANK_CHAR,
+    addr2_id: BLANK_CHAR,
   }),
 ];

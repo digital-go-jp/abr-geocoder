@@ -24,7 +24,7 @@
 import { PassThrough } from 'node:stream';
 
 export class StreamGeocoder extends PassThrough {
-  static create = async () => {
+  static readonly create = async () => {
     return new PassThrough();
   };
 }
