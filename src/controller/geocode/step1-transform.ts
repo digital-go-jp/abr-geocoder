@@ -28,12 +28,10 @@ import {
   ALPHA_NUMERIC_SYMBOLS,
   DASH,
   DASH_SYMBOLS,
-  DOUBLE_QUOTATION,
   J_DASH,
   NUMRIC_AND_KANJI_SYMBOLS,
-  SINGLE_QUOTATION,
   SPACE,
-  SPACE_SYMBOLS,
+  SPACE_SYMBOLS
 } from '@settings/constant-values';
 import { Transform, TransformCallback } from 'node:stream';
 

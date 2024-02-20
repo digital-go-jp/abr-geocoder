@@ -172,8 +172,10 @@ export class Query implements IQuery {
     );
   }
 
-  static readonly create = (address: string, next?: TransformCallback): Query => {
-
+  static readonly create = (
+    address: string,
+    next?: TransformCallback
+  ): Query => {
     address = address.trim();
 
     // 先頭1文字と末尾1文字が同じクォーテーションマークなら、取り除く
@@ -185,7 +187,7 @@ export class Query implements IQuery {
     ) {
       address = address.substring(1, address.length - 1);
     }
-    
+
     return new Query({
       input: address,
       tempAddress: address,
