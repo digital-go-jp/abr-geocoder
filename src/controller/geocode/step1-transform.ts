@@ -61,14 +61,13 @@ export class GeocodingStep1 extends Transform {
     //
     let tempAddress = query.tempAddress.normalize('NFC');
 
-    tempAddress = tempAddress.replace(
-      RegExpEx.create(`^[${SINGLE_QUOTATION}|${DOUBLE_QUOTATION}]`, 'g'),
-      ''
-    );
-    tempAddress = tempAddress.replace(
-      RegExpEx.create(`[${SINGLE_QUOTATION}|${DOUBLE_QUOTATION}]$`, 'g'),
-      ''
-    );
+    const firstChar = tempAddress[0];
+    const lastChar = tempAddress[tempAddress.length - 1];
+
+    if (firstChar === lastChar &&
+      (firstChar === SINGLE_QUOTATION || firstChar === DOUBLE_QUOTATION)) {
+      tempAddress = tempAddress.substring(1, tempAddress.length)
+    }
     tempAddress = tempAddress.replace(
       RegExpEx.create(`[${SPACE_SYMBOLS}]+`, 'g'),
       SPACE
