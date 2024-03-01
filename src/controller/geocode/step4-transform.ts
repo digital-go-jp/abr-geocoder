@@ -53,6 +53,7 @@ export class GeocodingStep4 extends Transform {
     encoding: BufferEncoding,
     callback: TransformCallback
   ): void {
+    // 市区町村名の判別を行う
     //
     // オリジナルコード
     // https://github.com/digital-go-jp/abr-geocoder/blob/a42a079c2e2b9535e5cdd30d009454cddbbca90c/src/engine/normalize.ts#L380-L397

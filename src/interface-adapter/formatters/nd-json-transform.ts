@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 import { GeocodeResult } from '@domain/geocode-result';
+import { BLANK_CHAR } from '@settings/constant-values';
 import { Stream } from 'node:stream';
 import { TransformCallback } from 'stream';
 
@@ -49,21 +50,21 @@ export class NdJsonTransform extends Stream.Transform {
       },
       result: {
         output: result.output,
-        prefecture: result.prefecture?.toString(),
+        prefecture: result.prefecture ?? BLANK_CHAR,
         match_level: result.match_level,
-        city: result.city,
-        town: result.town,
-        town_id: result.town_id,
-        lg_code: result.lg_code,
-        other: result.other,
+        city: result.city ?? BLANK_CHAR,
+        town: result.town ?? BLANK_CHAR,
+        town_id: result.town_id ?? BLANK_CHAR,
+        lg_code: result.lg_code ?? BLANK_CHAR,
+        other: result.other ?? BLANK_CHAR,
         lat: result.lat,
         lon: result.lon,
-        block: result.block,
-        block_id: result.block_id,
-        addr1: result.addr1,
-        addr1_id: result.addr1_id,
-        addr2: result.addr2,
-        addr2_id: result.addr2_id,
+        block: result.block ?? BLANK_CHAR,
+        block_id: result.block_id ?? BLANK_CHAR,
+        addr1: result.addr1 ?? BLANK_CHAR,
+        addr1_id: result.addr1_id ?? BLANK_CHAR,
+        addr2: result.addr2 ?? BLANK_CHAR,
+        addr2_id: result.addr2_id ?? BLANK_CHAR,
       },
     });
     callback(null, `${jsonStr}\n`);
@@ -74,7 +75,7 @@ export class NdJsonTransform extends Stream.Transform {
     callback();
   }
 
-  static create = (): NdJsonTransform => {
+  static readonly create = (): NdJsonTransform => {
     return new NdJsonTransform();
   };
 }

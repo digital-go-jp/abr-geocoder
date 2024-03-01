@@ -31,6 +31,7 @@ import { AbrgMessage } from '@abrg-message/abrg-message';
 import { downloadDataset } from '@controller/download/download-dataset';
 import { geocode } from '@controller/geocode/geocode';
 import { updateCheck } from '@controller/update-check/update-check';
+import { UPDATE_CHECK_RESULT } from '@controller/update-check/update-check-result';
 import { OutputFormat } from '@domain/output-format';
 import { packageJsonMeta } from '@domain/package-json-meta';
 import { parsePackageJson } from '@domain/parse-package-json';
@@ -89,7 +90,7 @@ export const parseHelper = (processArgv: string[]): string[] => {
         break;
 
       case '--fuzzy':
-        if (result.length === 0 || result[0].length !== 1) {
+        if (result.length === 0) {
           result.unshift(DEFAULT_FUZZY_CHAR);
         }
         break;
@@ -160,10 +161,13 @@ export const main = async (
           });
       },
       async argv => {
-        await updateCheck({
+        const result = await updateCheck({
           ckanId: argv.resource,
           dataDir: argv.dataDir,
         });
+        if (result === UPDATE_CHECK_RESULT.NO_UPDATE_IS_AVAILABLE) {
+          exit(1);
+        }
       }
     )
 
@@ -215,6 +219,15 @@ export const main = async (
             describe: AbrgMessage.toString(
               AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
             ),
+            coerce: fuzzy => {
+              if (fuzzy.length !== 1) {
+                console.error(
+                  AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR)
+                );
+                exit(1);
+              }
+              return fuzzy;
+            },
           })
           .option('dataDir', {
             alias: 'd',
@@ -245,6 +258,7 @@ export const main = async (
               OutputFormat.NDJSON,
               OutputFormat.GEOJSON,
               OutputFormat.NDGEOJSON,
+              OutputFormat.NORMALIZE,
             ],
           })
           .positional('inputFile', {

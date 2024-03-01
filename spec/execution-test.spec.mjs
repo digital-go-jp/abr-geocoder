@@ -3,7 +3,6 @@ const trimLines = (target) => {
 };
 
 const { $ } = await import('zx');
-const csvtojson = (await import('csvtojson')).default;
 const path = await import('path');
 const { fileURLToPath } = await import('url');
 const __filename = fileURLToPath(import.meta.url);
@@ -34,14 +33,19 @@ class JsonTest extends Test {
       throw err;
     })
 
-    if (result) {
-      assert.equal(result.exitCode, expectCode, `The exit code should be ${expectCode}`);
-      const diffResult = jsonDiff.diffString(
-        JSON.parse(trimLines(result.stdout)),
-        expectOutput,
-      )
-      assert.equal(diffResult, '')
+    if (expectCode !== 0) {
+      return;
     }
+
+    if (!result) {
+      throw 'output is empty';
+    }
+    assert.equal(result.exitCode, expectCode, `The exit code should be ${expectCode}`);
+    const diffResult = jsonDiff.diffString(
+      JSON.parse(trimLines(result.stdout)),
+      expectOutput,
+    )
+    assert.equal(diffResult, '')
   }
 }
 class CsvTest extends Test {
@@ -54,19 +58,24 @@ class CsvTest extends Test {
       throw err;
     })
 
-    if (result) {
-      assert.equal(result.exitCode, expectCode, `The exit code should be ${expectCode}`);
+    if (expectCode !== 0) {
+      return;
+    }
 
-      const results = await csvtojson({
-        output: 'csv',
-      }).fromString(trimLines(result.stdout));
-      const expectCsv = await csvtojson({
-        output: 'csv',
-      }).fromString(trimLines(expectOutput));
+    if (!result) {
+      throw 'output is empty';
+    }
+    assert.equal(result.exitCode, expectCode, `The exit code should be ${expectCode}`);
 
+    const results = trimLines(result.stdout).split('\n');
+    const expectCsv = trimLines(expectOutput).split('\n');
+
+    assert.equal(results.length, expectCsv.length);
+
+    for (let i = 0; i < results.length; i++) {
       const diffResult = jsonDiff.diffString(
-        results,
-        expectCsv,
+        results[i],
+        expectCsv[i],
       )
       assert.equal(diffResult, '')
     }
@@ -92,14 +101,18 @@ test(`'echo "<input data>" | abrg - -f csv' should return the expected results a
   // サンプルデータ ('#' または // で始まる行はコメント行として処理します)
   //
   東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階
+  東京都千代田区紀尾井町1-3　"21階、22階"
+  東京都千代田区紀尾井町1-3　23,24階
   東京都千代田区九段南1丁目2-1
   `;
 
   const expectResult = `
-    input,match_level,lg_code,prefecture,city,town,town_id,block,block_id,addr1,addr1_id,addr2,addr2_id,other,lat,lon
-    "東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階","東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,,東京ガーデンテラス紀尾井町 19階、20階,35.679107172,139.736394597
-    "東京都千代田区九段南1丁目2-1","東京都千代田区九段南一丁目",3,131016,東京都,千代田区,九段南一丁目,0008001,,,,,,,,35.693972,139.753265
-  `;
+    input,output,match_level,lg_code,prefecture,city,town,town_id,block,block_id,addr1,addr1_id,addr2,addr2_id,other,lat,lon
+    東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階,東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階,8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,,東京ガーデンテラス紀尾井町 19階、20階,35.679107172,139.736394597
+    "東京都千代田区紀尾井町1-3　""21階、22階""","東京都千代田区紀尾井町1-3 ""21階、22階""",8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,,"""21階、22階""",35.679107172,139.736394597
+    "東京都千代田区紀尾井町1-3　23,24階","東京都千代田区紀尾井町1-3 23,24階",8,131016,東京都,千代田区,紀尾井町,0056000,1,001,3,003,,,"23,24階",35.679107172,139.736394597
+    東京都千代田区九段南1丁目2-1,東京都千代田区九段南一丁目2-1,7,131016,東京都,千代田区,九段南一丁目,0008001,2,002,,,,,-1,35.693948,139.753535
+    `;
 
   const expectExitCode = 0;
   const tester = new CsvTest();
@@ -107,8 +120,32 @@ test(`'echo "<input data>" | abrg - -f csv' should return the expected results a
 })
 
 
+test(`'echo "<input data>" | abrg - -f normalize' should return the expected results as CSV format`, async () => {
 
-test(`'echo "<input data>" | abrg - -f csv' should be error because "brabrabra" is unknown file.` , async () => {
+  const input = `
+  //
+  // サンプルデータ ('#' または // で始まる行はコメント行として処理します)
+  //
+  東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階
+  東京都千代田区紀尾井町1-3　"19階、20階"
+  東京都千代田区紀尾井町1-3　19,20階
+  東京都千代田区九段南1丁目2-1
+  `;
+
+  const expectResult = `
+  input,output,match_level
+  東京都千代田区紀尾井町1-3　東京ガーデンテラス紀尾井町 19階、20階,東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階,8
+  "東京都千代田区紀尾井町1-3　""19階、20階""","東京都千代田区紀尾井町1-3 ""19階、20階""",8
+  "東京都千代田区紀尾井町1-3　19,20階","東京都千代田区紀尾井町1-3 19,20階",8
+  東京都千代田区九段南1丁目2-1,東京都千代田区九段南一丁目2-1,7
+  `;
+
+  const expectExitCode = 0;
+  const tester = new CsvTest();
+  await tester.validate('- -f normalize', input, expectExitCode, expectResult)
+})
+
+test(`'echo "<input data>" | abrg - -f csv' should be error because "brabrabra" is unknown file.`, async () => {
 
   const input = `東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階`;
 
@@ -116,7 +153,7 @@ test(`'echo "<input data>" | abrg - -f csv' should be error because "brabrabra" 
 
   const expectExitCode = 1;
   const tester = new CsvTest();
-  await tester.validate('brabrabra -f csv', input, expectExitCode, expectResult);
+  await tester.validate('not_file_path -f csv', input, expectExitCode, expectResult);
 })
 
 test(`'echo "<input data>" | abrg - -f json' should return the expected results as JSON format`, async () => {

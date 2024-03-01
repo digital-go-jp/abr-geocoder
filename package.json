@@ -1,6 +1,6 @@
 {
   "name": "@digital-go-jp/abr-geocoder",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
   "author": "Japan Digital Agency (デジタル庁)",
   "repository": {
@@ -23,7 +23,7 @@
     "build": "tspc -p tsconfig.build.json",
     "test": "jest --maxWorker=25%",
     "test:ci": "jest --runInBand",
-    "test:system": "node spec/execution-test.spec.mjs",
+    "test:system": "npm run build && node spec/execution-test.spec.mjs",
     "lint": "eslint . --ext .ts",
     "lint-and-fix": "eslint . --ext .ts --fix"
   },
@@ -42,7 +42,7 @@
     "@types/yargs": "^17.0.28",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
-    "csvtojson": "^2.0.10",
+    "csv-stringify": "^6.4.5",
     "eslint": "^8.51.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-node": "^11.1.0",

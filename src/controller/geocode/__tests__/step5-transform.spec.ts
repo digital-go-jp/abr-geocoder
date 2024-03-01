@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AddressFinderForStep3and5 } from '@domain/geocode/address-finder-for-step3and5';
+import { AddressFinderForStep3and5 } from '@usecase/geocode/address-finder-for-step3and5';
 import { MatchLevel } from '@domain/match-level';
 import { PrefectureName } from '@domain/prefecture-name';
 import { Query } from '@domain/query';
@@ -31,8 +31,9 @@ import Stream, { PassThrough } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { GeocodingStep5 } from '../step5-transform';
 import { WritableStreamToArray } from './stream-to-array.skip';
+import { DASH } from '@settings/constant-values';
 
-jest.mock<AddressFinderForStep3and5>('@domain/geocode/address-finder-for-step3and5');
+jest.mock<AddressFinderForStep3and5>('@usecase/geocode/address-finder-for-step3and5');
 jest.mock('better-sqlite3');
 
 const createWriteStream = () => {
@@ -101,6 +102,7 @@ describe('step5-transform', () => {
         town_id: '0302000',
       }),
 
+      // 「二十二番地」の部分が、「22」になることを期待
       Query.create('東京都府中市宮西町二丁目二十二番地').copy({
         city: '府中市',
         lat: 35.669764,
@@ -112,6 +114,28 @@ describe('step5-transform', () => {
         town: '宮西町二丁目',
         town_id: '0015002',
       }),
+
+      // 「1丁目3番地」の部分が、「一丁目3」になることを期待
+      // https://github.com/digital-go-jp/abr-geocoder/issues/86
+      Query.create('東京都千代田区紀尾井町1丁目3番地').copy({
+        city: '千代田区',
+        lat: 35.681411,
+        lg_code: '131016',
+        lon: 139.73495,
+        match_level: 3,
+        prefecture: PrefectureName.TOKYO,
+        tempAddress: '1丁目3番地',
+        town: '紀尾井町',
+        town_id: '0056000',
+      }),
+      
+      // 「三田マンション９９９」がそのまま残ることを期待
+      Query.create('東京都港区三田２－２－１８ 三田マンション９９９').copy({
+        prefecture: PrefectureName.TOKYO,
+        city: '港区',
+        town: '三田',
+        tempAddress: `2${DASH}2${DASH}18 三田マンション９９９`,
+      })
     ];
 
     beforeAll(async () => {
@@ -150,6 +174,19 @@ describe('step5-transform', () => {
           tempAddress: '22',
           town: '宮西町二丁目',
           town_id: '0015002',
+        }),
+      )
+      expect(results[3]).toEqual(
+        Query.create('東京都千代田区紀尾井町1丁目3番地').copy({
+          city: '千代田区',
+          lat: 35.681411,
+          lg_code: '131016',
+          lon: 139.73495,
+          match_level: 3,
+          prefecture: PrefectureName.TOKYO,
+          tempAddress: '一丁目3',
+          town: '紀尾井町',
+          town_id: '0056000',
         }),
       )
     });
