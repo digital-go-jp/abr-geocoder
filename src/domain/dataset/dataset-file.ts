@@ -84,7 +84,7 @@ export abstract class DataForPosFile
     // 座標系の変換
     const lat = parseFloat(parsedRow[DataField.REP_PNT_LAT.dbColumn] as string);
     const lon = parseFloat(parsedRow[DataField.REP_PNT_LON.dbColumn] as string);
-    const extra = row['代表点_座標参照系'];
+    const extra = row[DataField.REP_PNT_SRID.csv];
     const [longitude, latitude] = proj4(
       extra, // from
       'WGS84' // to
