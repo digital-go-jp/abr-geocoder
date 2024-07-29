@@ -38,7 +38,6 @@ import { DebugLogger } from '@domain/services/logger/debug-logger';
 export class KoazaTransform extends Transform {
 
   constructor(private params: Required<{
-    fuzzy: string | undefined;
     db: ICommonDbGeocode;
     logger: DebugLogger | undefined;
   }>) {
@@ -111,9 +110,7 @@ export class KoazaTransform extends Transform {
       const conditions = this.createWhereCondition(query);
       const rows = await this.params.db.getKoazaRows(conditions);
   
-      const trie = new TrieAddressFinder<KoazaMachingInfo>({
-        fuzzy: this.params.fuzzy,
-      });
+      const trie = new TrieAddressFinder<KoazaMachingInfo>();
       for (const row of rows) {
         const key = this.normalizeStr(row.koaza);
         trie.append({
@@ -132,6 +129,7 @@ export class KoazaTransform extends Transform {
       }
       const findResults = trie.find({
         target,
+        fuzzy: query.fuzzy,
       });
       
       let hit = false;

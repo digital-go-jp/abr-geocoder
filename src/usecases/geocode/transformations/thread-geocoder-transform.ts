@@ -21,12 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { Duplex } from 'node:stream';
 import timers from 'node:timers/promises';
-import { AbrGeocoder, AbrgGeocoderInput } from '../abr-geocoder';
+import { AbrGeocoder } from '../abr-geocoder';
+import { AbrGeocoderInput } from '../models/abrg-input-data';
 import { GeocoderDiContainer } from '../models/geocode-di-container';
 import { Query, QueryJson } from '../models/query';
+import { SearchTarget } from '@domain/types/search-target';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 // import inspector from "node:inspector";
 
 export class ThreadGeocodeTransform extends Duplex {
@@ -36,16 +38,22 @@ export class ThreadGeocodeTransform extends Duplex {
   private receivedFinal: boolean = false;
   private nextIdx: number = 1;
   private geocoder: AbrGeocoder;
+  private searchTarget: SearchTarget;
+  private fuzzy: string | undefined;
 
   constructor(params: Required<{
     container: GeocoderDiContainer,
     geocoder: AbrGeocoder,
+    fuzzy: string;
+    searchTarget?: SearchTarget;
   }>) {
     super({
       objectMode: true,
       allowHalfOpen: true,
     });
     this.geocoder = params.geocoder;
+    this.fuzzy = params.fuzzy || DEFAULT_FUZZY_CHAR;
+    this.searchTarget = params.searchTarget || SearchTarget.ALL;
 
     // スレッドに渡したタスクが終了するたびに、次のタスクを利用可能なスレッドに渡して処理する  
     this.on(this.kShiftEvent, (query: Query) => this._nextTasks(query));
@@ -106,7 +114,7 @@ export class ThreadGeocodeTransform extends Duplex {
 
   // 前のstreamからデータが渡されてくる
   async _write(
-    input: string | AbrgGeocoderInput, 
+    input: string | AbrGeocoderInput, 
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
@@ -118,6 +126,8 @@ export class ThreadGeocodeTransform extends Duplex {
       input = {
         address: input,
         tag: lineId,
+        searchTarget: this.searchTarget,
+        fuzzy: this.fuzzy,
       };
     }
 

@@ -34,8 +34,6 @@ import { DebugLogger } from '@domain/services/logger/debug-logger';
 export class RsdtBlkTransform extends Transform {
 
   constructor(private readonly params: Required<{
-    fuzzy: string | undefined;
-    searchTarget: SearchTarget;
     dbCtrl: GeocodeDbController;
     logger: DebugLogger | undefined;
   }>) {
@@ -49,13 +47,14 @@ export class RsdtBlkTransform extends Transform {
     _: BufferEncoding,
     callback: TransformCallback
   ) {
-    if (this.params.searchTarget === SearchTarget.PARCEL) {
-      // 地番検索が指定されている場合、このステップはスキップする
-      return callback(null, queries);
-    }
 
     const results: Query[] = [];
     for await (const query of queries) {
+      if (query.searchTarget === SearchTarget.PARCEL) {
+        // 地番検索が指定されている場合、このステップはスキップする
+        results.push(query);
+        continue;
+      }
 
       // town_key が必要なので、TOWN_LOCAL未満はスキップ
       // もしくは 既に地番データが判明している場合もスキップ
@@ -141,7 +140,7 @@ export class RsdtBlkTransform extends Transform {
     let matchedCnt = 0;
 
     while (p) {
-      if (p.char === this.params.fuzzy) {
+      if (p.char === query.fuzzy) {
         // fuzzyの場合、任意の１文字
         buffer.push('_');
         matchedCnt++;

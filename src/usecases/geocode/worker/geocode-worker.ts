@@ -26,6 +26,7 @@ import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
 import { WardTransform } from '../steps/ward-transform';
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { AbrGeocoderInput } from '../models/abrg-input-data';
 
 export type GeocodeWorkerInitData = {
   containerParams: GeocoderDiContainerParams,
@@ -36,8 +37,6 @@ export const geocodeOnWorkerThread = async (params: Required<{
   initData: GeocodeWorkerInitData;
 }>) => {
   const container = new GeocoderDiContainer(params.initData.containerParams);
-  const fuzzy: string = container.fuzzy || DEFAULT_FUZZY_CHAR;
-  const searchTarget: SearchTarget = container.searchTarget || SearchTarget.ALL;
   const dbCtrl = container.database;
   const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
   const logger: DebugLogger | undefined = container.logger;
@@ -62,19 +61,20 @@ export const geocodeOnWorkerThread = async (params: Required<{
     Tokyo23WardTranform,
     WardTransform,
   ] = await Promise.all([
+    // 都道府県を試す
     new Promise(async (resolve: (result: PrefTransform) => void) => {
       const prefList = await commonDb.getPrefList();
       resolve(new PrefTransform({
         prefList,
-        fuzzy,
         logger,
       }));
     }),
+
+    // 〇〇郡〇〇市を試す
     new Promise(async (resolve: (result: CountyAndCityTransform) => void) => {
       const countyAndCityList = await commonDb.getCountyAndCityList();
       resolve(new CountyAndCityTransform({
         countyAndCityList,
-        fuzzy,
         logger,
       }));
     }),
@@ -84,7 +84,6 @@ export const geocodeOnWorkerThread = async (params: Required<{
       const cityAndWardList = await commonDb.getCityAndWardList();
       resolve(new CityAndWardTransform({
         cityAndWardList,
-        fuzzy,
         logger,
       }));
     }),
@@ -93,7 +92,6 @@ export const geocodeOnWorkerThread = async (params: Required<{
       const wardAndOazaList = await commonDb.getWardAndOazaChoList();
       resolve(new WardAndOazaTransform({
         wardAndOazaList,
-        fuzzy,
         logger,
       }));
     }),
@@ -101,9 +99,7 @@ export const geocodeOnWorkerThread = async (params: Required<{
     new Promise(async (resolve: (result: OazaChomeTransform) => void) => {
       const oazaChomes = await commonDb.getOazaChomes();
       resolve(new OazaChomeTransform({
-        db: commonDb,
         oazaChomes,
-        fuzzy,
         logger,
       }));
     }),
@@ -113,7 +109,6 @@ export const geocodeOnWorkerThread = async (params: Required<{
     new Promise(async (resolve: (result: Tokyo23TownTranform) => void) => {
       const tokyo23towns = await commonDb.getTokyo23Towns();
       resolve(new Tokyo23TownTranform({
-        fuzzy,
         tokyo23towns,
         logger,
       }));
@@ -123,7 +118,6 @@ export const geocodeOnWorkerThread = async (params: Required<{
     new Promise(async (resolve: (result: Tokyo23WardTranform) => void) => {
       const tokyo23wards = await commonDb.getTokyo23Wards();
       resolve(new Tokyo23WardTranform({
-        fuzzy,
         tokyo23wards,
         logger,
       }));
@@ -134,7 +128,6 @@ export const geocodeOnWorkerThread = async (params: Required<{
       const wards = await commonDb.getWards();
       resolve(new WardTransform({
         db: commonDb,
-        fuzzy,
         wards,
         logger,
       }));
@@ -151,43 +144,34 @@ export const geocodeOnWorkerThread = async (params: Required<{
   //
   const normalizeTransform = new NormalizeTransform({
     logger,
-    fuzzy,
   });
 
   // 丁目を試す
   const chomeTransform = new ChomeTranform({
     db: commonDb,
-    fuzzy,
     logger,
   });
 
   // 小字を試す
   const koazaTransform = new KoazaTransform({
     db: commonDb,
-    fuzzy,
     logger,
   });
   
   // 地番の特定を試みる
   const parcelTransform = new ParcelTransform({
-    fuzzy,
-    searchTarget,
     dbCtrl,
     logger,
   });
 
   // 街区符号の特定を試みる
   const rsdtBlkTransform = new RsdtBlkTransform({
-    fuzzy,
-    searchTarget,
     dbCtrl,
     logger,
   });
 
   // 住居番号の特定を試みる
   const rsdtDspTransform = new RsdtDspTransform({
-    fuzzy,
-    searchTarget,
     dbCtrl,
     logger,
   });
@@ -241,7 +225,7 @@ export const geocodeOnWorkerThread = async (params: Required<{
 
   // メインスレッドからメッセージを受け取る
   params.port.on('message', async (task: Uint8Array) => {
-    const data = fromSharedMemory<ThreadJob<string>>(task);
+    const data = fromSharedMemory<ThreadJob<AbrGeocoderInput>>(task);
     reader.push(data);
   });
 };

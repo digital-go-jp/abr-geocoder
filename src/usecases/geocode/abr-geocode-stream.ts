@@ -29,8 +29,9 @@ import { Query } from './models/query';
 import { TextReaderTransform } from './transformations/text-reader-transform';
 import { ThreadGeocodeTransform } from './transformations/thread-geocoder-transform';
 import { AbrGeocoder } from './abr-geocoder';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
-export type GeocodeOptions = {
+export type AbrGeocodeOptions = {
   dataDir?: string;
   fuzzy?: string;
   searchTarget: SearchTarget;
@@ -47,9 +48,7 @@ export class AbrGeocodeStream extends Duplex {
   private outCnt = 0;
   private receivedFinal: boolean = false;
 
-  constructor(
-    params: GeocodeOptions,
-  ) {
+  constructor(params: AbrGeocodeOptions) {
     super({
       objectMode: true,
       allowHalfOpen: true,
@@ -74,8 +73,6 @@ export class AbrGeocodeStream extends Duplex {
     // 初期設定値を DIコンテナに全て詰め込む
     const container = new GeocoderDiContainer({
       database: params.database,
-      fuzzy: params.fuzzy,
-      searchTarget: params.searchTarget,
       debug: params.debug === true,
     });
 
@@ -93,6 +90,8 @@ export class AbrGeocodeStream extends Duplex {
     this.geocoderTransform = new ThreadGeocodeTransform({
       container,
       geocoder,
+      fuzzy: params.fuzzy || DEFAULT_FUZZY_CHAR,
+      searchTarget: params.searchTarget,
     });
     if (params.progress) {
       this.geocoderTransform.on('progress', (current: number, total: number, isPaused: boolean) => {

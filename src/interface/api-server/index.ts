@@ -12,8 +12,6 @@ export class AbrgApiServer extends Server {
   
   constructor(params: Required<{
     database: DatabaseParams;
-    fuzzy?: string;
-    searchTarget?: SearchTarget;
   }>) {
     super();
 
@@ -30,17 +28,15 @@ export class AbrgApiServer extends Server {
 
     const onGeocodeRequest = new OnGeocodeRequest({
       database: params.database,
-      fuzzy: params.fuzzy,
-      searchTarget: params.searchTarget,
       debug: false,
     });
     
-    this.router.get('/geocode', corsMiddleware, (request, response) => {
+    this.router.get('/geocode', (request, response) => {
       onGeocodeRequest.run(request, response)
         .catch(error => this.onInternalServerError(error, response));
     });
 
-    this.router.get('*', corsMiddleware, (_: Request, response: Response) => {
+    this.router.get('*', (_: Request, response: Response) => {
       response.status(StatusCodes.NOT_FOUND);
       response.json({
         status: 'error',

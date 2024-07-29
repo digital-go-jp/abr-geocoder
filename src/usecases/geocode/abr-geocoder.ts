@@ -2,16 +2,14 @@ import { WorkerThreadPool } from "@domain/services/thread/worker-thread-pool";
 import path from 'node:path';
 import { EventEmitter } from "node:stream";
 import { GeocoderDiContainer } from "./models/geocode-di-container";
-import { GeocoderWorkData, QueryJson } from "./models/query";
+import { QueryJson } from "./models/query";
 import { GeocodeWorkerInitData } from "./worker/geocode-worker";
+import { AbrGeocoderInput } from "./models/abrg-input-data";
 
-export type AbrgGeocoderInput = {
-  address: string;
-  tag: Omit<Object, 'Function'>;
-};
+
 
 export class AbrGeocoder extends EventEmitter {
-  private readonly workerPool: WorkerThreadPool<GeocodeWorkerInitData, GeocoderWorkData, QueryJson>;
+  private readonly workerPool: WorkerThreadPool<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>;
 
   constructor(params: {
     container: GeocoderDiContainer,
@@ -37,13 +35,10 @@ export class AbrGeocoder extends EventEmitter {
     });
   }
   // 1件だけのリクエストを処理する場合にこのメソッドを呼び出す
-  async geocode(input: AbrgGeocoderInput): Promise<QueryJson> {
+  async geocode(input: AbrGeocoderInput): Promise<QueryJson> {
 
     // 別スレッドで処理する
-    const result: QueryJson = await this.workerPool.run({
-      address: input.address,
-      tag: input.tag,
-    });
+    const result: QueryJson = await this.workerPool.run(input);
 
     return result;
   }

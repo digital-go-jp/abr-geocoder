@@ -51,7 +51,6 @@ export class Tokyo23WardTranform extends Transform {
   ]);
   
   constructor(params: Required<{
-    fuzzy: string | undefined;
     tokyo23wards: CityMatchingInfo[];
     logger: DebugLogger | undefined;
   }>) {
@@ -61,9 +60,7 @@ export class Tokyo23WardTranform extends Transform {
     this.logger = params.logger;
 
     // 東京23区を探すためのトライ木
-    this.tokyo23WardTrie = new TrieAddressFinder<CityMatchingInfo>({
-      fuzzy: params.fuzzy,
-    });
+    this.tokyo23WardTrie = new TrieAddressFinder<CityMatchingInfo>();
     setImmediate(() => {
       params.tokyo23wards.forEach(ward => {
         const key = this.normalizeStr(ward.key);
@@ -81,32 +78,35 @@ export class Tokyo23WardTranform extends Transform {
     _: BufferEncoding,
     callback: TransformCallback
   ) {
-    await new Promise(async (resolve: (_?: unknown[]) => void) => {
-      while (!this.initialized) {
-        await timers.setTimeout(100);
-      }
-      resolve();
-    });
-
     const results: Query[] = [];
-    queries.forEach(query => {
+    for (const query of queries) {
       // 行政区が判明している場合はスキップ
       if (!query.tempAddress || 
         query.match_level.num >= MatchLevel.CITY.num) {
         results.push(query);
-        return;
+        continue;
       }
       
+      if (!this.initialized) {
+        await new Promise(async (resolve: (_?: unknown[]) => void) => {
+          while (!this.initialized) {
+            await timers.setTimeout(100);
+          }
+          resolve();
+        });
+      }
+
       //　東京都〇〇区〇〇パターンを探索する
       const target = this.normalizeCharNode(query.tempAddress)!;
       const searchResults = this.tokyo23WardTrie.find({
         target,
         extraChallenges: ['区'],
         partialMatches: true,
+        fuzzy: query.fuzzy,
       });
       if (!searchResults || searchResults.length === 0) {
         results.push(query);
-        return;
+        continue;
       }
 
       // 東京都〇〇区にヒットした
@@ -140,7 +140,7 @@ export class Tokyo23WardTranform extends Transform {
       if (keepOriginal) {
         results.push(query);
       }
-    });
+    }
 
     this.logger?.info(`tokyo23ward : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);

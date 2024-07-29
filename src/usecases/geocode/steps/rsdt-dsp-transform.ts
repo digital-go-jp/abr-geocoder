@@ -35,11 +35,7 @@ import { TrieAddressFinder } from '../services/trie/trie-finder';
 
 export class RsdtDspTransform extends Transform {
 
-  //private readonly trieCache = new LRUCache<number, TrieAddressFinder<RsdtDspInfo>>({max: 10});
-
   constructor(private readonly params: Required<{
-    fuzzy: string | undefined;
-    searchTarget: SearchTarget;
     dbCtrl: GeocodeDbController;
     logger: DebugLogger | undefined;
   }>) {
@@ -53,18 +49,16 @@ export class RsdtDspTransform extends Transform {
     _: BufferEncoding,
     callback: TransformCallback
   ) {
-    if (this.params.searchTarget === SearchTarget.PARCEL) {
-      // 地番検索が指定されている場合、このステップはスキップする
-      return callback(null, queries);
-    }
 
     // ------------------------
     // 住居番号で当たるものがあるか
     // ------------------------
-    const trie = new TrieAddressFinder<RsdtDspInfo>({
-      fuzzy: this.params.fuzzy,
-    });
+    const trie = new TrieAddressFinder<RsdtDspInfo>();
     for await (const query of queries) {
+      if (query.searchTarget === SearchTarget.PARCEL) {
+        // 地番検索が指定されている場合、このステップはスキップする
+        continue;
+      }
       const db = await this.params.dbCtrl.openRsdtDspDb({
         lg_code: query.lg_code!,
         createIfNotExists: false,
@@ -88,6 +82,11 @@ export class RsdtDspTransform extends Transform {
     const results: Query[] = [];
     for await (const query of queries) {
 
+      if (query.searchTarget === SearchTarget.PARCEL) {
+        // 地番検索が指定されている場合、このステップはスキップする
+        results.push(query);
+        continue;
+      }
       // rsdtblk_key が必要なので、RESIDENTIAL_BLOCK未満はスキップ
       // もしくは 既に地番データが判明している場合もスキップ
       if (query.match_level.num < MatchLevel.RESIDENTIAL_BLOCK.num || 
@@ -114,6 +113,7 @@ export class RsdtDspTransform extends Transform {
       }
       const findResults = trie.find({
         target,
+        fuzzy: query.fuzzy,
       });
       if (findResults === undefined || findResults.length === 0) {
         results.push(query);

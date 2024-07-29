@@ -38,7 +38,6 @@ import { TrieAddressFinder } from '../services/trie/trie-finder';
 export class ChomeTranform extends Transform {
 
   constructor(private params: Required<{
-    fuzzy: string | undefined;
     db: ICommonDbGeocode;
     logger: DebugLogger | undefined;
   }>) {
@@ -123,9 +122,7 @@ export class ChomeTranform extends Transform {
 
       const rows = await this.params.db.getChomeRows(conditions);
   
-      const trie = new TrieAddressFinder<ChomeMachingInfo>({
-        fuzzy: this.params.fuzzy,
-      });
+      const trie = new TrieAddressFinder<ChomeMachingInfo>();
       for (const row of rows) {
         const key = this.normalizeStr(row.chome);
         trie.append({
@@ -144,6 +141,7 @@ export class ChomeTranform extends Transform {
       }
       const findResults = trie.find({
         target,
+        fuzzy: query.fuzzy,
       });
       
       let hit = false;

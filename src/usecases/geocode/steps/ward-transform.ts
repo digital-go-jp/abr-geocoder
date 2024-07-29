@@ -38,12 +38,10 @@ export class WardTransform extends Transform {
 
   private readonly wardTrie: TrieAddressFinder<WardMatchingInfo>;
   private readonly logger: DebugLogger | undefined;
-  private readonly fuzzy: string | undefined;
   private readonly db: ICommonDbGeocode;
   private initialized: boolean = false;
 
   constructor(params: Required<{
-    fuzzy: string | undefined;
     wards: WardMatchingInfo[];
     db: ICommonDbGeocode;
     logger: DebugLogger | undefined;
@@ -52,13 +50,10 @@ export class WardTransform extends Transform {
       objectMode: true,
     });
     this.logger = params.logger;
-    this.fuzzy = params.fuzzy;
     this.db = params.db;
 
     // 〇〇区を探すためのトライ木
-    this.wardTrie = new TrieAddressFinder<WardMatchingInfo>({
-      fuzzy: params.fuzzy,
-    });
+    this.wardTrie = new TrieAddressFinder<WardMatchingInfo>();
     setImmediate(() => {
       params.wards.forEach(ward => this.wardTrie.append({
         key: this.normalizeStr(ward.key),
@@ -115,6 +110,7 @@ export class WardTransform extends Transform {
       const searchResults2 = this.wardTrie.find({
         target: this.normalizeCharNode(query.tempAddress)!,
         extraChallenges: ['市', '区'],
+        fuzzy: query.fuzzy,
       });
       searchResults2?.forEach(result => {
         if (!result.info) {
@@ -144,9 +140,7 @@ export class WardTransform extends Transform {
         break;
       }
 
-      const trie = new TrieAddressFinder<WardMatchingInfo>({
-        fuzzy: this.fuzzy,
-      });
+      const trie = new TrieAddressFinder<WardMatchingInfo>();
 
       // 〇〇区に所属する市町村を試す
       const townRows = await this.db.getWardRows({
@@ -169,6 +163,7 @@ export class WardTransform extends Transform {
           target: this.normalizeCharNode(query.tempAddress)!,
           extraChallenges: ['市', '町', '村'],
           partialMatches: true,
+          fuzzy: query.fuzzy,
         });
 
         if (!hitResult) {

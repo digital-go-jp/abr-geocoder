@@ -42,7 +42,6 @@ export class Tokyo23TownTranform extends Transform {
   private initialized: boolean = false;
   
   constructor(params: Required<{
-    fuzzy: string | undefined;
     tokyo23towns: TownMatchingInfo[];
     logger: DebugLogger | undefined;
   }>) {
@@ -52,9 +51,7 @@ export class Tokyo23TownTranform extends Transform {
     this.logger = params.logger;
 
     // 東京23区を探すためのトライ木
-    this.tokyo23TownTrie = new TrieAddressFinder<TownMatchingInfo>({
-      fuzzy: params.fuzzy,
-    });
+    this.tokyo23TownTrie = new TrieAddressFinder<TownMatchingInfo>();
     setImmediate(() => {
       params.tokyo23towns.forEach(town => {
         const key = this.normalizeStr(town.key);
@@ -72,32 +69,35 @@ export class Tokyo23TownTranform extends Transform {
     _: BufferEncoding,
     callback: TransformCallback
   ) {
-    await new Promise(async (resolve: (_?: unknown[]) => void) => {
-      while (!this.initialized) {
-        await timers.setTimeout(100);
-      }
-      resolve();
-    });
-    
     const results: Query[] = [];
-    queries.forEach(query => {
+    for (const query of queries) {
       // 行政区が判明している場合はスキップ
       if (!query.tempAddress || 
         query.match_level.num >= MatchLevel.CITY.num) {
         results.push(query);
-        return;
+        continue;
       }
       
+      if (!this.initialized) {
+        await new Promise(async (resolve: (_?: unknown[]) => void) => {
+          while (!this.initialized) {
+            await timers.setTimeout(100);
+          }
+          resolve();
+        });
+      }
+
       //　東京都〇〇区〇〇パターンを探索する
       const target = this.normalizeCharNode(query.tempAddress)!;
       const searchResults = this.tokyo23TownTrie.find({
         target,
         extraChallenges: ['区', '町', '市', '村'],
         partialMatches: true,
+        fuzzy: query.fuzzy,
       });
       if (!searchResults || searchResults.length === 0) {
         results.push(query);
-        return;
+        continue;
       }
 
       // 東京都〇〇区〇〇にヒットした
@@ -128,7 +128,7 @@ export class Tokyo23TownTranform extends Transform {
           chome: searchResult.info.chome,
         }));
       });
-    });
+    }
 
     this.logger?.info(`tokyo23 : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);

@@ -27,6 +27,8 @@ import { MatchLevel } from '@domain/types/geocode/match-level';
 import { getLevenshteinDistanceRatio } from '../services/get-levenshtein-distance-ratio';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { CharNode } from '../services/trie/char-node';
+import { SearchTarget } from '@domain/types/search-target';
+import { AbrGeocoderInput } from './abrg-input-data';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）
@@ -39,6 +41,8 @@ export interface IQuery {
   matchedCnt: number;
 
   startTime: number;
+  fuzzy?: string;
+  searchTarget: SearchTarget;
 
   pref?: string;
   pref_key?: number;
@@ -81,17 +85,14 @@ export interface IQuery {
   coordinate_level: MatchLevel;
 }
 export type QueryInput = {
-  data: GeocoderWorkData;
+  data: AbrGeocoderInput;
   // worker-thread-poolのtaskId
   taskId: number;
 
   // geocoderの順番を制御するためのID
   lineId: number;
 };
-export type GeocoderWorkData = {
-  address: string;
-  tag?: Omit<Object, 'Function'>;
-}
+
 export type FormattedAddres = {
   address: string;
   score: number;
@@ -101,6 +102,8 @@ export type QueryJson = Omit<IQuery, 'tempAddress'> & { tempAddress: string | un
 export class Query implements IQuery {
   public readonly input: QueryInput;
   public readonly tempAddress?: CharNode;
+  public readonly searchTarget: SearchTarget;
+  public readonly fuzzy?: string;
   public readonly other?: string;
   public readonly pref?: string;
   public readonly pref_key?: number;
@@ -141,6 +144,8 @@ export class Query implements IQuery {
   public readonly startTime: number = 0;
 
   private constructor(params: IQuery) {
+    this.fuzzy = params.fuzzy;
+    this.searchTarget = params.searchTarget;
     this.pref_key = params.pref_key;
     this.city_key = params.city_key;
     this.town_key = params.town_key;
@@ -189,25 +194,27 @@ export class Query implements IQuery {
 
   public toJSON(): QueryJson {
     return {
-      city_key: this.city_key as number | undefined,
-      pref_key: this.pref_key as number | undefined,
-      town_key: this.town_key as number | undefined,
+      fuzzy: this.fuzzy,
+      searchTarget: this.searchTarget,
+      city_key: this.city_key as number || undefined,
+      pref_key: this.pref_key as number || undefined,
+      town_key: this.town_key as number || undefined,
       rsdtblk_key: this.rsdtblk_key,
       rsdtdsp_key: this.rsdtdsp_key,
       matchedCnt: this.matchedCnt,
       startTime: this.startTime,
       input: this.input,
       tempAddress: this.tempAddress?.toString(),
-      pref: this.pref as string | undefined,
-      county: this.county as string | undefined,
-      city: this.city as string | undefined,
-      ward: this.ward as string | undefined,
+      pref: this.pref as string || undefined,
+      county: this.county as string || undefined,
+      city: this.city as string || undefined,
+      ward: this.ward as string || undefined,
       oaza_cho: this.oaza_cho,
       chome: this.chome,
       koaza: this.koaza,
-      lg_code: this.lg_code as string | undefined,
-      rep_lat: this.rep_lat as number | null,
-      rep_lon: this.rep_lon as number | null,
+      lg_code: this.lg_code as string || undefined,
+      rep_lat: this.rep_lat as number || null,
+      rep_lon: this.rep_lon as number || null,
       rsdt_addr_flg: this.rsdt_addr_flg,
       machiaza_id: this.machiaza_id as string,
       block: this.block,
@@ -243,6 +250,9 @@ export class Query implements IQuery {
     return new Query(
       Object.assign(
         {
+          fuzzy: this.fuzzy,
+          searchTarget: this.searchTarget,
+
           pref_key : this.pref_key,
           city_key : this.city_key,
           town_key : this.town_key,
@@ -396,6 +406,8 @@ export class Query implements IQuery {
       match_level: MatchLevel.UNKNOWN,
       coordinate_level: MatchLevel.UNKNOWN,
       startTime: Date.now(),
+      fuzzy: input.data.fuzzy,
+      searchTarget: input.data.searchTarget,
     });
   };
 }

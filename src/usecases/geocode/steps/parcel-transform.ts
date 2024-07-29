@@ -35,8 +35,6 @@ import { DebugLogger } from '@domain/services/logger/debug-logger';
 export class ParcelTransform extends Transform {
 
   constructor(private readonly params: Required<{
-    fuzzy: string | undefined;
-    searchTarget: SearchTarget;
     dbCtrl: GeocodeDbController;
     logger: DebugLogger | undefined;
   }>) {
@@ -50,10 +48,6 @@ export class ParcelTransform extends Transform {
     _: BufferEncoding,
     callback: TransformCallback
   ) {
-    if (this.params.searchTarget === SearchTarget.RESIDENTIAL) {
-      // 住居表示検索が指定されている場合、このステップはスキップする
-      return callback(null, queries);
-    }
 
     // ------------------------
     // 地番で当たるものがあるか
@@ -66,6 +60,11 @@ export class ParcelTransform extends Transform {
 
     const results: Query[] = [];
     for await (const query of queries) {
+      if (query.searchTarget === SearchTarget.RESIDENTIAL) {
+        // 住居表示検索が指定されている場合、このステップはスキップする
+        results.push(query);
+        continue;
+      }
 
       // lg_code が必要なので、CITY未満はスキップする
       if (query.match_level.num < MatchLevel.CITY.num) {
@@ -161,7 +160,7 @@ export class ParcelTransform extends Transform {
 
     while (p) {
       matchedCnt++;
-      if (p.char === this.params.fuzzy) {
+      if (p.char === query.fuzzy) {
         // fuzzyの場合、任意の１文字
         current.push('_');
       } else if (/\d/.test(p.char!)) {

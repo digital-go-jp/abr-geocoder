@@ -40,7 +40,6 @@ export class CountyAndCityTransform extends Transform {
 
   constructor(params: Required<{
     countyAndCityList: CityMatchingInfo[];
-    fuzzy: string | undefined;
     logger: DebugLogger | undefined;
   }>) {
     super({
@@ -49,9 +48,7 @@ export class CountyAndCityTransform extends Transform {
     this.logger = params.logger;
     
     // 〇〇郡〇〇市町村のトライ木
-    this.countyAndCityTrie = new TrieAddressFinder({
-      fuzzy: params.fuzzy,
-    });
+    this.countyAndCityTrie = new TrieAddressFinder();
     setImmediate(() => {
       for (const city of params.countyAndCityList) {
         this.countyAndCityTrie.append({
@@ -91,6 +88,7 @@ export class CountyAndCityTransform extends Transform {
           target: query.tempAddress,
           extraChallenges: ['郡', '市', '町', '村'],
           partialMatches: true,
+          fuzzy: query.fuzzy,
         });
         if (!results || results.length === 0) {
           return query;

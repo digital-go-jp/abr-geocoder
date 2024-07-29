@@ -30,34 +30,6 @@ export class TrieNode<T> {
 
 export class TrieAddressFinder<T> {
   private readonly root = new TrieNode<T[]>();
-  private readonly fuzzy: string | undefined;
-
-  constructor({
-    fuzzy,
-  }: {
-    fuzzy: string | undefined;
-  }) {
-    this.fuzzy = fuzzy;
-  }
-
-  static createFromMap<T>({
-    fuzzy,
-    map,
-  }: {
-    fuzzy?: string;
-    map: Map<string | number, T>;
-  }) {
-    const trie = new TrieAddressFinder<T>({
-      fuzzy,
-    });
-    for (const [key, value] of map.entries()) {
-      trie.append({
-        key,
-        value,
-      });
-    }
-    return trie;
-  }
 
   append({
     key,
@@ -88,7 +60,11 @@ export class TrieAddressFinder<T> {
   }
 
   find({ 
+    // 検索対象の文字列
     target,
+
+    // ワイルドカードマッチの1文字
+    fuzzy,
 
     // trueのとき、中間でマッチした結果も含めて返す
     partialMatches,
@@ -96,9 +72,9 @@ export class TrieAddressFinder<T> {
     // マッチしなかったときに、もう1文字を試してみる
     extraChallenges,
    }: {
+    fuzzy: string | undefined;
     target: CharNode;
     partialMatches?: boolean;
-
     extraChallenges?: string[];
    }): TrieFinderResult<T>[] | undefined {
 
@@ -112,6 +88,7 @@ export class TrieAddressFinder<T> {
       node,
       partialMatches: partialMatches === true,
       extraChallenges,
+      fuzzy,
     });
 
     return results?.map(result => {
@@ -128,7 +105,9 @@ export class TrieAddressFinder<T> {
     node,
     partialMatches,
     extraChallenges,
+    fuzzy,
   }: {
+    fuzzy: string | undefined;
     parent: TrieNode<T[]> | undefined;
     node: CharNode | undefined;
     partialMatches: boolean;
@@ -145,6 +124,7 @@ export class TrieAddressFinder<T> {
         node,
         partialMatches,
         extraChallenges,
+        fuzzy,
       });
     }
 
@@ -160,6 +140,7 @@ export class TrieAddressFinder<T> {
           }
           const child = parent.children.get(extraChar)!;
           const others = this.traverse({
+            fuzzy,
             parent: child,
             node,
             partialMatches,
@@ -192,6 +173,7 @@ export class TrieAddressFinder<T> {
     if (parent.children.has(node.char)) {
       const parent2 = parent.children.get(node.char);
       const others = this.traverse({
+        fuzzy,
         parent: parent2,
         node: node.next,
         partialMatches,
@@ -224,10 +206,11 @@ export class TrieAddressFinder<T> {
     }
 
     // fuzzyが来た場合、全ての可能性を探索する
-    if (node.char === this.fuzzy) {
+    if (node.char === fuzzy) {
       const results: InternalResult<T>[] = [];
       for (const child of parent.children.values()) {
         const others = this.traverse({
+          fuzzy,
           parent: child,
           node: node.next,
           partialMatches,
@@ -268,6 +251,7 @@ export class TrieAddressFinder<T> {
 
         const child = parent.children.get(extraChar)!;
         const others = this.traverse({
+          fuzzy,
           parent: child,
           node,
           partialMatches,

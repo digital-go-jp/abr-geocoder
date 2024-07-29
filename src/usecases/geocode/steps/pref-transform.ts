@@ -38,7 +38,6 @@ export class PrefTransform extends Transform {
 
   constructor(params: Required<{
     prefList: PrefInfo[];
-    fuzzy: string | undefined;
     logger: DebugLogger | undefined;
   }>) {
     super({
@@ -47,9 +46,7 @@ export class PrefTransform extends Transform {
     this.logger = params.logger;
 
     // 都道府県のトライ木
-    this.prefTrie = new TrieAddressFinder<PrefInfo>({
-      fuzzy: params.fuzzy,
-    });
+    this.prefTrie = new TrieAddressFinder<PrefInfo>();
     for (const prefInfo of params.prefList) {
       this.prefTrie.append({
         key: this.normalizeStr(prefInfo.pref),
@@ -64,43 +61,45 @@ export class PrefTransform extends Transform {
     next: TransformCallback
   ): void {
 
-    const results = queries
-      .map(query => {
-        // --------------------
-        // 都道府県を探索する
-        // --------------------
-        const results = this.prefTrie.find({
-          target: query.tempAddress!,
+    const results = [];
+    for (const query of queries) {
+      // --------------------
+      // 都道府県を探索する
+      // --------------------
+      const matched = this.prefTrie.find({
+        target: query.tempAddress!,
 
-          // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
-          extraChallenges: ['道', '都', '府', '県'],
-        });
+        // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
+        extraChallenges: ['道', '都', '府', '県'],
+        
+        fuzzy: query.fuzzy,
+      });
 
-        if (!results) {
-          return query;
+      if (!matched) {
+        results.push(query);
+        break;
+      }
+      let anyHit = false;
+      for (const mResult of matched) {
+        if (!mResult.info) {
+          continue;
         }
-        return results.map(result => {
-          if (!result.info) {
-            return query;
-          }
-          return query.copy({
-            pref_key: result.info.pref_key,
-            tempAddress: result.unmatched,
-            rep_lat: result.info.rep_lat,
-            rep_lon: result.info.rep_lon,
-            lg_code: result.info.lg_code,
-            pref: result.info.pref,
-            match_level: MatchLevel.PREFECTURE,
-            coordinate_level: MatchLevel.PREFECTURE,
-            matchedCnt: result.depth,
-          });
-        });
-      })
-      .flat();
-    
-    // 念のため
-    if (results.length === 0) {
-      results.push(...queries);
+        anyHit = true;
+        results.push(query.copy({
+          pref_key: mResult.info.pref_key,
+          tempAddress: mResult.unmatched,
+          rep_lat: mResult.info.rep_lat,
+          rep_lon: mResult.info.rep_lon,
+          lg_code: mResult.info.lg_code,
+          pref: mResult.info.pref,
+          match_level: MatchLevel.PREFECTURE,
+          coordinate_level: MatchLevel.PREFECTURE,
+          matchedCnt: mResult.depth,
+        }));
+      }
+      if (!anyHit) {
+        results.push(query);
+      }
     }
 
     this.logger?.info(`prefecture : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} `);

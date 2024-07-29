@@ -28,23 +28,18 @@ import { SearchTarget } from '@domain/types/search-target';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 
 export type GeocoderDiContainerParams = {
-  fuzzy?: string;
-  searchTarget?: SearchTarget;
   database: DatabaseParams;
   debug: boolean;
 };
 
 export class GeocoderDiContainer extends CommonDiContainer {
 
-  public readonly fuzzy?: string;
   public readonly searchTarget?: SearchTarget;
   public readonly database: GeocodeDbController;
   public readonly logger?: DebugLogger;
 
   constructor(private params: GeocoderDiContainerParams) {
     super();
-    this.fuzzy = params.fuzzy;
-    this.searchTarget = params.searchTarget;
     this.database = new GeocodeDbController({
       connectParams: params.database,
     });
@@ -57,8 +52,6 @@ export class GeocoderDiContainer extends CommonDiContainer {
   toJSON(): GeocoderDiContainerParams {
     return {
       ...this.params,
-      fuzzy: this.fuzzy,
-      searchTarget: this.searchTarget,
     }
   }
 }

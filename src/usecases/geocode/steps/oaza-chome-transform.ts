@@ -39,25 +39,19 @@ import timers from 'node:timers/promises';
 export class OazaChomeTransform extends Transform {
 
   private readonly trie: TrieAddressFinder<OazaChoMachingInfo>;
-  private readonly db: ICommonDbGeocode;
   private readonly logger: DebugLogger | undefined;
   private initialized: boolean = false;
 
   constructor(params: Required<{
-    fuzzy: string | undefined;
     oazaChomes: OazaChoMachingInfo[];
-    db: ICommonDbGeocode;
     logger: DebugLogger | undefined;
   }>) {
     super({
       objectMode: true,
     });
-    this.db = params.db;
     this.logger = params.logger;
 
-    this.trie = new TrieAddressFinder<OazaChoMachingInfo>({
-      fuzzy: params.fuzzy,
-    });
+    this.trie = new TrieAddressFinder<OazaChoMachingInfo>();
     setImmediate(() => {
       for (const oazaInfo of params.oazaChomes) {
         this.trie.append({
@@ -123,35 +117,13 @@ export class OazaChomeTransform extends Transform {
       // Queryの情報を使って、DBから情報を取得する
       // ------------------------------------
       const where = this.createWhereCondition(query);
-      const searchTrie: TrieAddressFinder<OazaChoMachingInfo> = await (async () => {
-        // if (!where) {
-          await new Promise(async (resolve: (_?: unknown[]) => void) => {
-            while (!this.initialized) {
-              await timers.setTimeout(100);
-            }
-            resolve();
-          });
-          return this.trie;
-        // }
-
-        // (大字)(丁目)(小字)の３つ全てを持つパターンはない。
-        // なので、「OAZA_CHO || CHOME || KOAZA」としても
-        // 自動的に「(大字)(丁目)」「(大字)(小字)」「（大字）」の２パターンを取ってくることになる
-        // const trie = new TrieAddressFinder<OazaChoMachingInfo>({
-        //   fuzzy: this.fuzzy,
-        // });
-        // const rows = await this.db.getOazaChoPatterns(where);
-        // for (const row of rows) {
-        //   const key = this.normalizeStr(row.key);
-        //   trie.append({
-        //     key,
-        //     value: row,
-        //   });
-        // }
-        // return trie;
-      })();
+      await new Promise(async (resolve: (_?: unknown[]) => void) => {
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
+        resolve();
+      });
       
-
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
@@ -167,13 +139,14 @@ export class OazaChomeTransform extends Transform {
       // target = 末広町184
       // expected = 末広町
       // wrong_matched_result = 末広町18字
-      const findResults = searchTrie.find({
+      const findResults = this.trie.find({
         target,
         partialMatches: true,
 
         // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
         // 「〇〇町」の「町」が省略された入力の場合を想定
         extraChallenges: ['町'],
+        fuzzy: query.fuzzy,
       });
       
       const filteredResult = findResults?.filter(result => {
@@ -194,10 +167,8 @@ export class OazaChomeTransform extends Transform {
         return matched;
       })
 
-
-      let hit = false;
-
       // 複数都道府県にヒットする可能性があるので、全て試す
+      let hit = false;
       filteredResult?.forEach(findResult => {
         // step2, step3で city_key が判別している場合で
         // city_key が異なる場合はスキップ
