@@ -6,3 +6,5 @@ pnpm-lock.yaml
 coverage/
 .github/
 *.tgz
+.vscode/
+jmeter

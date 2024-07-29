@@ -1,0 +1,234 @@
+
+import { SINGLE_DASH_ALTERNATIVE } from '@config/constant-values';
+import { EnvProvider } from '@domain/models/env-provider';
+import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
+import { resolveHome } from '@domain/services/resolve-home';
+import { upwardFileSearch } from '@domain/services/upward-file-search';
+import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
+import { AbrgMessage } from '@domain/types/messages/abrg-message';
+import { OutputFormat } from '@domain/types/output-format';
+import { SearchTarget } from '@domain/types/search-target';
+import { FormatterProvider } from '@interface/format/formatter-provider';
+import { AbrGeocodeStream } from '@usecases/geocode/abr-geocode-stream';
+import { getReadStreamFromSource } from '@usecases/geocode/services/get-read-stream-from-source';
+import { LineStream } from 'byline';
+import fs from 'node:fs';
+import path from 'node:path';
+import { Writable } from 'node:stream';
+import streamPromises from 'node:stream/promises';
+import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
+
+
+/**
+ * abrg geocode
+ * 入力されたファイル、または標準入力から与えられる住所をジオコーディングする
+ */
+export type GeocodeCommandArgv = {
+  abrgDir?: string; // 'abrgDir' または 'd' はオプショナル
+  d?: string; // alias 'd' もオプショナル
+
+  target?: SearchTarget; // 'target' はオプショナル
+
+  fuzzy?: string; // 'fuzzy' はオプショナル
+
+  debug?: boolean; // 'debug' はオプショナル
+
+  silent?: boolean; // 'silent' はオプショナル
+
+  format?: OutputFormat; // 'format' または 'f' はオプショナル
+  f?: OutputFormat; // alias 'f' もオプショナル
+
+  inputFile?: string; // 'inputFile' は必須
+  outputFile?: string; // 'outputFile' はオプショナル
+}
+
+const geocodeCommand: CommandModule = {
+  command: '$0 <inputFile> [outputFile] [options]',
+  describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_DESC),
+
+  builder: (yargs: Argv): Argv<GeocodeCommandArgv> => {
+    return yargs
+      .option('abrgDir', {
+        alias: 'd',
+        type: 'string',
+        default: EnvProvider.DEFAULT_ABRG_DIR,
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+        ),
+      })
+      .option('target', {
+        type: 'string',
+        default: SearchTarget.ALL,
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_GEOCODE_TARGET_OPTION
+        ),
+        choices: [SearchTarget.ALL, SearchTarget.RESIDENTIAL, SearchTarget.PARCEL],
+      })
+      .option('fuzzy', {
+        type: 'string',
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
+        ),
+        coerce: fuzzy => {
+          if (fuzzy.length !== 1) {
+            console.error(
+              AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR)
+            );
+            process.exit(1);
+          }
+          return fuzzy;
+        },
+      })
+      .option('format', {
+        alias: 'f',
+        type: 'string',
+        default: OutputFormat.JSON,
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_GEOCODE_FORMAT_OPTION
+        ),
+        choices: [
+          OutputFormat.CSV,
+          OutputFormat.JSON,
+          OutputFormat.NDJSON,
+          OutputFormat.GEOJSON,
+          OutputFormat.NDGEOJSON,
+          OutputFormat.SIMPLIFIED,
+        ],
+      })
+      .positional('inputFile', {
+        describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),
+        type: 'string',
+        coerce: (inputFile: string) => {
+          if (inputFile === SINGLE_DASH_ALTERNATIVE) {
+            return inputFile;
+          }
+
+          if (fs.existsSync(inputFile)) {
+            return inputFile;
+          }
+          throw new AbrgError({
+            messageId: AbrgMessage.CANNOT_FIND_INPUT_FILE,
+            level: AbrgErrorLevel.ERROR,
+          });
+        },
+      })
+      .positional('outputFile', {
+        describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_OUTPUT_FILE),
+        type: 'string',
+        default: undefined,
+      })
+      .option('debug', {
+        type: 'boolean',
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_COMMON_DEBUG_OPTION
+        ),
+      })
+      .option('silent', {
+        type: 'boolean',
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_COMMON_SILENT_OPTION
+        ),
+      });
+  },
+
+  handler: async (argv: ArgumentsCamelCase<GeocodeCommandArgv>) => {
+    // Prevent users from running this command without options.
+    // i.e. $> abrg
+    if (!argv['inputFile']) {
+      return;
+    }
+    const source = argv['inputFile'] as string;
+    const destination = argv['outputFile'] as string | undefined;
+
+    // ジオコーディングにかかる時間を表示
+    if (argv.debug) {
+      console.time("geocoding");
+    }
+
+    // プログレスバーの作成。
+    // silentの指定がなく、ファイル入力の場合のみ作成される。
+    const progressBar = (argv.silent || destination === '-' || destination === undefined) ?
+      undefined : createSingleProgressBar();
+    progressBar?.start(1, 0);
+
+    // ワークスペース
+    const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
+
+    const debug = argv.debug === true;
+
+    // 入力元の選択
+    const srcStream = getReadStreamFromSource(source);
+    // Geocoding結果を出力するフォーマッタ
+    const format = argv.format || OutputFormat.JSON;
+    const formatter = FormatterProvider.get({
+      type: format,
+      debug,
+    });
+    // 出力先（ファイル or stdout）の選択
+    const outputStream: Writable = (destination => {
+      if (destination === '' || destination === undefined) {
+        // ThreadGeocodeTransformで　各スレッドがstdout を使用しようとして、
+        // イベントリスナーを取り合いになるため、以下の警告が発生する模様。
+        // 動作的には問題ないので、 process.stdout.setMaxListeners(0) として警告を殺す。
+        //
+        // (node:62246) MaxListenersExceededWarning: Possible EventEmitter memory leak detected.
+        // 11 unpipe listeners added to [WriteStream]. Use emitter.setMaxListeners() to increase limit
+        process.stdout.setMaxListeners(0);
+        return process.stdout;
+      }
+
+      // メモリを節約するため、あまり溜め込まないようにする
+      // ReadableStream において objectMode = true のときの highWaterMark が 16 なので
+      // 固定値で16にする
+      const result = fs.createWriteStream(path.normalize(destination), {
+        encoding: 'utf8',
+        highWaterMark: 16,
+      });
+      return result;
+    })(destination);
+
+    // ルートディレクトリを探す
+    const rootDir = await upwardFileSearch(__dirname, 'build');
+    if (!rootDir) {
+      throw new AbrgError({
+        messageId: AbrgMessage.CANNOT_FIND_THE_ROOT_DIR,
+        level: AbrgErrorLevel.ERROR,
+      });
+    }
+
+    // ジオコーディングを行う
+    const geocoder = new AbrGeocodeStream({
+      fuzzy: argv.fuzzy,
+      searchTarget: argv.target || SearchTarget.ALL,
+      database: {
+        type: 'sqlite3',
+        dataDir: path.join(abrgDir, 'database'),
+        schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
+      },
+      debug,
+      progress(current: number, total: number, isPaused: boolean) {
+        progressBar?.setTotal(total);
+        progressBar?.update(current);
+      }
+    });
+
+    const lineByLine = new LineStream();
+
+    await streamPromises.pipeline(
+      srcStream,
+      lineByLine,
+      geocoder,
+      formatter,
+      outputStream,
+    )
+
+    progressBar?.stop();
+
+    // ジオコーディングにかかる時間を表示
+    if (argv.debug) {
+      console.timeEnd("geocoding");
+    }
+  }
+};
+
+export default geocodeCommand;

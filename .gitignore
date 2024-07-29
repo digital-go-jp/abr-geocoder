@@ -12,3 +12,6 @@ spec/*.sqlite
 .pnpm-store/
 pnpm-lock.yaml
 .vscode/result.*
+db/
+.clinic/
+log.txt

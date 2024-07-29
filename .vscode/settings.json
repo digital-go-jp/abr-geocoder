@@ -6,5 +6,6 @@
   "exportall.config.relExclusion": [
     "/src/index.ts"
   ],
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "testing.openTesting": "neverOpen"
 }
