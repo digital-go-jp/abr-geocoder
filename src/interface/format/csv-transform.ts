@@ -139,7 +139,10 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return `"${result.tempAddress.toOriginalString()}"`;
 
           case 'blk_num':
-            return result.block || '';
+            if (!result.block) {
+              return '';
+            }
+            return `"${result.block.toString()}"`;
 
           case 'blk_id':
             return result.block_id || '';
@@ -157,13 +160,22 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.rsdt_num2?.toString() || '';
 
           case 'prc_num1':
-            return result.prc_num1?.toString() || '';
+            if (!result.prc_num1) {
+              return '';
+            }
+            return `"${result.prc_num1.toString()}"`;
 
           case 'prc_num2':
-            return result.prc_num2?.toString() || '';
+            if (!result.prc_num2) {
+              return '';
+            }
+            return `"${result.prc_num2.toString()}"`;
 
           case 'prc_num3':
-            return result.prc_num3?.toString() || '';
+            if (!result.prc_num3) {
+              return '';
+            }
+            return `"${result.prc_num3.toString()}"`;
 
           case 'prc_id':
             return result.prc_id?.toString() || '';
