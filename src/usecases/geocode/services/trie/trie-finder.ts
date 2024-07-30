@@ -4,15 +4,18 @@ export class TrieFinderResult<T> {
   public readonly info: T | undefined;
   public readonly unmatched: CharNode;
   public readonly depth: number;
+  public readonly ambiguous: boolean;
 
   constructor(params: {
     info: T | undefined;
     unmatched: CharNode;
     depth: number;
+    ambiguous: boolean;
   }) {
     this.info = params.info;
     this.unmatched = params.unmatched;
     this.depth = params.depth;
+    this.ambiguous = params.ambiguous;
     Object.freeze(this);
   }
 }
@@ -21,6 +24,10 @@ type InternalResult<T> = {
   info: T | undefined;
   unmatched: CharNode;
   depth: number;
+  
+  // fuzzy や extraChallenges を使った場合
+  // 結果が間違えている可能性があるとき true
+  ambiguous: boolean;
 }
 
 export class TrieNode<T> {
@@ -97,6 +104,7 @@ export class TrieAddressFinder<T> {
         info: result.info,
         unmatched: result.unmatched,
         depth: result.depth,
+        ambiguous: result.ambiguous,
       });
     });
   }
@@ -202,6 +210,7 @@ export class TrieAddressFinder<T> {
           info,
           unmatched: node,
           depth,
+          ambiguous: false,
         });
       });
       return results;
@@ -225,6 +234,7 @@ export class TrieAddressFinder<T> {
           if (other.unmatched?.char === fuzzy) {
             other.unmatched = other.unmatched.next!;
           }
+          other.ambiguous = true;
           results.push(other);
         });
       }
@@ -236,6 +246,7 @@ export class TrieAddressFinder<T> {
             info,
             unmatched: node,
             depth,
+            ambiguous: false,
           });
         })
       }
@@ -249,6 +260,7 @@ export class TrieAddressFinder<T> {
         info,
         unmatched: node,
         depth,
+        ambiguous: false,
       });
     });
 
@@ -277,6 +289,7 @@ export class TrieAddressFinder<T> {
           if (other.unmatched?.char === fuzzy) {
             other.unmatched = other.unmatched.next!;
           }
+          other.ambiguous = true;
           results.push(other)
         });
       }

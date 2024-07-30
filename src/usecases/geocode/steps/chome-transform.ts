@@ -144,7 +144,8 @@ export class ChomeTranform extends Transform {
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       
-      let hit = false;
+      let anyHit = false;
+      let anyAmbiguous = false;
 
       // 複数にヒットする可能性が高いので、全て試す
       findResults?.forEach(findResult => {
@@ -158,6 +159,7 @@ export class ChomeTranform extends Transform {
           (query.city_key !== findResult.info.city_key)) {
             return;
         }
+        anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         // 丁目がヒットした
         results.push(query.copy({
@@ -174,10 +176,10 @@ export class ChomeTranform extends Transform {
           coordinate_level: MatchLevel.MACHIAZA_DETAIL,
         }));
 
-        hit = true;
+        anyHit = true;
       });
 
-      if (!hit) {
+      if (!anyHit || anyAmbiguous) {
         results.push(query);
       }
     }

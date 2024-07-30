@@ -101,10 +101,14 @@ export class Tokyo23TownTranform extends Transform {
       }
 
       // 東京都〇〇区〇〇にヒットした
+      let anyHit = false;
+      let anyAmbiguous = false;
       searchResults.forEach(searchResult => {
         if (!searchResult.info) {
           throw new Error('searchResult.info is empty');
         }
+        anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
+        anyHit = true;
 
         results.push(query.copy({
           pref_key: searchResult.info.pref_key,
@@ -128,6 +132,9 @@ export class Tokyo23TownTranform extends Transform {
           chome: searchResult.info.chome,
         }));
       });
+      if (!anyHit || anyAmbiguous) {
+        results.push(query);
+      }
     }
 
     this.logger?.info(`tokyo23 : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);

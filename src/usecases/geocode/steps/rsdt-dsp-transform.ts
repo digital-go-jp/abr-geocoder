@@ -120,35 +120,42 @@ export class RsdtDspTransform extends Transform {
         continue;
       }
       
-      // 1つしかヒットしないはず
-      const findResult = findResults[0];
+      let anyAmbiguous = false;
+      let anyHit = false;
+      for (const findResult of findResults) {
 
-      // マッチしていない文字の最初の文字が数字のときは、
-      // 数字の途中でミスマッチしたときなので
-      // 結果を使用しない
-      if (findResult.unmatched?.char &&
-        RegExpEx.create('^[0-9]$').test(findResult.unmatched.char)) {
-        results.push(query);
-        continue;
+        // マッチしていない文字の最初の文字が数字のときは、
+        // 数字の途中でミスマッチしたときなので
+        // 結果を使用しない
+        if (findResult.unmatched?.char &&
+          RegExpEx.create('^[0-9]$').test(findResult.unmatched.char)) {
+          results.push(query);
+          continue;
+        }
+        anyHit = true;
+      
+        // 番地がヒットした
+        const info = findResult.info! as RsdtDspInfo;
+        anyAmbiguous = anyAmbiguous || findResult.ambiguous;
+
+        results.push(query.copy({
+          rsdtdsp_key: info.rsdtdsp_key,
+          rsdtblk_key: info.rsdtblk_key,
+          rsdt_num: info.rsdt_num,
+          rsdt_id: info.rsdt_id,
+          rsdt_num2: info.rsdt_num2,
+          rsdt2_id: info.rsdt2_id,
+          rep_lat: info.rep_lat,
+          rep_lon: info.rep_lon,
+          tempAddress: findResult.unmatched,
+          match_level: MatchLevel.RESIDENTIAL_DETAIL,
+          coordinate_level: MatchLevel.RESIDENTIAL_DETAIL,
+          matchedCnt: query.matchedCnt + findResult.depth,
+        }));
       }
-    
-      // 番地がヒットした
-      const info = findResult.info! as RsdtDspInfo;
-
-      results.push(query.copy({
-        rsdtdsp_key: info.rsdtdsp_key,
-        rsdtblk_key: info.rsdtblk_key,
-        rsdt_num: info.rsdt_num,
-        rsdt_id: info.rsdt_id,
-        rsdt_num2: info.rsdt_num2,
-        rsdt2_id: info.rsdt2_id,
-        rep_lat: info.rep_lat,
-        rep_lon: info.rep_lon,
-        tempAddress: findResult.unmatched,
-        match_level: MatchLevel.RESIDENTIAL_DETAIL,
-        coordinate_level: MatchLevel.RESIDENTIAL_DETAIL,
-        matchedCnt: query.matchedCnt + findResult.depth,
-      }));
+      if (!anyHit || anyAmbiguous) {
+        results.push(query);
+      }
     }
 
     this.params.logger?.info(`rsdt-dsp : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);

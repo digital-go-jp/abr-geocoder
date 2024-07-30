@@ -132,13 +132,15 @@ export class KoazaTransform extends Transform {
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       
-      let hit = false;
+      let anyHit = false;
+      let anyAmbiguous = false;
 
       // 複数にヒットする可能性がある
       findResults?.forEach(findResult => {
         if (!findResult.info) {
           throw new Error('findResult.info is empty');
         }
+        anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         // 小字がヒットした
         const params: Record<string, CharNode | number | string | MatchLevel> = {
@@ -158,10 +160,10 @@ export class KoazaTransform extends Transform {
         };
         results.push(query.copy(params));
 
-        hit = true;
+        anyHit = true;
       });
 
-      if (!hit) {
+      if (!anyHit || anyAmbiguous) {
         results.push(query);
       }
     }

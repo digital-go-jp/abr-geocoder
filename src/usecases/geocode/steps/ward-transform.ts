@@ -69,13 +69,13 @@ export class WardTransform extends Transform {
     _: BufferEncoding,
     callback: TransformCallback
   ) {
+    const results: Query[] = [];
     // ----------------------------------------------
     // 〇〇区から始まるパターンは、
     // 続く大字、町名、小字を調べないと分からないので
     // Databaseから取得して、動的にトライ木を作って探索する
     // ----------------------------------------------
     // 行政区が判明できているQueryと、そうでないQueryに分ける
-    const results: Query[] = [];
     let targets: Query[] = [];
     queries.forEach(query => {
       if (query.match_level.num >= MatchLevel.CITY.num) {
@@ -90,17 +90,20 @@ export class WardTransform extends Transform {
       return callback(null, results);
     }
 
-    await new Promise(async (resolve: (_?: unknown[]) => void) => {
-      while (!this.initialized) {
-        await timers.setTimeout(100);
-      }
-      resolve();
-    });
+    // 初期化が完了していなければ待機
+    if (!this.initialized) {
+      await new Promise(async (resolve: (_?: unknown[]) => void) => {
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
+        resolve();
+      });
+    }
 
     // 〇〇区を全て探索すると効率が悪いので、
     // 類似度が高い（もしくは一致する）〇〇区を探す
     const possibleWards: WardMatchingInfo[] = [];
-    targets.forEach(query => {
+    const filteredTargets = targets.filter(query => {
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
         results.push(query);
@@ -113,12 +116,14 @@ export class WardTransform extends Transform {
         extraChallenges: ['市', '区'],
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
+      let anyHit = false;
       searchResults2?.forEach(result => {
         if (!result.info) {
           return;
         }
 
         if (query.match_level === MatchLevel.UNKNOWN) {
+          anyHit = true;
           possibleWards.push(result.info);
           return;
         }
@@ -127,10 +132,14 @@ export class WardTransform extends Transform {
           query.match_level === MatchLevel.PREFECTURE &&
           query.pref_key === result.info.pref_key
         ) {
+          anyHit = true;
           possibleWards.push(result.info);
-          return;
         }
       })
+      if (!anyHit) {
+        results.push(query);
+      }
+      return anyHit;
     })
 
     // 可能性がありそうな〇〇区を指定して、トライ木を作成する
@@ -154,75 +163,73 @@ export class WardTransform extends Transform {
         value: row,
       }));
 
-      // マッチしないQuery は、次の探索に掛ける
-      const unmatched: Query[] = [];
-      targets.forEach(query => {
+      for (const query of filteredTargets) {
         if (!query.tempAddress) {
-          return query;
+          results.push(query);
+          continue;
         }
-        let hitResult = trie.find({
+
+        if (query.match_level.num > MatchLevel.PREFECTURE.num) {
+          results.push(query);
+          continue;
+        } 
+
+        let matched = trie.find({
           target: this.normalizeCharNode(query.tempAddress)!,
           extraChallenges: ['市', '町', '村'],
           partialMatches: true,
           fuzzy: DEFAULT_FUZZY_CHAR,
         });
 
-        if (!hitResult) {
-          unmatched.push(query);
-          return;
+        if (!matched) {
+          results.push(query);
+          continue;
+        }
+        let anyAmbiguous = false;
+        let anyHit = false;
+        for (const mResult of matched) {
+          if (query.pref_key !== mResult.info?.pref_key) {
+            continue;
+          }
+          anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+          anyHit = true;
+
+          // ここで大字を確定させると、rsdt_blk に入らなくなってしまうので、
+          // あくまでも 〇〇区までに留める
+          const oazaTmpAddress = (() => {
+            if (!mResult.info!.oaza_cho) {
+              return;
+            }
+            if (mResult.unmatched) {
+              return mResult.unmatched.splice(0, 0, mResult.info!.oaza_cho);
+            } else {
+              return new CharNode(mResult.info!.oaza_cho);
+            }
+          })();
+          results.push(query.copy({
+            pref_key: mResult.info!.pref_key,
+            city_key: mResult.info!.city_key,
+            pref: mResult.info!.pref,
+            city: mResult.info!.city,
+            lg_code: mResult.info!.lg_code,
+            county: mResult.info!.county,
+            ward: mResult.info!.ward,
+            tempAddress: oazaTmpAddress,
+            match_level: MatchLevel.MACHIAZA,
+            rsdt_addr_flg: -1,
+            matchedCnt: query.matchedCnt + mResult.depth - mResult.info!.oaza_cho.length,
+            rep_lat: mResult.info?.rep_lat,
+            rep_lon: mResult.info?.rep_lon,
+            coordinate_level: MatchLevel.CITY,
+          }));
         }
 
-        hitResult = hitResult.filter(result => {
-          if (query.match_level === MatchLevel.UNKNOWN ||
-            query.match_level.num === MatchLevel.PREFECTURE.num &&
-            query.pref_key === result.info?.pref_key) {
-
-            // ここで大字を確定させると、rsdt_blk に入らなくなってしまうので、
-            // あくまでも 〇〇区までに留める
-            const oazaTmpAddress = (() => {
-              if (!result.info!.oaza_cho) {
-                return;
-              }
-              if (result.unmatched) {
-                return result.unmatched.splice(0, 0, result.info!.oaza_cho);
-              } else {
-                return new CharNode(result.info!.oaza_cho);
-              }
-            })();
-
-            results.push(query.copy({
-              pref_key: result.info!.pref_key,
-              city_key: result.info!.city_key,
-              pref: result.info!.pref,
-              city: result.info!.city,
-              lg_code: result.info!.lg_code,
-              county: result.info!.county,
-              ward: result.info!.ward,
-              tempAddress: oazaTmpAddress,
-              match_level: MatchLevel.MACHIAZA,
-              matchedCnt: query.matchedCnt + result.depth - result.info!.oaza_cho.length,
-              rep_lat: result.info?.rep_lat,
-              rep_lon: result.info?.rep_lon,
-              coordinate_level: MatchLevel.CITY,
-            }));
-            return true;
-          } else {
-            return false;
-          }
-        });
-
-        if (hitResult.length === 0) {
-          unmatched.push(query);
-        } else {
-          // 〇〇区で始まるパターンの場合、誤マッチングの可能性があるので
-          // マッチしなかった可能性もキープしておく
-          if (query.match_level === MatchLevel.UNKNOWN) {
-            results.push(query);
-          }
+        // 〇〇区で始まるパターンの場合、誤マッチングの可能性があるので
+        // マッチしなかった可能性もキープしておく
+        if (!anyHit || anyAmbiguous || query.match_level === MatchLevel.UNKNOWN) {
+          results.push(query);
         }
-      });
-
-      targets = unmatched;
+      }
     }
 
     if (results.length > 0) {
@@ -230,7 +237,7 @@ export class WardTransform extends Transform {
     } else {
       this.logger?.info(`ward : ${((Date.now() - targets[0].startTime) / 1000).toFixed(2)} s`);
     }
-    callback(null, [results, targets].flat());
+    callback(null, results);
   }
 
 

@@ -41,18 +41,15 @@ export class OazaChomeTransform extends Transform {
   private readonly trie: TrieAddressFinder<OazaChoMachingInfo>;
   private readonly logger: DebugLogger | undefined;
   private initialized: boolean = false;
-  private readonly db: ICommonDbGeocode;
 
   constructor(params: Required<{
     oazaChomes: OazaChoMachingInfo[];
     logger: DebugLogger | undefined;
-    db: ICommonDbGeocode;
   }>) {
     super({
       objectMode: true,
     });
     this.logger = params.logger;
-    this.db = params.db;
 
     this.trie = new TrieAddressFinder<OazaChoMachingInfo>();
     setImmediate(() => {
@@ -177,7 +174,8 @@ export class OazaChomeTransform extends Transform {
       })
 
       // 複数都道府県にヒットする可能性があるので、全て試す
-      let hit = false;
+      let anyHit = false;
+      let anyAmbiguous = false;
       filteredResult?.forEach(findResult => {
         // step2, step3で city_key が判別している場合で
         // city_key が異なる場合はスキップ
@@ -185,9 +183,10 @@ export class OazaChomeTransform extends Transform {
           (query.city_key !== findResult.info?.city_key)) {
           return;
         }
+        anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         const info = findResult.info!;
-        hit = true;
+        anyHit = true;
         if (info.rsdt_addr_flg === -1) {
           // 大字までヒットした
           results.push(query.copy({
@@ -233,7 +232,7 @@ export class OazaChomeTransform extends Transform {
         }));
       });
 
-      if (!hit) {
+      if (!anyHit || anyAmbiguous) {
         results.push(query);
       }
     }

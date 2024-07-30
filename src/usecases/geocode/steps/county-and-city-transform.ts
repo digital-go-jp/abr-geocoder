@@ -73,57 +73,64 @@ export class CountyAndCityTransform extends Transform {
       resolve();
     });
 
-    const results = queries
-      .map(query => {
-        if (!query.tempAddress) {
-          return query;
+    const results: Query[] = [];
+    for (const query of queries) {
+      // 既に判明している場合はスキップ
+      if (query.match_level.num >= MatchLevel.CITY.num) {
+        results.push(query);
+        continue;
+      }
+      if (!query.tempAddress) {
+        results.push(query);
+        continue;
+      }
+
+      // -------------------------
+      // 〇〇郡〇〇市町村を探索する
+      // -------------------------
+      const matched = this.countyAndCityTrie.find({
+        target: query.tempAddress,
+        extraChallenges: ['郡', '市', '町', '村'],
+        partialMatches: true,
+        fuzzy: DEFAULT_FUZZY_CHAR,
+      });
+      if (!matched || matched.length === 0) {
+        results.push(query);
+        continue;
+      }
+
+      let anyHit = false;
+      let anyAmbiguous = false;
+      for (const mResult of matched) {
+        // 都道府県が判別していない、または判別できでいて、
+        //　result.pref_key が同一でない結果はスキップする
+        // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
+        if (query.match_level.num === MatchLevel.PREFECTURE.num && 
+          query.pref_key !== mResult.info?.pref_key) {
+            continue;
         }
-        // 既に判明している場合はスキップ
-        if (query.match_level.num >= MatchLevel.CITY.num) {
-          return query;
-        }
-        // -------------------------
-        // 〇〇郡〇〇市町村を探索する
-        // -------------------------
-        const results = this.countyAndCityTrie.find({
-          target: query.tempAddress,
-          extraChallenges: ['郡', '市', '町', '村'],
-          partialMatches: true,
-          fuzzy: DEFAULT_FUZZY_CHAR,
-        });
-        if (!results || results.length === 0) {
-          return query;
-        }
-        return results
-          // 都道府県が判別していない、または判別できでいて、result.pref_key が同一のもの
-          // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
-          .filter(result => {
-            return (query.match_level.num === MatchLevel.UNKNOWN.num || 
-              query.match_level.num === MatchLevel.PREFECTURE.num &&
-              query.pref_key === result.info?.pref_key
-            );
-          })
-          .map(result => {
-            // 誤マッチングの可能性もあるので、元々のqueryも残しておく
-            return [query, query.copy({
-              pref: query.pref || result.info!.pref,
-              pref_key: query.pref_key || result.info!.pref_key,
-              city_key: result.info!.city_key,
-              tempAddress: result.unmatched,
-              city: result.info!.city,
-              county: result.info!.county,
-              ward: result.info!.ward,
-              rep_lat: result.info!.rep_lat,
-              rep_lon: result.info!.rep_lon,
-              lg_code: result.info!.lg_code,
-              match_level: MatchLevel.CITY,
-              coordinate_level: MatchLevel.CITY,
-              matchedCnt: query.matchedCnt + result.depth,
-            })];
-          })
-          .flat();
-      })
-      .flat();
+        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+
+        results.push(query.copy({
+          pref: query.pref || mResult.info!.pref,
+          pref_key: query.pref_key || mResult.info!.pref_key,
+          city_key: mResult.info!.city_key,
+          tempAddress: mResult.unmatched,
+          city: mResult.info!.city,
+          county: mResult.info!.county,
+          ward: mResult.info!.ward,
+          rep_lat: mResult.info!.rep_lat,
+          rep_lon: mResult.info!.rep_lon,
+          lg_code: mResult.info!.lg_code,
+          match_level: MatchLevel.CITY,
+          coordinate_level: MatchLevel.CITY,
+          matchedCnt: query.matchedCnt + mResult.depth,
+        }));
+      }
+      if (!anyHit || anyAmbiguous) {
+        results.push(query);
+      }
+    }
     
     const seen = new Set<string | undefined>();
     const filteredReslts = results.filter(x => {

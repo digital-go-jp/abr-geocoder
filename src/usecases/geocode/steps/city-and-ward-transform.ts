@@ -103,33 +103,35 @@ export class CityAndWardTransform extends Transform {
       }
       
       let anyHit = false;
-      for (const mQuery of matched) {
+      let anyAmbiguous = false;
+      for (const mResult of matched) {
         // 都道府県が判別していない、または判別できでいて、
         //　result.pref_key が同一でない結果はスキップする
         // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
         if (query.match_level.num === MatchLevel.PREFECTURE.num && 
-          query.pref_key !== mQuery.info?.pref_key) {
+          query.pref_key !== mResult.info?.pref_key) {
             continue;
         }
+        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
         anyHit = true;
 
         results.push(query.copy({
-          pref: query.pref || mQuery.info!.pref,
-          pref_key: query.pref_key || mQuery.info!.pref_key,
-          city_key: mQuery.info!.city_key,
-          tempAddress: mQuery.unmatched,
-          county: mQuery.info!.county,
-          city: mQuery.info!.city,
-          rep_lat: mQuery.info!.rep_lat,
-          rep_lon: mQuery.info!.rep_lon,
-          lg_code: mQuery.info!.lg_code,
-          ward: mQuery.info!.ward,
+          pref: query.pref || mResult.info!.pref,
+          pref_key: query.pref_key || mResult.info!.pref_key,
+          city_key: mResult.info!.city_key,
+          tempAddress: mResult.unmatched,
+          county: mResult.info!.county,
+          city: mResult.info!.city,
+          rep_lat: mResult.info!.rep_lat,
+          rep_lon: mResult.info!.rep_lon,
+          lg_code: mResult.info!.lg_code,
+          ward: mResult.info!.ward,
           match_level: MatchLevel.CITY,
           coordinate_level: MatchLevel.CITY,
-          matchedCnt: query.matchedCnt + mQuery.depth,
+          matchedCnt: query.matchedCnt + mResult.depth,
         }));
       }
-      if (!anyHit) {
+      if (!anyHit || anyAmbiguous) {
         results.push(query);
       }
     }

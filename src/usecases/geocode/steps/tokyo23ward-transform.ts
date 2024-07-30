@@ -109,8 +109,8 @@ export class Tokyo23WardTranform extends Transform {
         continue;
       }
 
-      // 東京都〇〇区にヒットした
-      let keepOriginal = false;
+      let anyAmbiguous = false;
+      let anyHit = false;
       searchResults.forEach(searchResult => {
         if (!searchResult.info) {
           throw new Error('searchResult.info is empty');
@@ -120,8 +120,10 @@ export class Tokyo23WardTranform extends Transform {
         // この時点で東京都と判定できていない場合は、
         // 他都道府県の可能性もあるので、ヒットしない場合もキープしておく
         if (query.lg_code !== PrefLgCode.TOKYO && this.needsCopy.has(searchResult.info.city)) {
-          keepOriginal = true;
+          anyAmbiguous = true;
         }
+        anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
+        anyHit = true;
 
         results.push(query.copy({
           pref_key: searchResult.info.pref_key,
@@ -137,7 +139,7 @@ export class Tokyo23WardTranform extends Transform {
           coordinate_level: MatchLevel.CITY,
         }));
       });
-      if (keepOriginal) {
+      if (!anyHit || anyAmbiguous) {
         results.push(query);
       }
     }

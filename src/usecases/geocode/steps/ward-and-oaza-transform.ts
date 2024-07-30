@@ -67,7 +67,7 @@ export class WardAndOazaTransform extends Transform {
     next: TransformCallback
   ) {
 
-    const results = [];
+    const results: Query[] = [];
     for (const query of queries) {
       if (!query.tempAddress) {
         results.push(query);
@@ -101,42 +101,46 @@ export class WardAndOazaTransform extends Transform {
         results.push(query);
         continue;
       }
-      const matchedResults = trieResults
-        // 都道府県が判別していない、または判別できでいて、result.pref_key が同一のもの
-        // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
-        .filter(result => {
-          return (query.match_level.num === MatchLevel.UNKNOWN.num || 
-            query.match_level.num === MatchLevel.PREFECTURE.num &&
-            query.pref_key === result.info?.pref_key
-          );
-        })
-        .map(result => {
-          return query.copy({
-            pref: query.pref || result.info!.pref,
-            pref_key: query.pref_key || result.info!.pref_key,
-            city_key: result.info!.city_key,
-            tempAddress: result.unmatched,
-            city: result.info!.city,
-            county: result.info!.county,
-            lg_code: result.info!.lg_code,
-            ward: result.info!.ward,
-            rep_lat: result.info!.rep_lat,
-            rep_lon: result.info!.rep_lon,
-            machiaza_id: result.info!.machiaza_id,
 
-            // 大字・小字に rsdt_addr_flg で 0,1 が混在する可能性があるので
-            // この時点では不明。なので -1
-            rsdt_addr_flg: -1,
-            oaza_cho: result.info!.oaza_cho,
-            match_level: MatchLevel.MACHIAZA,
-            coordinate_level: MatchLevel.CITY,
-            matchedCnt: query.matchedCnt + result.depth,
-          });
-        });
-      if (matchedResults.length === 0) {
+      let anyAmbiguous = false;
+      let anyHit = false;
+
+      for (const mResult of trieResults) {
+        // 都道府県が判別していない、または判別できでいて、
+        //　result.pref_key が同一でない結果はスキップする
+        // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
+        if (query.match_level.num === MatchLevel.PREFECTURE.num && 
+          query.pref_key !== mResult.info?.pref_key) {
+            continue;
+        }
+        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+        anyHit = true;
+
+        results.push(query.copy({
+          pref: query.pref || mResult.info!.pref,
+          pref_key: query.pref_key || mResult.info!.pref_key,
+          city_key: mResult.info!.city_key,
+          tempAddress: mResult.unmatched,
+          city: mResult.info!.city,
+          county: mResult.info!.county,
+          lg_code: mResult.info!.lg_code,
+          ward: mResult.info!.ward,
+          rep_lat: mResult.info!.rep_lat,
+          rep_lon: mResult.info!.rep_lon,
+          machiaza_id: mResult.info!.machiaza_id,
+
+          // 大字・小字に rsdt_addr_flg で 0,1 が混在する可能性があるので
+          // この時点では不明。なので -1
+          rsdt_addr_flg: -1,
+          oaza_cho: mResult.info!.oaza_cho,
+          match_level: MatchLevel.MACHIAZA,
+          coordinate_level: MatchLevel.CITY,
+          matchedCnt: query.matchedCnt + mResult.depth,
+        }));
+      }
+
+      if (!anyHit || anyAmbiguous) {
         results.push(query);
-      } else {
-        matchedResults.forEach(matched => results.push(matched));
       }
     }
     this.logger?.info(`ward_and_oaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);

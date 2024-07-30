@@ -81,10 +81,12 @@ export class PrefTransform extends Transform {
         break;
       }
       let anyHit = false;
+      let anyAmbiguous = false;
       for (const mResult of matched) {
         if (!mResult.info) {
           continue;
         }
+        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
         anyHit = true;
         results.push(query.copy({
           pref_key: mResult.info.pref_key,
@@ -98,7 +100,7 @@ export class PrefTransform extends Transform {
           matchedCnt: mResult.depth,
         }));
       }
-      if (!anyHit) {
+      if (!anyHit || anyAmbiguous) {
         results.push(query);
       }
     }
