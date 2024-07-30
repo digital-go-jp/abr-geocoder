@@ -355,16 +355,17 @@ export class Query implements IQuery {
       ) {
         formatted_address.push(' ');
       }
-      formatted_address.push(other.trim());
+      formatted_address.push(other);
     }
 
     // 最終的な文字列を作成
-    const result = formatted_address.join('').trim();
+    const result = formatted_address.join('')
+      .replaceAll(RegExpEx.create(' +', 'g'), ' ').trim();
     
     // 最終的な文字列と一番最初のクエリ文字列の類似度を計算する
     const invertScore = getLevenshteinDistanceRatio(
       toHankakuAlphaNum(result),
-      toHankakuAlphaNum(this.input.data.address),
+      toHankakuAlphaNum(this.input.data.address.replaceAll(RegExpEx.create(' +', 'g'), ' ')),
     );
 
     // 浮動小数点の計算で 1 - 0.33 = 0.69999.. になるのを防ぐために
