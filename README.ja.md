@@ -41,7 +41,7 @@
   abrg  # 実行できることを確認
   ```
 
-## `download`
+## `abrg download`コマンド
 
   [アドレス・ベース・レジストリ](https://catalog.registries.digital.go.jp/rc/dataset/)からジオコーディングに必要なデータセットをダウンロードし、SQLiteを使ってデータベースを構築します。
 
@@ -98,7 +98,7 @@
     ```
   </details>
 
-## `update-check`
+## `abrg update-check`コマンド
 
   データのアップデートを確認します。ローカルにデータがある場合は、データベースに含まれる市区町村を対象にアップデートチェックを行ないます。新しいデータがある場合には、続けてダウンロードすることが可能です。
 
@@ -147,9 +147,10 @@
     ```
   </details>
 
-## `geocode`
+## `abrg`コマンド
 
   入力した住所文字列をデータベースと突合し、正規化された住所文字列・町字 ID・緯度経度等を出力します。
+  (ジオコーディングを行います。)
 
   ```
   $ abrg <inputFile> [<outputFile>] [options]
@@ -269,7 +270,7 @@
     ```
   </details>
 
-## `serve`
+## `abrg serve`コマンド
 
   ジオコーダをREST APIサーバーとして起動します。
 
