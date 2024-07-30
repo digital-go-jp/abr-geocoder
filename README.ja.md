@@ -1,5 +1,7 @@
 # abr-geocoder (デジタル庁 アドレス・ベース・レジストリ ジオコーダー)
 
+- [English version](./README.md)
+
 ## 説明
 
   入力した住所文字列とデジタル庁が整備する [アドレス・ベース・レジストリ](https://catalog.registries.digital.go.jp/rc/dataset/)を突合し、正規化された住所文字列・町字 ID ・緯度経度等を出力するジオコーダーです。

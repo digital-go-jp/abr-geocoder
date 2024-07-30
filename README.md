@@ -1,6 +1,8 @@
 
 # abr-geocoder (Digital Agency Address Base Registry Geocoder)
 
+- [日本語版](./README.ja.md)
+
 ## Description
 
 A geocoder that matches input address strings with the [Address Base Registry](https://catalog.registries.digital.go.jp/rc/dataset/) maintained by the Digital Agency, Government of Japan, outputting normalized address strings, town IDs, latitude and longitude, etc. It analyzes Japanese domestic address notation, absorbs variations, and outputs normalized results according to the hierarchy.
