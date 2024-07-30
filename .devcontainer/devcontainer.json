@@ -4,7 +4,7 @@
   "name": "abrg-dev",
   "dockerFile": "Dockerfile",
   "mounts": [
-    //"source=${localEnv:HOME}/ba000001.sqlite,target=/root/.abr-geocoder/ba000001.sqlite,type=bind",
+    //"source=${localEnv:HOME}/abr-geocoder,target=/root/.abr-geocoder,type=bind",
     "target=${containerWorkspaceFolder}/node_modules,type=volume"
   ]
 }

@@ -122,16 +122,16 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
 
           case 'oaza_cho':
             return result.oaza_cho || '';
-          
+
           case 'chome':
             return result.chome || '';
-          
+
           case 'koaza':
             return result.koaza || '';
 
           case 'rsdt_addr_flg':
             return result.rsdt_addr_flg;
-  
+
           case 'other':
             if (!result.tempAddress) {
               return '';
@@ -139,13 +139,10 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return `"${result.tempAddress.toOriginalString()}"`;
 
           case 'blk_num':
-            if (!result.block) {
-              return '';
-            }
-            return `"${result.block.toString()}"`;
+            return result.block?.toString() || '';
 
           case 'blk_id':
-            return result.block_id || '';
+            return result.block_id?.toString() || '';
 
           case 'rsdt_id':
             return result.rsdt_id?.toString() || '';
@@ -160,29 +157,20 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.rsdt_num2?.toString() || '';
 
           case 'prc_num1':
-            if (!result.prc_num1) {
-              return '';
-            }
-            return `"${result.prc_num1.toString()}"`;
+            return result.prc_num1?.toString() || '';
 
           case 'prc_num2':
-            if (!result.prc_num2) {
-              return '';
-            }
-            return `"${result.prc_num2.toString()}"`;
+            return result.prc_num2?.toString() || '';
 
           case 'prc_num3':
-            if (!result.prc_num3) {
-              return '';
-            }
-            return `"${result.prc_num3.toString()}"`;
+            return result.prc_num3?.toString() || '';
 
           case 'prc_id':
             return result.prc_id?.toString() || '';
 
           case 'coordinate_level':
             return result.coordinate_level.str;
-  
+
           case 'pref_key':
             return result.pref_key;
 
@@ -226,32 +214,32 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
   static readonly DEFAULT_COLUMNS = [
     // 出力するCSVカラムの順番
     'input',
-    'score',
     'output',
     'other',
+    'score',
     'match_level',
+    'coordinate_level',
+    'lat',
+    'lon',
     'lg_code',
+    'machiaza_id',
+    'rsdt_addr_flg',
+    'blk_id',
+    'rsdt_id',
+    'rsdt2_id',
+    'prc_id',
     'pref',
     'county',
     'city',
     'ward',
-    'machiaza_id',
     'oaza_cho',
     'chome',
     'koaza',
     'blk_num',
-    'blk_id',
     'rsdt_num',
-    'rsdt_id',
     'rsdt_num2',
-    'rsdt2_id',
-    'rsdt_addr_flg',
     'prc_num1',
     'prc_num2',
     'prc_num3',
-    'prc_id',
-    'lat',
-    'lon',
-    'coordinate_level',
   ];
 }
