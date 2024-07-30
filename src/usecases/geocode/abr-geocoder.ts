@@ -1,7 +1,7 @@
 import { WorkerThreadPool } from "@domain/services/thread/worker-thread-pool";
 import path from 'node:path';
 import { EventEmitter } from "node:stream";
-import { GeocoderDiContainer } from "./models/geocode-di-container";
+import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
 import { QueryJson } from "./models/query";
 import { GeocodeWorkerInitData } from "./worker/geocode-worker";
 import { AbrGeocoderInput } from "./models/abrg-input-data";
@@ -12,7 +12,7 @@ export class AbrGeocoder extends EventEmitter {
   private readonly workerPool: WorkerThreadPool<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>;
 
   constructor(params: {
-    container: GeocoderDiContainer,
+    container: AbrGeocoderDiContainer,
     maxConcurrency: number;
   }) {
     super();

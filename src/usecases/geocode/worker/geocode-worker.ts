@@ -7,7 +7,7 @@ import { ICommonDbGeocode } from '@interface/database/common-db';
 import { MessagePort } from 'node:worker_threads';
 import { Readable, Writable } from "stream";
 import { isMainThread, parentPort, workerData } from "worker_threads";
-import { GeocoderDiContainer, GeocoderDiContainerParams } from '../models/geocode-di-container';
+import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from '../models/abr-geocoder-di-container';
 import { Query, QueryInput } from '../models/query';
 import { ChomeTranform } from '../steps/chome-transform';
 import { CityAndWardTransform } from '../steps/city-and-ward-transform';
@@ -29,14 +29,14 @@ import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { AbrGeocoderInput } from '../models/abrg-input-data';
 
 export type GeocodeWorkerInitData = {
-  containerParams: GeocoderDiContainerParams,
+  containerParams: AbrGeocoderDiContainerParams,
 }
 
 export const geocodeOnWorkerThread = async (params: Required<{
   port: MessagePort;
   initData: GeocodeWorkerInitData;
 }>) => {
-  const container = new GeocoderDiContainer(params.initData.containerParams);
+  const container = new AbrGeocoderDiContainer(params.initData.containerParams);
   const dbCtrl = container.database;
   const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
   const logger: DebugLogger | undefined = container.logger;

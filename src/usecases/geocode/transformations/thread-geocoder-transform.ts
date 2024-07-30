@@ -25,7 +25,7 @@ import { Duplex } from 'node:stream';
 import timers from 'node:timers/promises';
 import { AbrGeocoder } from '../abr-geocoder';
 import { AbrGeocoderInput } from '../models/abrg-input-data';
-import { GeocoderDiContainer } from '../models/geocode-di-container';
+import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
 import { Query, QueryJson } from '../models/query';
 import { SearchTarget } from '@domain/types/search-target';
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
@@ -42,7 +42,7 @@ export class ThreadGeocodeTransform extends Duplex {
   private fuzzy: string | undefined;
 
   constructor(params: Required<{
-    container: GeocoderDiContainer,
+    container: AbrGeocoderDiContainer,
     geocoder: AbrGeocoder,
     fuzzy: string;
     searchTarget?: SearchTarget;

@@ -1,6 +1,7 @@
 
 import { DatabaseParams } from "@domain/types/database-params";
-import { SearchTarget } from "@domain/types/search-target";
+import { AbrGeocoder } from "@usecases/geocode/abr-geocoder";
+import { AbrGeocoderDiContainer } from "@usecases/geocode/models/abr-geocoder-di-container";
 import { StatusCodes } from 'http-status-codes';
 import { MiddlewareNext, Request, Response, Router, Server } from "hyper-express";
 import { OnGeocodeRequest } from "./on-geocode-request";
@@ -10,9 +11,7 @@ export class AbrgApiServer extends Server {
   // アクセスルーター
   private readonly router: Router = new Router();
   
-  constructor(params: Required<{
-    database: DatabaseParams;
-  }>) {
+  constructor(container: AbrGeocoderDiContainer) {
     super();
 
     const corsMiddleware = (_: Request, response: Response, next: MiddlewareNext) => {
@@ -24,18 +23,24 @@ export class AbrgApiServer extends Server {
       // response.setHeader('Access-Control-Allow-Credentials', 'true');
       next();
     }
-    this.use('/', corsMiddleware, this.router);
 
-    const onGeocodeRequest = new OnGeocodeRequest({
-      database: params.database,
-      debug: false,
-    });
+    // リクエストにCORSヘッダーを付加
+    this.use('/', corsMiddleware, this.router);
     
+    // ジオコーダの作成
+    const geocoder = new AbrGeocoder({
+      container,
+      maxConcurrency: 5,
+    });
+
+    // geocode に対するリクエスト
+    const onGeocodeRequest = new OnGeocodeRequest(geocoder);
     this.router.get('/geocode', (request, response) => {
       onGeocodeRequest.run(request, response)
         .catch(error => this.onInternalServerError(error, response));
     });
 
+    // その他のアクセスは Not found
     this.router.get('*', (_: Request, response: Response) => {
       response.status(StatusCodes.NOT_FOUND);
       response.json({

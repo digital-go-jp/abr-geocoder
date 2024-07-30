@@ -2,32 +2,18 @@ import { OutputFormat } from "@domain/types/output-format";
 import { SearchTarget } from "@domain/types/search-target";
 import { FormatterProvider } from "@interface/format/formatter-provider";
 import { AbrGeocoder } from "@usecases/geocode/abr-geocoder";
-import { GeocoderDiContainer, GeocoderDiContainerParams } from "@usecases/geocode/models/geocode-di-container";
 import { Query } from "@usecases/geocode/models/query";
 import { StatusCodes } from "http-status-codes";
-import {
-  Request,
-  Response
-} from "hyper-express";
-import stringHash from "string-hash";
-import { ApiResponseTransform } from "./api-response-transform";
+import { Request, Response } from "hyper-express";
 
 export class OnGeocodeRequest {
-
-  // ジオコーダーのストリーム
-  // 内部でwebworkerによる複数スレッドを立ち上げるので、何度も再作成するのはパフォーマンスが悪くなる。
-  // そこで _write と _read の部分だけを利用する
-  private readonly geocoder: AbrGeocoder;
 
   private readonly validFormat;
   private readonly validSearchTargets;
 
-  constructor(params: GeocoderDiContainerParams) {
-    const container = new GeocoderDiContainer(params);
-    this.geocoder = new AbrGeocoder({
-      container,
-      maxConcurrency: 5,
-    });
+  constructor(
+    private readonly geocoder: AbrGeocoder,
+  ) {
     this.geocoder.setMaxListeners(0);
 
     // 有効なフォーマット
@@ -86,30 +72,26 @@ export class OnGeocodeRequest {
       return;
     }
 
+    // フォーマッターの出力結果を response に書き込む
     const formatTransform = FormatterProvider.get({
       type: format,
       debug,
     });
     response.type(formatTransform.mimetype);
+    formatTransform.pipe(response);
 
-    const apiResponseTransform = new ApiResponseTransform();
-    if (format === 'json' ||
-      format == 'geojson' ||
-      format === 'ndjson' ||
-      format === 'ndgeojson') {
-        formatTransform.pipe(apiResponseTransform).pipe(response);
-    } else {
-      formatTransform.pipe(response);
-    }
-
-    const tag = stringHash(Date.now() + ':' + Math.floor(Math.random() * Date.now()));
+    // 1件単位でジオコーディングを行う
+    // ストリームで処理するほうが効率は良いが
+    // サーバーで使用する場合、他のリクエストと重なる可能性があるので
+    // 1件単位で処理する
     const result = await this.geocoder.geocode({
       address,
-      tag,
+      tag: undefined,
       searchTarget,
       fuzzy,
     });
 
+    // 
     const query = Query.from(result);
     formatTransform.write(query);
     formatTransform.end();

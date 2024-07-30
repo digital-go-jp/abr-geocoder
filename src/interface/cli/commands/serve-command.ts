@@ -6,6 +6,7 @@ import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { SearchTarget } from '@domain/types/search-target';
 import { AbrgApiServer } from '@interface/api-server';
+import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
 import path from 'node:path';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 
@@ -69,17 +70,20 @@ const serveCommand: CommandModule = {
       });
     }
 
-    const server = new AbrgApiServer({
+    // ジオコーダ作成のためのパラメータ
+    const container = new AbrGeocoderDiContainer({
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
         schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
+      debug: process.env.NODE_ENV === 'development',
     });
 
+    // APIサーバー
+    const server = new AbrgApiServer(container);
     const port = argv.port || 3000;
     const host = '0.0.0.0';
-
     await server.listen(port, host);
     console.log(`server start at ${host}:${port}`)
   }

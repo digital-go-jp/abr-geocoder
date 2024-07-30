@@ -27,29 +27,29 @@ import { DatabaseParams } from '@domain/types/database-params';
 import { SearchTarget } from '@domain/types/search-target';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 
-export type GeocoderDiContainerParams = {
+export type AbrGeocoderDiContainerParams = {
   database: DatabaseParams;
   debug: boolean;
 };
 
-export class GeocoderDiContainer extends CommonDiContainer {
+export class AbrGeocoderDiContainer extends CommonDiContainer {
 
   public readonly searchTarget?: SearchTarget;
   public readonly database: GeocodeDbController;
   public readonly logger?: DebugLogger;
 
-  constructor(private params: GeocoderDiContainerParams) {
+  constructor(private params: AbrGeocoderDiContainerParams) {
     super();
     this.database = new GeocodeDbController({
       connectParams: params.database,
     });
-    if (params.debug && process.env.NODE_ENV === 'development') {
+    if (params.debug) {
       this.logger = DebugLogger.getInstance();
     }
     Object.freeze(this);
   }
   
-  toJSON(): GeocoderDiContainerParams {
+  toJSON(): AbrGeocoderDiContainerParams {
     return {
       ...this.params,
     }

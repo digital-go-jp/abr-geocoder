@@ -24,7 +24,7 @@
 import { DatabaseParams } from '@domain/types/database-params';
 import { SearchTarget } from '@domain/types/search-target';
 import { Duplex, Writable } from 'node:stream';
-import { GeocoderDiContainer } from './models/geocode-di-container';
+import { AbrGeocoderDiContainer } from './models/abr-geocoder-di-container';
 import { Query } from './models/query';
 import { TextReaderTransform } from './transformations/text-reader-transform';
 import { ThreadGeocodeTransform } from './transformations/thread-geocoder-transform';
@@ -71,7 +71,7 @@ export class AbrGeocodeStream extends Duplex {
 
     // DIコンテナをセットアップする
     // 初期設定値を DIコンテナに全て詰め込む
-    const container = new GeocoderDiContainer({
+    const container = new AbrGeocoderDiContainer({
       database: params.database,
       debug: params.debug === true,
     });
