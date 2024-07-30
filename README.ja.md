@@ -46,8 +46,7 @@
   [アドレス・ベース・レジストリ](https://catalog.registries.digital.go.jp/rc/dataset/)からジオコーディングに必要なデータセットをダウンロードし、SQLiteを使ってデータベースを構築します。
 
   ```sh
-  # 日本全国のデータをダウンロード
-  abrg download
+  abrg download [options]
   ```
 
   - <details>
@@ -104,7 +103,7 @@
   データのアップデートを確認します。ローカルにデータがある場合は、データベースに含まれる市区町村を対象にアップデートチェックを行ないます。新しいデータがある場合には、続けてダウンロードすることが可能です。
 
   ```sh
-  abrg update-check
+  abrg update-check [options]
   ```
 
   - <details>
@@ -275,7 +274,7 @@
   ジオコーダをREST APIサーバーとして起動します。
 
   ```sh
-  abrg serve
+  abrg serve [options]
   ```
 
   - <details>
