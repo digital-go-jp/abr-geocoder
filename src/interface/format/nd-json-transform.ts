@@ -28,7 +28,7 @@ import { Stream, TransformCallback } from 'node:stream';
 import { IFormatTransform } from './iformat-transform';
 
 export class NdJsonTransform extends Stream.Transform implements IFormatTransform {
-  
+
   mimetype: string = 'application/json';
 
   constructor(private readonly options: {
@@ -56,11 +56,19 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
       },
       result: {
         output: result.formatted.address,
+        other: result.tempAddress?.toOriginalString() || BLANK_CHAR,
         score: result.formatted.score,
         match_level: result.match_level.str,
-        other: result.tempAddress?.toOriginalString() || BLANK_CHAR,
         coordinate_level: result.coordinate_level.str,
-        lg_code: result.lg_code || BLANK_CHAR,
+        lat: result.rep_lat,
+        lon: result.rep_lon,
+        lg_code: result.lg_code ? result.lg_code : BLANK_CHAR,
+        machiaza_id: result.machiaza_id || BLANK_CHAR,
+        rsdt_addr_flg: result.rsdt_addr_flg,
+        blk_id: result.block_id || BLANK_CHAR,
+        rsdt_id: result.rsdt_id || BLANK_CHAR,
+        rsdt2_id: result.rsdt2_id || BLANK_CHAR,
+        prc_id: result.prc_id || BLANK_CHAR,
         pref: result.pref || BLANK_CHAR,
         county: result.county || BLANK_CHAR,
         city: result.city || BLANK_CHAR,
@@ -68,20 +76,12 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
         oaza_cho: result.oaza_cho || BLANK_CHAR,
         chome: result.chome || BLANK_CHAR,
         koaza: result.koaza || BLANK_CHAR,
-        machiaza_id: result.machiaza_id || BLANK_CHAR,
         blk_num: result.block?.toString() || BLANK_CHAR,
-        blk_id: result.block_id || BLANK_CHAR,
         rsdt_num: result.rsdt_num || BLANK_CHAR,
-        rsdt_id: result.rsdt_id || BLANK_CHAR,
         rsdt_num2: result.rsdt_num2 || BLANK_CHAR,
-        rsdt2_id: result.rsdt2_id || BLANK_CHAR,
-        rsdt_addr_flg: result.rsdt_addr_flg,
         prc_num1: result.prc_num1?.toString() || BLANK_CHAR,
         prc_num2: result.prc_num2?.toString() || BLANK_CHAR,
         prc_num3: result.prc_num3?.toString() || BLANK_CHAR,
-        prc_id: result.prc_id || BLANK_CHAR,
-        lat: result.rep_lat,
-        lon: result.rep_lon,
       },
     };
     if (this.options.debug) {

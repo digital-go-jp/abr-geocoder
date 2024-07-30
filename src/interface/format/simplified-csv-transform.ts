@@ -27,15 +27,15 @@ import { Stream, TransformCallback } from 'node:stream';
 import { IFormatTransform } from './iformat-transform';
 
 export class SimplifiedCsvTransform extends Stream.Transform implements IFormatTransform {
-  
+
   mimetype: string = 'text/x-csv';
-  
+
   private readonly rows: string[] = [];
   private readonly columns = [
     // 出力するCSVカラムの順番
     'input',
-    'score',
     'output',
+    'score',
     'match_level',
   ];
 
@@ -85,7 +85,7 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
           case 'score':
             return result.formatted.score;
           case 'match_level':
-            return result.match_level.str;
+            return `"${result.match_level.str || ''}"`;
           case 'pref_key':
             return result.pref_key;
           case 'city_key':
