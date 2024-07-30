@@ -355,7 +355,7 @@ export class Query implements IQuery {
       ) {
         formatted_address.push(' ');
       }
-      formatted_address.push(other);
+      formatted_address.push(other.trim());
     }
 
     // 最終的な文字列を作成
