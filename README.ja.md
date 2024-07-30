@@ -274,6 +274,10 @@
 
   ジオコーダをREST APIサーバーとして起動します。
 
+  ```sh
+  abrg serve
+  ```
+
   - <details>
     <summary>ポート番号の変更</summary>
 
