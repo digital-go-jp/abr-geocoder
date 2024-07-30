@@ -58,6 +58,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
         output: result.formatted.address,
         score: result.formatted.score,
         match_level: result.match_level.str,
+        other: result.tempAddress?.toOriginalString() || BLANK_CHAR,
         coordinate_level: result.coordinate_level.str,
         lg_code: result.lg_code || BLANK_CHAR,
         pref: result.pref || BLANK_CHAR,

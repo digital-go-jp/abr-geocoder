@@ -61,6 +61,7 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
         input: result.input.data.address,
         output: result.formatted.address,
         score: result.formatted.score,
+        other: result.tempAddress?.toOriginalString() || BLANK_CHAR,
         match_level: result.match_level.str,
         lg_code: result.lg_code || BLANK_CHAR,
         pref: result.pref || BLANK_CHAR,
