@@ -1,4 +1,5 @@
 
+import { AMBIGUOUS_RSDT_ADDR_FLG } from "@config/constant-values";
 import { DataField } from "@config/data-field";
 import { DbTableName } from "@config/db-table-name";
 import { TableKeyProvider } from "@domain/services/table-key-provider";
@@ -10,10 +11,10 @@ import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { TownInfo, TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
 import { PrefLgCode } from "@domain/types/pref-lg-code";
-import { ICommonDbGeocode } from "../../common-db";
-import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 import { LRUCache } from "lru-cache";
 import stringHash from "string-hash";
+import { ICommonDbGeocode } from "../../common-db";
+import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 
 export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbGeocode {
 
