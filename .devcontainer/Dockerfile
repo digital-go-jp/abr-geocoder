@@ -10,5 +10,3 @@ RUN apt-get update && apt-get install -y \
 RUN sed -i -E 's/# (ja_JP.UTF-8)/\1/' /etc/locale.gen \
   && locale-gen
 ENV LANG ja_JP.UTF-8
-
-RUN npm install -g pnpm
