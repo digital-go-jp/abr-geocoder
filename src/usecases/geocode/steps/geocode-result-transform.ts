@@ -67,12 +67,33 @@ export class GeocodeResultTransform extends Transform {
         let totalScoreA = 0;
         let totalScoreB = 0;
   
-        // マッチレベルが高い方に +1
-        if (a.match_level.num > b.match_level.num) {
-          totalScoreA += 1;
-        } else if (a.match_level.num < b.match_level.num) {
-          totalScoreB += 1;
+        const aLv = a.match_level.num;
+        const bLv = b.match_level.num;
+        const isArsdt = aLv === MatchLevel.RESIDENTIAL_BLOCK.num || aLv === MatchLevel.RESIDENTIAL_DETAIL.num;
+        const isBrsdt = bLv === MatchLevel.RESIDENTIAL_BLOCK.num || bLv === MatchLevel.RESIDENTIAL_DETAIL.num;
+        const isAprcl = aLv === MatchLevel.PARCEL.num;
+        const isBprcl = bLv === MatchLevel.PARCEL.num;
+
+        switch (true) {
+          // Aが住居表示、Bが地番の場合、住居表示を優先
+          case isArsdt && isBprcl:
+            totalScoreA += 1;
+            break
+          
+          // Aが地番、Bが住居表示の場合、住居表示を優先
+          case isAprcl && isBrsdt:
+            totalScoreB += 1;
+            break;
+          
+          default:
+            if (a.match_level.num > b.match_level.num) {
+              totalScoreA += 1;
+            } else if (a.match_level.num < b.match_level.num) {
+              totalScoreB += 1;
+            }
+            break;
         }
+        
   
         // 元の文字と類似度が高い方に+1
         if (a.formatted.score > b.formatted.score) {
