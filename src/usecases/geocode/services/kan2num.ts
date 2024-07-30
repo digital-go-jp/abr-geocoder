@@ -73,11 +73,6 @@ const kanjiNum = new Map<string, number>([
   ['十', 10],
 ]);
 
-type Node<T> = {
-  kind: 'string' | 'number';
-  val: T;
-};
-
 export const kan2num = (target: string) => {
   const result: string[] = [];
   const stack: string[] = [];
@@ -86,7 +81,7 @@ export const kan2num = (target: string) => {
   
   // Monotonic stackを使って解く
   const N = target.length;
-  for (let i = 0; i < target.length; i++) {
+  for (let i = 0; i < N; i++) {
     const char = target[i];
 
     // 漢数字なら、stackに溜め込む

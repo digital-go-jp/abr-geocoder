@@ -579,7 +579,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         town_key: townRow.town_key,
         rep_lat: city.rep_lat,
         rep_lon: city.rep_lon,
-        rsdt_addr_flg: -1,
+        rsdt_addr_flg: AMBIGUOUS_RSDT_ADDR_FLG,
       });
     });
 

@@ -110,3 +110,9 @@ export const BLANK_CHAR = null;
 
 // 同時ダウンロード数
 export const MAX_CONCURRENT_DOWNLOAD = 100;
+
+// MatchLevel = Machiaza のとき、その地域に含まれる
+// 大字・丁目・小字に rsdt_addr_flg = 0 と 1 が
+// 混合する可能性がある。
+// そこで、 -1 を出力する
+export const AMBIGUOUS_RSDT_ADDR_FLG = -1;

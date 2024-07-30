@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
+import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { OazaChoMachingInfo } from '@domain/types/geocode/oaza-cho-info';
@@ -187,7 +187,7 @@ export class OazaChomeTransform extends Transform {
 
         const info = findResult.info!;
         anyHit = true;
-        if (info.rsdt_addr_flg === -1) {
+        if (info.rsdt_addr_flg === AMBIGUOUS_RSDT_ADDR_FLG) {
           // 大字までヒットした
           results.push(query.copy({
             pref_key: info.pref_key,
@@ -200,7 +200,7 @@ export class OazaChomeTransform extends Transform {
             rep_lon: info.rep_lon,
             oaza_cho: info.oaza_cho,
             machiaza_id: info.machiaza_id,
-            rsdt_addr_flg: -1,
+            rsdt_addr_flg: AMBIGUOUS_RSDT_ADDR_FLG,
             tempAddress: findResult.unmatched,
             match_level: MatchLevel.MACHIAZA,
             coordinate_level: MatchLevel.CITY,

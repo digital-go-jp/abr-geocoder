@@ -31,7 +31,7 @@ import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import timers from 'node:timers/promises';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export class WardAndOazaTransform extends Transform {
 
@@ -130,8 +130,8 @@ export class WardAndOazaTransform extends Transform {
           machiaza_id: mResult.info!.machiaza_id,
 
           // 大字・小字に rsdt_addr_flg で 0,1 が混在する可能性があるので
-          // この時点では不明。なので -1
-          rsdt_addr_flg: -1,
+          // この時点では不明。なので AMBIGUOUS_RSDT_ADDR_FLG
+          rsdt_addr_flg: AMBIGUOUS_RSDT_ADDR_FLG,
           oaza_cho: mResult.info!.oaza_cho,
           match_level: MatchLevel.MACHIAZA,
           coordinate_level: MatchLevel.CITY,

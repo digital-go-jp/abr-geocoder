@@ -33,7 +33,7 @@ import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { CharNode } from '../services/trie/char-node';
 import timers from 'node:timers/promises';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export class WardTransform extends Transform {
 
@@ -216,7 +216,7 @@ export class WardTransform extends Transform {
             ward: mResult.info!.ward,
             tempAddress: oazaTmpAddress,
             match_level: MatchLevel.MACHIAZA,
-            rsdt_addr_flg: -1,
+            rsdt_addr_flg: AMBIGUOUS_RSDT_ADDR_FLG,
             matchedCnt: query.matchedCnt + mResult.depth - mResult.info!.oaza_cho.length,
             rep_lat: mResult.info?.rep_lat,
             rep_lon: mResult.info?.rep_lon,
