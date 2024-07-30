@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -113,7 +113,7 @@ export class RsdtDspTransform extends Transform {
       }
       const findResults = trie.find({
         target,
-        fuzzy: query.fuzzy,
+        fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (findResults === undefined || findResults.length === 0) {
         results.push(query);

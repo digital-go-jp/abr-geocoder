@@ -94,7 +94,7 @@ export const SPACE_SYMBOLS: string = [
 ].join('');
 
 // ワイルドカードとしてマッチングさせる1文字
-export const DEFAULT_FUZZY_CHAR: string = '?';
+export const DEFAULT_FUZZY_CHAR: string = '£';
 
 // yargs が '-' を解析できないので、別の文字に置き換える
 export const SINGLE_DASH_ALTERNATIVE: string = '<stdin>';

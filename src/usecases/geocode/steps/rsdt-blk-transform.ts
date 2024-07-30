@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, SPACE } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
@@ -140,8 +140,9 @@ export class RsdtBlkTransform extends Transform {
     let matchedCnt = 0;
 
     while (p) {
-      if (p.char === query.fuzzy) {
+      if (p.char === DEFAULT_FUZZY_CHAR) {
         // fuzzyの場合、任意の１文字
+        // TODO: Databaseごとの処理に対応させる
         buffer.push('_');
         matchedCnt++;
       } else if (/\d/.test(p.char!)) {

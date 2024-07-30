@@ -30,6 +30,7 @@ import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { PrefInfo } from '@domain/types/geocode/pref-info';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export class PrefTransform extends Transform {
 
@@ -72,7 +73,7 @@ export class PrefTransform extends Transform {
         // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
         extraChallenges: ['道', '都', '府', '県'],
         
-        fuzzy: query.fuzzy,
+        fuzzy: DEFAULT_FUZZY_CHAR,
       });
 
       if (!matched) {

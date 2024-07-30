@@ -27,7 +27,7 @@ import { Stream, TransformCallback } from 'node:stream';
 import { IFormatTransform } from './iformat-transform';
 
 export class CsvTransform extends Stream.Transform implements IFormatTransform {
-  mimetype: string = 'text/csv';
+  mimetype: string = 'text/x-csv';
 
   private readonly rows: string[] = [];
   private readonly columns: string[];

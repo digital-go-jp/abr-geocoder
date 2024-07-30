@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, MUBANCHI } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { OazaChoMachingInfo } from '@domain/types/geocode/oaza-cho-info';
@@ -146,7 +146,7 @@ export class OazaChomeTransform extends Transform {
         // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
         // 「〇〇町」の「町」が省略された入力の場合を想定
         extraChallenges: ['町'],
-        fuzzy: query.fuzzy,
+        fuzzy: DEFAULT_FUZZY_CHAR,
       });
       
       const filteredResult = findResults?.filter(result => {

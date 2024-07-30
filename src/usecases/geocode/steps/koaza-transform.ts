@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, MUBANCHI } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { KoazaMachingInfo } from '@domain/types/geocode/koaza-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -129,7 +129,7 @@ export class KoazaTransform extends Transform {
       }
       const findResults = trie.find({
         target,
-        fuzzy: query.fuzzy,
+        fuzzy: DEFAULT_FUZZY_CHAR,
       });
       
       let hit = false;

@@ -31,6 +31,7 @@ import { CityMatchingInfo } from '@domain/types/geocode/city-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import timers from 'node:timers/promises';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export class CountyAndCityTransform extends Transform {
 
@@ -88,7 +89,7 @@ export class CountyAndCityTransform extends Transform {
           target: query.tempAddress,
           extraChallenges: ['郡', '市', '町', '村'],
           partialMatches: true,
-          fuzzy: query.fuzzy,
+          fuzzy: DEFAULT_FUZZY_CHAR,
         });
         if (!results || results.length === 0) {
           return query;

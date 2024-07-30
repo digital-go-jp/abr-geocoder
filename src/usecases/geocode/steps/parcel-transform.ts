@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { TableKeyProvider } from '@domain/services/table-key-provider';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
@@ -160,8 +160,9 @@ export class ParcelTransform extends Transform {
 
     while (p) {
       matchedCnt++;
-      if (p.char === query.fuzzy) {
+      if (p.char === DEFAULT_FUZZY_CHAR) {
         // fuzzyの場合、任意の１文字
+        // TODO: Databaseごとの処理
         current.push('_');
       } else if (/\d/.test(p.char!)) {
         current.push(p.char!);

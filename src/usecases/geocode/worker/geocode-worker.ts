@@ -8,7 +8,7 @@ import { MessagePort } from 'node:worker_threads';
 import { Readable, Writable } from "stream";
 import { isMainThread, parentPort, workerData } from "worker_threads";
 import { GeocoderDiContainer, GeocoderDiContainerParams } from '../models/geocode-di-container';
-import { Query } from '../models/query';
+import { Query, QueryInput } from '../models/query';
 import { ChomeTranform } from '../steps/chome-transform';
 import { CityAndWardTransform } from '../steps/city-and-ward-transform';
 import { CountyAndCityTransform } from '../steps/county-and-city-transform';
@@ -225,7 +225,7 @@ export const geocodeOnWorkerThread = async (params: Required<{
 
   // メインスレッドからメッセージを受け取る
   params.port.on('message', async (task: Uint8Array) => {
-    const data = fromSharedMemory<ThreadJob<AbrGeocoderInput>>(task);
+    const data = fromSharedMemory<ThreadJob<QueryInput>>(task);
     reader.push(data);
   });
 };

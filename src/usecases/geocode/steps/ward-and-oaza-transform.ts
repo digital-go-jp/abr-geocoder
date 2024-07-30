@@ -31,6 +31,7 @@ import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import timers from 'node:timers/promises';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export class WardAndOazaTransform extends Transform {
 
@@ -94,7 +95,7 @@ export class WardAndOazaTransform extends Transform {
         target: query.tempAddress,
         extraChallenges: ['市', '町', '村'],
         partialMatches: true,
-        fuzzy: query.fuzzy,
+        fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!trieResults || trieResults.length === 0) {
         results.push(query);

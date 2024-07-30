@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { Transform, TransformCallback } from 'node:stream';
-import { DASH, DASH_SYMBOLS, MUBANCHI, SPACE, SPACE_SYMBOLS, VIRTUAL_SPACE } from '@config/constant-values';
+import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE, SPACE_SYMBOLS, VIRTUAL_SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Query } from '../models/query';
@@ -119,6 +119,11 @@ export class GeocodeResultTransform extends Transform {
     //   .replace(
     //     RegExpEx.create(`(${DASH}?\\d+)?[(?:丁目?)(?:番地?)号]`, 'g'), `\$1${DASH}`);
     // })
+
+    // fuzzy を元に戻す
+    if (query.fuzzy) {
+      result = result.replaceAll(DEFAULT_FUZZY_CHAR, query.fuzzy);
+    }
     
       // 末尾が(DASH)+(空白)なら削除
     result = result.replace(RegExpEx.create(`[${DASH}${SPACE_SYMBOLS}]+$`), '');

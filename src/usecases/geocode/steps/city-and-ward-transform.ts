@@ -31,6 +31,7 @@ import { CityMatchingInfo } from '@domain/types/geocode/city-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import timers from 'node:timers/promises';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export class CityAndWardTransform extends Transform {
 
@@ -94,7 +95,7 @@ export class CityAndWardTransform extends Transform {
         target: query.tempAddress,
         extraChallenges: ['市', '区'],
         partialMatches: true,
-        fuzzy: query.fuzzy,
+        fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!matched || matched.length === 0) {
         results.push(query);
@@ -103,10 +104,11 @@ export class CityAndWardTransform extends Transform {
       
       let anyHit = false;
       for (const mQuery of matched) {
-        // 都道府県が判別していない、または判別できでいて、result.pref_key が同一のもの
+        // 都道府県が判別していない、または判別できでいて、
+        //　result.pref_key が同一でない結果はスキップする
         // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
         if (query.match_level.num === MatchLevel.PREFECTURE.num && 
-          query.pref_key === mQuery.info?.pref_key) {
+          query.pref_key !== mQuery.info?.pref_key) {
             continue;
         }
         anyHit = true;

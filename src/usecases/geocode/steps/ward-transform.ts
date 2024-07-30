@@ -33,6 +33,7 @@ import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { CharNode } from '../services/trie/char-node';
 import timers from 'node:timers/promises';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export class WardTransform extends Transform {
 
@@ -110,7 +111,7 @@ export class WardTransform extends Transform {
       const searchResults2 = this.wardTrie.find({
         target: this.normalizeCharNode(query.tempAddress)!,
         extraChallenges: ['市', '区'],
-        fuzzy: query.fuzzy,
+        fuzzy: DEFAULT_FUZZY_CHAR,
       });
       searchResults2?.forEach(result => {
         if (!result.info) {
@@ -163,7 +164,7 @@ export class WardTransform extends Transform {
           target: this.normalizeCharNode(query.tempAddress)!,
           extraChallenges: ['市', '町', '村'],
           partialMatches: true,
-          fuzzy: query.fuzzy,
+          fuzzy: DEFAULT_FUZZY_CHAR,
         });
 
         if (!hitResult) {

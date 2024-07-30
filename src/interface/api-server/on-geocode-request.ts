@@ -1,4 +1,3 @@
-import { removeUnwantedCharacters } from "@domain/services/remove-unwanted-characters";
 import { OutputFormat } from "@domain/types/output-format";
 import { SearchTarget } from "@domain/types/search-target";
 import { FormatterProvider } from "@interface/format/formatter-provider";
@@ -11,6 +10,7 @@ import {
   Response
 } from "hyper-express";
 import stringHash from "string-hash";
+import { ApiResponseTransform } from "./api-response-transform";
 
 export class OnGeocodeRequest {
 
@@ -69,7 +69,7 @@ export class OnGeocodeRequest {
 
     // ワイルドカード
     const fuzzy = request.query_parameters['fuzzy']?.trim();
-    if (fuzzy && !this.validateFuzzyOption(searchTarget)) {
+    if (fuzzy && !this.validateFuzzyOption(fuzzy)) {
       response.status(StatusCodes.BAD_REQUEST, 'fuzzy is invalid');
       response.json({
         status: 'error',
@@ -90,25 +90,17 @@ export class OnGeocodeRequest {
       type: format,
       debug,
     });
+    response.type(formatTransform.mimetype);
 
-    switch (format) {
-      case 'ndgeojson':
-      case 'geojson':
-      case 'ndjson':
-      case 'json': {
-        response.type('application/json');
-        break;
-      }
-      case 'simplified':
-      case 'csv': {
-        response.type('text/csv');
-        break;
-      }
-      default: 
-        // Do nothing here.
-        break;
+    const apiResponseTransform = new ApiResponseTransform();
+    if (format === 'json' ||
+      format == 'geojson' ||
+      format === 'ndjson' ||
+      format === 'ndgeojson') {
+        formatTransform.pipe(apiResponseTransform).pipe(response);
+    } else {
+      formatTransform.pipe(response);
     }
-    formatTransform.pipe(response);
 
     const tag = stringHash(Date.now() + ':' + Math.floor(Math.random() * Date.now()));
     const result = await this.geocoder.geocode({
@@ -124,11 +116,7 @@ export class OnGeocodeRequest {
   }
 
   private validateFuzzyOption(value: string): boolean {
-    if (value.length >= 2) {
-      return false;
-    }
-    const removed = removeUnwantedCharacters(value, '');
-    return removed === value;
+    return value.length === 1;
   }
 
   private validateTargetOption(value: string): value is SearchTarget {

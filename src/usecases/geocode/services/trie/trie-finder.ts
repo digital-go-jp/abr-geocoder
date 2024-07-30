@@ -89,6 +89,7 @@ export class TrieAddressFinder<T> {
       partialMatches: partialMatches === true,
       extraChallenges,
       fuzzy,
+      depth: 0,
     });
 
     return results?.map(result => {
@@ -106,12 +107,14 @@ export class TrieAddressFinder<T> {
     partialMatches,
     extraChallenges,
     fuzzy,
+    depth,
   }: {
     fuzzy: string | undefined;
     parent: TrieNode<T[]> | undefined;
     node: CharNode | undefined;
     partialMatches: boolean;
     extraChallenges?: string[];
+    depth: number;
   }): InternalResult<T>[] | undefined {
 
     // ignoreフラグが指定されている場合、スキップする
@@ -125,6 +128,7 @@ export class TrieAddressFinder<T> {
         partialMatches,
         extraChallenges,
         fuzzy,
+        depth,
       });
     }
 
@@ -133,7 +137,7 @@ export class TrieAddressFinder<T> {
 
       // extraChallenges が指定されている場合、もう１文字を試してみる
       const results: InternalResult<T>[] = [];
-      if (parent && extraChallenges && extraChallenges.length > 0) {
+      if (depth > 0 && parent && extraChallenges && extraChallenges.length > 0) {
         for (const extraChar of extraChallenges) {
           if (!parent.children.has(extraChar)) {
             continue;
@@ -145,6 +149,7 @@ export class TrieAddressFinder<T> {
             node,
             partialMatches,
             extraChallenges: [], // 2回 extraChallenge は行わない
+            depth: depth + 1,
           });
           if (!others) {
             continue;
@@ -161,7 +166,7 @@ export class TrieAddressFinder<T> {
         results.push({
           info,
           unmatched: node,
-          depth: 0,
+          depth,
         } as InternalResult<T>)
       });
 
@@ -178,15 +183,12 @@ export class TrieAddressFinder<T> {
         node: node.next,
         partialMatches,
         extraChallenges,
+        depth: depth + 1,
       });
 
       const results: InternalResult<T>[] = [];
-      if (others) {
-        others?.forEach(other => {
-          other.depth++;
-          results.push(other);
-        });
-      }
+      others?.forEach(other => results.push(other));
+
       // 中間結果を含まない場合は、情報を返す
       if (!partialMatches) {
         return results;
@@ -199,7 +201,7 @@ export class TrieAddressFinder<T> {
         results.push({
           info,
           unmatched: node,
-          depth: 0,
+          depth,
         });
       });
       return results;
@@ -214,9 +216,17 @@ export class TrieAddressFinder<T> {
           parent: child,
           node: node.next,
           partialMatches,
-          extraChallenges,
+          extraChallenges: [], // fuzzy のときは extraChallengeをしない
+          depth: depth + 1,
         });
-        others?.forEach(other => results.push(other));
+        others?.forEach(other => {
+          // extraChallengeをした結果
+          // fuzzy が unmatched の最初に来るときは、fuzzy を取り除く
+          if (other.unmatched?.char === fuzzy) {
+            other.unmatched = other.unmatched.next!;
+          }
+          results.push(other);
+        });
       }
     
       // 中間結果を含める場合は、現時点の情報を追加する
@@ -225,7 +235,7 @@ export class TrieAddressFinder<T> {
           results.push({
             info,
             unmatched: node,
-            depth: 0,
+            depth,
           });
         })
       }
@@ -238,12 +248,12 @@ export class TrieAddressFinder<T> {
       results.push({
         info,
         unmatched: node,
-        depth: 0,
+        depth,
       });
     });
 
     // extraChallenges が指定されている場合、もう１文字を試してみる
-    if (parent && extraChallenges && extraChallenges.length > 0) {
+    if (depth > 0 && parent && extraChallenges && extraChallenges.length > 0) {
       for (const extraChar of extraChallenges) {
         if (!parent.children.has(extraChar)) {
           continue;
@@ -256,11 +266,19 @@ export class TrieAddressFinder<T> {
           node,
           partialMatches,
           extraChallenges: [], // 2回目は行わない
+          depth: depth + 1,
         });
         if (!others) {
           continue;
         }
-        others.forEach(other => results.push(other));
+        others.forEach(other => {
+          // extraChallengeをした結果
+          // fuzzy が unmatched の最初に来るときは、fuzzy を取り除く
+          if (other.unmatched?.char === fuzzy) {
+            other.unmatched = other.unmatched.next!;
+          }
+          results.push(other)
+        });
       }
     }
     

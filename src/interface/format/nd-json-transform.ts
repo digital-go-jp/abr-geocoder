@@ -29,7 +29,7 @@ import { IFormatTransform } from './iformat-transform';
 
 export class NdJsonTransform extends Stream.Transform implements IFormatTransform {
   
-  mimetype: string = 'application/x-ndjson';
+  mimetype: string = 'application/json';
 
   constructor(private readonly options: {
     debug?: boolean;

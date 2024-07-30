@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { CityMatchingInfo } from '@domain/types/geocode/city-info';
@@ -102,7 +102,7 @@ export class Tokyo23WardTranform extends Transform {
         target,
         extraChallenges: ['区'],
         partialMatches: true,
-        fuzzy: query.fuzzy,
+        fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!searchResults || searchResults.length === 0) {
         results.push(query);
