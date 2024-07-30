@@ -41,15 +41,18 @@ export class OazaChomeTransform extends Transform {
   private readonly trie: TrieAddressFinder<OazaChoMachingInfo>;
   private readonly logger: DebugLogger | undefined;
   private initialized: boolean = false;
+  private readonly db: ICommonDbGeocode;
 
   constructor(params: Required<{
     oazaChomes: OazaChoMachingInfo[];
     logger: DebugLogger | undefined;
+    db: ICommonDbGeocode;
   }>) {
     super({
       objectMode: true,
     });
     this.logger = params.logger;
+    this.db = params.db;
 
     this.trie = new TrieAddressFinder<OazaChoMachingInfo>();
     setImmediate(() => {
@@ -114,15 +117,21 @@ export class OazaChomeTransform extends Transform {
       }
       
       // ------------------------------------
-      // Queryの情報を使って、DBから情報を取得する
+      // 初期化が完了していない場合は待つ
+      // ------------------------------------
+      if (!this.initialized) {
+        await new Promise(async (resolve: (_?: unknown[]) => void) => {
+          while (!this.initialized) {
+            await timers.setTimeout(100);
+          }
+          resolve();
+        });
+      }
+
+      // ------------------------------------
+      // Queryの情報を使って、条件式を作成
       // ------------------------------------
       const where = this.createWhereCondition(query);
-      await new Promise(async (resolve: (_?: unknown[]) => void) => {
-        while (!this.initialized) {
-          await timers.setTimeout(100);
-        }
-        resolve();
-      });
       
       // ------------------------------------
       // トライ木を使って探索
@@ -147,7 +156,7 @@ export class OazaChomeTransform extends Transform {
         // 「〇〇町」の「町」が省略された入力の場合を想定
         extraChallenges: ['町'],
         fuzzy: DEFAULT_FUZZY_CHAR,
-      });
+      }) || [];
       
       const filteredResult = findResults?.filter(result => {
         if (!where) {
@@ -177,8 +186,32 @@ export class OazaChomeTransform extends Transform {
           return;
         }
 
-        // 小字までヒットした
         const info = findResult.info!;
+        hit = true;
+        if (info.rsdt_addr_flg === -1) {
+          // 大字までヒットした
+          results.push(query.copy({
+            pref_key: info.pref_key,
+            city_key: info.city_key,
+            town_key: info.town_key,
+            lg_code: info.lg_code,
+            pref: info.pref,
+            city: info.city,
+            rep_lat: info.rep_lat,
+            rep_lon: info.rep_lon,
+            oaza_cho: info.oaza_cho,
+            machiaza_id: info.machiaza_id,
+            rsdt_addr_flg: -1,
+            tempAddress: findResult.unmatched,
+            match_level: MatchLevel.MACHIAZA,
+            coordinate_level: MatchLevel.CITY,
+            matchedCnt: query.matchedCnt + findResult.depth,
+          }));
+
+          return;
+        }
+
+        // 小字までヒットした
         results.push(query.copy({
           pref_key: info.pref_key,
           city_key: info.city_key,
@@ -198,7 +231,6 @@ export class OazaChomeTransform extends Transform {
           coordinate_level: MatchLevel.MACHIAZA_DETAIL,
           matchedCnt: query.matchedCnt + findResult.depth,
         }));
-        hit = true;
       });
 
       if (!hit) {

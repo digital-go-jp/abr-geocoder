@@ -123,9 +123,13 @@ export class WardAndOazaTransform extends Transform {
             rep_lat: result.info!.rep_lat,
             rep_lon: result.info!.rep_lon,
             machiaza_id: result.info!.machiaza_id,
+
+            // 大字・小字に rsdt_addr_flg で 0,1 が混在する可能性があるので
+            // この時点では不明。なので -1
+            rsdt_addr_flg: -1,
             oaza_cho: result.info!.oaza_cho,
-            match_level: MatchLevel.CITY,
-            coordinate_level: MatchLevel.MACHIAZA,
+            match_level: MatchLevel.MACHIAZA,
+            coordinate_level: MatchLevel.CITY,
             matchedCnt: query.matchedCnt + result.depth,
           });
         });

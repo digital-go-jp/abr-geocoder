@@ -101,6 +101,7 @@ export const geocodeOnWorkerThread = async (params: Required<{
       resolve(new OazaChomeTransform({
         oazaChomes,
         logger,
+        db: commonDb,
       }));
     }),
 

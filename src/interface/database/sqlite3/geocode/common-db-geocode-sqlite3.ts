@@ -13,6 +13,7 @@ import { PrefLgCode } from "@domain/types/pref-lg-code";
 import { ICommonDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 import { LRUCache } from "lru-cache";
+import stringHash from "string-hash";
 
 export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbGeocode {
 
@@ -196,7 +197,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         ${DataField.KOAZA.dbColumn} as koaza,
         ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
         ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-        (${DataField.OAZA_CHO.dbColumn} || ${DataField.CHOME.dbColumn}) as key
+        (${DataField.OAZA_CHO.dbColumn}) as key
       FROM
         ${DbTableName.TOWN}
       WHERE
@@ -487,7 +488,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       rep_lon: number;
     };
 
-
     const [
       prefMap,
       cityMap,
@@ -496,7 +496,23 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       this.getPrefMap(),
       this.getCityMap(),
       new Promise((resolve: (rows: TownRow[]) => void) => {
-        const townRows = this.prepare<unknown[], TownRow>(`select town_key, city_key, machiaza_id, oaza_cho, chome, koaza, rsdt_addr_flg, rep_lat, rep_lon from town where oaza_cho != '' and oaza_cho is not null`).all();
+        const townRows = this.prepare<unknown[], TownRow>(`
+          SELECT
+            town_key,
+            city_key,
+            ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+            ${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+            ${DataField.CHOME.dbColumn} as chome,
+            ${DataField.KOAZA.dbColumn} as koaza,
+            ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
+            ${DataField.REP_LAT.dbColumn} as rep_lat,
+            ${DataField.REP_LON.dbColumn} as rep_lon
+          FROM
+            ${DbTableName.TOWN}
+          WHERE
+            ${DataField.OAZA_CHO.dbColumn} != '' AND
+            ${DataField.OAZA_CHO.dbColumn} IS NOT NULL
+        `).all();
         resolve(townRows);
       }),
     ]);
@@ -527,6 +543,44 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         rep_lon: townRow.rep_lon || city.rep_lon,
         rsdt_addr_flg: townRow.rsdt_addr_flg,
       };
+    });
+
+    // 存在しない「大字丁目」の場合、「大字」までヒットさせたい、という仕様要求のため
+    // 「大字」までのデータも作成する
+    //
+    // 例：「霞が関４丁目」の場合、「４丁目」は存在しないが、「霞が関」は存在する
+    // なので「霞が関」までヒットさせたい
+    const added = new Set<number>();
+    townRows.forEach(townRow => {
+      const key = townRow.oaza_cho;
+      
+      const city = cityMap.get(townRow.city_key)!;
+      const pref = prefMap.get(city.pref_key)!.pref;
+      const machiaza_id = `${townRow.machiaza_id.substring(0, 4)}000`;
+      const oazaKey = stringHash([city.city_key.toString(), townRow.oaza_cho, machiaza_id].join(''));
+      if (added.has(oazaKey)) {
+        return;
+      }
+      added.add(oazaKey);
+
+      rows.push({
+        key,
+        pref: pref,
+        city: city.city,
+        county: city.county,
+        ward: city.ward,
+        chome: '',
+        lg_code: city.lg_code,
+        oaza_cho: townRow.oaza_cho,
+        koaza: '',
+        machiaza_id,
+        pref_key: city.pref_key,
+        city_key: townRow.city_key,
+        town_key: townRow.town_key,
+        rep_lat: city.rep_lat,
+        rep_lon: city.rep_lon,
+        rsdt_addr_flg: -1,
+      });
     });
 
     return rows;
