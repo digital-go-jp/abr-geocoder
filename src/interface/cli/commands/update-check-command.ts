@@ -1,15 +1,37 @@
-
+/*!
+ * MIT License
+ *
+ * Copyright (c) 2024 デジタル庁
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import { EnvProvider } from '@domain/models/env-provider';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { resolveHome } from '@domain/services/resolve-home';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
+import { PrefLgCode } from '@domain/types/pref-lg-code';
 import { UpdateChecker } from '@usecases/update-check/update-check-process';
 import path from 'node:path';
-import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 import readline from 'node:readline/promises';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 import downloadCommand from './download-command';
-import { PrefLgCode } from '@domain/types/pref-lg-code';
 
 export type UpdateCheckCommandArgv = {
   abrgDir?: string;
