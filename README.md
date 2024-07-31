@@ -37,11 +37,18 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 
 ## Installation
 
-```sh
-npm install @digital-go-jp/abr-geocoder
-npm link
-abrg  # Verify it runs
-```
+  - Global installation
+    ```sh
+    npm install -g @digital-go-jp/abr-geocoder
+    abrg  # Verify it runs
+    ```
+
+  - Local install 
+    ```sh
+    npm install @digital-go-jp/abr-geocoder
+    npm link
+    abrg  # Verify it runs
+    ```
 
 ## `abrg download` command
 
