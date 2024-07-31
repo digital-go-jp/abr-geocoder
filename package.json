@@ -13,7 +13,7 @@
   "homepage": "https://github.com/digital-go-jp/abr-geocoder",
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "bin": {
     "abrg": "build/interface/cli/cli.js"
