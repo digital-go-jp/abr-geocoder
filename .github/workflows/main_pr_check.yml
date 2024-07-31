@@ -40,47 +40,9 @@ jobs:
           npm install --global yarn
           yarn install
 
-      - name: Run eslint
-        uses: sibiraj-s/action-eslint@v3
-        with:
-          extensions: 'ts'
-          ignore-path: .eslintignore
-          ignore-patterns: |
-            build/
-            node_modules/
-          token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-
-      - name: Run tests
-        if: github.event_name != 'workflow_dispatch' 
-        run: npm run test:ci
-
-      - name: build test
-        shell: bash
+      - name: Build
         run: |
           npm run build
-      
-      - name: run system test
-        if: github.event_name != 'workflow_dispatch' 
-        shell: bash
-        run: |
-          npm run test:system
-      
-      - name: create test report
-        if: github.event_name != 'workflow_dispatch' 
-        uses: MishaKav/jest-coverage-comment@main
-        with:
-          github-token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-          summary-title: Coverage Summary
-          badge-title: Coverage
-          hide-comment: false
-          create-new-comment: false
-          hide-summary: false
-          coverage-summary-path: ./coverage/coverage-summary.json
-          junitxml-title: JUnit
-          junitxml-path: ./coverage/junit.xml
-          coverage-title: Coverage Details
-          coverage-path: ./coverage/coverage.txt
-          coverage-path-prefix: './src/'
 
       - name: git setup
         run: |

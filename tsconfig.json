@@ -1,10 +1,13 @@
+// Refer:
+// https://www.totaltypescript.com/tsconfig-cheat-sheet
 {
-  "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
     "outDir": "./build",
     "lib": [
-      "ES2021"
+      "es2023"
     ],
+    "target": "es2022",
+    "module": "NodeNext",
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true,
@@ -21,19 +24,24 @@
     "moduleResolution": "nodenext",
     "baseUrl": ".",
     "paths": {
-      "@mock/*": ["__mocks__/*"],
-      "@cli/*": ["src/cli/*"],
       "@domain/*": ["src/domain/*"],
-      "@controller/*": ["src/controller/*"],
-      "@interface-adapter/*": ["src/interface-adapter/*"],
-      "@usecase/*": ["src/usecase/*"],
-      "@settings/*": ["src/settings/*"],
-      "@process/*": ["src/controller/download/process/*"],
-      "@abrg-message/*": ["src/domain/abrg-message/*"],
-      "@abrg-error/*": ["src/domain/abrg-error/*"]
+      "@interface/*": ["src/interface/*"],
+      "@usecases/*": ["src/usecases/*"],
+      "@config/*": ["src/config/*"],
+      // "@mock/*": ["__mocks__/*"],
+      // "@cli/*": ["src/cli/*"],
+      // "@domain/*": ["src/domain/*"],
+      // "@controller/*": ["src/controller/*"],
+      // "@interface-adapter/*": ["src/interface-adapter/*"],
+      // "@usecase/*": ["src/usecase/*"],
+      // "@settings/*": ["src/config/*"],
+      // "@process/*": ["src/controller/download/process/*"],
+      // "@abrg-message/*": ["src/core/domain/abrg-message/*"],
+      // "@abrg-error/*": ["src/core/domain/abrg-error/*"]
     },
     "removeComments": true,
-    "isolatedModules": false,
+    "moduleDetection": "force",
+    "isolatedModules": true,
     "plugins": [
       {
         "transform": "typescript-transform-paths"
@@ -50,10 +58,10 @@
       "typescript-transform-paths/register"
     ]
   },
-  "include": [
-    "src/**/*.ts"
-  ],
+  "include": ["src/**/*.ts" ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/__skips__/",
+    "**/__skip__/",
   ]
 }

@@ -1,0 +1,107 @@
+## This workflow has been disabled for now, because the CKAN API is blocking our requests.
+## Re-enable when we can package test data inside this repository.
+
+name: "PR check for the main branch"
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  lint_and_build:
+    runs-on: ubuntu-latest
+
+    # Set up concurrency so the SQLite cache can be reused between nodejs matrix versions
+    # concurrency:
+    #   group: ${{ github.workflow }}-${{ github.ref }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - uses: actions/cache@v3
+        name: Setup npm cache
+        id: node_modules
+        with:
+          path: node_modules/
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+
+      - name: Install dependencies
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: |
+          npm install --global yarn
+          yarn install
+
+      - name: Run eslint
+        uses: sibiraj-s/action-eslint@v3
+        with:
+          extensions: 'ts'
+          ignore-path: .eslintignore
+          ignore-patterns: |
+            build/
+            node_modules/
+          token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+
+      - name: Run tests
+        if: github.event_name != 'workflow_dispatch' 
+        run: npm run test:ci
+
+      - name: build test
+        shell: bash
+        run: |
+          npm run build
+      
+      - name: run system test
+        if: github.event_name != 'workflow_dispatch' 
+        shell: bash
+        run: |
+          npm run test:system
+      
+      - name: create test report
+        if: github.event_name != 'workflow_dispatch' 
+        uses: MishaKav/jest-coverage-comment@main
+        with:
+          github-token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+          summary-title: Coverage Summary
+          badge-title: Coverage
+          hide-comment: false
+          create-new-comment: false
+          hide-summary: false
+          coverage-summary-path: ./coverage/coverage-summary.json
+          junitxml-title: JUnit
+          junitxml-path: ./coverage/junit.xml
+          coverage-title: Coverage Details
+          coverage-path: ./coverage/coverage.txt
+          coverage-path-prefix: './src/'
+
+      - name: git setup
+        run: |
+          git config --global user.email "no-reply@digital.go.jp"
+          git config --global user.name "github actions"
+            
+      - name: create changelog.md
+        id: prepare
+        run: |
+          bash ./.github/workflows/generate_changelog.sh
+          git add .
+          git commit -m "create changelog.md"
+          version=$(cat package.json | jq -r '.version')
+          echo "version=$version" >> $GITHUB_OUTPUT
+          tgz=$(npm pack | tail -n1 | tr -d '\n')
+          echo "tgz=$tgz" >> $GITHUB_OUTPUT
+
+      - name: github draft release  (trigger / workflow_dispatch)
+        run: |
+          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
+          npm publish . --dry-run
+        env:
+          GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+          GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}

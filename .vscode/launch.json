@@ -7,25 +7,8 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "geocoding(default)",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeArgs": [
-        "--trace-warnings",
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/.vscode/sample-data.txt"
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
       "name": "geocoding | jq",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
       "runtimeExecutable" : "${workspaceFolder}/.vscode/debug-with-jq.sh",
       "runtimeArgs": [
@@ -34,7 +17,9 @@
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/.vscode/sample-data.txt"
+        "${workspaceFolder}/.vscode/test.txt",
+        "--silent",
+        "--debug"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -42,18 +27,42 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "geocoding(csv)",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "name": "(地番)geocoding",
+      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
       "runtimeArgs": [
+        "--trace-warnings",
+        "--inspect-brk",
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "${workspaceFolder}/.vscode/sample-data.txt",
-        "${workspaceFolder}/.vscode/result.csv",
+        "${workspaceFolder}/.vscode/parcel-sample.txt",
+        "${workspaceFolder}/.vscode/parcel-out.csv",
+        "--debug",
+        "-f csv"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "schools(toCsv)",
+      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeArgs": [
+        "--require",
+        "ts-node/register",
+        "--inspect",
+        "--trace-warnings"
+      ],
+      "args": [
         "-f",
         "csv",
+        "${workspaceFolder}/.vscode/schools-input.txt",
+        "${workspaceFolder}/.vscode/schools-output.csv",
+        "--debug",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -61,94 +70,21 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "geocoding(json)",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "name": "short-business-offices(toCsv)",
+      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/.vscode/sample-data.txt",
-        "${workspaceFolder}/.vscode/result.json",
-        "-f",
-        "json",
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "geocoding(ndjson)",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeArgs": [
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/.vscode/sample-data.txt",
-        "${workspaceFolder}/.vscode/result.nd.json",
-        "--format",
-        "ndjson",
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "geocoding(geojson)",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeArgs": [
-        "--require",
-        "ts-node/register"
+        "ts-node/register",
+        "--inspect",
+        "--trace-warnings"
       ],
       "args": [
         "-f",
-        "geojson",
-        "${workspaceFolder}/.vscode/sample-data.txt",
-        "${workspaceFolder}/.vscode/result.geo.json",
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "geocoding(ndgeojson)",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeArgs": [
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "-f",
-        "ndgeojson",
-        "${workspaceFolder}/.vscode/sample-data.txt",
-        "${workspaceFolder}/.vscode/result.nd.geo.json",
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "geocoding(normalize)",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeArgs": [
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/.vscode/sample-data.txt",
-        "${workspaceFolder}/.vscode/result.csv",
-        "-f",
-        "normalize",
+        "csv",
+        "${workspaceFolder}/.vscode/short.txt",
+        "${workspaceFolder}/.vscode/business-output.csv",
+        "--debug",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -157,31 +93,54 @@
       "type": "node",
       "request": "launch",
       "name": "download command",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
       "runtimeArgs": [
+        "--inspect",
         "--require",
         "ts-node/register"
       ],
       "args": [
         "download",
+        "-c 082082"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
+      "env": {
+        "NODE_ENV": "development"
+      }
     },
 
     {
       "type": "node",
       "request": "launch",
+      "name": "api server",
+      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeArgs": [
+        "--trace-warnings",
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "serve",
+        "--port 80"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "update-check",
-      "program": "${workspaceFolder}/src/cli/cli.ts",
+      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
       "runtimeArgs": [
         "--require",
         "ts-node/register"
       ],
       "args": [
-        "update-check"
+        "update-check",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
