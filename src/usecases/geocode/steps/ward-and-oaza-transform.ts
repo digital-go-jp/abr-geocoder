@@ -136,6 +136,7 @@ export class WardAndOazaTransform extends Transform {
           match_level: MatchLevel.MACHIAZA,
           coordinate_level: MatchLevel.CITY,
           matchedCnt: query.matchedCnt + mResult.depth,
+          ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
         }));
       }
 

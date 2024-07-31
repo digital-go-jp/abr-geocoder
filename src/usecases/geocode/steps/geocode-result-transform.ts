@@ -103,9 +103,11 @@ export class GeocodeResultTransform extends Transform {
         }
         
         // マッチングした文字列が多い方に+1
-        if (a.matchedCnt > b.matchedCnt) {
+        const aMatchedCnt = a.matchedCnt - a.ambiguousCnt;
+        const bMatchedCnt = b.matchedCnt - b.ambiguousCnt;
+        if (aMatchedCnt > bMatchedCnt) {
           totalScoreA += 1;
-        } else if (a.matchedCnt < b.matchedCnt) {
+        } else if (aMatchedCnt < bMatchedCnt) {
           totalScoreB += 1;
         }
   
@@ -119,7 +121,17 @@ export class GeocodeResultTransform extends Transform {
         }
         
         // マッチレベルが高いほうが優先
-        return totalScoreB - totalScoreA;
+        if (totalScoreB - totalScoreA !== 0) {
+          return totalScoreB - totalScoreA;
+        }
+
+        // どうしても同じなら、ambiguousCnt が少ない方を優先
+        if (a.ambiguousCnt < b.ambiguousCnt) {
+          return -1;
+        } else if (a.ambiguousCnt > b.ambiguousCnt) {
+          return 1;
+        }
+        return 0;
       });
       
       if (queries.length === 0) {

@@ -221,6 +221,7 @@ export class WardTransform extends Transform {
             rep_lat: mResult.info?.rep_lat,
             rep_lon: mResult.info?.rep_lon,
             coordinate_level: MatchLevel.CITY,
+            ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
           }));
         }
 

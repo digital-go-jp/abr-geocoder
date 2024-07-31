@@ -151,6 +151,7 @@ export class RsdtDspTransform extends Transform {
           match_level: MatchLevel.RESIDENTIAL_DETAIL,
           coordinate_level: MatchLevel.RESIDENTIAL_DETAIL,
           matchedCnt: query.matchedCnt + findResult.depth,
+          ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
         }));
       }
       if (!anyHit || anyAmbiguous) {

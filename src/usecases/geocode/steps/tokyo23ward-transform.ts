@@ -137,6 +137,7 @@ export class Tokyo23WardTranform extends Transform {
           rep_lat: searchResult.info.rep_lat,
           rep_lon: searchResult.info.rep_lon,
           coordinate_level: MatchLevel.CITY,
+          ambiguousCnt: query.ambiguousCnt + (searchResult.ambiguous ? 1 : 0), 
         }));
       });
       if (!anyHit || anyAmbiguous) {

@@ -130,6 +130,7 @@ export class Tokyo23TownTranform extends Transform {
           oaza_cho: searchResult.info.oaza_cho,
           machiaza_id: searchResult.info.machiaza_id,
           chome: searchResult.info.chome,
+          ambiguousCnt: query.ambiguousCnt + (searchResult.ambiguous ? 1 : 0), 
         }));
       });
       if (!anyHit || anyAmbiguous) {

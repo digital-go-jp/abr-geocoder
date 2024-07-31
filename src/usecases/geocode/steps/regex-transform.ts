@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { Transform, TransformCallback } from 'node:stream';
-import { DASH, SPACE, VIRTUAL_SPACE } from '@config/constant-values';
+import { DASH, DASH_SYMBOLS, SPACE, VIRTUAL_SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Query } from '../models/query';
@@ -103,11 +103,15 @@ export class RegExTransform extends Transform {
     }
 
     let tmp = original;
-    tmp = tmp.replace(RegExpEx.create(`([0-9]+(?:丁目?))([0-9]+)(?:番地?の?)([0-9]+)号?`), `$1${DASH}2${DASH}$3`);
+    tmp = tmp.replace(RegExpEx.create(`([0-9]+(?:丁目?))([0-9]+)(?:番地?の?)([0-9]+)号?`), `$1${DASH}]2${DASH}$3`);
     tmp = tmp.replace(RegExpEx.create(`([0-9]+)(?:番地?の?)([0-9]+)(?:号)?`), `$1${DASH}$2`);
-    tmp = tmp.replace(RegExpEx.create(`(?:${DASH}|番地?)([0-9]+)号`), `${DASH}$1`);
+    tmp = tmp.replace(RegExpEx.create(`(?:[${DASH_SYMBOLS}${DASH}]|番地?)([0-9]+)号`), `${DASH}$1`);
     tmp = tmp.replace(RegExpEx.create(`([0-9]+)(?:番地?|号)$`), `$1`);
-    tmp = tmp.replace(RegExpEx.create(`${DASH}+`), DASH);
+    tmp = tmp.replace(RegExpEx.create(`(?:番地?|号)([0-9]+)$`), `${DASH}$1`);
+    tmp = tmp.replace(RegExpEx.create(`(?:番地?)([0-9]+)[${DASH_SYMBOLS}${DASH}]([0-9]+)$`), `${DASH}$1${DASH}$2`);
+    tmp = tmp.replace(RegExpEx.create(`(?:番地?)([0-9]+)[${DASH_SYMBOLS}${DASH}]([0-9]+)号$`), `${DASH}$1${DASH}$2`);
+    tmp = tmp.replace(RegExpEx.create(`(?:番地?)([0-9]+)[${DASH_SYMBOLS}${DASH}]([0-9]+)号室$`), `${DASH}$1${DASH}$2号室`);
+    tmp = tmp.replace(RegExpEx.create(`[${DASH_SYMBOLS}${DASH}]+`), DASH);
 
     p = CharNode.create(tmp);
 

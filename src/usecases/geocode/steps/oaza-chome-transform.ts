@@ -22,19 +22,18 @@
  * SOFTWARE.
  */
 import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { OazaChoMachingInfo } from '@domain/types/geocode/oaza-cho-info';
-import { ICommonDbGeocode } from '@interface/database/common-db';
 import { Transform, TransformCallback } from 'node:stream';
+import timers from 'node:timers/promises';
 import { Query } from '../models/query';
 import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import timers from 'node:timers/promises';
 
 export class OazaChomeTransform extends Transform {
 
@@ -205,6 +204,7 @@ export class OazaChomeTransform extends Transform {
             match_level: MatchLevel.MACHIAZA,
             coordinate_level: MatchLevel.CITY,
             matchedCnt: query.matchedCnt + findResult.depth,
+            ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
           }));
 
           return;

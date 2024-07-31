@@ -83,6 +83,9 @@ export interface IQuery {
   match_level: MatchLevel;
   // 緯度経度が有効なレベル
   coordinate_level: MatchLevel;
+
+  // FuzzyやextraChallenge を何文字含むか
+  ambiguousCnt: number;
 }
 export type QueryInput = {
   data: AbrGeocoderInput;
@@ -136,6 +139,7 @@ export class Query implements IQuery {
   public readonly match_level: MatchLevel;
   public readonly coordinate_level: MatchLevel;
   public readonly matchedCnt: number = 0;
+  public readonly ambiguousCnt: number = 0;
   public readonly formatted: FormattedAddres;
   public readonly debug: {
     original?: string;
@@ -154,6 +158,7 @@ export class Query implements IQuery {
     this.match_level = params.match_level;
     this.coordinate_level = params.coordinate_level;
     this.matchedCnt = params.matchedCnt;
+    this.ambiguousCnt = params.ambiguousCnt;
     this.startTime = params.startTime;
 
     this.input = params.input;
@@ -194,6 +199,7 @@ export class Query implements IQuery {
 
   public toJSON(): QueryJson {
     return {
+      ambiguousCnt: this.ambiguousCnt,
       fuzzy: this.fuzzy,
       searchTarget: this.searchTarget,
       city_key: this.city_key as number || undefined,
@@ -250,6 +256,7 @@ export class Query implements IQuery {
     return new Query(
       Object.assign(
         {
+          ambiguousCnt: this.ambiguousCnt,
           fuzzy: this.fuzzy,
           searchTarget: this.searchTarget,
 
@@ -409,6 +416,7 @@ export class Query implements IQuery {
       startTime: Date.now(),
       fuzzy: input.data.fuzzy,
       searchTarget: input.data.searchTarget,
+      ambiguousCnt: 0,
     });
   };
 }

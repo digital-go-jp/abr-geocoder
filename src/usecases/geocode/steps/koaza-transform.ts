@@ -157,6 +157,7 @@ export class KoazaTransform extends Transform {
           koaza: findResult.info.koaza,
           machiaza_id: findResult.info.machiaza_id,
           matchedCnt: query.matchedCnt + findResult.depth,
+          ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
         };
         results.push(query.copy(params));
 

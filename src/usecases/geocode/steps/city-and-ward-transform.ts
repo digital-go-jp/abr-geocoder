@@ -129,6 +129,7 @@ export class CityAndWardTransform extends Transform {
           match_level: MatchLevel.CITY,
           coordinate_level: MatchLevel.CITY,
           matchedCnt: query.matchedCnt + mResult.depth,
+          ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
         }));
       }
       if (!anyHit || anyAmbiguous) {

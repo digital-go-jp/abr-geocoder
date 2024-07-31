@@ -98,6 +98,7 @@ export class PrefTransform extends Transform {
           match_level: MatchLevel.PREFECTURE,
           coordinate_level: MatchLevel.PREFECTURE,
           matchedCnt: mResult.depth,
+          ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
         }));
       }
       if (!anyHit || anyAmbiguous) {

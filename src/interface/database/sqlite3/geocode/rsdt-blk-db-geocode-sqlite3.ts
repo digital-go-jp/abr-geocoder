@@ -42,7 +42,7 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
         SELECT
           rsdtblk_key,
           town_key,
-          blk_id,
+          ${DataField.BLK_ID.dbColumn} AS blk_id,
           ${DataField.BLK_NUM.dbColumn} AS blk_num,
           ${DataField.REP_LAT.dbColumn} as rep_lat,
           ${DataField.REP_LON.dbColumn} as rep_lon

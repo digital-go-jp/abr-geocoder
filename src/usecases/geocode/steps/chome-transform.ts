@@ -174,6 +174,7 @@ export class ChomeTranform extends Transform {
           rep_lon: findResult.info.rep_lon,
           koaza: findResult.info.koaza,
           coordinate_level: MatchLevel.MACHIAZA_DETAIL,
+          ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
         }));
 
         anyHit = true;

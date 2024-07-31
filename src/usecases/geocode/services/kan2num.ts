@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+import { DASH, SPACE } from "@config/constant-values";
 import { CharNode } from "./trie/char-node";
 
 const kanjiNum = new Map<string, number>([
@@ -68,16 +69,42 @@ const kanjiNum = new Map<string, number>([
 
   ['〇', 0],
   ['0', 0],
+  ['０', 0],
   ['零', 0],
 
   ['十', 10],
 ]);
 
+const SENTINEL = '&';
+const targetPatterns = new Set<string>([
+  '通',
+  '丁', // 東十二丁目 -> 東12丁目
+  '町',
+  '字', 
+  '通',
+  '番',
+  '番',
+  '部', // 壱壱壱部25 -> 111部25
+  '所', // 十二所 -> 12所
+  '社', // 三十八社町 -> 38社町
+  '線', // 西六線北二十六号 -> 西6線北26号
+  '号', // 西六線北二十六号 -> 西6線北26号
+  '条', // 東十五条南 -> 東15条南
+  '里', // 九十九里町 -> 99里町
+  SENTINEL,
+  DASH,
+  SPACE,
+  'の',
+  '之',
+  'ノ',
+  '丿',
+])
+
 export const kan2num = (target: string) => {
   const result: string[] = [];
   const stack: string[] = [];
 
-  target = target + "&";
+  target = target + SENTINEL;
   
   // Monotonic stackを使って解く
   const N = target.length;
@@ -90,21 +117,38 @@ export const kan2num = (target: string) => {
       continue;
     }
 
+    if (!targetPatterns.has(char)) {
+      // ターゲットパターンではないので、漢数字を復元する
+      result.push(...stack);
+      result.push(char);
+      stack.length = 0;
+      continue;
+    }
+
+
     // 漢数字が現れてきて、別の文字が現れたので、連続した漢数字が終了したことを意味する。
     // なので、stack に溜まっている漢数字を算用数字に変換する
     let current = 0;
     const tempResult = [];
-    while(stack.length > 0) {
-      const val = kanjiNum.get(stack.pop()!)!;
+    const stackLen = stack.length;
+    while (stack.length > 0) {
+      let val = kanjiNum.get(stack.pop()!)!;
 
-      if (val === 10) {
+      if (val === 0) {
+        tempResult.push(current.toString());
+        tempResult.push('0');
+        current = 0;
+        continue;
+
+      } else if (val === 10) {
+        val = 10;
         // 十が初めて出現する場合、current = 0 なので、
         // current = 0 + 10 = 10 となる。
         //
-        // または「"十六"」のように漢数字だけで、最後が「十」出ない場合、
+        // または「"十六"」のように漢数字だけで、最後が「十」でない場合、
         // current = 6 となっているので
         // current = 6 + 10 = 16 となる。 
-        if (stack.length === 0) {
+        if (!stack.length) {
           current += val;
           continue;
         }
@@ -140,7 +184,6 @@ export const kan2num = (target: string) => {
 };
 
 export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | undefined => {
-  // Google Gemini (Model 1.5) に生成させたコードをベースにしてみる
   const result: CharNode[] = [];
   const buffer: CharNode[] = [];
   
@@ -160,8 +203,11 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
 
     // 漢数字以外の場合
     if (num === undefined) {
-      //　現在の数値が 0 より大きい場合のみ追加
-      if (currentNumber > 0) {
+      if (!targetPatterns.has(char)) {
+        // ターゲットパターンではないときは、復元する
+        result.push(...buffer);
+      } else if (currentNumber > 0) {
+        //　現在の数値が 0 より大きい場合のみ追加
 
         // 1文字ずつに変換する
         const tmp = currentNumber.toString().split('');
@@ -209,15 +255,24 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
   if (currentNumber > 0) {
     // 1文字ずつに変換する
     const tmp = currentNumber.toString().split('');
-    for (const node of buffer) {
-      if (tmp.length === 0) {
-        break;
+    if (tmp.length > buffer.length) {
+      for (const node of buffer) {
+        node.char = tmp.shift();
+        result.push(node); 
       }
-      node.char = tmp.shift();
-      result.push(node); 
-    }
-    while (tmp.length > 0) {
-      result.push(new CharNode('', tmp.shift()));
+      while (tmp.length > 0) {
+        result.push(new CharNode('', tmp.shift()));
+      }
+    } else {
+      while (buffer.length > 0) {
+        const node = buffer.shift()!;
+        if (tmp.length > 0) {
+          node.char = tmp.shift()!;
+        } else {
+          node.char = '';
+        }
+        result.push(node);
+      }
     }
     // for (const node of buffer) {
     //   result.push(node); // 現在の数値が 0 より大きい場合のみ追加
@@ -237,3 +292,8 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
 
   return resultNode.next;
 };
+// const result = kan2numForCharNode(CharNode.create(`１８${DASH}３０４号`));
+// console.log(`original`, result?.toOriginalString());
+// console.log(`processed`, result?.toProcessedString());
+
+// console.log(kan2num(`東京都港区三田二丁目２番１８${DASH}３０４号`))

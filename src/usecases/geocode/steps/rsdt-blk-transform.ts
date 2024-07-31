@@ -109,7 +109,7 @@ export class RsdtBlkTransform extends Transform {
         results.push(query);
         continue;
       }
-
+      
       findResults.forEach(result => {
         results.push(query.copy({
           block: result.blk_num.toString(),
