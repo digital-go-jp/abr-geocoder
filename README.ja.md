@@ -39,8 +39,7 @@
 
   - グローバルインストール
   ```sh
-  npm install @digital-go-jp/abr-geocoder
-  npm link
+  npm install -g @digital-go-jp/abr-geocoder
   abrg  # 実行できることを確認
   ```
 
