@@ -40,6 +40,10 @@ jobs:
           npm install --global yarn
           yarn install
 
+      - name: Build
+        run: |
+          npm run build
+
       - name: git setup
         run: |
           git config --global user.email "no-reply@digital.go.jp"
