@@ -21,16 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Transform, TransformCallback } from 'node:stream';
 import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, J_DASH, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, NUMRIC_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS, VIRTUAL_SPACE, ZENKAKU } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { Transform, TransformCallback } from 'node:stream';
 import { Query, QueryInput } from '../models/query';
 import { jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2numForCharNode } from '../services/kan2num';
 import { toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
 import { toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 
 export class NormalizeTransform extends Transform {
 
@@ -139,6 +139,9 @@ export class NormalizeTransform extends Transform {
     // 半角カナ・全角カナ => 平仮名
     address = toHiraganaForCharNode(address);
 
+    // 全角英数字は、半角英数字に変換
+    address = toHankakuAlphaNumForCharNode(address);
+    
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
     address = jisKanjiForCharNode(address);
 
