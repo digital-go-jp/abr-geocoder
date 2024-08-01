@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { KoazaMachingInfo } from '@domain/types/geocode/koaza-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -30,10 +31,10 @@ import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
 import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2num, kan2numForCharNode } from '../services/kan2num';
+import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 
 export class KoazaTransform extends Transform {
 
@@ -177,6 +178,9 @@ export class KoazaTransform extends Transform {
     // 漢数字を半角数字に変換する
     address = kan2num(address);
 
+    // 全角英数字は、半角英数字に変換
+    address = toHankakuAlphaNum(address);
+    
     // カタカナはひらがなに変換する
     address = toHiragana(address);
 
