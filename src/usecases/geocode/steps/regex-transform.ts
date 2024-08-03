@@ -39,7 +39,7 @@ export class RegExTransform extends Transform {
     });
   }
 
-  async _transform(
+  _transform(
     queries: Query[],
     _: BufferEncoding,
     callback: TransformCallback
@@ -96,7 +96,7 @@ export class RegExTransform extends Transform {
 
   private normalize(p: CharNode | undefined): CharNode | undefined {
     // p のオリジナルの文字列で「〇〇丁目〇〇番地〇〇号」「〇〇丁目〇〇番地」と残っている部分を
-    // 「〇〇丁目〇〇-〇〇」「〇〇丁目〇〇」にする　
+    // 「〇〇丁目〇〇-〇〇」「〇〇丁目〇〇」にする
     const original = p?.toOriginalString();
     if (original === undefined) {
       return p;

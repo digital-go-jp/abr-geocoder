@@ -99,7 +99,7 @@ export class DownloadTransform extends Duplex {
         this.runningTasks--;
 
         if (isDownloadProcessError(downloadResult)) {
-          this.push(downloadResult as DownloadProcessError);
+          this.push(downloadResult);
           if (this.runningTasks === 0 && this.receivedFinal) {
             this.push(null);
           }

@@ -83,7 +83,7 @@ export class WorkerThread<I, T, R> extends Worker {
       const received = fromSharedMemory<ThreadJobResult<R> | ThreadMessage<any>>(shareMemory);
 
       if (received.kind !== 'result') {
-        this.emit('custom_message', received as ThreadMessage<any>);
+        this.emit('custom_message', received);
         return;
       }
       

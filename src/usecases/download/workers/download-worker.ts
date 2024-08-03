@@ -85,7 +85,7 @@ export const downloadOnWorkerThread = async (params: Required<{
   // ダウンロード処理のストリームに投げる
   params.port.on('message', (sharedMemory: Uint8Array) => {
     const params = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
-    reader.push(params as ThreadJob<DownloadRequest>);
+    reader.push(params);
   });
 };
 

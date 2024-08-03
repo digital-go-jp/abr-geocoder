@@ -103,7 +103,7 @@ export class CsvParseTransform extends Duplex {
     this.runningTasks++;
 
     // CSVファイルを分析して、データベースに登録する
-    const parseResult = await this.csvParsers.run(downloadResult as DownloadQuery2);
+    const parseResult = await this.csvParsers.run(downloadResult);
     this.push(parseResult);
     this.runningTasks--;
 

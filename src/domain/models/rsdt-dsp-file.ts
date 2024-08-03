@@ -44,7 +44,7 @@ export class RsdtDspFile
   }
   
   async process(params: Omit<ProcessOptions, 'db'> & {db : IRsdtDspDbDownload}) {
-    let parsedRows = params.lines.map(row => this.parseCsv(row));
+    const parsedRows = params.lines.map(row => this.parseCsv(row));
 
     // 続けて処理をする必要がるため、lgCodeを返す
     const lgCodes = new Set<string>();

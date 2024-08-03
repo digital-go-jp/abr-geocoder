@@ -79,15 +79,12 @@ export class Tokyo23TownTranform extends Transform {
       }
       
       if (!this.initialized) {
-        await new Promise(async (resolve: (_?: unknown[]) => void) => {
-          while (!this.initialized) {
-            await timers.setTimeout(100);
-          }
-          resolve();
-        });
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
       }
 
-      //　東京都〇〇区〇〇パターンを探索する
+      // 東京都〇〇区〇〇パターンを探索する
       const target = this.normalizeCharNode(query.tempAddress)!;
       const searchResults = this.tokyo23TownTrie.find({
         target,

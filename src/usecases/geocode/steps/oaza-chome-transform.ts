@@ -116,12 +116,9 @@ export class OazaChomeTransform extends Transform {
       // 初期化が完了していない場合は待つ
       // ------------------------------------
       if (!this.initialized) {
-        await new Promise(async (resolve: (_?: unknown[]) => void) => {
-          while (!this.initialized) {
-            await timers.setTimeout(100);
-          }
-          resolve();
-        });
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
       }
 
       // ------------------------------------
@@ -268,7 +265,7 @@ export class OazaChomeTransform extends Transform {
     // 「条」「条通」「条通り」を DASH にする
     address = address.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
 
-    // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
+    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
     address = address.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[地丁]?|軒|号|部|条通?|字)', 'g'), `$1${DASH}`);
@@ -276,7 +273,7 @@ export class OazaChomeTransform extends Transform {
     // 「通り」の「り」が省略されることがあるので、「通」だけにしておく
     address = address.replace(RegExpEx.create('の?通り?'), '通');
 
-    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
+    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく → どうもこれ、うまく機能しない。別の方法を考える
     // address = address.replace(RegExpEx.create('(.{2,})町'), '$1');
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
@@ -309,7 +306,7 @@ export class OazaChomeTransform extends Transform {
     // 「条」「条通」「条通り」を DASH にする
     address = address?.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
     
-    // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
+    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
     address = address?.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[丁地街町]?|軒|号|部|条通?|字)', 'g'), `$1${DASH}`);
@@ -317,7 +314,7 @@ export class OazaChomeTransform extends Transform {
     // 「通り」の「り」が省略されることがあるので、「通」だけにしておく
     address = address?.replace(RegExpEx.create('の?通り?'), '通');
 
-    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
+    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく → どうもこれ、うまく機能しない。別の方法を考える
     // address = address?.replace(RegExpEx.create('(.{2,})町'), '$1');
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので

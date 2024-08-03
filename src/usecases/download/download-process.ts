@@ -176,7 +176,7 @@ export class Downloader {
       });
     }
     
-    const packageListResult = response.body as {
+    const packageListResult = response.body as unknown as {
       success: boolean;
       result: string[];
     };
