@@ -213,11 +213,11 @@ export class CharNode {
           // tail = tail?.next;
           head = head?.next;
         }
-        tail!.next = new CharNode(head?.char, '', true);
+        tail.next = new CharNode(head?.char, '', true);
         tail = tail?.next;
         head = head?.next;
       }
-      tail!.next = head;
+      tail.next = head;
       return root.next;
     }
 
@@ -229,7 +229,7 @@ export class CharNode {
         tail = tail?.next;
         head = head?.next;
       }
-      head!.char = newValue!.char;
+      head!.char = newValue.char;
       head = head?.next;
       tail = tail?.next;
       newValue = newValue?.next;
@@ -238,7 +238,7 @@ export class CharNode {
     if (deleteCount > 0) {
       // 消す文字列の方が長い
       while ((deleteCount > 0) && head) {
-        tail!.originalChar += head!.originalChar!;
+        tail!.originalChar += head.originalChar!;
         head.char = '';
         head.ignore = true;
         head = head.next;
@@ -254,7 +254,7 @@ export class CharNode {
       // tail.next = newValue;
     }
     if (tail) {
-      tail!.next = head;
+      tail.next = head;
     }
 
     return root.next;

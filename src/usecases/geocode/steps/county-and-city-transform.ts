@@ -66,12 +66,12 @@ export class CountyAndCityTransform extends Transform {
     _: BufferEncoding,
     next: TransformCallback
   ) {
-    await new Promise(async (resolve: (_?: unknown[]) => void) => {
+    // 初期化が完了していなければ待つ
+    if (!this.initialized) {
       while (!this.initialized) {
         await timers.setTimeout(100);
       }
-      resolve();
-    });
+    }
 
     const results: Query[] = [];
     for (const query of queries) {
@@ -103,12 +103,13 @@ export class CountyAndCityTransform extends Transform {
       let anyAmbiguous = false;
       for (const mResult of matched) {
         // 都道府県が判別していない、または判別できでいて、
-        //　result.pref_key が同一でない結果はスキップする
+        // result.pref_key が同一でない結果はスキップする
         // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
         if (query.match_level.num === MatchLevel.PREFECTURE.num && 
           query.pref_key !== mResult.info?.pref_key) {
             continue;
         }
+        anyHit = true;
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;
 
         results.push(query.copy({

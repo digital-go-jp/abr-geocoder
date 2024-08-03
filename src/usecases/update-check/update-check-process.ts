@@ -75,7 +75,7 @@ export class UpdateChecker {
       });
     }
 
-    const packageListResult = response.body as {
+    const packageListResult = response.body as unknown as {
       success: boolean;
       result: string[];
     };

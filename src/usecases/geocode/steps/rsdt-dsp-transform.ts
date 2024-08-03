@@ -135,7 +135,7 @@ export class RsdtDspTransform extends Transform {
         anyHit = true;
       
         // 番地がヒットした
-        const info = findResult.info! as RsdtDspInfo;
+        const info = findResult.info!;
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         results.push(query.copy({
@@ -168,7 +168,7 @@ export class RsdtDspTransform extends Transform {
     address = address?.replace(RegExpEx.create(`^${DASH}+`), '');
     
     // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
-    address = address?.replaceAll(RegExpEx.create('(\d+)[番(?:番地)号の]', 'g'), `$1${DASH}`);
+    address = address?.replaceAll(RegExpEx.create("(\d+)[番(?:番地)号の]", 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する

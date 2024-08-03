@@ -67,7 +67,7 @@ export class BufferResponseData extends ResponseData {
     header: ResponseHeader,
     body: Buffer[],
   ) {
-    super(header, Buffer.concat(body as Buffer[]));
+    super(header, Buffer.concat(body));
     Object.freeze(this);
   }
   get body(): Buffer {
@@ -95,8 +95,8 @@ export class JsonResponseData extends ResponseData {
     super(header, JSON.parse(body.join('')));
     Object.freeze(this);
   }
-  get body(): Record<string, string | number | Object | undefined> {
-    return this.bodyData as Record<string, string | number | Object | undefined>;
+  get body(): Record<string, string | number | object | undefined> {
+    return this.bodyData as Record<string, string | number | object | undefined>;
   }
 }
 

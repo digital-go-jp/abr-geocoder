@@ -106,7 +106,7 @@ export class NormalizeTransform extends Transform {
     address = toHankakuAlphaNumForCharNode(address);
 
     // アラビア数字の直後に全角が来る場合は、仮想のスペース記号を入れる
-    // (〇〇番地32三田マンション　のように、「2」の直後に「三」が来た場合に区切りをつけるため)
+    // (〇〇番地32三田マンション のように、「2」の直後に「三」が来た場合に区切りをつけるため)
     address = address?.replace(
       RegExpEx.create(
         `(${NUMRIC_SYMBOLS})(${ZENKAKU})`,
@@ -115,7 +115,7 @@ export class NormalizeTransform extends Transform {
       `$1${VIRTUAL_SPACE}$2`
     );
 
-    // 数字＋ダッシュ　または ダッシュ+数字　の組み合わせのとき、ダッシュを DASHにする
+    // 数字＋ダッシュ,または ダッシュ+数字 の組み合わせのとき、ダッシュを DASHにする
     // (ダッシュの記号は類似するものが多いので、統一する)
     address = address?.replace(
       RegExpEx.create(
@@ -128,7 +128,7 @@ export class NormalizeTransform extends Transform {
     );
 
     
-    // 〇〇町や〇〇番地　より前にある SPACEはすべて削除
+    // 〇〇町や〇〇番地 より前にある SPACEはすべて削除
     address = address?.replace(
       RegExpEx.create(`(.+)(丁目?|番(町|地|丁)|条|軒|線|(${J_DASH})町|地割)`),
       (match: string) => {

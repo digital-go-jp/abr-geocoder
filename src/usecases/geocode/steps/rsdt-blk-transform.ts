@@ -130,7 +130,7 @@ export class RsdtBlkTransform extends Transform {
   }
 
   // トライ木の作成に時間がかかるので、SQLの LIKE 演算子を使って
-  // DB内を直接検索するための　blk_num を作成する
+  // DB内を直接検索するための blk_num を作成する
   // fuzzyが含まれる可能性があるので、'_' に置換する
   // ('_'は、SQLiteにおいて、任意の一文字を示す)
   private getBlockNum(query: Query) {
@@ -180,7 +180,7 @@ export class RsdtBlkTransform extends Transform {
     // 先頭にDashがある場合、削除する
     address = address?.replace(RegExpEx.create(`^${DASH}+`), '');
     
-    // [〇〇]番地、[〇〇]番　〇〇丁目[〇〇]ー〇〇　の [〇〇] だけを取る
+    // [〇〇]番地、[〇〇]番 〇〇丁目[〇〇]ー〇〇 の [〇〇] だけを取る
     const buffer: CharNode[] = [];
     enum Status {
       UNDEFINED,
@@ -188,7 +188,7 @@ export class RsdtBlkTransform extends Transform {
       GOU,
     };
 
-    let status = 0;
+    let status: Status = Status.UNDEFINED;
     let head: CharNode | undefined = address;
     while (head) {
       if (status === Status.UNDEFINED) {

@@ -87,7 +87,7 @@ export abstract class DatasetFile implements IDatasetFileMeta {
   ): Record<string, string | number>  {
     const result: Record<string, string | number> = {};
     this.fields.forEach(field => {
-      result[field.dbColumn] = line[field.csv] as string;
+      result[field.dbColumn] = line[field.csv];
     });
     return result;
   }

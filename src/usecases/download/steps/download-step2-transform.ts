@@ -72,7 +72,7 @@ export class DownloadStep2Transform extends Duplex {
             path: dstPath,
             name: filename,
             crc32: entry.vars.crc32,
-            contentLength:(entry.vars as any).uncompressedSize,
+            contentLength: entry.vars.uncompressedSize,
             lastModified: entry.vars.lastModifiedTime,
             noUpdate: (job as ThreadJob<DownloadQuery2>).data.noUpdate,
           });
