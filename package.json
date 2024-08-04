@@ -22,6 +22,7 @@
     "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/"
   },
   "devDependencies": {
+    "@jest/globals": "^29.7.0",
     "@types/better-sqlite3": "^7.6.10",
     "@types/busboy": "^1.5.4",
     "@types/byline": "^4.2.36",
