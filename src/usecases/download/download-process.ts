@@ -98,7 +98,7 @@ export class Downloader {
     const total = requests.length;
 
     // ランダムに入れ替える（DBの書き込みを分散させるため）
-    requests.sort((_, __) => {
+    requests.sort(() => {
       return -1 + Math.random() * 3;
     });
     
@@ -121,7 +121,7 @@ export class Downloader {
 
     // プログレスバーに進捗を出力する
     const dst = new CounterWritable({
-      write: async (_: CsvLoadResult | DownloadProcessError, __, callback) => {
+      write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
         if (params.progress) {
           params.progress(dst.count, total);
         }
@@ -137,22 +137,19 @@ export class Downloader {
         async transform(chunk, _, callback) {
           inputCnt++;
 
-          await new Promise<void>(async (resolve: (_?: void) => void) => {
-            const waitingCnt = inputCnt - dst.count;
-            if (waitingCnt < MAX_CONCURRENT_DOWNLOAD) {
-              return resolve();
-            }
-            // Out of memory を避けるために、受け入れを一時停止
-            // 処理済みが追いつくまで、待機する
-            const half = MAX_CONCURRENT_DOWNLOAD >> 1;
-            while (inputCnt - dst.count > half) {
-              await timers.setTimeout(100);
-            }
-      
-            // 再開する
-            resolve();
-          });
+          const waitingCnt = inputCnt - dst.count;
+          if (waitingCnt < MAX_CONCURRENT_DOWNLOAD) {
+            return callback(null, chunk);
+          }
 
+          // Out of memory を避けるために、受け入れを一時停止
+          // 処理済みが追いつくまで、待機する
+          const half = MAX_CONCURRENT_DOWNLOAD >> 1;
+          while (inputCnt - dst.count > half) {
+            await timers.setTimeout(100);
+          }
+      
+          // 再開する
           callback(null, chunk);
         },
       }),
@@ -160,8 +157,8 @@ export class Downloader {
       csvParseTransform,
       dst,
     );
-    downloadTransform.close();
-    csvParseTransform.close();
+    await downloadTransform.close();
+    await csvParseTransform.close();
   }
   
 
@@ -274,7 +271,7 @@ export class Downloader {
 
     // ランダムに並び替えることで、lgCodeが分散され、DB書き込みのときに衝突を起こしにくくなる
     // (衝突すると、書き込み待ちが発生する)
-    results.sort((_, __) => Math.random() * 3 - 2);
+    results.sort(() => Math.random() * 3 - 2);
     return results;
   }
 
@@ -285,9 +282,9 @@ export class Downloader {
     const results = new Map<string, string>();
 
     // params.lgCodesに含まれるlgCodeが prefLgCode(都道府県を示すlgCode)なら、
-    // 市町村レベルのlgCodeは必要ないので省く。　
+    // 市町村レベルのlgCodeは必要ないので省く。
     lgCodes.forEach(lgCode => {
-      if (lgCode === PrefLgCode.ALL) {
+      if (lgCode === PrefLgCode.ALL.toString()) {
         return;
       }
       const prefix = lgCode.substring(0, 2);

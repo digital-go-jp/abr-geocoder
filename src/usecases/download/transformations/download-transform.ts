@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */;
-import { DownloadProcessError, DownloadQueryBase, DownloadRequest, isDownloadProcessError } from '@domain/models/download-process-query';
+import { DownloadQueryBase, DownloadRequest, isDownloadProcessError } from '@domain/models/download-process-query';
 import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
 import { DownloadWorkerInitData } from '@usecases/download/workers/download-worker';

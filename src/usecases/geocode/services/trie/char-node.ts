@@ -38,7 +38,7 @@ export class CharNode {
   replaceAll(search: string | RegExp, replaceValue: string | Function): CharNode | undefined {
     let root: CharNode | undefined = this.clone();
 
-    this.toProcessedString().replaceAll(search, (match: string,  ...args: any[]): string => {
+    this.toProcessedString().replaceAll(search, (match: string, ...args: any[]): string => {
 
       let repValue = (() => {
         if (typeof replaceValue === 'function') {

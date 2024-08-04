@@ -156,22 +156,8 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       filename: params.filename,
       initData: params.initData,
     });
-    // if (params.filename.includes('csv')) {
-
-      // this.timer = setInterval(() => {
-      //   const fname = path.basename(params.filename);
-      //   // console.log(`${fname} : task: ${this.waitingTasks.length}, noMore: ${this.noMoreTasks.size}, que: ${this.workerQueue.length()}`);
-        
-      //   const buffer: string[] = [];
-      //   this.workers.forEach((worker, idx) => {
-      //     buffer.push(`#${idx}: ${worker.numOfTasks}`)
-      //   });
-      //   console.log(` ${fname} (${this.waitingTasks.length})  ${buffer.join(", ")}`)
-      // }, 1000);
-
-    // }
     
-    const filename = path.basename(params.filename);
+    // const filename = path.basename(params.filename);
     // this.timer = setInterval(() => {
     //   console.log(filename, `: `, this.workers.map(worker => worker.totalTasks).join(', '));
     // }, 1000);
@@ -384,10 +370,11 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     // this.heap.forEach(worker => {
     //   worker.terminate();
     // });
-    this.workers.forEach(worker => {
+    const waits = this.workers.map(worker => {
       // console.log('-->terminate');
-      worker.terminate();
+      return worker.terminate();
     });
+    await Promise.all(waits);
     if (this.timer) {
       clearInterval(this.timer);
     }

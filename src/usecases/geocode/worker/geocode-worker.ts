@@ -81,76 +81,54 @@ export const geocodeOnWorkerThread = async (params: Required<{
     WardTransform,
   ] = await Promise.all([
     // 都道府県を試す
-    new Promise(async (resolve: (result: PrefTransform) => void) => {
-      const prefList = await commonDb.getPrefList();
-      resolve(new PrefTransform({
-        prefList,
-        logger,
-      }));
-    }),
+    commonDb.getPrefList().then(prefList => new PrefTransform({
+      prefList,
+      logger,
+    })),
 
     // 〇〇郡〇〇市を試す
-    new Promise(async (resolve: (result: CountyAndCityTransform) => void) => {
-      const countyAndCityList = await commonDb.getCountyAndCityList();
-      resolve(new CountyAndCityTransform({
-        countyAndCityList,
-        logger,
-      }));
-    }),
+    commonDb.getCountyAndCityList().then(countyAndCityList => new CountyAndCityTransform({
+      countyAndCityList,
+      logger,
+    })),
 
     // 〇〇市〇〇区を試す
-    new Promise(async (resolve: (result: CityAndWardTransform) => void) => {
-      const cityAndWardList = await commonDb.getCityAndWardList();
-      resolve(new CityAndWardTransform({
-        cityAndWardList,
-        logger,
-      }));
-    }),
+    commonDb.getCityAndWardList().then(cityAndWardList => new CityAndWardTransform({
+      cityAndWardList,
+      logger,
+    })),
+
     // 〇〇市 (〇〇郡が省略された場合）を試す
-    new Promise(async (resolve: (result: WardAndOazaTransform) => void) => {
-      const wardAndOazaList = await commonDb.getWardAndOazaChoList();
-      resolve(new WardAndOazaTransform({
-        wardAndOazaList,
-        logger,
-      }));
-    }),
+    commonDb.getWardAndOazaChoList().then(wardAndOazaList => new WardAndOazaTransform({
+      wardAndOazaList,
+      logger,
+    })),
+    
     // 大字を試す
-    new Promise(async (resolve: (result: OazaChomeTransform) => void) => {
-      const oazaChomes = await commonDb.getOazaChomes();
-      resolve(new OazaChomeTransform({
-        oazaChomes,
-        logger,
-      }));
-    }),
+    commonDb.getOazaChomes().then(oazaChomes => new OazaChomeTransform({
+      oazaChomes,
+      logger,
+    })),
 
     // 東京23区を試す
     // 〇〇区＋大字の組み合わせで探す
-    new Promise(async (resolve: (result: Tokyo23TownTranform) => void) => {
-      const tokyo23towns = await commonDb.getTokyo23Towns();
-      resolve(new Tokyo23TownTranform({
-        tokyo23towns,
-        logger,
-      }));
-    }),
+    commonDb.getTokyo23Towns().then(tokyo23towns => new Tokyo23TownTranform({
+      tokyo23towns,
+      logger,
+    })),
 
     // 東京23区を試す
-    new Promise(async (resolve: (result: Tokyo23WardTranform) => void) => {
-      const tokyo23wards = await commonDb.getTokyo23Wards();
-      resolve(new Tokyo23WardTranform({
-        tokyo23wards,
-        logger,
-      }));
-    }),
+    commonDb.getTokyo23Wards().then(tokyo23wards => new Tokyo23WardTranform({
+      tokyo23wards,
+      logger,
+    })),
   
     // 〇〇区で始まるパターン(東京23区以外)
-    new Promise(async (resolve: (result: WardTransform) => void) => {
-      const wards = await commonDb.getWards();
-      resolve(new WardTransform({
-        db: commonDb,
-        wards,
-        logger,
-      }));
-    }),
+    commonDb.getWards().then(wards => new WardTransform({
+      db: commonDb,
+      wards,
+      logger,
+    })),
   ]);
 
   // 住所の正規化処理
@@ -243,7 +221,7 @@ export const geocodeOnWorkerThread = async (params: Required<{
     .pipe(dst);
 
   // メインスレッドからメッセージを受け取る
-  params.port.on('message', async (task: Uint8Array) => {
+  params.port.on('message', (task: Uint8Array) => {
     const data = fromSharedMemory<ThreadJob<QueryInput>>(task);
     reader.push(data);
   });

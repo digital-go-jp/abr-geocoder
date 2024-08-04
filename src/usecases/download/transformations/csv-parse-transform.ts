@@ -27,8 +27,6 @@ import { DownloadDiContainer } from '@usecases/download/models/download-di-conta
 import path from 'node:path';
 import { Duplex, TransformCallback } from 'node:stream';
 import { ParseWorkerInitData } from '../workers/csv-parse-worker';
-import timers from 'node:timers/promises';
-import { ThreadMessage } from '@domain/services/thread/thread-task';
 
 export class CsvParseTransform extends Duplex {
 

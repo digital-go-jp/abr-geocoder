@@ -130,7 +130,6 @@ export const kan2num = (target: string) => {
     // なので、stack に溜まっている漢数字を算用数字に変換する
     let current = 0;
     const tempResult = [];
-    const stackLen = stack.length;
     while (stack.length > 0) {
       let val = kanjiNum.get(stack.pop()!)!;
 
@@ -160,7 +159,7 @@ export const kan2num = (target: string) => {
         current = 0;
         continue;
       } else {
-        // 五四三　のように　１桁の数字が続く場合、一度リセットする
+        // 五四三 のように １桁の数字が続く場合、一度リセットする
         if (current > 0) {
           tempResult.push(current.toString());
         }
@@ -207,7 +206,7 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
         // ターゲットパターンではないときは、復元する
         result.push(...buffer);
       } else if (currentNumber > 0) {
-        //　現在の数値が 0 より大きい場合のみ追加
+        // 現在の数値が 0 より大きい場合のみ追加
 
         // 1文字ずつに変換する
         const tmp = currentNumber.toString().split('');

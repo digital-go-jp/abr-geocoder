@@ -75,7 +75,7 @@ const serveCommand: CommandModule = {
     
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
 
-    // ThreadGeocodeTransformで　各スレッドがstdout を使用しようとして、
+    // ThreadGeocodeTransformで 各スレッドがstdout を使用しようとして、
     // イベントリスナーを取り合いになるため、以下の警告が発生する模様。
     // 動作的には問題ないので、 process.stdout.setMaxListeners(0) として警告を殺す。
     //

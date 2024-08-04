@@ -38,14 +38,35 @@ import stringHash from "string-hash";
 import { ICommonDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 
+type GetWardRowsOptions = {
+  ward: string;
+  city_key: number;
+};
+type GetOazaChoPatternsOptions = {
+  pref_key: number;
+  city_key: number;
+  town_key: number;
+};
+type GetKoazaRowsOptions = {
+  city_key: number;
+  oaza_cho: string;
+  chome: string;
+};
+type GetChomeRowsOptions = {
+  pref_key: number;
+  city_key: number;
+  town_key: number;
+  oaza_cho: string;
+};
+
 export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbGeocode {
 
   private readonly resultCache = new LRUCache<string, any>({
     max: 20,
   });
 
-  async getTownInfoByKey(town_key: number): Promise<TownInfo | undefined> {
-    return await this.prepare<{
+  getTownInfoByKey(town_key: number): Promise<TownInfo | undefined> {
+    return Promise.resolve(this.prepare<{
       town_key: number;
     }, TownInfo>(`
       SELECT
@@ -61,11 +82,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         town_key = @town_key
     `).get({
       town_key,
-    });
+    }));
   }
 
-  async getCityInfoByKey(city_key: number): Promise<CityInfo | undefined> {
-    return await this.prepare<{
+  getCityInfoByKey(city_key: number): Promise<CityInfo | undefined> {
+    return Promise.resolve(this.prepare<{
       city_key: number;
     }, CityInfo>(`
       SELECT
@@ -83,11 +104,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         city_key = @city_key
     `).get({
       city_key,
-    });
+    }));
   }
 
-  async getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined> {
-    return this.prepare<{
+  getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined> {
+    const results = this.prepare<{
       pref_key: number;
     }, PrefInfo>(`
       SELECT
@@ -103,13 +124,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     `).get({
       pref_key,
     });
+    return Promise.resolve(results);
   }
 
-  async getKoazaRows(where: Partial<{
-    city_key: number;
-    oaza_cho: string;
-    chome: string;
-  }>): Promise<KoazaMachingInfo[]> {
+  getKoazaRows(where: Partial<GetKoazaRowsOptions>): Promise<KoazaMachingInfo[]> {
     const conditions: string[] = [];
     if (where.city_key) {
       conditions.push(`c.city_key = @city_key`);
@@ -122,7 +140,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     }
     const WHERE_CONDITION = conditions.join(' AND ');
 
-    return this.prepare<any, KoazaMachingInfo>(`
+    const results = this.prepare<Partial<GetKoazaRowsOptions>, KoazaMachingInfo>(`
       SELECT
         c.city_key,
         t.town_key,
@@ -149,14 +167,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         t.${DataField.KOAZA.dbColumn} IS NOT NULL AND
         ${WHERE_CONDITION}
     `).all(where);
+
+    return Promise.resolve(results);
   }
 
-  async getChomeRows(where: Partial<{
-    pref_key: number;
-    city_key: number;
-    town_key: number;
-    oaza_cho: string;
-  }>): Promise<ChomeMachingInfo[]> {
+  getChomeRows(where: Partial<GetChomeRowsOptions>): Promise<ChomeMachingInfo[]> {
     const conditions: string[] = [];
     if (where.pref_key) {
       conditions.push(`c.pref_key = @pref_key`);
@@ -171,8 +186,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       conditions.push(`t.${DataField.OAZA_CHO.dbColumn} = @oaza_cho`);
     }
     const WHERE_CONDITION = conditions.join(' AND ');
-
-    return this.prepare<any, ChomeMachingInfo>(`
+    const results = this.prepare<Partial<GetChomeRowsOptions>, ChomeMachingInfo>(`
       SELECT
         c.pref_key,
         c.city_key,
@@ -201,13 +215,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       GROUP BY
         c.pref_key, c.city_key, t.town_key, t.${DataField.CHOME.dbColumn}
     `).all(where);
+
+    return Promise.resolve(results);
   }
 
-  async getOazaChoPatterns(where: Partial<{
-    pref_key: number;
-    city_key: number;
-    town_key: number;
-  }>): Promise<OazaChoMachingInfo[]> {
+  async getOazaChoPatterns(where: Partial<GetOazaChoPatternsOptions>): Promise<OazaChoMachingInfo[]> {
     const sql = `
       SELECT
         town_key,
@@ -242,7 +254,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           resolve(this.resultCache.get('town_cache'));
           return;
         }
-        const rows = this.prepare<any, Omit<OazaChoMachingInfo, 'pref' | 'pref_key'>>(sql).all(where);
+        const rows = this.prepare<
+          Partial<GetOazaChoPatternsOptions>,
+          Omit<OazaChoMachingInfo, 'pref' | 'pref_key'>
+        >(sql).all(where);
         this.resultCache.set('town_cache', rows);
         resolve(rows);
       }),
@@ -324,12 +339,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
 
 
-  async getWardRows(where: Required<{
-    ward: string;
-    city_key: number;
-  }>): Promise<WardMatchingInfo[]> {
+  async getWardRows(where: Required<GetWardRowsOptions>): Promise<WardMatchingInfo[]> {
     return new Promise((resolve: (rows: WardMatchingInfo[]) => void) => {
-      const rows = this.prepare<any, WardMatchingInfo>(`
+      const rows = this.prepare<GetWardRowsOptions, WardMatchingInfo>(`
         SELECT
           p.pref_key,
           c.city_key,
@@ -373,7 +385,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
   
   // ------------------------------------
-  // prefテーブルを HashMapにして返す　
+  // prefテーブルを HashMapにして返す
   // ------------------------------------
   async getPrefList(): Promise<PrefInfo[]> {
     if (this.resultCache.has('pref_list')) {
@@ -401,40 +413,38 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       return this.resultCache.get('city_list') as CityInfo[];
     }
 
-    return new Promise(async (resolve: (rows: CityInfo[]) => void) => {
-      const [
-        prefMap,
-        cityRows,
-      ] = await Promise.all([
-        this.getPrefMap(),
-        new Promise((resolve: (rows:  Omit<CityInfo, 'pref'>[]) => void) => {
-          const townRows = this.prepare<unknown[],  Omit<CityInfo, 'pref'>>(`
-            SELECT
-              city_key,
-              pref_key,
-              ${DataField.LG_CODE.dbColumn},
-              ${DataField.COUNTY.dbColumn},
-              ${DataField.CITY.dbColumn},
-              ${DataField.WARD.dbColumn},
-              ${DataField.REP_LAT.dbColumn},
-              ${DataField.REP_LON.dbColumn}
-            FROM
-              ${DbTableName.CITY}
-          `).all();
-          resolve(townRows);
-        }),
-      ]);
-  
-      const results = cityRows.map(city => {
-        return {
-          ...city,
-          pref: prefMap.get(city.pref_key)!.pref,
-        }
-      });
-  
-      this.resultCache.set('city_list', results);
-      resolve(results);
+    const [
+      prefMap,
+      cityRows,
+    ] = await Promise.all([
+      this.getPrefMap(),
+      new Promise((resolve: (rows:  Omit<CityInfo, 'pref'>[]) => void) => {
+        const townRows = this.prepare<unknown[],  Omit<CityInfo, 'pref'>>(`
+          SELECT
+            city_key,
+            pref_key,
+            ${DataField.LG_CODE.dbColumn},
+            ${DataField.COUNTY.dbColumn},
+            ${DataField.CITY.dbColumn},
+            ${DataField.WARD.dbColumn},
+            ${DataField.REP_LAT.dbColumn},
+            ${DataField.REP_LON.dbColumn}
+          FROM
+            ${DbTableName.CITY}
+        `).all();
+        resolve(townRows);
+      }),
+    ]);
+
+    const results = cityRows.map(city => {
+      return {
+        ...city,
+        pref: prefMap.get(city.pref_key)!.pref,
+      }
     });
+
+    this.resultCache.set('city_list', results);
+    return results;
   }
   
 
@@ -610,25 +620,28 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
   
   // -------------------------------------------------------------------------
-  //  〇〇市〇〇大字〇〇丁目 と　〇〇市〇〇丁目〇〇小字 を作成する
+  //  〇〇市〇〇大字〇〇丁目 と 〇〇市〇〇丁目〇〇小字 を作成する
   //
   //  補足:
   //  他の都道府県では「〇〇市北区」となるが、東京都23区の場合は「東京都北区〇〇市」となる。
   //
   //  北区〇〇と、都道府県を省略された場合、東京都が間違えてヒットするので、
-  //  大字や丁目を含めてマッチングテストするために、パターンを作成する　
+  //  大字や丁目を含めてマッチングテストするために、パターンを作成する
   // -------------------------------------------------------------------------
   async getTokyo23Towns(): Promise<TownMatchingInfo[]> {
     
     return new Promise((resolve: (rows: TownMatchingInfo[]) => void) => {
-        
+      
+      type SQLParams = {
+        tokyo_pref_key: number | null,
+      }
       const params = {
         tokyo_pref_key: TableKeyProvider.getPrefKey({
           lg_code: PrefLgCode.TOKYO,
-        })
+        }),
       };
 
-      const results = this.prepare<any, TownMatchingInfo>(`
+      const results = this.prepare<SQLParams, TownMatchingInfo>(`
         SELECT
           c.pref_key,
           c.city_key,
@@ -709,7 +722,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   // -----------------------------------------
   // 〇〇区△△ のHashMapを返す（△△は大字）
   // -----------------------------------------
-  async getWardAndOazaChoList(): Promise<OazaChoMachingInfo[]> {
+  getWardAndOazaChoList(): Promise<OazaChoMachingInfo[]> {
     const rows = this.prepare<unknown[], OazaChoMachingInfo>(`
       SELECT
         c.city_key,
@@ -736,10 +749,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       GROUP BY
         (c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn})
     `).all();
-    return rows;
+    return Promise.resolve(rows);
   }
   // -----------------------------------------
-  // 〇〇市〇〇区　のHashMapを返す
+  // 〇〇市〇〇区 のHashMapを返す
   // -----------------------------------------
   async getCityAndWardList(): Promise<CityMatchingInfo[]> {
     const cityMap = await this.getCityMap();

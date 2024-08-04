@@ -253,7 +253,7 @@ export class UpdateCheckTransform extends Duplex {
     });
 
     // リソースが利用できない (404 Not found)
-    if (packageResponse.header.statusCode !== 200) {
+    if (packageResponse.header.statusCode !== StatusCodes.OK) {
       return false;
     }
 

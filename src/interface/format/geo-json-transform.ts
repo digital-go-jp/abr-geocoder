@@ -27,6 +27,49 @@ import { Query } from '@usecases/geocode/models/query';
 import { Stream, TransformCallback } from 'node:stream';
 import { IFormatTransform } from './iformat-transform';
 
+export type GeoJsonOutput = {
+  type: 'Feature',
+  geometry: {
+    type: 'Point',
+    coordinates: [number | null, number | null],
+  },
+  properties: {
+    input: string;
+    output: string;
+    other: string | null;
+    score: number;
+    match_level: string;
+    coordinate_level: string;
+    lat: number | null;
+    lon: number | null;
+    lg_code: string | null;
+    machiaza_id: string | null;
+    rsdt_addr_flg: number | undefined;
+    blk_id: string | null;
+    rsdt_id: string | null;
+    rsdt2_id: string | null;
+    prc_id: string | null;
+    pref: string | null;
+    county: string | null;
+    city: string | null;
+    ward: string | null;
+    oaza_cho: string | null;
+    chome: string | null;
+    koaza: string | null;
+    blk_num: string | null;
+    rsdt_num: number | null;
+    rsdt_num2: number | null;
+    prc_num1: string | null;
+    prc_num2: string | null;
+    prc_num3: string | null;
+    debug_pref_key?: number;
+    debug_city_key?: number;
+    debug_town_key?: number;
+    debug_parcel_key?: number;
+    debug_rsdtblk_key?: number;
+    debug_rsdtdsp_key?: number;
+  },
+};
 export class GeoJsonTransform extends Stream.Transform implements IFormatTransform {
 
   mimetype: string = 'application/json';
@@ -61,7 +104,7 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
       this.buffer = '{"type":"FeatureCollection", "features":[';
     }
     this.lineNum++;
-    const output = {
+    const output: GeoJsonOutput = {
       type: 'Feature',
       geometry: {
         type: 'Point',
@@ -99,12 +142,12 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
       },
     };
     if (this.options.debug) {
-      (output as any).properties.debug_pref_key = result.pref_key;
-      (output as any).properties.debug_city_key = result.city_key;
-      (output as any).properties.debug_town_key = result.town_key;
-      (output as any).properties.debug_parcel_key = result.parcel_key;
-      (output as any).properties.debug_rsdtblk_key = result.rsdtblk_key;
-      (output as any).properties.debug_rsdtdsp_key = result.rsdtdsp_key;
+      output.properties.debug_pref_key = result.pref_key;
+      output.properties.debug_city_key = result.city_key;
+      output.properties.debug_town_key = result.town_key;
+      output.properties.debug_parcel_key = result.parcel_key;
+      output.properties.debug_rsdtblk_key = result.rsdtblk_key;
+      output.properties.debug_rsdtdsp_key = result.rsdtdsp_key;
     }
     this.buffer += JSON.stringify(output);
     callback(null, out);

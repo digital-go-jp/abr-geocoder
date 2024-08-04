@@ -24,7 +24,6 @@
 import { DownloadProcessError, DownloadProcessStatus, DownloadQuery1, DownloadQuery2 } from '@domain/models/download-process-query';
 import crc32 from '@domain/services/crc32-lib';
 import { getUrlHash } from '@domain/services/get-url-hash';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { ThreadJob, ThreadJobResult } from '@domain/services/thread/thread-task';
 import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { CkanPackageResponse, CkanResource } from '@domain/types/download/ckan-package';
@@ -82,7 +81,7 @@ export class DownloadStep1Transform extends Duplex {
     });
 
     // リソースが利用できない (404 Not found)
-    if (packageResponse.header.statusCode !== 200) {
+    if (packageResponse.header.statusCode !== StatusCodes.OK) {
       return {
         kind: 'result',
         taskId: job.taskId,
@@ -183,7 +182,7 @@ export class DownloadStep1Transform extends Duplex {
     const fileCrc32 = await crc32.fromFile(csvFilePath);
 
     // キャッシュに情報を保存する
-    this.params.urlCacheMgr.writeCache({
+    await this.params.urlCacheMgr.writeCache({
       key: urlHash,
       url: csvMeta.url,
       cache_file: csvFilename,

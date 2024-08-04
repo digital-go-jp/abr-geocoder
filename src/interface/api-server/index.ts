@@ -58,7 +58,9 @@ export class AbrgApiServer extends Server {
     const onGeocodeRequest = new OnGeocodeRequest(geocoder);
     this.router.get('/geocode', (request, response) => {
       onGeocodeRequest.run(request, response)
-        .catch(error => this.onInternalServerError(error, response));
+        .catch((error: string | Error) => {
+          this.onInternalServerError(error, response);
+        });
     });
 
     // その他のアクセスは Not found
@@ -71,12 +73,12 @@ export class AbrgApiServer extends Server {
     });
   }
 
-  private onInternalServerError(error: unknown, response: Response) {
+  private onInternalServerError(error: string | Error, response: Response) {
     response.sendStatus(StatusCodes.INTERNAL_SERVER_ERROR);
     if (error instanceof Error) {
       response.send(error.message);
     } else {
-      response.send(error + '');
+      response.send(error.toString());
     }
   }
 }

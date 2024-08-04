@@ -30,7 +30,7 @@ import { Statement } from "better-sqlite3";
 
 export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDbDownload {
   async closeDb(): Promise<void> {
-    this.close();
+    Promise.resolve(this.close());
   }
 
   // Lat,Lonを テーブルにcsvのデータを溜め込む
@@ -101,18 +101,18 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
         const lg_code = rows[0][DataField.LG_CODE.dbColumn] as string;
 
         for (const row of rows) {
           row.town_key = TableKeyProvider.getTownKey({
             lg_code,
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn] as string,
-          });
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
+          }) as number;
           row.parcel_key = TableKeyProvider.getParcelKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn],
-            prc_id: row[DataField.PRC_ID.dbColumn],
+            lg_code: row[DataField.LG_CODE.dbColumn].toString().toString(),
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
+            prc_id: row[DataField.PRC_ID.dbColumn].toString(),
           });
           params.upsert.run(row);
         }
