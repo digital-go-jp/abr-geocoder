@@ -38,7 +38,7 @@ export type ParseWorkerInitData = {
   semaphoreSharedMemory: SharedArrayBuffer;
 }
 
-export const parseOnWorkerThread = async (params: Required<{
+export const parseOnWorkerThread = (params: Required<{
   port: MessagePort;
   initData: ParseWorkerInitData;
 }>) => {

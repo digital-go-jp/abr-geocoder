@@ -84,8 +84,8 @@ export class CsvLoadStep2Transform extends Duplex {
     } as ThreadJob<CsvLoadResult>);
 
     // 展開したcsvファイルを消す
-    (job as ThreadJob<CsvLoadQuery2>).data.files.map(file => {
+    await Promise.all((job as ThreadJob<CsvLoadQuery2>).data.files.map(file => {
       return fs.promises.unlink(file.csvFile.path);
-    });
+    }));
   }
 }

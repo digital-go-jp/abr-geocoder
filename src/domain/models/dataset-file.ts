@@ -119,7 +119,7 @@ export abstract class DataForPosFile
     const lon = parseFloat(parsedRow[DataField.REP_LON.dbColumn] as string);
 
     if (!parsedRow[DataField.REP_SRID.csv]) {
-      throw `${parsedRow[DataField.REP_SRID.csv]} is required`;
+      throw new Error(`${parsedRow[DataField.REP_SRID.csv]} is required`);
     }
 
     // 代表点_座標参照系

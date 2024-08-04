@@ -23,6 +23,8 @@
  */
 import { CsvLine, DatasetFile } from "@domain/models/dataset-file";
 import { SemaphoreManager } from "@domain/services/thread/semaphore-manager";
+import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
+import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import { DownloadDbController } from "@interface/database/download-db-controller";
 import { ConsolidateTransform } from "@usecases/geocode/transformations/consolidate-trnasform";
 import csvParser from "csv-parser";
@@ -144,6 +146,9 @@ const openDb = async (params: {
       });
     
     default:
-      throw `unimplemented ${params.datasetFile.type}`;
+      throw new AbrgError({
+        messageId: AbrgMessage.NOT_IMPLEMENTED,
+        level: AbrgErrorLevel.ERROR,
+      });
   }
 }

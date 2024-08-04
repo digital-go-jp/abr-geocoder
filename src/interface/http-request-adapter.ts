@@ -23,7 +23,6 @@
  */
 import { StatusCodes } from 'http-status-codes';
 import http2, { ClientSessionRequestOptions, Http2Session } from 'node:http2';
-import stream from 'node:stream';
 
 export type HttpHeader = http2.IncomingHttpHeaders & http2.IncomingHttpStatusHeader;
 
@@ -59,7 +58,7 @@ export class ResponseHeader {
 export class ResponseData {
   constructor(
     public readonly header: ResponseHeader,
-    public readonly bodyData: any,
+    public readonly bodyData: unknown,
   ) { }
 }
 export class BufferResponseData extends ResponseData {
@@ -170,10 +169,10 @@ export class HttpRequestAdapter {
         .then(response => {
           resolve(new JsonResponseData(
             response.header,
-            response.bodyData,
+            response.bodyData as string[],
           ));
         })
-        .catch((_: unknown) => {
+        .catch(() => {
           setTimeout(() => {
             process();
           }, 3000);
@@ -199,10 +198,10 @@ export class HttpRequestAdapter {
         .then(response => {
           resolve(new StringResponseData(
             response.header,
-            response.bodyData,
+            response.bodyData as string[],
           ));
         })
-        .catch((_: unknown) => {
+        .catch(() => {
           setTimeout(() => {
             process();
           }, 3000);
@@ -233,7 +232,7 @@ export class HttpRequestAdapter {
             [Buffer.from(data, 'binary')]
           ));
         })
-        .catch((_: unknown) => {
+        .catch(() => {
           setTimeout(() => {
             process();
           }, 3000);
@@ -262,9 +261,9 @@ export class HttpRequestAdapter {
           encoding: 'utf-8',
         })
         .then(response => {
-          resolve(new StringResponseData(response.header, response.bodyData));
+          resolve(new StringResponseData(response.header, response.bodyData as string[]));
         })
-        .catch((_: unknown) => {
+        .catch(() => {
           setTimeout(() => {
             process();
           }, 3000);
@@ -292,7 +291,7 @@ export class HttpRequestAdapter {
           encoding: 'utf-8',
         })
         .then(resolve)
-        .catch((_: unknown) => {
+        .catch(() => {
           setTimeout(() => {
             process();
           }, 3000);
@@ -338,7 +337,7 @@ export class HttpRequestAdapter {
       waiter();
     });
     if (!this.session) {
-      return Promise.reject();
+      return Promise.reject('Session is undefined');
     }
     const req: http2.ClientHttp2Stream = this.session.request(
       reqParams,
@@ -353,17 +352,17 @@ export class HttpRequestAdapter {
     ) => {
       req.once('response', (headers) => {
         const header = ResponseHeader.from(headers);
-        const buffer: any[] = [];
+        const buffer: Buffer[] = [];
 
-        req.on('data', (chunk: any) => {
+        req.on('data', (chunk: Buffer) => {
 
           // データ受信の際にウィンドウサイズを動的に調整
           const currentWindowSize = req.state.localWindowSize;
-          const receivedDataSize = chunk.length;
+          const receivedDataSize: number = chunk.length;
 
           // ウィンドウサイズが一定量以下になった場合に拡張
           if (currentWindowSize && currentWindowSize < this.windowSize / 2) {
-            const newWindowSize = this.windowSize - currentWindowSize + receivedDataSize;
+            const newWindowSize: number = this.windowSize - currentWindowSize + receivedDataSize;
             req.session?.setLocalWindowSize(newWindowSize);
             // console.log(`===>new window size: ${(newWindowSize / (1024 ** 2)).toFixed(1)}MB`);
           } 
@@ -381,12 +380,10 @@ export class HttpRequestAdapter {
   public async getReadableStream({
     url,
     headers = {},
-    factory,
     abortController,
   }: {
     url: string;
     headers?: Record<string, string | undefined>;
-    factory?: (headers: ResponseHeader) => stream.Writable;
     abortController?: AbortController;
   }) {
 

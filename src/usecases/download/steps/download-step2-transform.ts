@@ -59,7 +59,7 @@ export class DownloadStep2Transform extends Duplex {
     await (new Promise((resolve: (_?: void) => void) => {
       fs.createReadStream((job as ThreadJob<DownloadQuery2>).data.csvFilePath)
         .pipe(unzipper.Parse())
-        .on('entry', async (entry) => {
+        .on('entry', (entry: unzipper.Entry) => {
           if (entry.type === 'Directory') {
             entry.autodrain();
             return;
@@ -72,11 +72,12 @@ export class DownloadStep2Transform extends Duplex {
             path: dstPath,
             name: filename,
             crc32: entry.vars.crc32,
-            contentLength: entry.vars.uncompressedSize,
+            contentLength: (entry.vars as unknown as {uncompressedSize: number}).uncompressedSize,
             lastModified: entry.vars.lastModifiedTime,
             noUpdate: (job as ThreadJob<DownloadQuery2>).data.noUpdate,
           });
-          entry.pipe(fs.createWriteStream(dstPath))
+          entry
+            .pipe(fs.createWriteStream(dstPath))
             .once('finish', resolve);
         })
     }))

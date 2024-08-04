@@ -27,20 +27,22 @@ import { ParcelInfo } from "@domain/types/geocode/parcel-info";
 import { IParcelDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 
+export type GetParcelRowsOptions = {
+  city_key: number;
+  town_key?: number | null;
+  prc_id: string; 
+};
+
 export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbGeocode {
 
   async closeDb(): Promise<void> {
-    this.close();
+    Promise.resolve(this.close());
   }
 
-  async getParcelRows(where: Required<{
-    city_key: number;
-    town_key?: number | null;
-    prc_id: string; 
-  }>): Promise<ParcelInfo[]> {
+  async getParcelRows(where: Required<GetParcelRowsOptions>): Promise<ParcelInfo[]> {
     where.town_key = where.town_key || null;
     return new Promise((resolve: (rows: ParcelInfo[]) => void) => {
-      const rows = this.prepare<any, ParcelInfo>(`
+      const rows = this.prepare<GetParcelRowsOptions, ParcelInfo>(`
         SELECT
           parcel_key,
           ${DataField.PRC_ID.dbColumn} as prc_id,

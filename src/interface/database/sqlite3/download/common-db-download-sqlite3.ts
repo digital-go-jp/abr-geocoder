@@ -32,7 +32,7 @@ export class CommonDbDownloadSqlite3
   implements ICommonDbDownload {
 
   async closeDb(): Promise<void> {
-    this.close();
+    Promise.resolve(this.close());
   }
 
   // Prefテーブルにデータを挿入する
@@ -92,10 +92,10 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.pref_key = TableKeyProvider.getPrefKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
+            lg_code: row[DataField.LG_CODE.dbColumn] as string,
           });
           params.upsert.run(row);
         }
@@ -181,11 +181,11 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.pref_key = params.prefKey;
           row.city_key = TableKeyProvider.getCityKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
+            lg_code: row[DataField.LG_CODE.dbColumn] as string,
           });
           params.upsert.run(row);
         }
@@ -272,13 +272,13 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.city_key = params.cityKey;
           row.town_key = TableKeyProvider.getTownKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn],
-          });
+            lg_code: row[DataField.LG_CODE.dbColumn] as string,
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn] as string,
+          }) as number;
           params.upsert.run(row);
         }
         resolve();
