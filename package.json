@@ -19,14 +19,17 @@
     "abrg": "build/interface/cli/cli.js"
   },
   "scripts": {
-    "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/"
+    "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/",
+    "test": "jest"
   },
   "devDependencies": {
+    "@jest/globals": "^29.7.0",
     "@types/better-sqlite3": "^7.6.10",
     "@types/busboy": "^1.5.4",
     "@types/byline": "^4.2.36",
     "@types/cli-progress": "^3.11.5",
     "@types/i18n": "^0.13.12",
+    "@types/jest": "^29.5.12",
     "@types/node": "^20.14.9",
     "@types/proj4": "^2.5.5",
     "@types/range-parser": "^1.2.7",
@@ -34,8 +37,10 @@
     "@types/unzipper": "^0.10.9",
     "@types/yargs": "^17.0.32",
     "copyfiles": "^2.4.1",
+    "jest": "^29.7.0",
     "rimraf": "^5.0.7",
     "ts-add-js-extension": "^1.6.4",
+    "ts-jest": "^29.2.4",
     "ts-node": "^10.9.2",
     "ts-patch": "^3.2.0",
     "typescript-transform-paths": "^3.4.7"
