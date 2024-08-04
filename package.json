@@ -41,6 +41,7 @@
     "typescript-transform-paths": "^3.4.7"
   },
   "dependencies": {
+    "@digital-go-jp/abr-geocoder": "^2.0.0",
     "better-sqlite3": "^11.1.2",
     "buffer-crc32": "^1.0.0",
     "busboy": "^1.6.0",
