@@ -30,7 +30,7 @@ import { Statement } from "better-sqlite3";
 
 export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbDownload {
   async closeDb(): Promise<void> {
-    this.close();
+    Promise.resolve(this.close());
   }
 
   // Lat,Lonを テーブルにcsvのデータを溜め込む
@@ -105,7 +105,7 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
 
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
 
         const lg_code = rows[0][DataField.LG_CODE.dbColumn].toString();
 
@@ -117,11 +117,11 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
           });
           row.rsdtdsp_key = TableKeyProvider.getRsdtDspKey({
             lg_code,
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn],
-            blk_id: row[DataField.BLK_ID.dbColumn],
-            rsdt_id: row[DataField.RSDT_ID.dbColumn],
-            rsdt2_id: row[DataField.RSDT2_ID.dbColumn],
-            rsdt_addr_flg: row[DataField.RSDT_ADDR_FLG.dbColumn],
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
+            blk_id: row[DataField.BLK_ID.dbColumn].toString(),
+            rsdt_id: row[DataField.RSDT_ID.dbColumn].toString(),
+            rsdt2_id: row[DataField.RSDT2_ID.dbColumn].toString(),
+            rsdt_addr_flg: row[DataField.RSDT_ADDR_FLG.dbColumn] as number,
           });
           
           params.upsert.run(row);

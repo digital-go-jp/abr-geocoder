@@ -23,7 +23,6 @@
  */
 import { DataField } from '@config/data-field';
 import { ICommonDbDownload } from '@interface/database/common-db';
-import { PrefLgCode } from '../types/pref-lg-code';
 import { DataWithDateFile, IDatasetFileMeta, ProcessOptions } from './dataset-file';
 
 export class CityDatasetFile

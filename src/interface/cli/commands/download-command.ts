@@ -121,7 +121,7 @@ const downloadCommand: CommandModule = {
       },
 
       // ダウンロード対象のlgcode
-      lgCodes: argv.lgCode as string[] | undefined,
+      lgCodes: argv.lgCode,
 
       // 同時ダウンロード数
       concurrentDownloads: MAX_CONCURRENT_DOWNLOAD,

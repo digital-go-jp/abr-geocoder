@@ -31,7 +31,7 @@ import { Statement } from "better-sqlite3";
 export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbDownload {
   
   async closeDb(): Promise<void> {
-    this.close();
+    Promise.resolve(this.close());
   }
 
   // rep_lat, rep_lon を rsdt_blkテーブルに挿入/更新する
@@ -97,7 +97,7 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
         const lg_code = rows[0][DataField.LG_CODE.dbColumn].toString();
 
         for (const row of rows) {
@@ -107,9 +107,9 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
           })!;
           
           row.rsdtblk_key = TableKeyProvider.getRsdtBlkKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn],
-            blk_id: row[DataField.BLK_ID.dbColumn],
+            lg_code: row[DataField.LG_CODE.dbColumn].toString(),
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
+            blk_id: row[DataField.BLK_ID.dbColumn].toString(),
           })
           params.upsert.run(row);
         }

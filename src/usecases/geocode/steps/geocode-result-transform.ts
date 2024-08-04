@@ -36,7 +36,7 @@ export class GeocodeResultTransform extends Transform {
     });
   }
   
-  async _transform(
+  _transform(
     queries: Query[],
     _: BufferEncoding,
     callback: TransformCallback

@@ -253,12 +253,12 @@ export class UpdateCheckTransform extends Duplex {
     });
 
     // リソースが利用できない (404 Not found)
-    if (packageResponse.header.statusCode !== 200) {
+    if (packageResponse.header.statusCode !== StatusCodes.OK) {
       return false;
     }
 
     // CSVファイルのURLを抽出する
-    const packageInfo = packageResponse.body as CkanPackageResponse;
+    const packageInfo = packageResponse.body as unknown as CkanPackageResponse;
     const csvMeta: CkanResource | undefined = packageInfo.result!.resources
     .find(x =>
       x.format.toLowerCase().startsWith('csv')

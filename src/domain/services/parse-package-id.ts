@@ -58,7 +58,7 @@ export type PackageInfo = {
 }
 export const parsePackageId = (packageId: string): PackageInfo | undefined => {
   
-  const elements = packageId.split(RegExpEx.create('[_\-]'));
+  const elements = packageId.split(RegExpEx.create('[_\\-]'));
     if (
         // パターンマッチしないパッケージID
         elements.length !== 5 ||

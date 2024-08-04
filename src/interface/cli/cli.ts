@@ -28,10 +28,9 @@ import yargs, { Argv } from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import downloadCommand from './commands/download-command';
 import geocodeCommand from './commands/geocode-command';
+import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
-import { AbrgMessage } from '@domain/types/messages/abrg-message';
-import serveCommand from './commands/serve-command';
 
 // @ts-ignore
 if (process[Symbol.for('ts-node.register.instance')]) {

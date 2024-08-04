@@ -30,9 +30,9 @@
 export const getLevenshteinDistanceRatio = (strA: string, strB: string): number => {
   const N = strA.length;
   const M = strB.length;
-  const dp: number[][] = new Array(N + 1)
+  const dp: number[][] = new Array<number[] | null>(N + 1)
     .fill(null)
-    .map(() => new Array(M + 1).fill(0));
+    .map(() => new Array<number>(M + 1).fill(0));
 
   for (let i = 0; i <= N; i++) {
     for (let j = 0; j <= M; j++) {

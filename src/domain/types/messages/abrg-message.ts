@@ -54,6 +54,7 @@ export enum AbrgMessage {
   CLI_GEOCODE_OUTPUT_FILE = 'CLI_GEOCODE_OUTPUT_FILE',
   CLI_SERVE_PORT_OPTION = 'CLI_SERVE_PORT_OPTION',
   CANNOT_FIND_THE_ROOT_DIR = 'CANNOT_FIND_THE_ROOT_DIR',
+  NOT_IMPLEMENTED = "NOT_IMPLEMENTED",
 }
 
 const enMessages: Record<AbrgMessage, string> = {
@@ -83,6 +84,7 @@ const enMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_GEOCODE_OUTPUT_FILE]: 'The path for the output file. If omit, print out to stdout.',
   [AbrgMessage.CLI_SERVE_PORT_OPTION]: 'The port number for rest api',
   [AbrgMessage.CANNOT_FIND_THE_ROOT_DIR]: 'Can not find the root directory',
+  [AbrgMessage.NOT_IMPLEMENTED]: 'Not implemented',
 };
 const jaMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_SERVE_DESC]: 'REST apiサーバーとしてジオコーディング機能を提供します',
@@ -110,7 +112,8 @@ const jaMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE]: '"package.json"ファイルが見つかりませんでした',
   [AbrgMessage.CLI_GEOCODE_OUTPUT_FILE]: '出力するファイルのパス。省略すると、標準出力に出力します。',
   [AbrgMessage.CLI_SERVE_PORT_OPTION]: 'REST apiのためのポート番号',
-  [AbrgMessage.CANNOT_FIND_THE_ROOT_DIR]: 'ルートディレクトリを見つけることが出来ませんでした'
+  [AbrgMessage.CANNOT_FIND_THE_ROOT_DIR]: 'ルートディレクトリを見つけることが出来ませんでした',
+  [AbrgMessage.NOT_IMPLEMENTED]: '実装されていません',
 }
 
 export namespace AbrgMessage {

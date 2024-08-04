@@ -144,7 +144,7 @@ export class ParcelTransform extends Transform {
   }
 
   // トライ木の作成に時間がかかるので、SQLの LIKE 演算子を使って
-  // DB内を直接検索するための　prc_id を作成する
+  // DB内を直接検索するための prc_id を作成する
   // fuzzyが含まれる可能性があるので、'_' に置換する
   // ('_'は、SQLiteにおいて、任意の一文字を示す)
   private getPrcId(query: Query) {

@@ -111,9 +111,6 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
           case 'county':
             return result.county || '';
 
-          case 'city':
-            return result.city || '';
-
           case 'ward':
             return result.ward || '';
 

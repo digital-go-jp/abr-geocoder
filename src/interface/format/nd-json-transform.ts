@@ -27,6 +27,49 @@ import { Query } from '@usecases/geocode/models/query';
 import { Stream, TransformCallback } from 'node:stream';
 import { IFormatTransform } from './iformat-transform';
 
+export type NDJsonOutputType = {
+  query: {
+    input: string;
+  },
+  result: {
+    output: string;
+    other: string | null;
+    score: number;
+    match_level: string;
+    coordinate_level: string;
+    lat: number | null;
+    lon: number | null;
+    lg_code: string | null;
+    machiaza_id: string | null;
+    rsdt_addr_flg: number | undefined;
+    blk_id: string | null;
+    rsdt_id: string | null;
+    rsdt2_id: string | null;
+    prc_id: string | null;
+    pref: string | null;
+    county: string | null;
+    city: string | null;
+    ward: string | null;
+    oaza_cho: string | null;
+    chome: string | null;
+    koaza: string | null;
+    blk_num: string | null;
+    rsdt_num: number | null;
+    rsdt_num2: number | null;
+    prc_num1: string | null;
+    prc_num2: string | null;
+    prc_num3: string | null;
+  },
+  debug?: {
+    pref_key: number | undefined;
+    city_key: number | undefined;
+    town_key: number | undefined;
+    parcel_key: number | undefined;
+    rsdtblk_key: number | undefined;
+    rsdtdsp_key: number | undefined;
+  }
+};
+
 export class NdJsonTransform extends Stream.Transform implements IFormatTransform {
 
   mimetype: string = 'application/json';
@@ -50,7 +93,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
     _: BufferEncoding,
     callback: TransformCallback
   ): void {
-    const output = {
+    const output: NDJsonOutputType = {
       query: {
         input: result.input.data.address,
       },
@@ -85,7 +128,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
       },
     };
     if (this.options.debug) {
-      (output as any).debug = {
+      output.debug = {
         pref_key: result.pref_key,
         city_key: result.city_key,
         town_key: result.town_key,

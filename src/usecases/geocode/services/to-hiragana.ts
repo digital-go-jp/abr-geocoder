@@ -227,7 +227,7 @@ const hiraganaMap = new Map<string, string>([
   ['ヮ', 'わ'],  // 捨て仮名
   ['ヲ', 'を'],
   ['ン', 'ん'],
-  ['之', 'の'],  // 堀之内 →　堀の内
+  ['之', 'の'],  // 堀之内 → 堀の内
 ]);
 
 export const toHiragana = (target: string) => {

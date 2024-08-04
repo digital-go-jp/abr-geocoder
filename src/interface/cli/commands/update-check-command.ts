@@ -149,7 +149,7 @@ const updateCheckCommand: CommandModule = {
     }
     const lgCode: string[] = Array
       .from(new Set(results.map(x => x.lgCode)).values())
-      .filter(x => x !== PrefLgCode.ALL);
+      .filter(x => x !== PrefLgCode.ALL as string);
     
     // ダウンロード処理を行う
     await downloadCommand.handler({

@@ -23,7 +23,7 @@
  */
 import { DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
 import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
-import { ThreadJob, ThreadJobResult, ThreadMessage } from '@domain/services/thread/thread-task';
+import { ThreadJob, ThreadJobResult } from '@domain/services/thread/thread-task';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
 import { Readable, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
@@ -36,7 +36,7 @@ export type DownloadWorkerInitData = {
   maxTasksPerWorker: number;
 }
 
-export const downloadOnWorkerThread = async (params: Required<{
+export const downloadOnWorkerThread = (params: Required<{
   port: MessagePort;
   initData: DownloadWorkerInitData;
 }>) => {
@@ -85,7 +85,7 @@ export const downloadOnWorkerThread = async (params: Required<{
   // ダウンロード処理のストリームに投げる
   params.port.on('message', (sharedMemory: Uint8Array) => {
     const params = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
-    reader.push(params as ThreadJob<DownloadRequest>);
+    reader.push(params);
   });
 };
 
