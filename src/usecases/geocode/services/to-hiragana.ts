@@ -24,7 +24,6 @@
 
 import { CharNode } from "./trie/char-node";
 
-
 const hiraganaMap = new Map<string, string>([
   ['ｶﾞ', 'が'],
   ['ｷﾞ', 'ぎ'],
