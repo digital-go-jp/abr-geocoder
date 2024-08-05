@@ -95,18 +95,17 @@ describe('CsvTransform', () => {
             const column = lines[0].split(',');
             const dataObject = convertToObject(column, lines[1]);
 
-            expect(dataObject).toMatchObject({
-                input: '東京都千代田区',
-                output: '東京都千代田区',
-                score: '1',
-                match_level: MatchLevel.CITY.str,
-                coordinate_level: MatchLevel.CITY.str,
-                lat: '35.6895',
-                lon: '139.6917',
-                lg_code: '13101',
-                pref: '東京都',
-                city: '千代田区'
-            });
+            expect(dataObject.input).toBe('東京都千代田区');
+            expect(dataObject.output).toBe('東京都千代田区');
+            expect(dataObject.score).toBe('1');
+            expect(dataObject.match_level).toBe(MatchLevel.CITY.str);
+            expect(dataObject.coordinate_level).toBe(MatchLevel.CITY.str);
+            expect(dataObject.lat).toBe('35.6895');
+            expect(dataObject.lon).toBe('139.6917');
+            expect(dataObject.lg_code).toBe('13101');
+            expect(dataObject.pref).toBe('東京都');
+            expect(dataObject.city).toBe('千代田区');
+
             done();
         });
 
