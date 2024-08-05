@@ -1,6 +1,20 @@
 import { beforeAll, describe, expect, test } from "@jest/globals";
 import { CsvTransform } from '../csv-transform';
 import { SearchTarget } from "../../../domain/types/search-target";
+import { MatchLevel } from "../../../domain/types/geocode/match-level";
+
+const convertToObject = (keys: string[], csvLine: string): Record<string, string> => {
+    const values = csvLine.split(',');
+    // ダブルクォート削除
+    const cleanedValues = values.map(value => value.replace(/^"|"$/g, ''));
+
+    const result: Record<string, string> = {};
+    keys.forEach((key, index) => {
+        result[key] = cleanedValues[index] || '';
+    });
+
+    return result;
+};
 
 class MockQuery {
     input: any;
@@ -24,8 +38,8 @@ class MockQuery {
         Object.assign(this, {
             input: { taskId: 1, lineId: 1, data: { address: '東京都千代田区', searchTarget: SearchTarget.ALL } },
             formatted: { address: '東京都千代田区', score: 1 },
-            match_level: { str: 'exact' },
-            coordinate_level: { str: 'city' },
+            match_level: MatchLevel.CITY,
+            coordinate_level: MatchLevel.CITY,
             rep_lat: 35.6895,
             rep_lon: 139.6917,
             lg_code: '13101',
@@ -77,11 +91,22 @@ describe('CsvTransform', () => {
             const result = Buffer.concat(chunks).toString();
             const lines = result.trim().split('\n');
             expect(lines.length).toBe(2); // Header + data line
-            expect(lines[1]).toContain('東京都千代田区');
-            expect(lines[1]).toContain('1');
-            expect(lines[1]).toContain('exact');
-            expect(lines[1]).toContain('35.6895');
-            expect(lines[1]).toContain('139.6917');
+
+            const column = lines[0].split(',');
+            const dataObject = convertToObject(column, lines[1]);
+
+            expect(dataObject).toMatchObject({
+                input: '東京都千代田区',
+                output: '東京都千代田区',
+                score: '1',
+                match_level: MatchLevel.CITY.str,
+                coordinate_level: MatchLevel.CITY.str,
+                lat: '35.6895',
+                lon: '139.6917',
+                lg_code: '13101',
+                pref: '東京都',
+                city: '千代田区'
+            });
             done();
         });
 
