@@ -95,7 +95,7 @@ describe('CsvTransform', () => {
             const column = lines[0].split(',');
             const dataObject = convertToObject(column, lines[1]);
 
-            expect(dataObject).toMatchObject({
+            const expectedFields = {
                 input: '東京都千代田区',
                 output: '東京都千代田区',
                 score: '1',
@@ -106,7 +106,14 @@ describe('CsvTransform', () => {
                 lg_code: '13101',
                 pref: '東京都',
                 city: '千代田区'
-            });
+            };
+
+            // valueの検証
+            expect(dataObject).toMatchObject(expectedFields);
+
+            // keyの検証（valueのないcolumnも含む）
+            expect(Object.keys(dataObject)).toEqual(CsvTransform.DEFAULT_COLUMNS);
+
             done();
         });
 
