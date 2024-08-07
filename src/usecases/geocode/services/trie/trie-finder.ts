@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { deserialize, serialize } from "node:v8";
 import { CharNode } from "./char-node";
 
 export class TrieFinderResult<T> {
@@ -53,13 +54,34 @@ type InternalResult<T> = {
   ambiguous: boolean;
 }
 
-export class TrieNode<T> {
+// export class TrieNode<T> {
+//   info: T | undefined;
+//   children = new Map<string, TrieNode<T>>();
+// }
+
+export interface ITrieNode<T> {
   info: T | undefined;
-  children = new Map<string, TrieNode<T>>();
+  children: Map<string, ITrieNode<T>>;
+}
+
+function createTrieNode<T>(): ITrieNode<T[]> {
+  const result: ITrieNode<T[]> = {
+    info: undefined,
+    children: new Map(),
+  };
+  return result;
 }
 
 export class TrieAddressFinder<T> {
-  private readonly root = new TrieNode<T[]>();
+  private root: ITrieNode<T[]> = createTrieNode();
+
+  export(): Buffer {
+    return serialize(this.root);
+  }
+
+  import(data: Buffer) {
+    this.root = deserialize(data);
+  }
 
   append({
     key,
@@ -73,14 +95,14 @@ export class TrieAddressFinder<T> {
     if (key instanceof CharNode) {
       let head: CharNode | undefined = key;
       while (head) {
-        const trie = parent.children.get(head.char!) || new TrieNode<T[]>();
+        const trie = parent.children.get(head.char!) || createTrieNode();
         parent.children.set(head.char!, trie);
         parent = trie;
         head = head.next;
       }
     } else {
       for (const char of key.toString()) {
-        const trie = parent.children.get(char) || new TrieNode<T[]>();
+        const trie = parent.children.get(char) || createTrieNode();
         parent.children.set(char, trie);
         parent = trie;
       }
@@ -141,7 +163,7 @@ export class TrieAddressFinder<T> {
     depth,
   }: {
     fuzzy: string | undefined;
-    parent: TrieNode<T[]> | undefined;
+    parent: ITrieNode<T[]> | undefined;
     node: CharNode | undefined;
     partialMatches: boolean;
     extraChallenges?: string[];

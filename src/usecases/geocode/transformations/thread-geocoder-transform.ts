@@ -21,14 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { SearchTarget } from '@domain/types/search-target';
 import { Duplex } from 'node:stream';
 import timers from 'node:timers/promises';
 import { AbrGeocoder } from '../abr-geocoder';
-import { AbrGeocoderInput } from '../models/abrg-input-data';
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
+import { AbrGeocoderInput } from '../models/abrg-input-data';
 import { Query, QueryJson } from '../models/query';
-import { SearchTarget } from '@domain/types/search-target';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 // import inspector from "node:inspector";
 
 export class ThreadGeocodeTransform extends Duplex {
@@ -79,7 +79,7 @@ export class ThreadGeocodeTransform extends Duplex {
 
     while (this.outputs.length > 0 && this.outputs[0].input.data.tag === this.nextIdx) {
       this.push(this.outputs.shift()!);
-      this.emit('progress', this.nextIdx, this.writeIdx, this.isPaused());
+      this.emit('progress', this.nextIdx, this.writeIdx);
       this.nextIdx++;
     }
     
@@ -98,18 +98,14 @@ export class ThreadGeocodeTransform extends Duplex {
   private async waiter() {
     // Out of memory を避けるために、受け入れを一時停止
     // 処理済みが追いつくまで、待機する
-    await new Promise<void>(async (resolve: (_?: void) => void) => {
-      const waitingCnt = this.writeIdx - this.nextIdx;
-      if (waitingCnt < 2000) {
-        return resolve();
-      }
-      while (this.writeIdx - this.nextIdx > 1000) {
-        await timers.setTimeout(100);
-      }
+    const waitingCnt = this.writeIdx - this.nextIdx;
+    if (waitingCnt < 2000) {
+      return;
+    }
 
-      // 再開する
-      resolve();
-    });
+    while (this.writeIdx - this.nextIdx > 1000) {
+      await timers.setTimeout(50);
+    }
   }
 
   // 前のstreamからデータが渡されてくる

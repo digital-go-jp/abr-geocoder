@@ -24,18 +24,22 @@
 import { Transform } from 'node:stream';
 import { TransformCallback } from 'stream';
 
-export class TextReaderTransform extends Transform {
+export class CommentFilterTransform extends Transform {
   // 現在のキャレットの位置が、コメントアウトされているかどうか
   private isCuretInComment: boolean = false;
   private _total = 0;
   public get total(): number {
     return this._total;
   }
+  private onlyCounting: boolean;
 
-  constructor() {
+  constructor(params?: {
+    onlyCounting: boolean;
+  }) {
     super({
       objectMode: true,
     });
+    this.onlyCounting = params?.onlyCounting === true;
   }
 
   _transform(
@@ -70,7 +74,9 @@ export class TextReaderTransform extends Transform {
       }
 
       if (i + 1 >= N) {
-        buffer.push(input[i]);
+        if (!this.onlyCounting) {
+          buffer.push(input[i]);
+        }
         i += 1;
         continue;
       }
@@ -79,7 +85,9 @@ export class TextReaderTransform extends Transform {
         break;
       }
       if (doubleChars !== '/*') {
-        buffer.push(input[i]);
+        if (!this.onlyCounting) {
+          buffer.push(input[i]);
+        }
         i += 1;
         continue;
       }
@@ -91,18 +99,13 @@ export class TextReaderTransform extends Transform {
       callback();
       return;
     }
-    const filteredInput = buffer.join('');
     this._total++;
-    if (this._total % 10 === 0) {
-      this.emit('total', this._total);
+    if (this.onlyCounting) {
+      callback(null);
+      return;
     }
+    const filteredInput = buffer.join('');
 
     callback(null, filteredInput);
   }
-
-  _final(callback: TransformCallback): void {
-    this.emit('total', this._total);
-    callback();
-  }
-
 }

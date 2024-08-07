@@ -32,11 +32,11 @@ import timers from 'node:timers/promises';
 export class DownloadTransform extends Duplex {
 
   private receivedFinal: boolean = false;
-
   private runningTasks = 0;
+  private isClosed = false;
 
   // ダウンロードを担当するワーカースレッド
-  private downloader: WorkerThreadPool<
+  private downloader?: WorkerThreadPool<
     DownloadWorkerInitData, 
     DownloadRequest,
     DownloadQueryBase
@@ -52,7 +52,11 @@ export class DownloadTransform extends Duplex {
       read() {},
     });
 
-    this.downloader = new WorkerThreadPool({
+    WorkerThreadPool.create<
+      DownloadWorkerInitData, 
+      DownloadRequest,
+      DownloadQueryBase
+    >({
       // download-worker へのパス
       filename: path.join(__dirname, '..', 'workers', 'download-worker'),
 
@@ -69,11 +73,17 @@ export class DownloadTransform extends Duplex {
 
       // 同時ダウンロード数
       maxTasksPerWorker: params.maxTasksPerWorker,
+    }).then(pool => {
+      this.downloader = pool;
+      if (this.isClosed) {
+        pool.close();
+      }
     });
   }
 
-  async close() {
-    await this.downloader.close();
+  close() {
+    this.isClosed = true;
+    this.downloader?.close();
   }
 
   // 前のstreamからデータが渡されてくる
@@ -83,6 +93,10 @@ export class DownloadTransform extends Duplex {
     // callback: (error?: Error | null | undefined) => void,
     callback: TransformCallback,
   ) {
+    while (!this.downloader) {
+      await timers.setTimeout(100);
+    }
+    
     this.runningTasks++;
 
     // 次のタスクをもらうために、callbackを呼び出す

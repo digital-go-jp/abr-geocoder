@@ -26,13 +26,14 @@ import { AbrGeocoderDiContainer } from "@usecases/geocode/models/abr-geocoder-di
 import { StatusCodes } from 'http-status-codes';
 import { MiddlewareNext, Request, Response, Router, Server } from "hyper-express";
 import { OnGeocodeRequest } from "./on-geocode-request";
+import path from "node:path";
 
 export class AbrgApiServer extends Server {
 
   // アクセスルーター
   private readonly router: Router = new Router();
   
-  constructor(container: AbrGeocoderDiContainer) {
+  private constructor(geocoder: AbrGeocoder) {
     super();
 
     const corsMiddleware = (_: Request, response: Response, next: MiddlewareNext) => {
@@ -48,12 +49,6 @@ export class AbrgApiServer extends Server {
     // リクエストにCORSヘッダーを付加
     this.use('/', corsMiddleware, this.router);
     
-    // ジオコーダの作成
-    const geocoder = new AbrGeocoder({
-      container,
-      maxConcurrency: 5,
-    });
-
     // geocode に対するリクエスト
     const onGeocodeRequest = new OnGeocodeRequest(geocoder);
     this.router.get('/geocode', (request, response) => {
@@ -78,6 +73,15 @@ export class AbrgApiServer extends Server {
     } else {
       response.send(error + '');
     }
+  }
+
+  static readonly create = async (container: AbrGeocoderDiContainer) => {
+    const geocoder = await AbrGeocoder.create({
+      container,
+      numOfThreads: 5,
+    });
+
+    return new AbrgApiServer(geocoder);
   }
 }
 
