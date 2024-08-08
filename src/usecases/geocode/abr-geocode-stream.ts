@@ -21,70 +21,66 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { CommentFilterTransform } from '@domain/transformations/comment-filter-transform';
 import { DatabaseParams } from '@domain/types/database-params';
 import { SearchTarget } from '@domain/types/search-target';
-import { Duplex, Writable } from 'node:stream';
+import { Duplex, Readable, Writable } from 'node:stream';
+import { AbrGeocoder } from './abr-geocoder';
 import { AbrGeocoderDiContainer } from './models/abr-geocoder-di-container';
 import { Query } from './models/query';
-import { TextReaderTransform } from './transformations/text-reader-transform';
 import { ThreadGeocodeTransform } from './transformations/thread-geocoder-transform';
-import { AbrGeocoder } from './abr-geocoder';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export type AbrGeocodeOptions = {
-  dataDir?: string;
-  fuzzy?: string;
+  fuzzy: string;
   searchTarget: SearchTarget;
   database: DatabaseParams;
   debug?: boolean;
-  progress?: (current: number, total: number, isPaused: boolean) => void;
+  cacheDir: string;
+  progress?: (current: number, total: number) => void;
 };
 
 export class AbrGeocodeStream extends Duplex {
 
-  private textReaderTransform: TextReaderTransform;
+  private reader = new Readable({
+    read() {},
+  });
+  private textReaderTransform: CommentFilterTransform;
   private geocoderTransform: ThreadGeocodeTransform;
   private dstStream: Writable;
   private outCnt = 0;
-  private receivedFinal: boolean = false;
 
-  constructor(params: AbrGeocodeOptions) {
+  private constructor(
+    geocoder: AbrGeocoder,
+    container: AbrGeocoderDiContainer,
+    params: AbrGeocodeOptions,
+  ) {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
 
-    const self = this;
     this.dstStream = new Writable({
       objectMode: true,
-      write(chunk: Query, _, callback: (error?: Error | null) => void): void {
+      write: (chunk: Query, _, callback: (error?: Error | null) => void) => {
         callback();
-        self.outCnt++;
-        self.push(chunk);
-        if (self.receivedFinal && self.textReaderTransform.total === self.outCnt) {
-          self.geocoderTransform.end();
-          self.push(null);
-        }
+        this.outCnt++;
+        this.push(chunk);
+        // if (this.receivedFinal && this.textReaderTransform.total === this.outCnt) {
+        //   // this.geocoderTransform.end();
+        //   this.push(null);
+        // }
+      },
+
+      final: (callback) => {
+        this.push(null);
+        callback();
       },
     });
 
-    // DIコンテナをセットアップする
-    // 初期設定値を DIコンテナに全て詰め込む
-    const container = new AbrGeocoderDiContainer({
-      database: params.database,
-      debug: params.debug === true,
-    });
-
-    // ジオコーダ
-    const maxConcurrency = Math.floor(container.env.availableParallelism() * 1.3);
-    const geocoder = new AbrGeocoder({
-      container,
-      maxConcurrency,
-    });
-
     // コメントを取り除く
-    this.textReaderTransform = new TextReaderTransform();
+    this.textReaderTransform = new CommentFilterTransform();
 
     // ジオコーディング処理
     this.geocoderTransform = new ThreadGeocodeTransform({
@@ -94,24 +90,45 @@ export class AbrGeocodeStream extends Duplex {
       searchTarget: params.searchTarget,
     });
     if (params.progress) {
-      this.geocoderTransform.on('progress', (current: number, total: number, isPaused: boolean) => {
-        params.progress!(current, total, isPaused);
+      this.geocoderTransform.on('progress', (current: number, total: number) => {
+        params.progress!(current, total);
       });
     }
 
-    this.textReaderTransform
+    this.reader
+      .pipe(this.textReaderTransform)
       .pipe(this.geocoderTransform)
       .pipe(this.dstStream);
   } 
 
   _write(chunk: Buffer, _: BufferEncoding, callback: (error?: Error | null) => void): void {
-    callback();
     // メイン処理
-    this.textReaderTransform.write(chunk);
+    this.reader.push(chunk);
+    callback();
   }
 
   _final(callback: (error?: Error | null) => void): void {
-    this.receivedFinal = true;
+    this.reader.push(null);
     callback();
+  }
+
+  static readonly create = async (params: Required<AbrGeocodeOptions>) => {
+
+    // DIコンテナをセットアップする
+    // 初期設定値を DIコンテナに全て詰め込む
+    const container = new AbrGeocoderDiContainer({
+      database: params.database,
+      debug: params.debug === true,
+      cacheDir: params.cacheDir,
+    });
+
+    const numOfThreads = Math.max(container.env.availableParallelism() - 1, 1);
+
+    const geocoder = await AbrGeocoder.create({
+      container,
+      numOfThreads,
+    })
+
+    return new AbrGeocodeStream(geocoder, container, params);
   }
 };

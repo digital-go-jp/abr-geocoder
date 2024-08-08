@@ -33,11 +33,11 @@ import { ThreadMessage } from '@domain/services/thread/thread-task';
 export class CsvParseTransform extends Duplex {
 
   private receivedFinal: boolean = false;
-
   private runningTasks = 0;
+  private isClosed = false;
 
   // ダウンロードされた zip ファイルを展開して、データベースに登録するワーカースレッド
-  private readonly csvParsers: WorkerThreadPool<
+  private csvParsers?: WorkerThreadPool<
     Required<ParseWorkerInitData>,
     DownloadQuery2,
     DownloadResult | DownloadProcessError
@@ -61,7 +61,7 @@ export class CsvParseTransform extends Duplex {
     // ブロックする必要がないので、maxConcurrency * 4となる
     const semaphoreSharedMemory = new SharedArrayBuffer(4 + params.maxConcurrency * 4);
 
-    this.csvParsers = new WorkerThreadPool<
+    WorkerThreadPool.create<
       Required<ParseWorkerInitData>,
       DownloadQuery2,
       DownloadResult | DownloadProcessError
@@ -83,11 +83,17 @@ export class CsvParseTransform extends Duplex {
         semaphoreSharedMemory,
         lgCodeFilter: Array.from(params.lgCodeFilter),
       }
+    }).then(pool => {
+      this.csvParsers = pool;
+      if (this.isClosed) {
+        pool.close();
+      }
     });
   }
 
-  async close() {
-    await this.csvParsers.close();
+  close() {
+    this.isClosed = true;
+    this.csvParsers?.close();
   }
 
   // 前のstreamからデータが渡されてくる
@@ -98,6 +104,10 @@ export class CsvParseTransform extends Duplex {
     callback: TransformCallback,
   ) {
 
+    while (!this.csvParsers) {
+      await timers.setTimeout(100);
+    }
+    
     // 次のタスクをもらうために、先にCallbackを呼ぶ
     callback();
     this.runningTasks++;

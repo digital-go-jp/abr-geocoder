@@ -37,7 +37,6 @@ export class OnGeocodeRequest {
   constructor(
     private readonly geocoder: AbrGeocoder,
   ) {
-    this.geocoder.setMaxListeners(0);
 
     // 有効なフォーマット
     const formats = Array.from(Object.values(OutputFormat));

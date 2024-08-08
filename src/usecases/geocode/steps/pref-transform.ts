@@ -21,21 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { MatchLevel } from '@domain/types/geocode/match-level';
+import { PrefInfo } from '@domain/types/geocode/pref-info';
 import { Transform, TransformCallback } from 'node:stream';
-import { toHiragana } from '../services/to-hiragana';
+import timers from 'node:timers/promises';
 import { Query } from '../models/query';
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
+import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { MatchLevel } from '@domain/types/geocode/match-level';
-import { PrefInfo } from '@domain/types/geocode/pref-info';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 
 export class PrefTransform extends Transform {
 
   private readonly prefTrie: TrieAddressFinder<PrefInfo>;
   private readonly logger: DebugLogger | undefined;
+  private initialized: boolean = false;
 
   constructor(params: Required<{
     prefList: PrefInfo[];
@@ -48,20 +50,31 @@ export class PrefTransform extends Transform {
 
     // 都道府県のトライ木
     this.prefTrie = new TrieAddressFinder<PrefInfo>();
-    for (const prefInfo of params.prefList) {
-      this.prefTrie.append({
-        key: this.normalizeStr(prefInfo.pref),
-        value: prefInfo,
-      });
-    }
+    setImmediate(() => {
+      for (const prefInfo of params.prefList) {
+        this.prefTrie.append({
+          key: this.normalizeStr(prefInfo.pref),
+          value: prefInfo,
+        });
+      }
+      this.initialized = true;
+    });
   }
 
-  _transform(
+  async _transform(
     queries: Query[],
     _: BufferEncoding,
     next: TransformCallback
-  ): void {
-
+  ) {
+    if (!this.initialized) {
+      await new Promise(async (resolve: (_?: unknown[]) => void) => {
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
+        resolve();
+      });
+    }
+ 
     const results = [];
     for (const query of queries) {
       // --------------------

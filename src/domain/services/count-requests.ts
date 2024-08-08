@@ -21,40 +21,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { CommonDiContainer } from '@domain/models/common-di-container';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { DatabaseParams } from '@domain/types/database-params';
-import { SearchTarget } from '@domain/types/search-target';
-import { GeocodeDbController } from '@interface/database/geocode-db-controller';
-
-export type AbrGeocoderDiContainerParams = {
-  cacheDir: string;
-  database: DatabaseParams;
-  debug: boolean;
-};
-
-export class AbrGeocoderDiContainer extends CommonDiContainer {
-
-  public readonly searchTarget?: SearchTarget;
-  public readonly database: GeocodeDbController;
-  public readonly logger?: DebugLogger;
-  public readonly cacheDir: string;
-
-  constructor(private params: AbrGeocoderDiContainerParams) {
-    super();
-    this.database = new GeocodeDbController({
-      connectParams: params.database,
-    });
-    if (params.debug) {
-      this.logger = DebugLogger.getInstance();
-    }
-    this.cacheDir = params.cacheDir;
-    Object.freeze(this);
-  }
-  
-  toJSON(): AbrGeocoderDiContainerParams {
-    return {
-      ...this.params,
-    }
-  }
+import { LineStream } from 'byline';
+import fs from 'node:fs';
+import { Writable } from 'node:stream';
+import { CommentFilterTransform } from '../transformations/comment-filter-transform';
+export const countRequests = (filePath: string) => {
+  const lineByLine = new LineStream();
+  const commentFilter = new CommentFilterTransform();
+  return new Promise((
+    resolve: (total: number) => void,
+  ) => {
+    fs.createReadStream(filePath)
+      .pipe(lineByLine)
+      .pipe(commentFilter)
+      .pipe(new Writable({
+        objectMode: true,
+        write(chunk, encoding, callback) {
+          callback();
+        },
+        final(callback) {
+          callback();
+          resolve(commentFilter.total);
+        },
+      }));
+  });
 }
