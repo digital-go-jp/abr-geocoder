@@ -6,13 +6,6 @@ jest.mock('node:fs');
 
 const mockFsReadFileSync = fs.readFileSync as jest.MockedFunction<typeof fs.readFileSync>;
 
-// mockFsReadFileSync.mockImplementation((path) => {
-//     return `
-//     {
-//     "version": "dummy",
-//     "description": "dummy description"
-//     }` as string | Buffer;
-// })
 mockFsReadFileSync.mockReturnValue(`
 {
     "version": "dummy",
@@ -39,7 +32,7 @@ describe("persePackageJson", () => {
             description: "dummy description"
         });
     });
-    
+
     test("test2", () => {
         mockFsReadFileSync.mockReset();
         mockFsReadFileSync.mockImplementation(() =>{
