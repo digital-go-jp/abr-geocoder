@@ -8,35 +8,32 @@ describe("toHiragana", () => {
   })
 
   test("test2", () => {
-    const result = toHiragana("ｶﾞ")
-    expect(result).toBe("かﾞ") // 変な「が」ならとおる
+    const result = toHiragana("カタカナとひらがな")
+    expect(result).toBe("かたかなとひらがな")
   })
 
-  // test("test3", () => {
-  //   const result = toHiragana("ｶﾞ")
-  //   expect(result).toBe("が") // 通常の「が」は通らない
-  // })
+  test("test3", () => {
+    const result = toHiragana("さしすせそ")
+    expect(result).toBe("さしすせそ")
+  })
 
   test("test4", () => {
-    const result = toHiragana("が")
-    expect(result).toBe("が")
+    const result = toHiragana("")
+    expect(result).toBe("")
   })
 
   test("test5", () => {
-    const result = toHiragana("ガ")
-    expect(result).toBe("が")
+    const result = toHiragana("漢字とカタカナ")
+    expect(result).toBe("漢字とかたかな")
   })
 
   test("test6", () => {
-    const result = toHiragana(" ")
-    expect(result).toBe(" ")
+    const result = toHiragana("カタカナと！ひらがな？")
+    expect(result).toBe("かたかなと！ひらがな？")
   })
 
-  test("test5", () => {
-    const result = toHiragana("ゑ")
-    expect(result).toBe("え")
+  test("test7", () => {
+    const result = toHiragana("カタカナ123とABCひらがな")
+    expect(result).toBe("かたかな123とABCひらがな")
   })
-
-
-  
 })

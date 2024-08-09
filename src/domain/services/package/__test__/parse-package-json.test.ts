@@ -3,17 +3,8 @@ import { parsePackageJson } from "../parse-package-json"
 import fs from "node:fs"
 
 jest.mock("node:fs")
+
 const mockedFsReadFileSync = fs.readFileSync as jest.MockedFunction<typeof fs.readFileSync>
-
-// mockedFsReadFileSync.mockImplementation(path => {
-//   if (path === "dummy file path") {
-//     return JSON.stringify({
-//       version: "dummy version",
-//       description: "dummy description",
-//     })
-//   }
-// })
-
 mockedFsReadFileSync.mockReturnValue(JSON.stringify({
   name: "dummy name",
   version: "dummy version",
@@ -21,7 +12,6 @@ mockedFsReadFileSync.mockReturnValue(JSON.stringify({
 }))
 
 describe("parsePackageJson", () => {
-
   test("test1", () => {
     const result = parsePackageJson({
       filePath: "dummy file path",
