@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import { DASH, SPACE } from "../../../config/constant-values";
+import { DASH, SPACE } from "@config/constant-values";
 import { CharNode } from "./trie/char-node";
 
 const kanjiNum = new Map<string, number>([
