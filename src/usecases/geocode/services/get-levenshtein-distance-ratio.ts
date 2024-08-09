@@ -25,7 +25,6 @@
 /*
  * 文字列の類似度を計算するレーベンシュタイン距離。
  * 1.0 に近いほど strA と strB は類似度が高い。
- * 将来的に使えそうなので、置いておく。
  */
 export const getLevenshteinDistanceRatio = (strA: string, strB: string): number => {
   const N = strA.length;
