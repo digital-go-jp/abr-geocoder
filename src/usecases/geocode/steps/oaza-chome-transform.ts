@@ -31,6 +31,7 @@ import timers from 'node:timers/promises';
 import { Query } from '../models/query';
 import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
+import { toHankakuAlphaNum, toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
@@ -244,6 +245,9 @@ export class OazaChomeTransform extends Transform {
     // 漢数字を半角数字に変換する
     address = kan2num(address);
 
+    // 全角英数字は、半角英数字に変換
+    address = toHankakuAlphaNum(address);
+
     // カタカナはひらがなに変換する
     address = toHiragana(address);
     
@@ -289,6 +293,9 @@ export class OazaChomeTransform extends Transform {
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
     address = jisKanjiForCharNode(address);
+
+    // 全角英数字は、半角英数字に変換
+    address = toHankakuAlphaNumForCharNode(address);
 
     // 半角カナ・全角カナを平仮名に変換する
     address = toHiraganaForCharNode(address);
