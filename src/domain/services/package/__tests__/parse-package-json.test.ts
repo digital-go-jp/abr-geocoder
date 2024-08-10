@@ -1,34 +1,42 @@
-import { parsePackageJson } from "../parse-package-json";
-import { jest, test, describe, expect, beforeAll } from "@jest/globals";
-import fs from "node:fs";
+import { jest, test, describe, expect, beforeAll } from '@jest/globals';
+import fs from 'node:fs';
+import { parsePackageJson } from '../parse-package-json';
 
-jest.mock("node:fs")
+jest.mock('node:fs');
 
-const mockedFsReadFileSync = fs.readFileSync as jest.MockedFunction<typeof fs.readFileSync>
+const mockReadFileSync = fs.readFileSync as jest.MockedFunction<typeof fs.readFileSync>;
 
 describe("parsePackageJson", () => {
     beforeAll(() => {
-        mockedFsReadFileSync.mockReset()
-    })
+        mockReadFileSync.mockReset();
+    });
+
     test("test1", () => {
-        mockedFsReadFileSync.mockReturnValue(`
-        {
-            "version":"dummy",
-            "description":"dummy description"
-        }
-        `)
-        const result = parsePackageJson({ filePath: "dummy.json" })
-        console.log(result)
+        mockReadFileSync.mockReturnValue(`
+    {
+      "version": "dummy",
+      "description": "dummy description"
+    }
+    `);
+
+        const result = parsePackageJson({
+            filePath: 'dummy.json',
+        });
         expect(result).toEqual({
-            version: "dummy",
-            description: "dummy description"
+            version: 'dummy',
+            description: 'dummy description'
         })
-    })
-    test("test2", () => {
-        mockedFsReadFileSync.mockReset()
-        mockedFsReadFileSync.mockImplementation(() => {
-            throw new Error("file not found");
+    });
+
+    test('test2', () => {
+        mockReadFileSync.mockImplementation(() => {
+            throw 'File not found';
         })
-        expect(() => parsePackageJson({ filePath: "error.json" })).toThrow()
-    })
+
+        expect(() => {
+            parsePackageJson({
+                filePath: 'error.json',
+            });
+        }).toThrow('File not found');
+    });
 })
