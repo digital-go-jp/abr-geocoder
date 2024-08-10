@@ -38,7 +38,9 @@ export class CharNode {
   replaceAll(search: string | RegExp, replaceValue: string | Function): CharNode | undefined {
     let root: CharNode | undefined = this.clone();
 
-    this.toProcessedString().replaceAll(search, (match: string,  ...args: any[]): string => {
+    let replacedCount = 0
+
+    this.toProcessedString().replaceAll(search, (match: string, ...args: any[]): string => {
 
       let repValue = (() => {
         if (typeof replaceValue === 'function') {
@@ -48,7 +50,7 @@ export class CharNode {
         }
       })();
 
-      const hasNamedGroups = Array.isArray(args.at(-1));
+      const hasNamedGroups = typeof args.at(-1) === "object";
       const offset: number = hasNamedGroups ? args.at(-3) : args.at(-2);
       
       // グルーピングをしている場合、repValueに適用する
@@ -62,7 +64,11 @@ export class CharNode {
         repValue = repValue.replaceAll(`$${i + 1}`, args[i]);
       }
       
-      root = root?.splice(offset, match.length, repValue);
+      const diff = replacedCount * (repValue.length - match.length)
+
+      root = root?.splice(offset + diff, match.length, repValue);
+
+      replacedCount++
 
       return repValue;
     });
