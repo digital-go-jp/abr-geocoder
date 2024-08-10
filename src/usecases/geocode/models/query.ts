@@ -29,6 +29,7 @@ import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { CharNode } from '../services/trie/char-node';
 import { SearchTarget } from '@domain/types/search-target';
 import { AbrGeocoderInput } from './abrg-input-data';
+import { kan2num } from '../services/kan2num';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）
@@ -351,18 +352,39 @@ export class Query implements IQuery {
     if (this.tempAddress) {
       const other = this.tempAddress?.
         replace(RegExpEx.create(`[${DASH}${SPACE_SYMBOLS}]+$`), '')?.
-        toOriginalString() || '';
-      if (
-        (
-          this.match_level.num === MatchLevel.RESIDENTIAL_DETAIL.num ||
-          this.match_level.num === MatchLevel.PARCEL.num
-        ) &&
-        (!RegExpEx.create(`^[${NUMRIC_SYMBOLS}]`).test(other)) &&
-        (!other.match(RegExpEx.create(`^[${DASH_SYMBOLS}0-9]`)))
-      ) {
-        formatted_address.push(' ');
+        toOriginalString() || undefined;
+      if (other) {
+        const firstChar = kan2num(this.tempAddress.char!);
+        
+        const isNums = firstChar?.match(RegExpEx.create(`[0-9]`)) !== null;
+        if (!isNums) {
+          // otherの先頭が数字ではない場合
+          if (firstChar?.match(RegExpEx.create(`[^${DASH}\-]`))) {
+            formatted_address.push('_____');
+            formatted_address.push(other);
+          }
+        } else {
+          // otherの先頭が数字（漢数字を含む）の場合
+
+          switch (this.match_level) {
+            // すでに枝番まで判明している場合は、スペースを入れる
+            case MatchLevel.PARCEL:
+            case MatchLevel.RESIDENTIAL_DETAIL: {
+              formatted_address.push('_____');
+              formatted_address.push(other);
+              break;
+            }
+
+            // (大字)〇〇まで判明していて、ー〇〇がある可能性がある
+            case MatchLevel.RESIDENTIAL_BLOCK:{
+              formatted_address.push('_____');
+              formatted_address.push(other);
+              break;
+            }
+
+          }
+        }
       }
-      formatted_address.push(other);
     }
 
     // 最終的な文字列を作成

@@ -34,6 +34,7 @@ import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import timers from 'node:timers/promises';
+import { QuerySet } from '../models/query-set';
 
 export class Tokyo23TownTranform extends Transform {
 
@@ -65,16 +66,16 @@ export class Tokyo23TownTranform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
-    const results: Query[] = [];
-    for (const query of queries) {
+    const results = new QuerySet();
+    for (const query of queries.values()) {
       // 行政区が判明している場合はスキップ
       if (!query.tempAddress || 
         query.match_level.num >= MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
@@ -96,7 +97,7 @@ export class Tokyo23TownTranform extends Transform {
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!searchResults || searchResults.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -110,7 +111,7 @@ export class Tokyo23TownTranform extends Transform {
         anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
         anyHit = true;
 
-        results.push(query.copy({
+        results.add(query.copy({
           pref_key: searchResult.info.pref_key,
           city_key: searchResult.info.city_key,
           town_key: searchResult.info.town_key,
@@ -134,11 +135,11 @@ export class Tokyo23TownTranform extends Transform {
         }));
       });
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
 
-    this.logger?.info(`tokyo23 : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.logger?.info(`tokyo23 : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 

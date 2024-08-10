@@ -35,6 +35,7 @@ import { toHankakuAlphaNum, toHankakuAlphaNumForCharNode } from '../services/to-
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { QuerySet } from '../models/query-set';
 
 export class OazaChomeTransform extends Transform {
 
@@ -93,23 +94,23 @@ export class OazaChomeTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
     // ------------------------
     // 大字・丁目・小字で当たるものがあるか
     // ------------------------
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
       if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
         // 大字が既に判明している場合はスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
       
@@ -133,9 +134,9 @@ export class OazaChomeTransform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = this.normalizeCharNode(query.tempAddress);
-      if (!target) {
-        results.push(query);
+      const copiedQuery = this.normalizeQuery(query);
+      if (!copiedQuery.tempAddress) {
+        results.add(copiedQuery);
         continue;
       }
       // 小字に数字が含まれていて、それが番地にヒットする場合がある。
@@ -146,7 +147,7 @@ export class OazaChomeTransform extends Transform {
       // expected = 末広町
       // wrong_matched_result = 末広町18字
       const findResults = this.trie.find({
-        target,
+        target: copiedQuery.tempAddress,
         partialMatches: true,
 
         // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
@@ -179,8 +180,8 @@ export class OazaChomeTransform extends Transform {
       filteredResult?.forEach(findResult => {
         // step2, step3で city_key が判別している場合で
         // city_key が異なる場合はスキップ
-        if ((query.city_key !== undefined) &&
-          (query.city_key !== findResult.info?.city_key)) {
+        if ((copiedQuery.city_key !== undefined) &&
+          (copiedQuery.city_key !== findResult.info?.city_key)) {
           return;
         }
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
@@ -189,7 +190,7 @@ export class OazaChomeTransform extends Transform {
         anyHit = true;
         if (info.rsdt_addr_flg === AMBIGUOUS_RSDT_ADDR_FLG) {
           // 大字までヒットした
-          results.push(query.copy({
+          results.add(copiedQuery.copy({
             pref_key: info.pref_key,
             city_key: info.city_key,
             town_key: info.town_key,
@@ -204,15 +205,15 @@ export class OazaChomeTransform extends Transform {
             tempAddress: findResult.unmatched,
             match_level: MatchLevel.MACHIAZA,
             coordinate_level: MatchLevel.CITY,
-            matchedCnt: query.matchedCnt + findResult.depth,
-            ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
+            matchedCnt: copiedQuery.matchedCnt + findResult.depth,
+            ambiguousCnt: copiedQuery.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
           }));
 
           return;
         }
 
         // 小字までヒットした
-        results.push(query.copy({
+        results.add(copiedQuery.copy({
           pref_key: info.pref_key,
           city_key: info.city_key,
           town_key: info.town_key,
@@ -229,15 +230,15 @@ export class OazaChomeTransform extends Transform {
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.MACHIAZA_DETAIL,
           coordinate_level: MatchLevel.MACHIAZA_DETAIL,
-          matchedCnt: query.matchedCnt + findResult.depth,
+          matchedCnt: copiedQuery.matchedCnt + findResult.depth,
         }));
       });
 
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
-    this.logger?.info(`oaza-cho : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.logger?.info(`oaza-cho : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 
@@ -286,10 +287,12 @@ export class OazaChomeTransform extends Transform {
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
     address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
-
+    
     return address;
   }
-  private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
+  private normalizeQuery(query: Query): Query {
+
+    let address: CharNode | undefined = query.tempAddress;
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
     address = jisKanjiForCharNode(address);
@@ -330,7 +333,16 @@ export class OazaChomeTransform extends Transform {
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
     address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
-    
-    return address;
+
+    if (query.city === '福井市' && query.pref === '福井県') {
+      address = address?.replaceAll(RegExpEx.create('^99', 'g'), 'つくも');
+    }
+    if (query.city === '海田町' && query.pref === '広島県' && query.county === '安芸郡') {
+      address = address?.replaceAll(RegExpEx.create('^(南)?99町', 'g'), '\$1つくも町');
+    }
+
+    return query.copy({
+      tempAddress: address,
+    });
   }
-}
+}       

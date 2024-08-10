@@ -31,6 +31,7 @@ import { CharNode } from '../services/trie/char-node';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { IParcelDbGeocode } from '@interface/database/common-db';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { QuerySet } from '../models/query-set';
 
 export class ParcelTransform extends Transform {
 
@@ -44,7 +45,7 @@ export class ParcelTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
@@ -58,34 +59,34 @@ export class ParcelTransform extends Transform {
     // ------------------------
 
 
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
       if (query.searchTarget === SearchTarget.RESIDENTIAL) {
         // 住居表示検索が指定されている場合、このステップはスキップする
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       // lg_code が必要なので、CITY未満はスキップする
       if (query.match_level.num < MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
       // 既に住居表示で見つかっている場合もスキップ
       if (query.match_level.num === MatchLevel.RESIDENTIAL_BLOCK.num ||
         query.match_level.num === MatchLevel.RESIDENTIAL_DETAIL.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       if (!query.lg_code) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
       const db: IParcelDbGeocode | null = await this.params.dbCtrl.openParcelDb({
@@ -94,7 +95,7 @@ export class ParcelTransform extends Transform {
       });
       if (!db) {
         // DBをオープンできなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -118,12 +119,12 @@ export class ParcelTransform extends Transform {
 
       // 見つからなかった
       if (findResults.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       findResults.forEach(row => {
-        results.push(query.copy({
+        results.add(query.copy({
           parcel_key: row.parcel_key,
           prc_id: row.prc_id,
           prc_num1: row.prc_num1,
@@ -139,7 +140,7 @@ export class ParcelTransform extends Transform {
       });
     }
 
-    this.params.logger?.info(`parcel : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`parcel : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 

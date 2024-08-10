@@ -32,6 +32,7 @@ import { MatchLevel } from '@domain/types/geocode/match-level';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import timers from 'node:timers/promises';
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { QuerySet } from '../models/query-set';
 
 export class CountyAndCityTransform extends Transform {
 
@@ -62,7 +63,7 @@ export class CountyAndCityTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     next: TransformCallback
   ) {
@@ -73,15 +74,15 @@ export class CountyAndCityTransform extends Transform {
       resolve();
     });
 
-    const results: Query[] = [];
-    for (const query of queries) {
+    const results = new QuerySet();
+    for (const query of queries.values()) {
       // 既に判明している場合はスキップ
       if (query.match_level.num >= MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       if (!query.tempAddress) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -95,7 +96,7 @@ export class CountyAndCityTransform extends Transform {
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!matched || matched.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -111,7 +112,7 @@ export class CountyAndCityTransform extends Transform {
         }
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;
 
-        results.push(query.copy({
+        results.add(query.copy({
           pref: query.pref || mResult.info!.pref,
           pref_key: query.pref_key || mResult.info!.pref_key,
           city_key: mResult.info!.city_key,
@@ -129,21 +130,21 @@ export class CountyAndCityTransform extends Transform {
         }));
       }
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
     
-    const seen = new Set<string | undefined>();
-    const filteredReslts = results.filter(x => {
-      const tempAddress = x.tempAddress?.toString();
-      if (seen.has(tempAddress)) {
-        return false;
-      }
-      seen.add(tempAddress);
-      return true;
-    });
-    this.logger?.info(`county-and-city : ${((Date.now() - filteredReslts[0].startTime) / 1000).toFixed(2)} s`);
-    next(null, filteredReslts);
+    // const seen = new Set<string | undefined>();
+    // const filteredReslts = results.filter(x => {
+    //   const tempAddress = x.tempAddress?.toString();
+    //   if (seen.has(tempAddress)) {
+    //     return false;
+    //   }
+    //   seen.add(tempAddress);
+    //   return true;
+    // });
+    // this.logger?.info(`county-and-city : ${((Date.now() - filteredReslts[0].startTime) / 1000).toFixed(2)} s`);
+    next(null, results);
   }
 
   private normalizeStr(value: string): string {

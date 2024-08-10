@@ -31,6 +31,7 @@ import { kan2numForCharNode } from '../services/kan2num';
 import { toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
 import { toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
+import { QuerySet } from '../models/query-set';
 
 export class NormalizeTransform extends Transform {
 
@@ -170,8 +171,10 @@ export class NormalizeTransform extends Transform {
 
 
     this.params.logger?.info(`normalize : ${((Date.now() - query.startTime) / 1000).toFixed(2)} s`);
-    callback(null, [query.copy({
+    const results = new QuerySet();
+    results.add(query.copy({
       tempAddress: address,
-    })]);
+    }));
+    callback(null, results);
   }
 }

@@ -34,6 +34,7 @@ import { kan2num, kan2numForCharNode } from '../services/kan2num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { QuerySet } from '../models/query-set';
 
 export class ChomeTranform extends Transform {
 
@@ -81,32 +82,32 @@ export class ChomeTranform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
     // ------------------------
     // 丁目で当たるものがあるか
     // ------------------------
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
 
       // 丁目を探索するためには、最低限でも city_key が分かっている必要がある。)
       // match_level = unknow, prefecture はスキップする
       if (query.match_level.num < MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       // 丁目が既に判明している場合はスキップ
       if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -116,7 +117,7 @@ export class ChomeTranform extends Transform {
       const conditions = this.createWhereCondition(query);
       if (!conditions) {
         // 探索する条件が絞り込めなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -136,7 +137,7 @@ export class ChomeTranform extends Transform {
       // ------------------------------------
       const target = this.normalizeCharNode(query.tempAddress);
       if (!target) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       const findResults = trie.find({
@@ -162,7 +163,7 @@ export class ChomeTranform extends Transform {
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         // 丁目がヒットした
-        results.push(query.copy({
+        results.add(query.copy({
           chome: findResult.info.chome,
           tempAddress: findResult.unmatched,
           town_key: findResult.info.town_key,
@@ -181,11 +182,11 @@ export class ChomeTranform extends Transform {
       });
 
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
 
-    this.params.logger?.info(`chome : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`chome : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
   

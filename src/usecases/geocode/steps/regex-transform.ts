@@ -28,6 +28,7 @@ import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Query } from '../models/query';
 import { CharNode } from '../services/trie/char-node';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { QuerySet } from '../models/query-set';
 
 export class RegExTransform extends Transform {
 
@@ -40,7 +41,7 @@ export class RegExTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
@@ -53,15 +54,18 @@ export class RegExTransform extends Transform {
     //
     // 正規表現で正規化することを試みる
     // ----------------------------------------------
-    queries = queries.map(query => {
+    const results = new QuerySet();
+    for (const query of queries.values()) {
       // 残り文字列がない場合
       // RESIDENTIAL, PARCEL の場合はスキップ
-      if (
-        query.tempAddress === undefined ||
-        query.match_level.num === MatchLevel.RESIDENTIAL_DETAIL.num ||
-        query.match_level.num === MatchLevel.PARCEL.num
-      ) {
-        return query;
+      // if (
+      //   query.tempAddress === undefined ||
+      //   query.match_level.num === MatchLevel.RESIDENTIAL_DETAIL.num ||
+      //   query.match_level.num === MatchLevel.PARCEL.num
+      // ) {
+      if (query.tempAddress === undefined) {
+        results.add(query);
+        return;
       }
 
       // 空白がある位置より前と後に分ける
@@ -73,13 +77,13 @@ export class RegExTransform extends Transform {
       // 結合する
       const tempAddress = this.concat(normalized, after);
       
-      return query.copy({
+      results.add(query.copy({
         tempAddress,
-      })
-    });
+      }));
+    }
 
-    this.params.logger?.info(`regexp : ${((Date.now() - queries[0].startTime) / 1000).toFixed(2)} s`);
-    callback(null, queries);
+    // this.params.logger?.info(`regexp : ${((Date.now() - queries[0].startTime) / 1000).toFixed(2)} s`);
+    callback(null, results);
   }
 
   private concat(p1: CharNode | undefined, p2: CharNode | undefined): CharNode | undefined {
@@ -102,7 +106,7 @@ export class RegExTransform extends Transform {
       return p;
     }
 
-    let tmp = original;
+    let tmp = original.trim();
     tmp = tmp.replace(RegExpEx.create(`([0-9]+(?:丁目?))([0-9]+)(?:番地?の?)([0-9]+)号?`), `$1${DASH}]2${DASH}$3`);
     tmp = tmp.replace(RegExpEx.create(`([0-9]+)(?:番地?の?)([0-9]+)(?:号)?`), `$1${DASH}$2`);
     tmp = tmp.replace(RegExpEx.create(`(?:[${DASH_SYMBOLS}${DASH}]|番地?)([0-9]+)号`), `${DASH}$1`);
@@ -111,6 +115,7 @@ export class RegExTransform extends Transform {
     tmp = tmp.replace(RegExpEx.create(`(?:番地?)([0-9]+)[${DASH_SYMBOLS}${DASH}]([0-9]+)$`), `${DASH}$1${DASH}$2`);
     tmp = tmp.replace(RegExpEx.create(`(?:番地?)([0-9]+)[${DASH_SYMBOLS}${DASH}]([0-9]+)号$`), `${DASH}$1${DASH}$2`);
     tmp = tmp.replace(RegExpEx.create(`(?:番地?)([0-9]+)[${DASH_SYMBOLS}${DASH}]([0-9]+)号室$`), `${DASH}$1${DASH}$2号室`);
+    tmp = tmp.replace(RegExpEx.create('^番地'), '');
     tmp = tmp.replace(RegExpEx.create(`[${DASH_SYMBOLS}${DASH}]+`), DASH);
 
     p = CharNode.create(tmp);

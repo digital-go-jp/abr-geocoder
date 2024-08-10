@@ -27,6 +27,7 @@ import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Query } from '../models/query';
 import { CharNode } from '../services/trie/char-node';
+import { QuerySet } from '../models/query-set';
 
 export class GeocodeResultTransform extends Transform {
 
@@ -37,21 +38,22 @@ export class GeocodeResultTransform extends Transform {
   }
   
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
+    let queryList = Array.from(queries.values());
     setImmediate(() => {
-      const orgInput = queries[0].input;
+      const orgInput = queryList[0].input;
       const N = orgInput.data.address.length;
   
-      queries = queries.map(query => {
+      queryList = queryList.map(query => {
         // 処理のために置き換えた文字列を元に戻す
         return this.restoreCharNode(query);
       });
   
       // 信頼度の低い結果を取り除く
-      queries = queries.filter(query => {
+      queryList = queryList.filter(query => {
         if (query === undefined) {
           return false;
         }
@@ -62,7 +64,7 @@ export class GeocodeResultTransform extends Transform {
           query.match_level.num >= MatchLevel.CITY.num);
       });
   
-      queries.sort((a, b) => {
+      queryList.sort((a, b) => {
         // いくつかの項目を比較して、合計値の高い方を優先する
         let totalScoreA = 0;
         let totalScoreB = 0;
@@ -134,11 +136,11 @@ export class GeocodeResultTransform extends Transform {
         return 0;
       });
       
-      if (queries.length === 0) {
-        queries.push(Query.create(orgInput));
+      if (queryList.length === 0) {
+        queryList.push(Query.create(orgInput));
       }
   
-      callback(null, queries[0]);
+      callback(null, queryList[0]);
     });
   }
 

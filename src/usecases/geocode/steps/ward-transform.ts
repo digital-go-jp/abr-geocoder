@@ -34,6 +34,7 @@ import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { CharNode } from '../services/trie/char-node';
 import timers from 'node:timers/promises';
 import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { QuerySet } from '../models/query-set';
 
 export class WardTransform extends Transform {
 
@@ -65,11 +66,11 @@ export class WardTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
-    const results: Query[] = [];
+    const results = new QuerySet();
     // ----------------------------------------------
     // 〇〇区から始まるパターンは、
     // 続く大字、町名、小字を調べないと分からないので
@@ -77,13 +78,13 @@ export class WardTransform extends Transform {
     // ----------------------------------------------
     // 行政区が判明できているQueryと、そうでないQueryに分ける
     let targets: Query[] = [];
-    queries.forEach(query => {
+    for (const query of queries.values()) {
       if (query.match_level.num >= MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
       } else {
         targets.push(query);
       }
-    });
+    }
 
     // 全て行政区が判明できているなら、スキップする
     if (targets.length === 0) {
@@ -106,7 +107,7 @@ export class WardTransform extends Transform {
     const filteredTargets = targets.filter(query => {
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         return false;
       }
 
@@ -137,7 +138,7 @@ export class WardTransform extends Transform {
         }
       })
       if (!anyHit) {
-        results.push(query);
+        results.add(query);
       }
       return anyHit;
     })
@@ -165,12 +166,12 @@ export class WardTransform extends Transform {
 
       for (const query of filteredTargets) {
         if (!query.tempAddress) {
-          results.push(query);
+          results.add(query);
           continue;
         }
 
         if (query.match_level.num > MatchLevel.PREFECTURE.num) {
-          results.push(query);
+          results.add(query);
           continue;
         } 
 
@@ -182,7 +183,7 @@ export class WardTransform extends Transform {
         });
 
         if (!matched) {
-          results.push(query);
+          results.add(query);
           continue;
         }
         let anyAmbiguous = false;
@@ -206,7 +207,7 @@ export class WardTransform extends Transform {
               return new CharNode(mResult.info!.oaza_cho);
             }
           })();
-          results.push(query.copy({
+          results.add(query.copy({
             pref_key: mResult.info!.pref_key,
             city_key: mResult.info!.city_key,
             pref: mResult.info!.pref,
@@ -228,16 +229,16 @@ export class WardTransform extends Transform {
         // 〇〇区で始まるパターンの場合、誤マッチングの可能性があるので
         // マッチしなかった可能性もキープしておく
         if (!anyHit || anyAmbiguous || query.match_level === MatchLevel.UNKNOWN) {
-          results.push(query);
+          results.add(query);
         }
       }
     }
 
-    if (results.length > 0) {
-      this.logger?.info(`ward : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
-    } else {
-      this.logger?.info(`ward : ${((Date.now() - targets[0].startTime) / 1000).toFixed(2)} s`);
-    }
+    // if (results.length > 0) {
+    //   this.logger?.info(`ward : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // } else {
+    //   this.logger?.info(`ward : ${((Date.now() - targets[0].startTime) / 1000).toFixed(2)} s`);
+    // }
     callback(null, results);
   }
 

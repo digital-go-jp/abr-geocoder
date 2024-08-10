@@ -32,6 +32,7 @@ import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import timers from 'node:timers/promises';
 import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { QuerySet } from '../models/query-set';
 
 export class WardAndOazaTransform extends Transform {
 
@@ -62,20 +63,20 @@ export class WardAndOazaTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     next: TransformCallback
   ) {
 
-    const results: Query[] = [];
-    for (const query of queries) {
+    const results = new QuerySet();
+    for (const query of queries.values()) {
       if (!query.tempAddress) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       // 既に判明している場合はスキップ
       if (query.match_level.num >= MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -98,7 +99,7 @@ export class WardAndOazaTransform extends Transform {
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!trieResults || trieResults.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -116,7 +117,7 @@ export class WardAndOazaTransform extends Transform {
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;
         anyHit = true;
 
-        results.push(query.copy({
+        results.add(query.copy({
           pref: query.pref || mResult.info!.pref,
           pref_key: query.pref_key || mResult.info!.pref_key,
           city_key: mResult.info!.city_key,
@@ -141,10 +142,10 @@ export class WardAndOazaTransform extends Transform {
       }
 
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
-    this.logger?.info(`ward_and_oaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.logger?.info(`ward_and_oaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     next(null, results);
   }
 

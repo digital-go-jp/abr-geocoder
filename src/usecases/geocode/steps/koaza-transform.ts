@@ -35,6 +35,7 @@ import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { QuerySet } from '../models/query-set';
 
 export class KoazaTransform extends Transform {
 
@@ -72,19 +73,19 @@ export class KoazaTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
     // ----------------------------------
     // 小字を特定する
     // ----------------------------------
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
 
       // 最低限、市区町村レベルまでは分かっている必要がある
       if (query.match_level.num < MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       // 既に判明している場合はスキップ
@@ -95,13 +96,13 @@ export class KoazaTransform extends Transform {
 
       // 小字が判明している場合はスキップ
       if (query.town_key && query.koaza) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -125,7 +126,7 @@ export class KoazaTransform extends Transform {
       // ------------------------------------
       const target = this.normalize(query.tempAddress);
       if (!target) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       const findResults = trie.find({
@@ -160,17 +161,17 @@ export class KoazaTransform extends Transform {
           matchedCnt: query.matchedCnt + findResult.depth,
           ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
         };
-        results.push(query.copy(params));
+        results.add(query.copy(params));
 
         anyHit = true;
       });
 
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
 
-    this.params.logger?.info(`koaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`koaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 

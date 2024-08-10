@@ -30,6 +30,7 @@ import { Query } from '../models/query';
 import { CharNode } from '../services/trie/char-node';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { QuerySet } from '../models/query-set';
 
 export class RsdtBlkTransform extends Transform {
 
@@ -43,16 +44,16 @@ export class RsdtBlkTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
 
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
       if (query.searchTarget === SearchTarget.PARCEL) {
         // 地番検索が指定されている場合、このステップはスキップする
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -60,12 +61,12 @@ export class RsdtBlkTransform extends Transform {
       // もしくは 既に地番データが判明している場合もスキップ
       if (query.match_level.num < MatchLevel.MACHIAZA.num || 
         query.match_level === MatchLevel.PARCEL) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -76,12 +77,12 @@ export class RsdtBlkTransform extends Transform {
       // }
 
       if (!query.town_key) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       const target = this.normalize(query.tempAddress);
       if (!target || !query.lg_code) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -91,7 +92,7 @@ export class RsdtBlkTransform extends Transform {
       });
       if (!db) {
         // DBをオープンできなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -106,12 +107,12 @@ export class RsdtBlkTransform extends Transform {
 
       // 番地が見つからなかった
       if (findResults.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
       findResults.forEach(result => {
-        results.push(query.copy({
+        results.add(query.copy({
           block: result.blk_num.toString(),
           block_id: result.blk_id,
           rep_lat: result.rep_lat,
@@ -125,7 +126,7 @@ export class RsdtBlkTransform extends Transform {
       })
     }
 
-    this.params.logger?.info(`rsdt-blk : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`rsdt-blk : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 

@@ -191,6 +191,7 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
   let lastWasTen = false; // 直前の文字が「十」かどうか
 
   let head = target;
+
   while (head && (head.ignore || head.char)) {
     if (head.ignore || !head.char) {
       result.push(head);
