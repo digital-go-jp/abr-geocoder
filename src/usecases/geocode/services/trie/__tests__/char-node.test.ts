@@ -96,6 +96,21 @@ describe("CharNode", () => {
     });
 
     describe("splice", () => {
+        it("should delete characters", () => {
+            const node = CharNode.create("test to delete string");
+            const result = node?.splice(4, 10);
+            expect(result?.toProcessedString()).toBe("test string");
+        });
+        it("should insert a string at a specified index", () => {
+            const node = CharNode.create("test string test");
+            const result = node?.splice(5, 0, "inserted ");
+            expect(result?.toProcessedString()).toBe("test inserted string test");
+        });
+        it("should insert a string at a specified index with overflow delete", () => {
+            const node = CharNode.create("test string test");
+            const result = node?.splice(15, 2, "inserted");
+            expect(result?.toProcessedString()).toBe("test string tesinserted");
+        });
         it("should not change characters", () => {
             const node = CharNode.create("test string");
             const result = node?.splice(4);
@@ -122,26 +137,7 @@ describe("CharNode", () => {
         });
         it("should ignore overflow start index", () => {
             const node = CharNode.create("test string");
-            const result = node?.splice(99);
-            expect(result?.toProcessedString()).toBe("test string");
-        });
-        it("should insert a string at a specified index", () => {
-            const node = CharNode.create("test string test");
-            const result = node?.splice(5, 0, "inserted ");
-            expect(result?.toProcessedString()).toBe("test inserted string test");
-        });
-        /**
-         * start + deleteCountがCharNodeの数を超えると、replaceValueが最後まで反映されない。
-         * これは想定通り？
-         **/
-        it("should insert a string at a specified index", () => {
-            const node = CharNode.create("test string test");
-            const result = node?.splice(15, 2, "inserted ");
-            expect(result?.toProcessedString()).toBe("test string tesi");
-        });
-        it("should delete characters", () => {
-            const node = CharNode.create("test to delete string");
-            const result = node?.splice(4, 10);
+            const result = node?.splice(99, 0, "inserted");
             expect(result?.toProcessedString()).toBe("test string");
         });
     });

@@ -250,15 +250,14 @@ export class CharNode {
         head = head.next;
         deleteCount--;
       }
-    } else {
-      // 置換する文字列の方が長い or 同等
-      while (newValue) {
-        tail!.next = new CharNode('', newValue.char);
-        tail = tail?.next;
-        newValue = newValue.next;
-      }
-      // tail.next = newValue;
     }
+    // 置換する文字列の方が長い or 同等
+    while (newValue) {
+      tail!.next = new CharNode('', newValue.char);
+      tail = tail?.next;
+      newValue = newValue.next;
+    }
+    // tail.next = newValue;
     if (tail) {
       tail!.next = head;
     }
