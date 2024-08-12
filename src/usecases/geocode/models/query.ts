@@ -353,7 +353,6 @@ export class Query implements IQuery {
 
     if (this.tempAddress) {
       const other = this.tempAddress?.toOriginalString() || undefined;
-      console.error(other)
       if (other) {
         const firstChar = kan2num(this.tempAddress.char!);
         // 紀尾井町1ガーデンテラス のとき、「1」と「ガ」の間にスペースを入れる

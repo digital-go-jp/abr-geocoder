@@ -43,105 +43,103 @@ export class GeocodeResultTransform extends Transform {
     callback: TransformCallback
   ) {
     let queryList = Array.from(queries.values());
-    setImmediate(() => {
-      const orgInput = queryList[0].input;
-      const N = orgInput.data.address.length;
-  
-      queryList = queryList.map(query => {
-        // 処理のために置き換えた文字列を元に戻す
-        return this.restoreCharNode(query);
-      });
-  
-      // 信頼度の低い結果を取り除く
-      queryList = queryList.filter(query => {
-        if (query === undefined) {
-          return false;
-        }
-        // console.error(query.formatted.score, query.formatted.address);
-        // inputの文字列に対して30％以上の割合でマッチしている or
-        // 市区町村が判明している
-        return (query.formatted.score >= 0.5 ||
-          (query.matchedCnt / N) >= 0.3 || 
-          query.match_level.num >= MatchLevel.CITY.num);
-      });
-  
-      queryList.sort((a, b) => {
-        // いくつかの項目を比較して、合計値の高い方を優先する
-        let totalScoreA = 0;
-        let totalScoreB = 0;
-  
-        const aLv = a.match_level.num;
-        const bLv = b.match_level.num;
-        const isArsdt = aLv === MatchLevel.RESIDENTIAL_BLOCK.num || aLv === MatchLevel.RESIDENTIAL_DETAIL.num;
-        const isBrsdt = bLv === MatchLevel.RESIDENTIAL_BLOCK.num || bLv === MatchLevel.RESIDENTIAL_DETAIL.num;
-        const isAprcl = aLv === MatchLevel.PARCEL.num;
-        const isBprcl = bLv === MatchLevel.PARCEL.num;
+    const orgInput = queryList[0].input;
+    const N = orgInput.data.address.length;
 
-        switch (true) {
-          // Aが住居表示、Bが地番の場合、住居表示を優先
-          case isArsdt && isBprcl:
-            totalScoreA += 1;
-            break
-          
-          // Aが地番、Bが住居表示の場合、住居表示を優先
-          case isAprcl && isBrsdt:
-            totalScoreB += 1;
-            break;
-          
-          default:
-            if (a.match_level.num > b.match_level.num) {
-              totalScoreA += 1;
-            } else if (a.match_level.num < b.match_level.num) {
-              totalScoreB += 1;
-            }
-            break;
-        }
-  
-        // 元の文字と類似度が高い方に+1
-        if (a.formatted.score > b.formatted.score) {
-          totalScoreA += 1;
-        } else if (a.formatted.score < b.formatted.score) {
-          totalScoreB += 1;
-        }
-        
-        // マッチングした文字列が多い方に+1
-        const aMatchedCnt = a.matchedCnt - a.ambiguousCnt;
-        const bMatchedCnt = b.matchedCnt - b.ambiguousCnt;
-        if (aMatchedCnt > bMatchedCnt) {
-          totalScoreA += 1;
-        } else if (aMatchedCnt < bMatchedCnt) {
-          totalScoreB += 1;
-        }
-  
-        // 残り文字数が少ないほうに+1
-        const restA = a.tempAddress?.toString().length || 0;
-        const restB = b.tempAddress?.toString().length || 0;
-        if (restA < restB) {
-          totalScoreA += 1;
-        } else if (restA > restB) {
-          totalScoreB += 1;
-        }
-        
-        // マッチレベルが高いほうが優先
-        if (totalScoreB - totalScoreA !== 0) {
-          return totalScoreB - totalScoreA;
-        }
-
-        // どうしても同じなら、ambiguousCnt が少ない方を優先
-        if (a.ambiguousCnt < b.ambiguousCnt) {
-          return -1;
-        } else if (a.ambiguousCnt > b.ambiguousCnt) {
-          return 1;
-        }
-        return 0;
-      });
-      
-      if (queryList.length === 0) {
-        queryList.push(Query.create(orgInput));
-      }
-  
-      callback(null, queryList[0]);
+    queryList = queryList.map(query => {
+      // 処理のために置き換えた文字列を元に戻す
+      return this.restoreCharNode(query);
     });
+
+    // 信頼度の低い結果を取り除く
+    queryList = queryList.filter(query => {
+      if (query === undefined) {
+        return false;
+      }
+      // console.error(query.formatted.score, query.formatted.address);
+      // inputの文字列に対して30％以上の割合でマッチしている or
+      // 市区町村が判明している
+      return (query.formatted.score >= 0.5 ||
+        (query.matchedCnt / N) >= 0.3 || 
+        query.match_level.num >= MatchLevel.CITY.num);
+    });
+
+    queryList.sort((a, b) => {
+      // いくつかの項目を比較して、合計値の高い方を優先する
+      let totalScoreA = 0;
+      let totalScoreB = 0;
+
+      const aLv = a.match_level.num;
+      const bLv = b.match_level.num;
+      const isArsdt = aLv === MatchLevel.RESIDENTIAL_BLOCK.num || aLv === MatchLevel.RESIDENTIAL_DETAIL.num;
+      const isBrsdt = bLv === MatchLevel.RESIDENTIAL_BLOCK.num || bLv === MatchLevel.RESIDENTIAL_DETAIL.num;
+      const isAprcl = aLv === MatchLevel.PARCEL.num;
+      const isBprcl = bLv === MatchLevel.PARCEL.num;
+
+      switch (true) {
+        // Aが住居表示、Bが地番の場合、住居表示を優先
+        case isArsdt && isBprcl:
+          totalScoreA += 1;
+          break
+        
+        // Aが地番、Bが住居表示の場合、住居表示を優先
+        case isAprcl && isBrsdt:
+          totalScoreB += 1;
+          break;
+        
+        default:
+          if (a.match_level.num > b.match_level.num) {
+            totalScoreA += 1;
+          } else if (a.match_level.num < b.match_level.num) {
+            totalScoreB += 1;
+          }
+          break;
+      }
+
+      // 元の文字と類似度が高い方に+1
+      if (a.formatted.score > b.formatted.score) {
+        totalScoreA += 1;
+      } else if (a.formatted.score < b.formatted.score) {
+        totalScoreB += 1;
+      }
+      
+      // マッチングした文字列が多い方に+1
+      const aMatchedCnt = a.matchedCnt - a.ambiguousCnt;
+      const bMatchedCnt = b.matchedCnt - b.ambiguousCnt;
+      if (aMatchedCnt > bMatchedCnt) {
+        totalScoreA += 1;
+      } else if (aMatchedCnt < bMatchedCnt) {
+        totalScoreB += 1;
+      }
+
+      // 残り文字数が少ないほうに+1
+      const restA = a.tempAddress?.toString().length || 0;
+      const restB = b.tempAddress?.toString().length || 0;
+      if (restA < restB) {
+        totalScoreA += 1;
+      } else if (restA > restB) {
+        totalScoreB += 1;
+      }
+      
+      // マッチレベルが高いほうが優先
+      if (totalScoreB - totalScoreA !== 0) {
+        return totalScoreB - totalScoreA;
+      }
+
+      // どうしても同じなら、ambiguousCnt が少ない方を優先
+      if (a.ambiguousCnt < b.ambiguousCnt) {
+        return -1;
+      } else if (a.ambiguousCnt > b.ambiguousCnt) {
+        return 1;
+      }
+      return 0;
+    });
+    
+    if (queryList.length === 0) {
+      queryList.push(Query.create(orgInput));
+    }
+
+    callback(null, queryList[0]);
   }
 
   private restoreCharNode(query: Query): Query {

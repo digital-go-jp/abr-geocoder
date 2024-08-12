@@ -46,15 +46,6 @@ export class RegExTransform extends Transform {
     _: BufferEncoding,
     callback: TransformCallback
   ) {
-    // ----------------------------------------------
-    // rsdt_dsp_flg = 1 の場合、住居表記なので
-    // 基本的に「〇〇丁目〇〇番〇〇号」となる
-    //
-    // rsdt_dsp_flg = 0 の場合、地番表記なので
-    // 基本的に「〇〇番地〇〇」となる
-    //
-    // 正規表現で正規化することを試みる
-    // ----------------------------------------------
     const results = new QuerySet();
     for (const query of queries.values()) {
       // 残り文字列がない場合はスキップ
@@ -64,13 +55,13 @@ export class RegExTransform extends Transform {
       }
 
       // 空白がある位置より前と後に分ける
-      const [before, after] = query.tempAddress.split(RegExpEx.create(`[${VIRTUAL_SPACE}${SPACE}]`, 'g'), 2);
+      const [before, ...after] = query.tempAddress.split(RegExpEx.create(`[${VIRTUAL_SPACE}${SPACE}]`, 'g'));
  
       // 正規化する
       const normalized = this.normalize(before);
 
       // 結合する
-      const tempAddress = normalized?.concat(new CharNode(SPACE, SPACE), after);
+      const tempAddress = CharNode.joinWith(new CharNode(SPACE), normalized, ...after);
       
       results.add(query.copy({
         tempAddress,
@@ -103,23 +94,26 @@ export class RegExTransform extends Transform {
       // (DASH)ガーデンテラスのとき、(DASH)をスペースに置き換える
       if (stack.at(-1)?.char === DASH && !isDigitForCharNode(top)) {
         stack.pop();
+        top.next = head.next;
+        head.next = top;
         const space = new CharNode(SPACE);
         space.next = head.next;
-        top.next = space;
-        head.next = top;
+        head.next = space;
         continue;
       }
-      // 1番地, 2番地の場合
-      if (isDigitForCharNode(stack.at(-1)) && top.char === '番' && head.next?.char === '地') {
-        // 「地」を取る
-        head.next = head.next.next;
+      // 1番地, 2番街, 3番地, 4番館, 5号棟, 6号室, 7号館, 8号室 など
+      if (isDigitForCharNode(stack.at(-1)) && RegExpEx.create('[番号]').test(top.char || '')) {
+        if (head.next?.char === '地') {
+          // 「地」を取る
+          head.next = head.next.next;
+        }
         // 「1番地の3」の可能性もあるので、「の」があれば取る
         if (head.next?.char === 'の' && isDigitForCharNode(head.next?.next)) {
           head.next = head.next.next;
         }
         // 「1番3号」の場合もあるし、「1番地3号室」の場合もある。
         // 3の後ろに「号」があれば「室,棟,区,館」の場合はDashを入れない
-        if (head.next?.char === '号' && !RegExpEx.create('[室棟区館]').test(head.next?.next?.char || '')) {
+        if (!RegExpEx.create('[室棟区館]').test(head.next?.char || '')) {
           const dash = new CharNode(DASH);
           dash.next = head.next;
           head.next = dash;
@@ -128,25 +122,9 @@ export class RegExTransform extends Transform {
         head.next = top;
         continue;
       }
-
-      // 「1番3号」の場合もあるし、「1番地3号室」の場合もある。
-      // 3の後ろに「号」があれば「室,棟,区,館」の場合はDashを入れない
-      if (isDigitForCharNode(stack.at(-1)) && top.char === '号') {
-        if (!RegExpEx.create('[室棟区館]').test(head.next?.char || '')) {
-          const space = new CharNode(SPACE);
-          space.next = head.next;
-          head.next = space;
-        }
-        top.next = head.next;
-        head.next = top;
-        continue;
-      }
-
-      // 234ガーデンテラスのとき、「4」と「ガ」の間にスペースを入れる
-      if (isDigitForCharNode(stack.at(-1)) && !RegExpEx.create(`[0-9${DASH}条通]`).test(top.char)) {
-        const space = new CharNode(SPACE);
-        space.next = head.next;
-        head.next = space;
+      if (isDigitForCharNode(stack.at(-1)) && RegExpEx.create('[のノ之]').test(top.char || '') && isDigitForCharNode(head.next)) {
+        top.char = DASH;
+        top.originalChar = DASH;
         top.next = head.next;
         head.next = top;
         continue;

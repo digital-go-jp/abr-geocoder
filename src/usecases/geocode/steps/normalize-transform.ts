@@ -99,7 +99,7 @@ export class NormalizeTransform extends Transform {
     address = address?.replaceAll(DOUBLE_QUOTATION, '');
     
     // 空白記号(半角・全角)は、SPACEに置換
-    address = address?.replace(
+    address = address?.replaceAll(
       RegExpEx.create(`[${SPACE_CHARS}]+`, 'g'),
       SPACE,
     );
@@ -109,13 +109,13 @@ export class NormalizeTransform extends Transform {
 
     // アラビア数字の直後に全角が来る場合は、仮想のスペース記号を入れる
     // (〇〇番地32三田マンション　のように、「2」の直後に「三」が来た場合に区切りをつけるため)
-    address = address?.replace(
-      RegExpEx.create(
-        `(${NUMRIC_SYMBOLS})(${ZENKAKU})`,
-        'g',
-      ),
-      `$1${VIRTUAL_SPACE}$2`
-    );
+    // address = address?.replace(
+    //   RegExpEx.create(
+    //     `(${NUMRIC_SYMBOLS})(${ZENKAKU})`,
+    //     'g',
+    //   ),
+    //   `$1${VIRTUAL_SPACE}$2`
+    // );
 
     // 数字＋ダッシュ　または ダッシュ+数字　の組み合わせのとき、ダッシュを DASHにする
     // (ダッシュの記号は類似するものが多いので、統一する)
@@ -235,7 +235,7 @@ const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNod
   }
 
   // 最初に空白がある位置より前と後に分ける
-  const [before, after] = address.split(RegExpEx.create(`[${VIRTUAL_SPACE}${SPACE}]`, 'g'), 2);
+  const [before, ...after] = address.split(RegExpEx.create(`[${VIRTUAL_SPACE}${SPACE}]`, 'g'));
 
   const kanjiNums = RegExpEx.create('[壱一二ニ弐参三四五六七八九零十]');
   const mathNums = RegExpEx.create('[0-9]');
@@ -307,10 +307,7 @@ const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNod
     return p;
   })(before);
 
-  if (!after) {
-    return normalized;
-  }
   // 結合する
-  address = normalized?.concat(after && new CharNode(SPACE, SPACE) || undefined, after);
-  return address;
+  const result = CharNode.joinWith(new CharNode(SPACE), normalized, ...after);
+  return result;
 }

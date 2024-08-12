@@ -37,6 +37,7 @@ export class CharNode {
     }
   }
 
+
   concat(...another: (CharNode | undefined)[]): CharNode | undefined {
     if (!another) {
       return this.clone();
@@ -64,7 +65,10 @@ export class CharNode {
   replaceAll(search: string | RegExp, replaceValue: string | Function): CharNode | undefined {
     let root: CharNode | undefined = this.clone();
 
-    this.toProcessedString().replaceAll(search, (match: string,  ...args: any[]): string => {
+    let replacedCount = 0;
+    let adjust = 0;
+
+    this.toProcessedString().replaceAll(search, (match: string, ...args: any[]): string => {
 
       let repValue = (() => {
         if (typeof replaceValue === 'function') {
@@ -74,7 +78,7 @@ export class CharNode {
         }
       })();
 
-      const hasNamedGroups = Array.isArray(args.at(-1));
+      const hasNamedGroups = typeof args.at(-1) === "object";
       const offset: number = hasNamedGroups ? args.at(-3) : args.at(-2);
       
       // グルーピングをしている場合、repValueに適用する
@@ -88,7 +92,12 @@ export class CharNode {
         repValue = repValue.replaceAll(`$${i + 1}`, args[i]);
       }
       
-      root = root?.splice(offset, match.length, repValue);
+      // const diff = replacedCount * (repValue.length - match.length)
+
+      root = root?.splice(offset - adjust, match.length, repValue);
+      adjust += match.length - repValue.length;
+
+      replacedCount++
 
       return repValue;
     });
@@ -273,10 +282,6 @@ export class CharNode {
     let head: CharNode | undefined = root.next;
     let tail: CharNode | undefined = root;
     for (let i = 0; i < start; i++) {
-      while (head && head?.ignore) {
-        tail = tail?.next;
-        head = head?.next;
-      }
       tail = tail?.next;
       head = head?.next;
     }
@@ -301,17 +306,17 @@ export class CharNode {
     }
 
 
-    let newValue : CharNode | undefined = CharNode.create(replaceValue);
+    const newValues: CharNode[] = CharNode.create(replaceValue)?.split('') || [];
 
-    while ((deleteCount > 0) && head && newValue) {
+    while ((deleteCount > 0) && head && newValues.length > 0) {
       while (head && head?.ignore) {
         tail = tail?.next;
         head = head?.next;
       }
-      head!.char = newValue!.char;
+      const headNewChar = newValues.shift()!;
+      head!.char = headNewChar.char;
       head = head?.next;
       tail = tail?.next;
-      newValue = newValue?.next;
       deleteCount--;
     }
     if (deleteCount > 0) {
@@ -325,13 +330,13 @@ export class CharNode {
       }
     } else {
       // 置換する文字列の方が長い or 同等
-      while (newValue) {
-        tail!.next = new CharNode('', newValue.char);
+      while (newValues.length > 0) {
+        const headNewChar = newValues.shift()!;
+        tail!.next = new CharNode('', headNewChar.char);
         tail = tail?.next;
-        newValue = newValue.next;
       }
-      // tail.next = newValue;
     }
+    // tail.next = newValue;
     if (tail) {
       tail!.next = head;
     }
@@ -376,6 +381,33 @@ export class CharNode {
     } catch(e) {
       throw 'unexpected format';
     }
+  }
+
+  static joinWith(separator: CharNode, ...targets: (CharNode | undefined)[]): CharNode | undefined {
+    targets = targets.filter(x => x !== undefined);
+    if (targets.length === 0) {
+      return undefined;
+    }
+    if (targets.length === 1) {
+      return targets[0];
+    }
+    let p = targets.shift();
+    const head = p;
+    while (p?.next) {
+      p = p.next;
+    }
+
+    while (p && targets.length > 0) {
+      p.next = separator.clone();
+      while (p.next) {
+        p = p.next;
+      }
+      p.next = targets.shift();
+      while (p?.next) {
+        p = p.next;
+      }
+    }
+    return head;
   }
 
   // address を CharNode に変換する

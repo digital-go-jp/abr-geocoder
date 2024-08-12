@@ -176,6 +176,9 @@ export class GeocodeTransform extends Duplex {
     const regexTranfrorm = new RegExTransform({
       logger: params.logger,
     });
+    const regexTranfrorm2 = new RegExTransform({
+      logger: params.logger,
+    });
 
     // 最終的な結果にまとめる
     const geocodeResultTransform = new GeocodeResultTransform();
@@ -190,6 +193,7 @@ export class GeocodeTransform extends Duplex {
     });
 
     this.reader.pipe(normalizeTransform)
+      .pipe(regexTranfrorm)
       .pipe(prefTransform)
       .pipe(countyAndCityTransform)
       .pipe(cityAndWardTransform)
@@ -203,7 +207,7 @@ export class GeocodeTransform extends Duplex {
       .pipe(rsdtBlkTransform)
       .pipe(rsdtDspTransform)
       .pipe(parcelTransform)
-      .pipe(regexTranfrorm)
+      .pipe(regexTranfrorm2)
       .pipe(geocodeResultTransform)
       .pipe(dst);
   }
