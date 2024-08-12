@@ -28,11 +28,24 @@ export class QuerySet {
 
   private memory: Map<number, Query> = new Map();
 
-  private toKey(query: Query) {
-    return stringHash(JSON.stringify(query.toJSON()));
+  static toKey(query: Query) {
+    const values: (string | number | undefined)[] = [
+      query.pref_key,
+      query.city_key,
+      query.town_key,
+      query.parcel_key,
+      query.rsdtblk_key,
+      query.rsdtdsp_key,
+      query.tempAddress?.toProcessedString(),
+    ];
+    const keyStr = values
+      .filter(x => x !== undefined)
+      .map(x => x.toString())
+      .join(':');
+    return stringHash(keyStr);
   }
   add(query: Query) {
-    const key = this.toKey(query);
+    const key = QuerySet.toKey(query);
     if (this.memory.has(key)) {
       return;
     }
@@ -44,7 +57,7 @@ export class QuerySet {
   }
 
   delete(query: Query) {
-    const key = this.toKey(query);
+    const key = QuerySet.toKey(query);
     if (!this.memory.has(key)) {
       return;
     }

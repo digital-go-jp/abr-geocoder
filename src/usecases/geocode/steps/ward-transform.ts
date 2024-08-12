@@ -257,6 +257,7 @@ export class WardTransform extends Transform {
     return address;
   }
   private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
+    address = address?.clone();
 
     // 漢数字を半角英数字にする
     address = toHankakuAlphaNumForCharNode(address);

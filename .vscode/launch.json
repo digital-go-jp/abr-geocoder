@@ -7,6 +7,27 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "geocoding | column",
+      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeExecutable" : "${workspaceFolder}/.vscode/debug-with-column.sh",
+      "runtimeArgs": [
+        "--trace-warnings",
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/.vscode/test.txt",
+        "-f simplified",
+        "--silent",
+        "--debug"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "geocoding | jq",
       "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
@@ -20,27 +41,6 @@
         "${workspaceFolder}/.vscode/test.txt",
         "--silent",
         "--debug"
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "(地番)geocoding",
-      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeArgs": [
-        "--trace-warnings",
-        "--inspect-brk",
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/.vscode/parcel-sample.txt",
-        "${workspaceFolder}/.vscode/parcel-out.csv",
-        "--debug",
-        "-f csv"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

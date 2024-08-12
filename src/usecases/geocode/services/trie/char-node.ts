@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { toHankakuAlphaNum } from "../to-hankaku-alpha-num";
 
 export class CharNode {
@@ -35,6 +36,31 @@ export class CharNode {
       this.char = this.originalChar;
     }
   }
+
+  concat(...another: (CharNode | undefined)[]): CharNode | undefined {
+    if (!another) {
+      return this.clone();
+    }
+    const head = this.clone();
+    let tail: CharNode | undefined = head;
+    for (const other of another) {
+      if (!other) {
+        continue;
+      }
+      while (tail && tail.next && tail.next.next) {
+        tail = tail.next.next;
+      }
+      if (tail?.next) {
+        tail = tail.next;
+      }
+      if (tail) {
+        tail.next = other;
+        tail = tail.next;
+      }
+    }
+    return head;
+  }
+
   replaceAll(search: string | RegExp, replaceValue: string | Function): CharNode | undefined {
     let root: CharNode | undefined = this.clone();
 
@@ -162,29 +188,82 @@ export class CharNode {
     return root.next!;
   }
 
-  static readonly fromString = (value: string): CharNode | undefined => {
-    try {
-      const parsedValue = JSON.parse(value);
-      if (typeof parsedValue === 'string') {
-        return CharNode.create(parsedValue);
+  split(search: string | RegExp, limit?: number): CharNode[] {
+    if (limit) {
+      if (limit === 0) {
+        return [];
       }
-      if (Array.isArray(parsedValue)) {
-        const root = new CharNode('', '');
-        let head = root;
-        for (const value of parsedValue as Iterable<{
-          org: string;
-          char: string;
-          ignore: boolean;
-        }>) {
-          head.next = new CharNode(value.org, value.char, value.ignore);
-          head = head.next;
-        }
-        return root.next;
+      if (limit < 0 || !Number.isInteger(limit)) {
+        throw new TypeError('limit for split() must be a non-negative integer');
       }
-      throw 'unexpected format';
-    } catch(e) {
-      throw 'unexpected format';
     }
+    let count = limit || Number.POSITIVE_INFINITY;
+
+    const results: CharNode[] = [];
+    if (search === '') {
+      let head: CharNode | undefined = this;
+      while (head && count > 0) {
+        count--;
+        const headNext: CharNode | undefined = head.next;
+        head.next = undefined;
+        results.push(head);
+        head = headNext;
+      }
+      return results;
+    }
+
+
+    // 正規表現でマッチした位置に値する部分を CharNode を使って置換していく
+    // オリジナルの文字は残す
+    const regexp: RegExp = (() => {
+      if (typeof search === 'string') {
+        return RegExpEx.create(search, 'g');
+      } else if (!search.global) {
+          throw new TypeError('The regexp for split() must have a global flag');
+      }
+      return search;
+    })();
+
+    let match: RegExpExecArray | null;
+    const txt = this.toProcessedString();
+    let root: CharNode | undefined = this.clone();
+    let buffer = new CharNode();
+    let tail: CharNode | undefined = buffer;
+    let i = 0;
+    while ((match = regexp.exec(txt)) !== null && count > 0) {
+      while (i < match.index && tail && root) {
+        
+        const rootNext: CharNode | undefined = root.next;
+        tail.next = root;
+        tail = tail.next;
+        tail.next = undefined;
+        root = rootNext;
+
+        if (root?.ignore) {
+          continue;
+        }
+        i++;
+      }
+      if (buffer.next) {
+        results.push(buffer.next);
+        tail = buffer;
+        root = root?.next;
+        i++;
+      }
+      while (i < regexp.lastIndex - 1 && root) {
+        root = root?.next;
+        if (root?.ignore) {
+          continue;
+        }
+        i++;
+      }
+      count--;
+    }
+    if (root && count > 0) {
+      results.push(root);
+    }
+    
+    return results;
   }
 
   splice(start: number, deleteCount: number = 0, replaceValue: string | undefined = undefined) {
@@ -259,14 +338,61 @@ export class CharNode {
 
     return root.next;
   }
+
+  moveToNext(targetChar?: string): CharNode | undefined {
+    let pointer: CharNode | undefined = this;
+    while (pointer) {
+      while (pointer && pointer.ignore) {
+        pointer = pointer.next;
+      }
+      if (!targetChar || pointer?.char === targetChar) {
+        break;
+      }
+      pointer = pointer?.next;
+    }
+    return pointer;
+  }
   
+  static readonly fromString = (value: string): CharNode | undefined => {
+    try {
+      const parsedValue = JSON.parse(value);
+      if (typeof parsedValue === 'string') {
+        return CharNode.create(parsedValue);
+      }
+      if (Array.isArray(parsedValue)) {
+        const root = new CharNode('', '');
+        let head = root;
+        for (const value of parsedValue as Iterable<{
+          org: string;
+          char: string;
+          ignore: boolean;
+        }>) {
+          head.next = new CharNode(value.org, value.char, value.ignore);
+          head = head.next;
+        }
+        return root.next;
+      }
+      throw 'unexpected format';
+    } catch(e) {
+      throw 'unexpected format';
+    }
+  }
+
   // address を CharNode に変換する
   static create(address: string): CharNode | undefined {
     let head: CharNode | undefined = undefined;
+    let isInParenthesis = false;
     for (let i = address.length - 1; i >= 0; i--) {
       const prevHead = head;
-      head = new CharNode(address[i]);
+      if (address[i] === ')') {
+        isInParenthesis = true;
+      } 
+      head = new CharNode(address[i], address[i], isInParenthesis);
       head.next = prevHead;
+
+      if (address[i] === '(') {
+        isInParenthesis = false;
+      } 
     }
     return head;
   }

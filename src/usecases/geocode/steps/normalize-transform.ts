@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, J_DASH, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, NUMRIC_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS, VIRTUAL_SPACE, ZENKAKU } from '@config/constant-values';
+import { BEGIN_SPECIAL, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, END_SPECIAL, J_DASH, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, NUMRIC_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS, VIRTUAL_SPACE, ZENKAKU } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { Transform, TransformCallback } from 'node:stream';
@@ -32,6 +32,7 @@ import { toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
 import { toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { QuerySet } from '../models/query-set';
+import { toKatakanaForCharNode } from '../services/to-katakana';
 
 export class NormalizeTransform extends Transform {
 
@@ -103,7 +104,7 @@ export class NormalizeTransform extends Transform {
       SPACE,
     );
     
-    // 全角のアラビア数字は問答無用で半角にする
+    // 英数字を半角にする
     address = toHankakuAlphaNumForCharNode(address);
 
     // アラビア数字の直後に全角が来る場合は、仮想のスペース記号を入れる
@@ -128,7 +129,6 @@ export class NormalizeTransform extends Transform {
       },
     );
 
-    
     // 〇〇町や〇〇番地　より前にある SPACEはすべて削除
     address = address?.replace(
       RegExpEx.create(`(.+)(丁目?|番(町|地|丁)|条|軒|線|(${J_DASH})町|地割)`),
@@ -156,6 +156,9 @@ export class NormalizeTransform extends Transform {
     // 漢数字 => 算用数字
     address = kan2numForCharNode(address);
 
+    // 12-34-56号室 や 12-34-5号棟 の場合、4-5の間の DASH をスペースに置換する
+    address = insertSpaceBeforeRoomOrFacility(address);
+
     // 「大字」「字」を削除する
     address = address?.replaceAll(RegExpEx.create('大?字', 'g'), '');
 
@@ -163,18 +166,151 @@ export class NormalizeTransform extends Transform {
     address = address?.replace(RegExpEx.create('無番地'), MUBANCHI);
 
     // 「番地」「番丁」「番町」「番街」「番」「番地の」をDASHにする
-    address = address?.replaceAll(RegExpEx.create('([0-9]+)番[丁地街町]?[の目]?', 'g'), `$1${DASH}`);
+    // address = address?.replaceAll(RegExpEx.create('([0-9]+)番[丁地街町][の目]?([0-9]+)', 'g'), `$1${DASH}$2`);
+    // address = address?.replaceAll(RegExpEx.create('([0-9]+)番[の目]?([0-9]+)', 'g'), `$1${DASH}$2`);
+    // address = address?.replaceAll(RegExpEx.create('([0-9]+)番[丁地街町]', 'g'), '$1');
+    address = replaceBancho(address);
 
     // 「〇〇番地〇〇号」の「号」を DASH にする
-    // 「〇〇号室」「〇〇号棟」「〇〇号区」は変換しない
-    address = address?.replaceAll(RegExpEx.create(`(${DASH}[0-9]+)号(?!室|棟|区)`, 'g'), '$1');
+    // 「〇〇号室」「〇〇号棟」「〇〇号区」「〇〇F」「〇〇階」は変換しない
+    address = address?.replaceAll(RegExpEx.create(`(${DASH}[0-9]+)号(?![室棟区館階])`, 'g'), '$1');
 
-
-    this.params.logger?.info(`normalize : ${((Date.now() - query.startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`normalize : ${((Date.now() - query.startTime) / 1000).toFixed(2)} s`);
     const results = new QuerySet();
     results.add(query.copy({
       tempAddress: address,
     }));
     callback(null, results);
   }
+}
+
+const replaceBancho = (address: CharNode | undefined): CharNode | undefined => {
+  let slow: CharNode | undefined = address;
+
+  const stack: (CharNode | undefined)[] = [];
+  let slowNext: CharNode | undefined;
+  while (slow) {
+    if (!slow.ignore && slow.char && RegExpEx.create('[0-9]').test(slow.char)) {
+      const tmp = charNodeToString(stack) + slow.char;
+      if (RegExpEx.create('([0-9]+)番[丁地街町][の目]?([0-9]+)').test(tmp)) {
+        while (!RegExpEx.create('[0-9]').test(stack.at(-1)?.char || '')) {
+          stack.pop();
+        }
+        stack.push(CharNode.create(DASH));
+      }
+    }
+    slowNext = slow.next;
+    slow.next = undefined;
+    stack.push(slow);
+    slow = slowNext;
+  }
+
+  const tmp = charNodeToString(stack);
+  if (RegExpEx.create('([0-9]+)番[丁地街町][の目]?').test(tmp)) {
+    while (!RegExpEx.create('[0-9]').test(stack.at(-1)?.char || '')) {
+      stack.pop()
+    }
+  }
+
+  const head: CharNode | undefined = new CharNode('', '');
+  let tail: CharNode | undefined = head;
+  for (const node of stack) {
+    tail!.next = node;
+    tail = tail?.next;
+  }
+
+  return head.next;
+};
+const charNodeToString = (stack: (CharNode | undefined)[]): string => {
+  const buffer: string[] = [];
+  for (const node of stack) {
+    buffer.push(node?.char || '');
+  }
+  return buffer.join('');
+}
+
+const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNode | undefined => {
+  if (!address) {
+    return;
+  }
+
+  // 最初に空白がある位置より前と後に分ける
+  const [before, after] = address.split(RegExpEx.create(`[${VIRTUAL_SPACE}${SPACE}]`, 'g'), 2);
+
+  const kanjiNums = RegExpEx.create('[壱一二ニ弐参三四五六七八九零十]');
+  const mathNums = RegExpEx.create('[0-9]');
+
+  const normalized = ((p) => {
+    if (!p) {
+      return;
+    }
+    let slow: CharNode | undefined = p;
+    let fast: CharNode | undefined = p.next;
+    while (slow && fast) {
+      slow = slow.moveToNext();
+      if (slow?.char === BEGIN_SPECIAL) {
+        // move the pointer until END_SPECIAL
+        slow = slow?.next?.moveToNext(END_SPECIAL);
+      }
+
+      fast = slow?.next?.moveToNext();
+      if (fast?.char === BEGIN_SPECIAL) {
+        // move the pointer until END_SPECIAL
+        fast = fast?.next?.moveToNext(END_SPECIAL);
+      }
+      if (!slow || !fast) {
+        break;
+      }
+      
+      // 算用数字と漢数字の間にスペースを入れる
+      if (mathNums.test(slow.originalChar!) && kanjiNums.test(fast.originalChar!)) {
+        slow = slow.moveToNext();
+        slow!.next = new CharNode(SPACE, SPACE);
+        slow!.next.next = fast;
+        break;
+      }
+
+      // 12-34-56号室のとき、4-5の間のDashをスペースに置き換える
+      // https://github.com/digital-go-jp/abr-geocoder/issues/157
+      if (mathNums.test(slow.char!) && fast.char === DASH) {
+        slow = fast;
+        fast = fast.next?.moveToNext();
+        if (!fast) {
+          break;
+        }
+        if (mathNums.test(fast.char!)) {
+          let another: CharNode | undefined = fast;
+          while (another && (another.ignore || mathNums.test(another.char!))) {
+            another = another.next;
+          }
+          if (another) {
+            // 建物の階層：2階, 2F
+            // 部屋番号：2号室, 302号室, 2A / 3B
+            // 建物の棟番号：2号棟 / A棟 / 1番館
+            if (RegExpEx.create('[番階号棟A-Z]').test(another.char!)) {
+              slow.char = SPACE;
+              slow.originalChar = SPACE;
+              break;
+            } else if (!RegExpEx.create(`[${SPACE}${VIRTUAL_SPACE}${DASH}]`).test(another.char!)) {
+              // 12-23-34南館 の場合、4と南の間にスペースを入れる
+              fast = fast.moveToNext();
+              fast!.next = new CharNode(SPACE, SPACE);
+              fast!.next.next = another;
+              break;
+            }
+          }
+        }
+      }
+      slow = slow?.next?.moveToNext();
+      fast = slow?.next?.moveToNext();
+    }
+    return p;
+  })(before);
+
+  if (!after) {
+    return normalized;
+  }
+  // 結合する
+  address = normalized?.concat(after && new CharNode(SPACE, SPACE) || undefined, after);
+  return address;
 }

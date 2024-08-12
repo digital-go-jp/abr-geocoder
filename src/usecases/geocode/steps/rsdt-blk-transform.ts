@@ -146,7 +146,7 @@ export class RsdtBlkTransform extends Transform {
         // TODO: Databaseごとの処理に対応させる
         buffer.push('_');
         matchedCnt++;
-      } else if (/\d/.test(p.char!)) {
+      } else if (RegExpEx.create('[0-9]').test(p.char!)) {
         buffer.push(p.char!);
         matchedCnt++;
       } else {
@@ -177,9 +177,10 @@ export class RsdtBlkTransform extends Transform {
   }
 
   private normalize(address: CharNode | undefined): CharNode | undefined {
+    let copyed = address?.clone();
 
     // 先頭にDashがある場合、削除する
-    address = address?.replace(RegExpEx.create(`^${DASH}+`), '');
+    copyed = copyed?.replace(RegExpEx.create(`^${DASH}+`), '');
     
     // [〇〇]番地、[〇〇]番　〇〇丁目[〇〇]ー〇〇　の [〇〇] だけを取る
     const buffer: CharNode[] = [];
@@ -203,13 +204,11 @@ export class RsdtBlkTransform extends Transform {
             cnt++;
             extra = extra.next;
           }
-          if (cnt === word.length) {
-            status = Status.BANCHI;
-            buffer.push(new CharNode(word, DASH));
-            status = Status.BANCHI;
-            head = extra;
-            break;
-          }
+          status = Status.BANCHI;
+          buffer.push(new CharNode(word, DASH));
+          status = Status.BANCHI;
+          head = extra;
+          break;
         }
       } else if ((status === Status.BANCHI) && (head.char === '号')) {
         buffer.push(new CharNode(head.originalChar, DASH));

@@ -33,6 +33,7 @@ import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { QuerySet } from '../models/query-set';
+import { toKatakana } from '../services/to-katakana';
 
 export class PrefTransform extends Transform {
 

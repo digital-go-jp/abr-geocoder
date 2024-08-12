@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DASH_SYMBOLS, NUMRIC_SYMBOLS, SPACE_SYMBOLS } from '@config/constant-values';
+import { DASH, DASH_SYMBOLS, NUMRIC_SYMBOLS, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { getLevenshteinDistanceRatio } from '../services/get-levenshtein-distance-ratio';
@@ -30,6 +30,8 @@ import { CharNode } from '../services/trie/char-node';
 import { SearchTarget } from '@domain/types/search-target';
 import { AbrGeocoderInput } from './abrg-input-data';
 import { kan2num } from '../services/kan2num';
+import { query } from 'winston';
+import { QuerySet } from './query-set';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）
@@ -350,40 +352,16 @@ export class Query implements IQuery {
     }
 
     if (this.tempAddress) {
-      const other = this.tempAddress?.
-        replace(RegExpEx.create(`[${DASH}${SPACE_SYMBOLS}]+$`), '')?.
-        toOriginalString() || undefined;
+      const other = this.tempAddress?.toOriginalString() || undefined;
+      console.error(other)
       if (other) {
         const firstChar = kan2num(this.tempAddress.char!);
-        
-        const isNums = firstChar?.match(RegExpEx.create(`[0-9]`)) !== null;
-        if (!isNums) {
-          // otherの先頭が数字ではない場合
-          if (firstChar?.match(RegExpEx.create(`[^${DASH}\-]`))) {
-            formatted_address.push('_____');
-            formatted_address.push(other);
-          }
-        } else {
-          // otherの先頭が数字（漢数字を含む）の場合
-
-          switch (this.match_level) {
-            // すでに枝番まで判明している場合は、スペースを入れる
-            case MatchLevel.PARCEL:
-            case MatchLevel.RESIDENTIAL_DETAIL: {
-              formatted_address.push('_____');
-              formatted_address.push(other);
-              break;
-            }
-
-            // (大字)〇〇まで判明していて、ー〇〇がある可能性がある
-            case MatchLevel.RESIDENTIAL_BLOCK:{
-              formatted_address.push('_____');
-              formatted_address.push(other);
-              break;
-            }
-
-          }
+        // 紀尾井町1ガーデンテラス のとき、「1」と「ガ」の間にスペースを入れる
+        if (RegExpEx.create('[0-9]').test(formatted_address[formatted_address.length - 1]) &&
+          !RegExpEx.create(`[0-9\-]`).test(firstChar)) {
+            formatted_address.push(' ');
         }
+        formatted_address.push(other);
       }
     }
 

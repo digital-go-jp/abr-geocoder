@@ -57,6 +57,7 @@ export class GeocodeResultTransform extends Transform {
         if (query === undefined) {
           return false;
         }
+        // console.error(query.formatted.score, query.formatted.address);
         // inputの文字列に対して30％以上の割合でマッチしている or
         // 市区町村が判明している
         return (query.formatted.score >= 0.5 ||
@@ -95,7 +96,6 @@ export class GeocodeResultTransform extends Transform {
             }
             break;
         }
-        
   
         // 元の文字と類似度が高い方に+1
         if (a.formatted.score > b.formatted.score) {

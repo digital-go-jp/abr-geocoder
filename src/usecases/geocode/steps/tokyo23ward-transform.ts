@@ -167,6 +167,7 @@ export class Tokyo23WardTranform extends Transform {
   }
 
   private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
+    address = address?.clone();
 
     // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
     address = address?.replaceAll(RegExpEx.create(`(\\d+)${DASH}?[番号町地丁目]+の?`, 'g'), `$1${DASH}`);

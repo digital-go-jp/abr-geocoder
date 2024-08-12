@@ -33,6 +33,7 @@ import { DebugLogger } from '@domain/services/logger/debug-logger';
 import timers from 'node:timers/promises';
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { QuerySet } from '../models/query-set';
+import { toKatakana } from '../services/to-katakana';
 
 export class CityAndWardTransform extends Transform {
 

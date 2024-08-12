@@ -35,6 +35,7 @@ import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { QuerySet } from '../models/query-set';
+import { toKatakana, toKatakanaForCharNode } from '../services/to-katakana';
 
 export class ChomeTranform extends Transform {
 
@@ -194,7 +195,7 @@ export class ChomeTranform extends Transform {
     // 漢数字を半角数字に変換する
     address = kan2num(address);
 
-    // カタカナはひらがなに変換する
+    // 片仮名は平仮名に変換する
     address = toHiragana(address);
     
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
@@ -202,34 +203,38 @@ export class ChomeTranform extends Transform {
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
+    address = address?.replaceAll(RegExpEx.create('(\d)丁目?', 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
+    address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
 
     return address;
   }
   
   private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
 
-    // 漢数字を半角数字に変換する
-    address = kan2numForCharNode(address);
+    let copyed = address?.clone();
 
-    // カタカナはひらがなに変換する
-    address = toHiraganaForCharNode(address);
+    // 漢数字を半角数字に変換する
+    copyed = kan2numForCharNode(copyed);
+
+    // 片仮名は平仮名に変換する
+    copyed = toHiraganaForCharNode(copyed);
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
+    copyed = jisKanjiForCharNode(copyed);
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
+    copyed = copyed?.replaceAll(RegExpEx.create('(\d)丁目?', 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
+    copyed = copyed?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    copyed = copyed?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
 
-    return address;
+    return copyed;
   }
 }
