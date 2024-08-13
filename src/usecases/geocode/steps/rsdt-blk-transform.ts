@@ -80,7 +80,7 @@ export class RsdtBlkTransform extends Transform {
         results.add(query);
         continue;
       }
-      const target = this.normalize(query.tempAddress);
+      const target = query.tempAddress?.trimWith(DASH);
       if (!target || !query.lg_code) {
         results.add(query);
         continue;
@@ -174,63 +174,5 @@ export class RsdtBlkTransform extends Transform {
       unmatched: p, 
       matchedCnt,
     };
-  }
-
-  private normalize(address: CharNode | undefined): CharNode | undefined {
-    let copyed = address?.clone();
-
-    // 先頭にDashがある場合、削除する
-    copyed = copyed?.replace(RegExpEx.create(`^${DASH}+`), '');
-    
-    // [〇〇]番地、[〇〇]番　〇〇丁目[〇〇]ー〇〇　の [〇〇] だけを取る
-    const buffer: CharNode[] = [];
-    enum Status {
-      UNDEFINED,
-      BANCHI,
-      GOU,
-    };
-
-    let status = 0;
-    let head: CharNode | undefined = address;
-    while (head) {
-      if (status === Status.UNDEFINED) {
-        for (const word of ['番地割', '地割', '番地', '番']) {
-          let extra : CharNode | undefined = head;
-          let cnt = 0;
-          for (const char of word) {
-            if (extra?.char !== char) {
-              break;
-            }
-            cnt++;
-            extra = extra.next;
-          }
-          status = Status.BANCHI;
-          buffer.push(new CharNode(word, DASH));
-          status = Status.BANCHI;
-          head = extra;
-          break;
-        }
-      } else if ((status === Status.BANCHI) && (head.char === '号')) {
-        buffer.push(new CharNode(head.originalChar, DASH));
-        head = head.next;
-        continue;
-      }
-      buffer.push(new CharNode(head?.originalChar, head?.char));
-      head = head?.next;
-    }
-
-    // 末尾にDashだったら、取る
-    if ((buffer.length > 0) && (buffer.at(-1)?.char === DASH)) {
-      buffer.pop();
-    }
-    
-    const result = new CharNode('', '');
-    let tail: CharNode | undefined = result;
-    buffer.forEach(node => {
-      tail!.next = node;
-      tail = tail?.next;
-    })
-
-    return result.next;
   }
 }

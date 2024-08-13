@@ -98,7 +98,7 @@ export class Tokyo23WardTranform extends Transform {
       }
 
       //　東京都〇〇区〇〇パターンを探索する
-      const target = this.normalizeCharNode(query.tempAddress)!;
+      const target = query.tempAddress;
       const searchResults = this.tokyo23WardTrie.find({
         target,
         extraChallenges: ['区'],
@@ -163,24 +163,6 @@ export class Tokyo23WardTranform extends Transform {
     // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
     address = address?.replaceAll(RegExpEx.create(`(\\d+)${DASH}?[番号町地丁目]+の?`, 'g'), `$1${DASH}`);
 
-    return address;
-  }
-
-  private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
-    address = address?.clone();
-
-    // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
-    address = address?.replaceAll(RegExpEx.create(`(\\d+)${DASH}?[番号町地丁目]+の?`, 'g'), `$1${DASH}`);
-
-    // 片仮名を平仮名に変換する
-    address = toHiraganaForCharNode(address);
-
-    // 漢数字を半角数字に変換する
-    address = kan2numForCharNode(address);
-
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
-    
     return address;
   }
 }

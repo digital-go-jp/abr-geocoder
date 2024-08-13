@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -107,7 +107,7 @@ export class RsdtDspTransform extends Transform {
         continue;
       }
 
-      const target = this.normalizeCharNode(query.tempAddress);
+      const target = query.tempAddress?.trimWith(DASH);
       if (!query.rsdtblk_key || !target) {
         results.add(query);
         continue;
@@ -162,25 +162,5 @@ export class RsdtDspTransform extends Transform {
 
     // this.params.logger?.info(`rsdt-dsp : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
-  }
-
-  private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
-    let copyed = address?.clone();
-
-    // 先頭にDashがある場合、削除する
-    copyed = copyed?.replace(RegExpEx.create(`^${DASH}+`), '');
-    
-    // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
-    copyed = copyed?.replaceAll(RegExpEx.create('(\d+)[番(?:番地)号の]', 'g'), `$1${DASH}`);
-
-    // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
-    // 「の」は全部DASHに変換する
-    copyed = copyed?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
-    copyed = copyed?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
-
-    // 末尾のDASHがある場合、削除する
-    copyed = copyed?.replace(RegExpEx.create(`${DASH}+$`), '');
-
-    return copyed;
   }
 }

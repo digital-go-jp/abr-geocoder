@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { TableKeyProvider } from '@domain/services/table-key-provider';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
@@ -32,6 +32,7 @@ import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { IParcelDbGeocode } from '@interface/database/common-db';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { QuerySet } from '../models/query-set';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class ParcelTransform extends Transform {
 
@@ -100,8 +101,8 @@ export class ParcelTransform extends Transform {
       }
 
       const searchInfo = this.getPrcId(query);
-      if (!query.lg_code) {
-        // もし lgCode がなければスキップする
+      if (!searchInfo) {
+        results.add(query);
         continue;
       }
 
@@ -152,28 +153,32 @@ export class ParcelTransform extends Transform {
     const PARCEL_LENGTH = 5;
     const ZERO_FILL = ''.padStart(PARCEL_LENGTH, '0');
 
-    let p: CharNode | undefined = query.tempAddress;
     const buffer: string[] = [];
     const current: string[] = [];
+    if (!query.tempAddress) {
+      return;
+    }
+
+    const [before, ...after]: CharNode[] = query.tempAddress?.split(SPACE);
+    let head: CharNode | undefined = before?.trimWith(DASH);
 
     // マッチした文字数
     let matchedCnt = 0;
-
-    while (p) {
+    while (head) {
       matchedCnt++;
-      if (p.char === DEFAULT_FUZZY_CHAR) {
+      if (head.char === DEFAULT_FUZZY_CHAR) {
         // fuzzyの場合、任意の１文字
         // TODO: Databaseごとの処理
         current.push('_');
-      } else if (/\d/.test(p.char!)) {
-        current.push(p.char!);
-      } else if (p.char === DASH) {
+      } else if (/\d/.test(head.char!)) {
+        current.push(head.char!);
+      } else if (head.char === DASH) {
         buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
         current.length = 0;
       } else {
         break;
       }
-      p = p.next;
+      head = head.next;
     }
     if (current.length > 0) {
       buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
@@ -185,9 +190,12 @@ export class ParcelTransform extends Transform {
       buffer.push(ZERO_FILL);
     }
     const parcelKey = buffer.join('');
+
     return {
       parcel_key: parcelKey,
-      unmatched: p,
+      unmatched: CharNode.joinWith(new CharNode({
+        char: SPACE,
+      }), head, ...after),
       matchedCnt
     };
   }

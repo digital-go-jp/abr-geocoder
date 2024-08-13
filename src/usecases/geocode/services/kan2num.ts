@@ -131,7 +131,6 @@ export const kan2num = (target: string) => {
     // なので、stack に溜まっている漢数字を算用数字に変換する
     let current = 0;
     const tempResult = [];
-    const stackLen = stack.length;
     while (stack.length > 0) {
       let val = kanjiNum.get(stack.pop()!)!;
 
@@ -207,7 +206,10 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
           result.push(node); 
         }
         while (tmp.length > 0) {
-          result.push(new CharNode('', tmp.shift()));
+          result.push(new CharNode({
+            originalChar: '',
+            char: tmp.shift()!,
+          }));
         }
         buffer.length = 0;
         currentNumber = 0;
@@ -241,7 +243,10 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
           result.push(node); 
         }
         while (tmp.length > 0) {
-          result.push(new CharNode('', tmp.shift()));
+          result.push(new CharNode({
+            originalChar: '',
+            char: tmp.shift()!,
+          }));
         }
       }
       buffer.length = 0;
@@ -288,7 +293,10 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
         result.push(node); 
       }
       while (tmp.length > 0) {
-        result.push(new CharNode('', tmp.shift()));
+        result.push(new CharNode({
+          originalChar: '',
+          char: tmp.shift()!,
+        }));
       }
     } else {
       while (buffer.length > 0) {
@@ -309,7 +317,9 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
     // buffer.length = 0;
   }
 
-  const resultNode = new CharNode('', '');
+  const resultNode = new CharNode({
+    char: '',
+  });
   let tail = resultNode;
   for (const node of result) {
     tail.next = node;

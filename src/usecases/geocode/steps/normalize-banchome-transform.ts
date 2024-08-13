@@ -21,17 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Transform, TransformCallback } from 'node:stream';
-import { BEGIN_SPECIAL, DASH, DASH_SYMBOLS, END_SPECIAL, SPACE, VIRTUAL_SPACE } from '@config/constant-values';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
-import { MatchLevel } from '@domain/types/geocode/match-level';
-import { Query } from '../models/query';
-import { CharNode } from '../services/trie/char-node';
+import { DASH, SPACE, VIRTUAL_SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
 import { isDigitForCharNode } from '../services/is-number';
+import { CharNode } from '../services/trie/char-node';
 
-export class RegExTransform extends Transform {
+export class NormalizeBanchomeTransform extends Transform {
 
   constructor(private params: {
     logger: DebugLogger | undefined;
@@ -55,13 +53,16 @@ export class RegExTransform extends Transform {
       }
 
       // 空白がある位置より前と後に分ける
-      const [before, ...after] = query.tempAddress.split(RegExpEx.create(`[${VIRTUAL_SPACE}${SPACE}]`, 'g'));
+      const [before, ...after] = query.tempAddress.split(RegExpEx.create(SPACE, 'g'));
  
       // 正規化する
       const normalized = this.normalize(before);
 
       // 結合する
-      const tempAddress = CharNode.joinWith(new CharNode(SPACE), normalized, ...after);
+      const tempAddress = CharNode.joinWith(new CharNode({
+        originalChar: SPACE,
+        char: SPACE,
+      }), normalized, ...after);
       
       results.add(query.copy({
         tempAddress,
@@ -81,7 +82,9 @@ export class RegExTransform extends Transform {
 
     const stack: CharNode[] = p.split('');
 
-    const head: CharNode | undefined = new CharNode('');
+    const head: CharNode | undefined = new CharNode({
+      char: '',
+    });
     let top: CharNode;
     while (stack.length > 0) {
       top = stack.pop()!;
@@ -93,14 +96,29 @@ export class RegExTransform extends Transform {
 
       // (DASH)ガーデンテラスのとき、(DASH)をスペースに置き換える
       if (stack.at(-1)?.char === DASH && !isDigitForCharNode(top)) {
-        stack.pop();
+        const removed = stack.pop();
         top.next = head.next;
         head.next = top;
-        const space = new CharNode(SPACE);
+        const space = new CharNode({
+          char: SPACE,
+          originalChar: removed && removed.originalChar,
+        });
         space.next = head.next;
         head.next = space;
         continue;
       }
+      // 他の置換により、「1番(DASH)」「2番地(DASH)」「3号(DASH)「4条(DASH)」になっているときは、DASHだけにする
+      if ((isDigitForCharNode(stack.at(-2)) && stack.at(-1)?.char === '番' && top.char === '地' && head.next?.char === DASH) ||
+        (isDigitForCharNode(stack.at(-1)) && top.char === '番' && head.next?.char === DASH) ||
+        (isDigitForCharNode(stack.at(-1)) && top.char === '号' && head.next?.char === DASH) ||
+        (isDigitForCharNode(stack.at(-1)) && top.char === '条' && head.next?.char === DASH)) {
+
+        while (stack.length > 0 && !isDigitForCharNode(stack.at(-1))) {
+          stack.pop();
+        }
+        continue;
+      }
+
       // 1番地, 2番街, 3番地, 4番館, 5号棟, 6号室, 7号館, 8号室 など
       if (isDigitForCharNode(stack.at(-1)) && RegExpEx.create('[番号]').test(top.char || '')) {
         if (head.next?.char === '地') {
@@ -114,10 +132,32 @@ export class RegExTransform extends Transform {
         // 「1番3号」の場合もあるし、「1番地3号室」の場合もある。
         // 3の後ろに「号」があれば「室,棟,区,館」の場合はDashを入れない
         if (!RegExpEx.create('[室棟区館]').test(head.next?.char || '')) {
-          const dash = new CharNode(DASH);
+          const dash = new CharNode({
+            char: DASH,
+            originalChar: head.next?.char,
+          });
           dash.next = head.next;
           head.next = dash;
+          continue;
         }
+
+        // 3号「室,棟,区,館」の場合、3の前に DASHがあれば、SPACEにする
+        const buffer: CharNode[] = [];
+        while (stack.length > 0 && isDigitForCharNode(stack.at(-1))) {
+          buffer.push(stack.pop()!);
+        }
+        const replaced: string[] = [];
+        while (RegExpEx.create(`[号番${DASH}]`).test(stack.at(-1)?.char || '')) {
+          const removed = stack.pop();
+          if (removed && removed.originalChar) {
+            replaced.push(removed.originalChar);
+          }
+        }
+        stack.push(new CharNode({
+          char: SPACE,
+          originalChar: replaced.reverse().join(''),
+        }));
+        stack.push(...buffer);
         top.next = head.next;
         head.next = top;
         continue;
@@ -133,68 +173,6 @@ export class RegExTransform extends Transform {
       top.next = head.next;
       head.next = top;
     }
-    // while (p) {
-    //   // 最初の文字が DASHの場合
-    //   if (p.char === DASH) {
-    //     const tmp = p.next?.moveToNext();
-    //     if (!tmp) {
-    //       break;
-    //     }
-    //     if (!RegExpEx.create('[1-9]').test(tmp.char || '')) {
-    //       // (DASH)ガーデンテラスのとき、(DASH)をスペースに置き換える
-    //       tmp.char = SPACE;
-    //       tmp.originalChar = SPACE;
-    //     } else {
-    //       // -234ガーデンテラスのとき、「4」と「ガ」の間にスペースを入れる
-
-    //       let slow: CharNode | undefined = p;
-    //       let fast: CharNode | undefined = slow.next;
-    //       while (slow && fast) {
-    //         slow = slow.moveToNext();
-    //         if (slow?.char === BEGIN_SPECIAL) {
-    //           slow = slow?.next?.moveToNext(END_SPECIAL);
-    //         }
-    //         fast = slow?.next?.moveToNext();
-    //         if (fast?.char === BEGIN_SPECIAL) {
-    //           fast = fast?.next?.moveToNext(END_SPECIAL);
-    //         }
-
-    //         if (!slow || !fast) {
-    //           break;
-    //         }
-    //         if (slow.char === DASH && RegExpEx.create('[1-9]').test(fast.char!)) {
-    //           // 数字の終わりを見つける
-    //           slow = fast;
-    //           fast = fast.next;
-    //           while (fast && (fast.ignore || RegExpEx.create('[0-9]').test(fast.char!))) {
-    //             slow = fast;
-    //             fast = fast.next;
-    //           }
-    //           if (fast?.char !== DASH && fast?.char !== undefined) {
-    //             slow.next = new CharNode(SPACE, SPACE);
-    //             slow.next.next = fast;
-    //           }
-    //           break;
-    //         }
-    //       }
-    //     }
-    //   }
-    //   p = p?.next?.moveToNext();
-    // }
-
-    // const original = head.toOriginalString();
-    // let tmp = original.trim();
-    // tmp = tmp.replace(RegExpEx.create(`([0-9]+(?:丁目?))([0-9]+)(?:番地?の?)([0-9]+)(?:号(?![室棟区館階])?)`), `$1${DASH}$2${DASH}$3`);
-    // tmp = tmp.replace(RegExpEx.create(`([0-9]+)(?:番地?の?)([0-9]+)(?:号(?![室棟区館階])?)?`), `$1${DASH}$2`);
-    // tmp = tmp.replace(RegExpEx.create(`(?:[${DASH_SYMBOLS}${DASH}]|番地?)([0-9]+)(?:号(?![室棟区館階])?)`), `$1`);
-    // tmp = tmp.replace(RegExpEx.create(`([0-9]+)(?:番地?|号(?![室棟区館階]))`), `$1`);
-    // tmp = tmp.replace(RegExpEx.create(`[${DASH_SYMBOLS}${DASH}]([0-9]+)`), `${DASH}$1`);
-    // tmp = tmp.replace(RegExpEx.create(`(?:番地?|号)([0-9]+)`), `${DASH}$1`);
-    // tmp = tmp.replace(RegExpEx.create(`(?:番地?)([0-9]+)[${DASH_SYMBOLS}${DASH}]([0-9]+)`), `${DASH}$1${DASH}$2`);
-    // tmp = tmp.replace(RegExpEx.create(`(?:番地?)([0-9]+)[${DASH_SYMBOLS}${DASH}]([0-9]+)(?:号(?![室棟区館階])?)`), `${DASH}$1${DASH}$2`);
-    // tmp = tmp.replace(RegExpEx.create('^番地'), '');
-    // tmp = tmp.replace(RegExpEx.create(`${DASH}+`), DASH);
-    // console.error(tmp);
 
     return head.next;
   }

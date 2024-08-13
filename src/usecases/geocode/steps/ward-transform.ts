@@ -113,7 +113,7 @@ export class WardTransform extends Transform {
 
       // 〇〇市〇〇区　パターンを探す
       const searchResults2 = this.wardTrie.find({
-        target: this.normalizeCharNode(query.tempAddress)!,
+        target: query.tempAddress,
         extraChallenges: ['市', '区'],
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
@@ -176,7 +176,7 @@ export class WardTransform extends Transform {
         } 
 
         let matched = trie.find({
-          target: this.normalizeCharNode(query.tempAddress)!,
+          target: query.tempAddress,
           extraChallenges: ['市', '町', '村'],
           partialMatches: true,
           fuzzy: DEFAULT_FUZZY_CHAR,
@@ -204,7 +204,9 @@ export class WardTransform extends Transform {
             if (mResult.unmatched) {
               return mResult.unmatched.splice(0, 0, mResult.info!.oaza_cho);
             } else {
-              return new CharNode(mResult.info!.oaza_cho);
+              return new CharNode({
+                char: mResult.info!.oaza_cho,
+              });
             }
           })();
           results.add(query.copy({
@@ -253,20 +255,6 @@ export class WardTransform extends Transform {
 
     // カタカナは全てひらがなにする（南アルプス市）
     address = toHiragana(address);
-
-    return address;
-  }
-  private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
-    address = address?.clone();
-
-    // 漢数字を半角英数字にする
-    address = toHankakuAlphaNumForCharNode(address);
-
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
-
-    // カタカナは全てひらがなにする（南アルプス市）
-    address = toHiraganaForCharNode(address);
 
     return address;
   }

@@ -165,7 +165,6 @@ export class GeocodeResultTransform extends Transform {
     result = result.replace(RegExpEx.create('^(号|番|番地|地番)$'), '');
       
     // もとに戻す
-    result = result.replaceAll(RegExpEx.create(VIRTUAL_SPACE, 'g'), '');
     result = result.replaceAll(RegExpEx.create(DASH, 'g'), '-');
     result = result.replaceAll(RegExpEx.create(SPACE, 'g'), ' ');
     result = result.replace(RegExpEx.create(MUBANCHI), '無番地');

@@ -42,7 +42,7 @@ import { NormalizeTransform } from '../steps/normalize-transform';
 import { OazaChomeTransform } from '../steps/oaza-chome-transform';
 import { ParcelTransform } from '../steps/parcel-transform';
 import { PrefTransform } from '../steps/pref-transform';
-import { RegExTransform } from '../steps/regex-transform';
+import { NormalizeBanchomeTransform } from '../steps/normalize-banchome-transform';
 import { RsdtBlkTransform } from '../steps/rsdt-blk-transform';
 import { RsdtDspTransform } from '../steps/rsdt-dsp-transform';
 import { Tokyo23TownTranform } from '../steps/tokyo23town-transform';
@@ -172,11 +172,8 @@ export class GeocodeTransform extends Duplex {
       logger: params.logger,
     });
 
-    // 正規表現での特定を試みる
-    const regexTranfrorm = new RegExTransform({
-      logger: params.logger,
-    });
-    const regexTranfrorm2 = new RegExTransform({
+    // 正規表現で番地を試みる
+    const regexTranfrorm = new NormalizeBanchomeTransform({
       logger: params.logger,
     });
 
@@ -207,7 +204,6 @@ export class GeocodeTransform extends Duplex {
       .pipe(rsdtBlkTransform)
       .pipe(rsdtDspTransform)
       .pipe(parcelTransform)
-      .pipe(regexTranfrorm2)
       .pipe(geocodeResultTransform)
       .pipe(dst);
   }
