@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, SPACE, VIRTUAL_SPACE } from '@config/constant-values';
+import { DASH, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { Transform, TransformCallback } from 'node:stream';
@@ -126,18 +126,26 @@ export class NormalizeBanchomeTransform extends Transform {
           char: DASH,
           originalChar: replaced.reverse().join(''),
         }));
-        head.next = head.next.next;
+        head.next = head?.next.next;
         continue;
       }
 
       // 1番地, 2番街, 3番地, 4番館, 5号棟, 6号室, 7号館, 8号室 など
-      if (isDigitForCharNode(stack.at(-1)) && RegExpEx.create('[番号]').test(top.char || '')) {
+      if (isDigitForCharNode(stack.at(-1)) &&
+      RegExpEx.create('[番号]').test(top.char || '')) {
+        const removed: string[] = [];
         if (head.next?.char === '地') {
           // 「地」を取る
+          if (head.next.originalChar) {
+            removed.push(head.next.originalChar);
+          }
           head.next = head.next.next;
         }
         // 「1番地の3」の可能性もあるので、「の」があれば取る
         if (head.next?.char === 'の' && isDigitForCharNode(head.next?.next)) {
+          if (head.next.originalChar) {
+            removed.push(head.next.originalChar);
+          }
           head.next = head.next.next;
         }
         // 「1番3号」の場合もあるし、「1番地3号室」の場合もある。
@@ -145,28 +153,28 @@ export class NormalizeBanchomeTransform extends Transform {
         if (!RegExpEx.create('[室棟区館]').test(head.next?.char || '')) {
           const dash = new CharNode({
             char: DASH,
-            originalChar: head.next?.char,
+            originalChar: removed.reverse().join(''),
           });
           dash.next = head.next;
           head.next = dash;
           continue;
         }
+        removed.length = 0;
 
         // 3号「室,棟,区,館」の場合、3の前に DASHがあれば、SPACEにする
         const buffer: CharNode[] = [];
         while (stack.length > 0 && isDigitForCharNode(stack.at(-1))) {
           buffer.push(stack.pop()!);
         }
-        const replaced: string[] = [];
         while (RegExpEx.create(`[号番${DASH}]`).test(stack.at(-1)?.char || '')) {
-          const removed = stack.pop();
-          if (removed && removed.originalChar) {
-            replaced.push(removed.originalChar);
+          const tmp = stack.pop();
+          if (tmp && tmp.originalChar) {
+            removed.push(tmp.originalChar);
           }
         }
         stack.push(new CharNode({
           char: SPACE,
-          originalChar: replaced.reverse().join(''),
+          originalChar: removed.reverse().join(''),
         }));
         stack.push(...buffer);
         top.next = head.next;

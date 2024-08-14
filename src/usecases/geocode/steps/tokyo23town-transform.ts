@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { Transform, TransformCallback } from 'node:stream';
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { TownMatchingInfo } from '@domain/types/geocode/town-info';
@@ -72,7 +72,10 @@ export class Tokyo23TownTranform extends Transform {
   ) {
     const results = new QuerySet();
     for (const query of queries.values()) {
-      const target = query.tempAddress?.trimWith(DASH);
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+        
       // 行政区が判明している場合はスキップ
       if (!target || 
         query.match_level.num >= MatchLevel.CITY.num) {

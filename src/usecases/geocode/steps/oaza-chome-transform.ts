@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, OAZA_BANCHO } from '@config/constant-values';
+import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, OAZA_BANCHO, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -137,6 +137,13 @@ export class OazaChomeTransform extends Transform {
         results.add(copiedQuery);
         continue;
       }
+      const target = query.tempAddress.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      if (!target) {
+        results.add(copiedQuery);
+        continue;
+      }
       // 小字に数字が含まれていて、それが番地にヒットする場合がある。
       // この場合は、マッチしすぎているので、中間結果を返す必要がある。
       // partialMatches = true にすると、中間結果を含めて返す。
@@ -145,7 +152,7 @@ export class OazaChomeTransform extends Transform {
       // expected = 末広町
       // wrong_matched_result = 末広町18字
       const findResults = this.trie.find({
-        target: copiedQuery.tempAddress,
+        target,
         partialMatches: true,
 
         // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
@@ -240,9 +247,6 @@ export class OazaChomeTransform extends Transform {
   }
 
   private normalizeStr(address: string): string {
-    // 漢数字を半角数字に変換する
-    address = kan2num(address);
-
     // 全角英数字は、半角英数字に変換
     address = toHankakuAlphaNum(address);
 
@@ -251,6 +255,9 @@ export class OazaChomeTransform extends Transform {
     
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
     address = jisKanji(address);
+
+    // 漢数字を半角数字に変換する
+    address = kan2num(address);
 
     // 「無番地」を「MUBANCHI」にする
     address = address?.replace(RegExpEx.create('無番地'), MUBANCHI);

@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { KoazaMachingInfo } from '@domain/types/geocode/koaza-info';
@@ -125,7 +125,9 @@ export class KoazaTransform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = query.tempAddress.trimWith(DASH);
+      const target = query.tempAddress.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
       if (!target) {
         results.add(query);
         continue;

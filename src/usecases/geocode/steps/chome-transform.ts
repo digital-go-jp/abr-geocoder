@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { ChomeMachingInfo } from '@domain/types/geocode/chome-info';
@@ -136,7 +136,9 @@ export class ChomeTranform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = this.normalizeCharNode(query.tempAddress);
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
       if (!target) {
         results.add(query);
         continue;

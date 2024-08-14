@@ -33,8 +33,9 @@ import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { CharNode } from '../services/trie/char-node';
 import timers from 'node:timers/promises';
-import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { QuerySet } from '../models/query-set';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class WardTransform extends Transform {
 
@@ -175,8 +176,15 @@ export class WardTransform extends Transform {
           continue;
         } 
 
+        const target = query.tempAddress?.
+          replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+          replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+        if (!target) {
+          results.add(query);
+          continue;
+        }
         let matched = trie.find({
-          target: query.tempAddress,
+          target,
           extraChallenges: ['市', '町', '村'],
           partialMatches: true,
           fuzzy: DEFAULT_FUZZY_CHAR,

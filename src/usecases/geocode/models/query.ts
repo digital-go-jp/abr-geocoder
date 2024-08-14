@@ -354,22 +354,20 @@ export class Query implements IQuery {
     if (this.tempAddress) {
       const other = this.tempAddress?.toOriginalString()?.trim() || undefined;
       if (other) {
-        const isTailDigit = RegExpEx.create('[0-9]').test(formatted_address.at(-1) || '');
-        const isHeadDigit = RegExpEx.create('[0-9]').test(other[0]);
-        const isHeadDash = other[0] === '-';
-        if (
-          // 末尾が数字 で otherの始まりも数字の場合、 1 234号室などなので、スペースを入れる
-          (isTailDigit && isHeadDigit) ||
-          // 末尾が数字 で otherの始まりはDASHではない場合、 1 234号室などなので、スペースを入れる
-          (isTailDigit && !isHeadDash)
-        ) {
-          formatted_address.push('✅');
+        if (!RegExpEx.create(`[号番通条町街丁階線F${DASH}${SPACE}]`).test(formatted_address.at(-1) || '')) {
+          const isTailDigit = RegExpEx.create('[0-9]').test(formatted_address.at(-1) || '');
+          const isHeadDigit = RegExpEx.create('[0-9]').test(other[0]);
+          const isHeadDash = other[0] === '-';
+          if (
+            // 末尾が数字 で otherの始まりも数字の場合、 1 234号室などなので、スペースを入れる
+            (isTailDigit && isHeadDigit) ||
+            // 末尾が数字 で otherの始まりはDASHではない場合、 1 234号室などなので、スペースを入れる
+            (isTailDigit && !isHeadDash)
+          ) {
+            // formatted_address.push('✅');
+            formatted_address.push(' ');
+          }
         }
-        // const firstChar = kan2num(this.tempAddress.char!);
-        // // otherの先頭が数字の場合、スペースを入れる
-        // if (RegExpEx.create('[0-9]').test(firstChar)) {
-        //     formatted_address.push(' ');
-        // }
         formatted_address.push(other);
       }
     }

@@ -95,20 +95,17 @@ export class RsdtDspTransform extends Transform {
         results.add(query);
         continue;
       }
-      if (!query.tempAddress) {
-        // 探索する文字がなければスキップ
+
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      if (!target) {
         results.add(query);
         continue;
       }
 
       // rest_abr_flg = 0のものは地番を検索する
-      if (query.rsdt_addr_flg === 0) {
-        results.add(query);
-        continue;
-      }
-
-      const target = query.tempAddress?.trimWith(DASH);
-      if (!query.rsdtblk_key || !target) {
+      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key) {
         results.add(query);
         continue;
       }

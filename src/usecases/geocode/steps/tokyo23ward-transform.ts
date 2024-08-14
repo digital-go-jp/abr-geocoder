@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { CityMatchingInfo } from '@domain/types/geocode/city-info';
@@ -98,7 +98,13 @@ export class Tokyo23WardTranform extends Transform {
       }
 
       //　東京都〇〇区〇〇パターンを探索する
-      const target = query.tempAddress;
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      if (!target) {
+        results.add(query);
+        continue;
+      }
       const searchResults = this.tokyo23WardTrie.find({
         target,
         extraChallenges: ['区'],

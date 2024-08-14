@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { PrefInfo } from '@domain/types/geocode/pref-info';
@@ -34,6 +34,7 @@ import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { QuerySet } from '../models/query-set';
 import { toKatakana } from '../services/to-katakana';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class PrefTransform extends Transform {
 
@@ -79,11 +80,18 @@ export class PrefTransform extends Transform {
  
     const results = new QuerySet();
     for (const query of queries.values()) {
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      if (!target) {
+        results.add(query);
+        continue;
+      }
       // --------------------
       // 都道府県を探索する
       // --------------------
       const matched = this.prefTrie.find({
-        target: query.tempAddress!,
+        target,
 
         // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
         extraChallenges: ['道', '都', '府', '県'],

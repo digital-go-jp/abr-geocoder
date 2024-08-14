@@ -46,7 +46,7 @@ export const NUMRIC_SYMBOLS: string = ['0-9', '０-９'].join('');
 
 export const ZENKAKU: string = '[^\x01-\x7E\xA1-\xDF]'
 
-export const KANJI_1to10_SYMBOLS: string = ['一二三四五六七八九〇十'].join('');
+export const KANJI_NUMS: string = '壱一二ニ弐参三四五六七八ㇵハ九零十';
 export const NUMRIC_AND_KANJI_SYMBOLS: string = [
   '0-9',
   '０-９',
@@ -67,8 +67,8 @@ export const SPACE: string = '␣';
 // 基本的に住所には含まれていなはず
 export const DASH: string = '@';
 
-export const BEGIN_SPECIAL = '(';
-export const END_SPECIAL = ')';
+export const BEGIN_SPECIAL = '<';
+export const END_SPECIAL = '>';
 
 // 東京都青ヶ島村無番地 のように「無番地」の部分は、「無番地」で当たるべきである。
 // 「番地」が含まれているため、上手く処理できないので

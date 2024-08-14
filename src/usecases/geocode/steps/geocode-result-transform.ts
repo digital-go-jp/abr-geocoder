@@ -88,11 +88,11 @@ export class GeocodeResultTransform extends Transform {
           break;
         
         default:
-          if (a.match_level.num > b.match_level.num) {
-            totalScoreA += 1;
-          } else if (a.match_level.num < b.match_level.num) {
-            totalScoreB += 1;
-          }
+          // if (a.match_level.num > b.match_level.num) {
+          //   totalScoreA += 1;
+          // } else if (a.match_level.num < b.match_level.num) {
+          //   totalScoreB += 1;
+          // }
           break;
       }
 
@@ -158,12 +158,19 @@ export class GeocodeResultTransform extends Transform {
       result = result.replaceAll(DEFAULT_FUZZY_CHAR, query.fuzzy);
     }
     
-      // 末尾が(DASH)+(空白)なら削除
+    // 末尾が(DASH)+(空白)なら削除
     result = result.replace(RegExpEx.create(`[${DASH}${SPACE_SYMBOLS}]+$`), '');
 
     // 末尾が省略可能な記号”だけ”なら削除
-    result = result.replace(RegExpEx.create('^(号|番|番地|地番)$'), '');
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)$'), '');
+
+    // 先頭が省略可能な記号ならハイフンにする
+    result = result.replace(RegExpEx.create('^(?:番地の?|地番|番の?|の|之|丿|ノ|\-)([0-9])'), `${DASH}$1`);
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)(?![室棟区館階])'), '');
       
+    // 末尾が省略可能な記号”だけ”なら削除
+    result = result.replace(RegExpEx.create('([0-9])(?:号|番地|地番|番|の|之|丿|ノ|\-)([0-9])'), `$1${DASH}$2`);
+
     // もとに戻す
     result = result.replaceAll(RegExpEx.create(DASH, 'g'), '-');
     result = result.replaceAll(RegExpEx.create(SPACE, 'g'), ' ');

@@ -31,9 +31,10 @@ import { CityMatchingInfo } from '@domain/types/geocode/city-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import timers from 'node:timers/promises';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { QuerySet } from '../models/query-set';
 import { toKatakana } from '../services/to-katakana';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class CountyAndCityTransform extends Transform {
 
@@ -82,7 +83,10 @@ export class CountyAndCityTransform extends Transform {
         results.add(query);
         continue;
       }
-      if (!query.tempAddress) {
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      if (!target) {
         results.add(query);
         continue;
       }
@@ -91,7 +95,7 @@ export class CountyAndCityTransform extends Transform {
       // 〇〇郡〇〇市町村を探索する
       // -------------------------
       const matched = this.countyAndCityTrie.find({
-        target: query.tempAddress,
+        target,
         extraChallenges: ['郡', '市', '町', '村'],
         partialMatches: true,
         fuzzy: DEFAULT_FUZZY_CHAR,

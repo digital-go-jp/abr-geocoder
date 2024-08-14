@@ -31,8 +31,9 @@ import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import timers from 'node:timers/promises';
-import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { QuerySet } from '../models/query-set';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class WardAndOazaTransform extends Transform {
 
@@ -92,8 +93,15 @@ export class WardAndOazaTransform extends Transform {
       // -------------------------
       // 〇〇市町村を探索する
       // -------------------------
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      if (!target) {
+        results.add(query);
+        continue;
+      }
       const trieResults = this.wardAndOazaTrie.find({
-        target: query.tempAddress,
+        target,
         extraChallenges: ['市', '町', '村'],
         partialMatches: true,
         fuzzy: DEFAULT_FUZZY_CHAR,

@@ -80,7 +80,9 @@ export class RsdtBlkTransform extends Transform {
         results.add(query);
         continue;
       }
-      const target = query.tempAddress?.trimWith(DASH);
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
       if (!target || !query.lg_code) {
         results.add(query);
         continue;

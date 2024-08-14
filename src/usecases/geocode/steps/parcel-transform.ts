@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, KANJI_NUMS, SPACE } from '@config/constant-values';
 import { TableKeyProvider } from '@domain/services/table-key-provider';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
@@ -33,6 +33,7 @@ import { IParcelDbGeocode } from '@interface/database/common-db';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { QuerySet } from '../models/query-set';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { isDigitForCharNode } from '../services/is-number';
 
 export class ParcelTransform extends Transform {
 
@@ -161,6 +162,7 @@ export class ParcelTransform extends Transform {
 
     const [before, ...after]: CharNode[] = query.tempAddress?.split(SPACE);
     let head: CharNode | undefined = before?.trimWith(DASH);
+    const kanjiNums = RegExpEx.create(`[${KANJI_NUMS}]`);
 
     // マッチした文字数
     let matchedCnt = 0;
@@ -171,14 +173,38 @@ export class ParcelTransform extends Transform {
         // TODO: Databaseごとの処理
         current.push('_');
       } else if (/\d/.test(head.char!)) {
-        current.push(head.char!);
+        // 数字の後ろの文字をチェック
+        // SPACE, DASH, 漢数字、または終了なら、追加する
+        const tmpBuffer: string[] = [];
+        let pointer: CharNode | undefined = head;
+        while (pointer && isDigitForCharNode(pointer) && !pointer.ignore) {
+          tmpBuffer.push(pointer.char!);
+          pointer = pointer.next?.moveToNext();
+        }
+        
+        if (!pointer || pointer.char === SPACE || kanjiNums.test(pointer.originalChar!)) {
+          current.push(...tmpBuffer);
+          buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+          head = pointer;
+          current.length = 0;
+          matchedCnt += tmpBuffer.length - 1;
+          break;
+        }
+        if (pointer.char === DASH) {
+          current.push(...tmpBuffer);
+          head = pointer;
+          matchedCnt += tmpBuffer.length - 1;
+
+          buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+          current.length = 0;
+        }
       } else if (head.char === DASH) {
         buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
         current.length = 0;
       } else {
         break;
       }
-      head = head.next;
+      head = head?.next?.moveToNext();
     }
     if (current.length > 0) {
       buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
@@ -196,7 +222,7 @@ export class ParcelTransform extends Transform {
       unmatched: CharNode.joinWith(new CharNode({
         char: SPACE,
       }), head, ...after),
-      matchedCnt
+      matchedCnt,
     };
   }
 }
