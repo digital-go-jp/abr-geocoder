@@ -21,24 +21,63 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { toHankakuAlphaNum } from "../to-hankaku-alpha-num";
+import { SPACE } from "@config/constant-values";
 
 export class CharNode {
   next?: CharNode;
+  public originalChar?: string;
+  public char?: string;
+  public ignore: boolean = false;
 
-  constructor(
-    public originalChar?: string,
-    public char?: string,
-    public ignore: boolean = false,
-  ) {
+  constructor({
+    originalChar = undefined,
+    char,
+    ignore = false,
+  }: {
+    originalChar?: string;
+    char: string;
+    ignore?: boolean;
+  }) {
+    this.originalChar = originalChar;
+    this.char = char;
+    this.ignore = ignore;
+
     if (this.char === undefined) {
       this.char = this.originalChar;
     }
   }
+
+
+  concat(...another: (CharNode | undefined)[]): CharNode | undefined {
+    if (!another) {
+      return this.clone();
+    }
+    const head = this.clone();
+    let tail: CharNode | undefined = head;
+    for (const other of another) {
+      if (!other) {
+        continue;
+      }
+      while (tail && tail.next && tail.next.next) {
+        tail = tail.next.next;
+      }
+      if (tail?.next) {
+        tail = tail.next;
+      }
+      if (tail) {
+        tail.next = other;
+        tail = tail.next;
+      }
+    }
+    return head;
+  }
+
   replaceAll(search: string | RegExp, replaceValue: string | Function): CharNode | undefined {
     let root: CharNode | undefined = this.clone();
-
-    this.toProcessedString().replaceAll(search, (match: string,  ...args: any[]): string => {
+    let adjust = 0;
+    this.toProcessedString().replaceAll(search, (match: string, ...args: any[]): string => {
 
       let repValue = (() => {
         if (typeof replaceValue === 'function') {
@@ -48,7 +87,7 @@ export class CharNode {
         }
       })();
 
-      const hasNamedGroups = Array.isArray(args.at(-1));
+      const hasNamedGroups = typeof args.at(-1) === "object";
       const offset: number = hasNamedGroups ? args.at(-3) : args.at(-2);
       
       // グルーピングをしている場合、repValueに適用する
@@ -62,7 +101,8 @@ export class CharNode {
         repValue = repValue.replaceAll(`$${i + 1}`, args[i]);
       }
       
-      root = root?.splice(offset, match.length, repValue);
+      root = root?.splice(offset - adjust, match.length, repValue);
+      adjust += match.length - repValue.length;
 
       return repValue;
     });
@@ -151,53 +191,146 @@ export class CharNode {
   }
 
   clone(): CharNode {
-    const root = new CharNode();
+    const root = new CharNode({
+      char: '',
+    });
     let tail: CharNode | undefined = root;
     let node: CharNode | undefined = this;
     while (node) {
-      tail.next = new CharNode(node.originalChar, node.char, node.ignore);
+      tail.next = new CharNode({
+        originalChar: node.originalChar,
+        char: node.char!,
+        ignore: node.ignore,
+      });
       tail = tail?.next;
       node = node.next;
     }
     return root.next!;
   }
 
-  static readonly fromString = (value: string): CharNode | undefined => {
-    try {
-      const parsedValue = JSON.parse(value);
-      if (typeof parsedValue === 'string') {
-        return CharNode.create(parsedValue);
-      }
-      if (Array.isArray(parsedValue)) {
-        const root = new CharNode('', '');
-        let head = root;
-        for (const value of parsedValue as Iterable<{
-          org: string;
-          char: string;
-          ignore: boolean;
-        }>) {
-          head.next = new CharNode(value.org, value.char, value.ignore);
-          head = head.next;
+  trimWith(target?: string): CharNode | undefined {
+    target = (target || SPACE)[0];
+    let foundBody = false;
+    let head: CharNode | undefined;
+    const stack: CharNode[] = this.split('');
+    while (stack.length > 0) {
+      const top = stack.pop()!;
+      if (!foundBody) {
+
+        // 末尾に target?.char がついている場合はスキップ
+        if (top?.char === target) {
+          continue;
         }
-        return root.next;
+        if (top.ignore) {
+          top.next = head;
+          head = top;
+          continue;
+        }
       }
-      throw 'unexpected format';
-    } catch(e) {
-      throw 'unexpected format';
+      foundBody = true;
+      // target が連続する場合はスキップ
+      if (top.char === target && head?.char === target) {
+        continue;
+      }
+      top.next = head;
+      head = top;
     }
+    // 先頭にtarget がある場合は排除
+    while (head && head.char === target) {
+      head = head.next;
+    }
+    return head;
+  }
+
+  split(search: string | RegExp, limit?: number): CharNode[] {
+    if (limit) {
+      if (limit === 0) {
+        return [];
+      }
+      if (limit < 0 || !Number.isInteger(limit)) {
+        throw new TypeError('limit for split() must be a non-negative integer');
+      }
+    }
+    let count = limit || Number.POSITIVE_INFINITY;
+
+    const results: CharNode[] = [];
+    if (search === '') {
+      let head: CharNode | undefined = this;
+      while (head && count > 0) {
+        count--;
+        const headNext: CharNode | undefined = head.next;
+        head.next = undefined;
+        results.push(head);
+        head = headNext;
+      }
+      return results;
+    }
+
+
+    // 正規表現でマッチした位置に値する部分を CharNode を使って置換していく
+    // オリジナルの文字は残す
+    const regexp: RegExp = (() => {
+      if (typeof search === 'string') {
+        return RegExpEx.create(search, 'g');
+      } else if (!search.global) {
+          throw new TypeError('The regexp for split() must have a global flag');
+      }
+      return search;
+    })();
+
+    let match: RegExpExecArray | null;
+    const txt = this.toProcessedString();
+    let root: CharNode | undefined = this.clone();
+    let buffer = new CharNode({
+      char: '',
+    });
+    let tail: CharNode | undefined = buffer;
+    let i = 0;
+    while ((match = regexp.exec(txt)) !== null && count > 0) {
+      while (i < match.index && tail && root) {
+        
+        const rootNext: CharNode | undefined = root.next;
+        tail.next = root;
+        tail = tail.next;
+        tail.next = undefined;
+        root = rootNext;
+
+        if (root?.ignore) {
+          continue;
+        }
+        i++;
+      }
+      if (buffer.next) {
+        results.push(buffer.next);
+        tail = buffer;
+        root = root?.next;
+        i++;
+      }
+      while (i < regexp.lastIndex - 1 && root) {
+        root = root?.next;
+        if (root?.ignore) {
+          continue;
+        }
+        i++;
+      }
+      count--;
+    }
+    if (root && count > 0) {
+      results.push(root);
+    }
+    
+    return results;
   }
 
   splice(start: number, deleteCount: number = 0, replaceValue: string | undefined = undefined) {
-    const root = new CharNode('', '');
+    const root = new CharNode({
+      char: '',
+    });
     root.next = this;
 
     let head: CharNode | undefined = root.next;
     let tail: CharNode | undefined = root;
     for (let i = 0; i < start; i++) {
-      while (head && head?.ignore) {
-        tail = tail?.next;
-        head = head?.next;
-      }
       tail = tail?.next;
       head = head?.next;
     }
@@ -213,7 +346,11 @@ export class CharNode {
           // tail = tail?.next;
           head = head?.next;
         }
-        tail!.next = new CharNode(head?.char, '', true);
+        tail!.next = new CharNode({
+          originalChar: head?.char,
+          char: '',
+          ignore: true,
+        });
         tail = tail?.next;
         head = head?.next;
       }
@@ -222,17 +359,17 @@ export class CharNode {
     }
 
 
-    let newValue : CharNode | undefined = CharNode.create(replaceValue);
+    const newValues: CharNode[] = CharNode.create(replaceValue)?.split('') || [];
 
-    while ((deleteCount > 0) && head && newValue) {
+    while ((deleteCount > 0) && head && newValues.length > 0) {
       while (head && head?.ignore) {
         tail = tail?.next;
         head = head?.next;
       }
-      head!.char = newValue!.char;
+      const headNewChar = newValues.shift()!;
+      head!.char = headNewChar.char;
       head = head?.next;
       tail = tail?.next;
-      newValue = newValue?.next;
       deleteCount--;
     }
     if (deleteCount > 0) {
@@ -246,27 +383,114 @@ export class CharNode {
       }
     } else {
       // 置換する文字列の方が長い or 同等
-      while (newValue) {
-        tail!.next = new CharNode('', newValue.char);
+      while (newValues.length > 0) {
+        const headNewChar = newValues.shift()!;
+        tail!.next = new CharNode({
+          originalChar: '',
+          char: headNewChar.char!,
+        });
         tail = tail?.next;
-        newValue = newValue.next;
       }
-      // tail.next = newValue;
     }
+    // tail.next = newValue;
     if (tail) {
       tail!.next = head;
     }
 
     return root.next;
   }
+
+  moveToNext(targetChar?: string): CharNode | undefined {
+    let pointer: CharNode | undefined = this;
+    while (pointer) {
+      while (pointer && pointer.ignore) {
+        pointer = pointer.next;
+      }
+      if (!targetChar || pointer?.char === targetChar) {
+        break;
+      }
+      pointer = pointer?.next;
+    }
+    return pointer;
+  }
   
+  static readonly fromString = (value: string): CharNode | undefined => {
+    try {
+      const parsedValue = JSON.parse(value);
+      if (typeof parsedValue === 'string') {
+        return CharNode.create(parsedValue);
+      }
+      if (Array.isArray(parsedValue)) {
+        const root = new CharNode({
+          char: '',
+        });
+        let head = root;
+        for (const value of parsedValue as Iterable<{
+          org: string;
+          char: string;
+          ignore: boolean;
+        }>) {
+          head.next = new CharNode({
+            originalChar: value.org,
+            char: value.char,
+            ignore: value.ignore,
+          });
+          head = head.next;
+        }
+        return root.next;
+      }
+      throw 'unexpected format';
+    } catch(e) {
+      throw 'unexpected format';
+    }
+  }
+
+  static joinWith(separator: CharNode, ...targets: (CharNode | undefined)[]): CharNode | undefined {
+    targets = targets.filter(x => x !== undefined);
+    if (targets.length === 0) {
+      return undefined;
+    }
+    if (targets.length === 1) {
+      return targets[0];
+    }
+    let p = targets.shift();
+    const head = p;
+    while (p?.next) {
+      p = p.next;
+    }
+
+    while (p && targets.length > 0) {
+      p.next = separator.clone();
+      while (p.next) {
+        p = p.next;
+      }
+      p.next = targets.shift();
+      while (p?.next) {
+        p = p.next;
+      }
+    }
+    return head;
+  }
+
   // address を CharNode に変換する
   static create(address: string): CharNode | undefined {
     let head: CharNode | undefined = undefined;
+    let isInParenthesis = false;
     for (let i = address.length - 1; i >= 0; i--) {
       const prevHead = head;
-      head = new CharNode(address[i]);
+      if (address[i] === ')') {
+        isInParenthesis = true;
+      } 
+      head = new CharNode({
+        originalChar: address[i],
+        char: address[i],
+        ignore: isInParenthesis,
+      });
       head.next = prevHead;
+
+      if (address[i] === '(') {
+        isInParenthesis = false;
+      } 
     }
     return head;
   }

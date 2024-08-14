@@ -216,22 +216,44 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
 
     signal?: AbortSignal;
   }) {
-    const tasks: Promise<void>[] = [];
-    for (let i = 0; i < params.maxConcurrency; i++) {
-      tasks.push(this.addWorker({
-        filename: params.filename,
-        initData: params.initData,
-        signal: params.signal,
-      }));
-      if (params.signal?.aborted) {
-        break;
+    const addWorkerEvent = Symbol('addWorker');
+
+    const onAddWorkerEvent = async () => {
+      if (this.workers.length === params.maxConcurrency) {
+        return;
       }
-    }
-    await Promise.all(tasks);
-    if (params.signal?.aborted) {
-      this.close();
-      return;
-    }
+      await this.addWorker(params);
+      if (params.signal?.aborted) {
+        this.close();
+        return;
+      }
+      this.emit(addWorkerEvent);
+      this.off(addWorkerEvent, onAddWorkerEvent);
+    };
+
+    await this.addWorker(params);
+    this.on(addWorkerEvent, onAddWorkerEvent);
+    this.emit(addWorkerEvent)
+
+
+    // const tasks: Promise<void>[] = [];
+    // for (let i = 0; i < params.maxConcurrency; i++) {
+    //   await this.addWorker(params);
+    //   if (params.signal?.aborted) {
+    //     break;
+    //   }
+    // }
+    // for (let i = 0; i < params.maxConcurrency; i++) {
+    //   tasks.push(this.addWorker({
+    //     filename: params.filename,
+    //     initData: params.initData,
+    //     signal: params.signal,
+    //   }));
+    //   if (params.signal?.aborted) {
+    //     break;
+    //   }
+    // }
+    // await Promise.all(tasks);
 
     // タスクが挿入 or 1つタスクが完了したら、次のタスクを実行する
     // (ラウンドロビン方式で、各スレッドに均等にタスクを割り当てる)

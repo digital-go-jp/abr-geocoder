@@ -30,6 +30,7 @@ import { Query } from '../models/query';
 import { CharNode } from '../services/trie/char-node';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { QuerySet } from '../models/query-set';
 
 export class RsdtBlkTransform extends Transform {
 
@@ -43,16 +44,16 @@ export class RsdtBlkTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
 
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
       if (query.searchTarget === SearchTarget.PARCEL) {
         // 地番検索が指定されている場合、このステップはスキップする
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -60,12 +61,12 @@ export class RsdtBlkTransform extends Transform {
       // もしくは 既に地番データが判明している場合もスキップ
       if (query.match_level.num < MatchLevel.MACHIAZA.num || 
         query.match_level === MatchLevel.PARCEL) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -76,12 +77,14 @@ export class RsdtBlkTransform extends Transform {
       // }
 
       if (!query.town_key) {
-        results.push(query);
+        results.add(query);
         continue;
       }
-      const target = this.normalize(query.tempAddress);
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
       if (!target || !query.lg_code) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -91,7 +94,7 @@ export class RsdtBlkTransform extends Transform {
       });
       if (!db) {
         // DBをオープンできなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -106,12 +109,12 @@ export class RsdtBlkTransform extends Transform {
 
       // 番地が見つからなかった
       if (findResults.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
       findResults.forEach(result => {
-        results.push(query.copy({
+        results.add(query.copy({
           block: result.blk_num.toString(),
           block_id: result.blk_id,
           rep_lat: result.rep_lat,
@@ -125,7 +128,7 @@ export class RsdtBlkTransform extends Transform {
       })
     }
 
-    this.params.logger?.info(`rsdt-blk : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`rsdt-blk : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 
@@ -145,7 +148,7 @@ export class RsdtBlkTransform extends Transform {
         // TODO: Databaseごとの処理に対応させる
         buffer.push('_');
         matchedCnt++;
-      } else if (/\d/.test(p.char!)) {
+      } else if (RegExpEx.create('[0-9]').test(p.char!)) {
         buffer.push(p.char!);
         matchedCnt++;
       } else {
@@ -173,64 +176,5 @@ export class RsdtBlkTransform extends Transform {
       unmatched: p, 
       matchedCnt,
     };
-  }
-
-  private normalize(address: CharNode | undefined): CharNode | undefined {
-
-    // 先頭にDashがある場合、削除する
-    address = address?.replace(RegExpEx.create(`^${DASH}+`), '');
-    
-    // [〇〇]番地、[〇〇]番　〇〇丁目[〇〇]ー〇〇　の [〇〇] だけを取る
-    const buffer: CharNode[] = [];
-    enum Status {
-      UNDEFINED,
-      BANCHI,
-      GOU,
-    };
-
-    let status = 0;
-    let head: CharNode | undefined = address;
-    while (head) {
-      if (status === Status.UNDEFINED) {
-        for (const word of ['番地割', '地割', '番地', '番']) {
-          let extra : CharNode | undefined = head;
-          let cnt = 0;
-          for (const char of word) {
-            if (extra?.char !== char) {
-              break;
-            }
-            cnt++;
-            extra = extra.next;
-          }
-          if (cnt === word.length) {
-            status = Status.BANCHI;
-            buffer.push(new CharNode(word, DASH));
-            status = Status.BANCHI;
-            head = extra;
-            break;
-          }
-        }
-      } else if ((status === Status.BANCHI) && (head.char === '号')) {
-        buffer.push(new CharNode(head.originalChar, DASH));
-        head = head.next;
-        continue;
-      }
-      buffer.push(new CharNode(head?.originalChar, head?.char));
-      head = head?.next;
-    }
-
-    // 末尾にDashだったら、取る
-    if ((buffer.length > 0) && (buffer.at(-1)?.char === DASH)) {
-      buffer.pop();
-    }
-    
-    const result = new CharNode('', '');
-    let tail: CharNode | undefined = result;
-    buffer.forEach(node => {
-      tail!.next = node;
-      tail = tail?.next;
-    })
-
-    return result.next;
   }
 }

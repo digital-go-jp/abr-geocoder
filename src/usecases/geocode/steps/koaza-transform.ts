@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { KoazaMachingInfo } from '@domain/types/geocode/koaza-info';
@@ -35,6 +35,8 @@ import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { QuerySet } from '../models/query-set';
+import { toKatakana, toKatakanaForCharNode } from '../services/to-katakana';
 
 export class KoazaTransform extends Transform {
 
@@ -72,19 +74,19 @@ export class KoazaTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
     // ----------------------------------
     // 小字を特定する
     // ----------------------------------
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
 
       // 最低限、市区町村レベルまでは分かっている必要がある
       if (query.match_level.num < MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       // 既に判明している場合はスキップ
@@ -95,13 +97,13 @@ export class KoazaTransform extends Transform {
 
       // 小字が判明している場合はスキップ
       if (query.town_key && query.koaza) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -123,9 +125,11 @@ export class KoazaTransform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = this.normalize(query.tempAddress);
+      const target = query.tempAddress.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
       if (!target) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       const findResults = trie.find({
@@ -160,17 +164,17 @@ export class KoazaTransform extends Transform {
           matchedCnt: query.matchedCnt + findResult.depth,
           ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
         };
-        results.push(query.copy(params));
+        results.add(query.copy(params));
 
         anyHit = true;
       });
 
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
 
-    this.params.logger?.info(`koaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`koaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 
@@ -181,7 +185,7 @@ export class KoazaTransform extends Transform {
     // 全角英数字は、半角英数字に変換
     address = toHankakuAlphaNum(address);
     
-    // カタカナはひらがなに変換する
+    // 片仮名は平仮名に変換する
     address = toHiragana(address);
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
@@ -200,45 +204,48 @@ export class KoazaTransform extends Transform {
     // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    address = address.replaceAll(RegExpEx.create('第?(\d+)(?:地[割区]|番地?|軒|号|部|条通?|字)?', 'g'), `$1${DASH}`);
+    address = address.replaceAll(RegExpEx.create('第?(\d+)(?:地[割区]|番地?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
 
     // 「一ノ瀬」→「一の瀬」と書くこともあるので、カタカナを平仮名にする
-    address = toHiragana(address);
+    // address = toHiragana(address);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
+    address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
 
     return address;
   }
   
   private normalize(address: CharNode | undefined): CharNode | undefined {
+    let copyed = address?.clone();
 
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
+    copyed = copyed?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
 
     // 小字に「大字」「字」を含んでいることがあり、住居表示だと省略されることも多いので取り除く
-    address = address?.replace(RegExpEx.create('大?字'), '');
+    copyed = copyed?.replace(RegExpEx.create('大?字'), '');
 
     // 漢数字を半角数字に変換する
-    address = kan2numForCharNode(address);
+    copyed = kan2numForCharNode(copyed);
 
-    // カタカナはひらがなに変換する
-    address = toHiraganaForCharNode(address);
+    // 片仮名は平仮名に変換する
+    copyed = toHiraganaForCharNode(copyed);
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
+    copyed = jisKanjiForCharNode(copyed);
     
     // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    address = address?.replaceAll(RegExpEx.create('第?(\d+)(?:地[割区]|番地?|軒|号|部|条通?|字)?', 'g'), `$1${DASH}`);
+    copyed = copyed?.replaceAll(RegExpEx.create('第?(\d+)(?:地[割区]|番地?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
+    copyed = copyed?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    copyed = copyed?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
     
-    return address;
+    return copyed;
   }
 }
