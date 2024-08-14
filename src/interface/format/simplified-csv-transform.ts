@@ -35,7 +35,6 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
     // 出力するCSVカラムの順番
     'input',
     'output',
-    'other',
     'score',
     'match_level',
   ];
