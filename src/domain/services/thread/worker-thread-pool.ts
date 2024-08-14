@@ -220,6 +220,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
 
     const onAddWorkerEvent = async () => {
       if (this.workers.length === params.maxConcurrency) {
+        this.off(addWorkerEvent, onAddWorkerEvent);
         return;
       }
       await this.addWorker(params);
@@ -228,7 +229,6 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
         return;
       }
       this.emit(addWorkerEvent);
-      this.off(addWorkerEvent, onAddWorkerEvent);
     };
 
     await this.addWorker(params);
