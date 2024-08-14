@@ -95,27 +95,38 @@ export class NormalizeBanchomeTransform extends Transform {
       }
 
       // (DASH)ガーデンテラスのとき、(DASH)をスペースに置き換える
-      if (stack.at(-1)?.char === DASH && !isDigitForCharNode(top)) {
-        const removed = stack.pop();
-        top.next = head.next;
-        head.next = top;
-        const space = new CharNode({
-          char: SPACE,
-          originalChar: removed && removed.originalChar,
-        });
-        space.next = head.next;
-        head.next = space;
-        continue;
-      }
+      // if (stack.at(-1)?.char === DASH && !isDigitForCharNode(top)) {
+      //   const removed = stack.pop();
+      //   top.next = head.next;
+      //   head.next = top;
+      //   const space = new CharNode({
+      //     char: SPACE,
+      //     originalChar: removed && removed.originalChar,
+      //   });
+      //   space.next = head.next;
+      //   head.next = space;
+      //   continue;
+      // }
       // 他の置換により、「1番(DASH)」「2番地(DASH)」「3号(DASH)「4条(DASH)」になっているときは、DASHだけにする
-      if ((isDigitForCharNode(stack.at(-2)) && stack.at(-1)?.char === '番' && top.char === '地' && head.next?.char === DASH) ||
-        (isDigitForCharNode(stack.at(-1)) && top.char === '番' && head.next?.char === DASH) ||
-        (isDigitForCharNode(stack.at(-1)) && top.char === '号' && head.next?.char === DASH) ||
-        (isDigitForCharNode(stack.at(-1)) && top.char === '条' && head.next?.char === DASH)) {
+      if ((isDigitForCharNode(stack.at(-2)) && stack.at(-1)?.char === '番' && top.char === '地' && head.next?.moveToNext()?.char === DASH) ||
+        (isDigitForCharNode(stack.at(-1)) && top.char === '番' && head.next?.moveToNext()?.char === DASH) ||
+        (isDigitForCharNode(stack.at(-1)) && top.char === '号' && head.next?.moveToNext()?.char === DASH) ||
+        (isDigitForCharNode(stack.at(-1)) && top.char === '条' && head.next?.moveToNext()?.char === DASH) ||
+        (isDigitForCharNode(stack.at(-1)) && top.char === '丁' && head.next?.moveToNext()?.char === '目') ||
+        (isDigitForCharNode(stack.at(-1)) && top.char === '町' && head.next?.moveToNext()?.char === '目')) {
 
+        const replaced: string[] = [];
         while (stack.length > 0 && !isDigitForCharNode(stack.at(-1))) {
-          stack.pop();
+          const removed = stack.pop();
+          if (removed && removed.originalChar) {
+            replaced.push(removed.originalChar);
+          }
         }
+        stack.push(new CharNode({
+          char: DASH,
+          originalChar: replaced.reverse().join(''),
+        }));
+        head.next = head.next.next;
         continue;
       }
 

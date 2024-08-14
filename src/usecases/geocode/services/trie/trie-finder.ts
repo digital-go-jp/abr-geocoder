@@ -131,9 +131,7 @@ export class TrieAddressFinder<T> {
    }): TrieFinderResult<T>[] | undefined {
 
     let node: CharNode | undefined = target;
-    while (node && node.ignore) {
-      node = node.next;
-    }
+    node = node.moveToNext();
 
     const results = this.traverse({
       parent: this.root,
@@ -172,9 +170,7 @@ export class TrieAddressFinder<T> {
 
     // ignoreフラグが指定されている場合、スキップする
     if (node && node.ignore) {
-      while (node && node.ignore) {
-        node = node.next;
-      }
+      node = node.moveToNext();
       return this.traverse({
         parent,
         node,

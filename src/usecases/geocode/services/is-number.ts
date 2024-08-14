@@ -30,5 +30,5 @@ export const isDigit = (char: string): boolean => {
 }
 
 export const isDigitForCharNode = (charNode: CharNode | undefined): boolean => {
-  return charNode && charNode.char && RegExpEx.create('^[0-9]$').test(charNode.char) || false;
+  return charNode && !charNode.ignore && charNode.char && RegExpEx.create('^[0-9]$').test(charNode.char) || false;
 }

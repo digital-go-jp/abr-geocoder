@@ -215,9 +215,17 @@ export class CharNode {
     const stack: CharNode[] = this.split('');
     while (stack.length > 0) {
       const top = stack.pop()!;
-      // 末尾に target?.char がついている場合はスキップ
-      if (!foundBody && (top?.char === target || top?.ignore)) {
-        continue;
+      if (!foundBody) {
+
+        // 末尾に target?.char がついている場合はスキップ
+        if (top?.char === target) {
+          continue;
+        }
+        if (top.ignore) {
+          top.next = head;
+          head = top;
+          continue;
+        }
       }
       foundBody = true;
       // target が連続する場合はスキップ

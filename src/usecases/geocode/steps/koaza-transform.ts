@@ -125,7 +125,7 @@ export class KoazaTransform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = this.normalize(query.tempAddress);
+      const target = query.tempAddress.trimWith(DASH);
       if (!target) {
         results.add(query);
         continue;

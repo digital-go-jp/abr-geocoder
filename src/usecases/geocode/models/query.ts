@@ -356,7 +356,6 @@ export class Query implements IQuery {
       if (other) {
         const isTailDigit = RegExpEx.create('[0-9]').test(formatted_address.at(-1) || '');
         const isHeadDigit = RegExpEx.create('[0-9]').test(other[0]);
-        const isTailDash = formatted_address.at(-1) === '-';
         const isHeadDash = other[0] === '-';
         if (
           // 末尾が数字 で otherの始まりも数字の場合、 1 234号室などなので、スペースを入れる

@@ -119,12 +119,9 @@ export class OazaChomeTransform extends Transform {
       // 初期化が完了していない場合は待つ
       // ------------------------------------
       if (!this.initialized) {
-        await new Promise(async (resolve: (_?: unknown[]) => void) => {
-          while (!this.initialized) {
-            await timers.setTimeout(100);
-          }
-          resolve();
-        });
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
       }
 
       // ------------------------------------
@@ -209,7 +206,6 @@ export class OazaChomeTransform extends Transform {
             matchedCnt: copiedQuery.matchedCnt + findResult.depth,
             ambiguousCnt: copiedQuery.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
           }));
-
           return;
         }
 
@@ -283,9 +279,9 @@ export class OazaChomeTransform extends Transform {
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
     address = address.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[地丁]?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
 
-    // 「通り」の「り」が省略されることがあるので、「通」だけにしておく
-    address = address?.replace(RegExpEx.create('の通り?'), '通');
-    address = address?.replace(RegExpEx.create('通り'), '通');
+    // 北海道に「太田五の通り」という大字がある。DASHにする
+    address = address?.replace(RegExpEx.create('の通り?'), DASH);
+    address = address?.replace(RegExpEx.create('通り'), DASH);
 
     // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
     // address = address.replace(RegExpEx.create('(.{2,})町'), '$1');
@@ -300,51 +296,51 @@ export class OazaChomeTransform extends Transform {
   }
   private normalizeQuery(query: Query): Query {
 
-    let address: CharNode | undefined = query.tempAddress?.clone();
+    let address: CharNode | undefined = query.tempAddress?.trimWith(DASH);
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
+    // address = jisKanjiForCharNode(address);
 
-    // 全角英数字は、半角英数字に変換
-    address = toHankakuAlphaNumForCharNode(address);
+    // // 全角英数字は、半角英数字に変換
+    // address = toHankakuAlphaNumForCharNode(address);
 
-    // 半角カナ・全角カナを平仮名に変換する
-    address = toHiraganaForCharNode(address);
+    // // 半角カナ・全角カナを平仮名に変換する
+    // address = toHiraganaForCharNode(address);
 
-    // 「丁目」をDASH に変換する
-    // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replace(RegExpEx.create('番[丁地街]'), DASH);
-    address = address?.replace(RegExpEx.create('番[の目]'), DASH);
+    // // 「丁目」をDASH に変換する
+    // // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
+    // address = address?.replace(RegExpEx.create('番[丁地街]'), DASH);
+    // address = address?.replace(RegExpEx.create('番[の目]'), DASH);
 
-    // 「大字」「字」がある場合は削除する
-    address = address?.replace(RegExpEx.create('大?字'), '');
+    // // 「大字」「字」がある場合は削除する
+    // address = address?.replace(RegExpEx.create('大?字'), '');
     
-    // 「丁目」をDASH に変換する
-    // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
+    // // 「丁目」をDASH に変換する
+    // // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
+    // address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
     
-    // 京都の「四条通」の「通」が省略されることがある
-    // 北海道では「春光四条二丁目1-1」を「春光4-2-1-1」と表記する例がある
-    // 「条」「条通」「条通り」を DASH にする
-    address = address?.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
+    // // 京都の「四条通」の「通」が省略されることがある
+    // // 北海道では「春光四条二丁目1-1」を「春光4-2-1-1」と表記する例がある
+    // // 「条」「条通」「条通り」を DASH にする
+    // address = address?.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
     
-    // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
-    // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
-    // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    address = address?.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[丁地街町]?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
+    // // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
+    // // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
+    // // トライ木でマッチすれば良いだけなので、正確である必要性はない
+    // address = address?.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[丁地街町]?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
 
-    // 「通り」の「り」が省略されることがあるので、「通」だけにしておく
-    address = address?.replace(RegExpEx.create('の通り?'), '通');
-    address = address?.replace(RegExpEx.create('通り'), '通');
+    // // 「通り」の「り」が省略されることがあるので、「通」だけにしておく
+    // address = address?.replace(RegExpEx.create('の通り?'), '通');
+    // address = address?.replace(RegExpEx.create('通り'), '通');
 
-    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
-    // address = address?.replace(RegExpEx.create('(.{2,})町'), '$1');
+    // // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
+    // // address = address?.replace(RegExpEx.create('(.{2,})町'), '$1');
 
-    // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
-    // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
-    address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
-    address = address?.replaceAll(RegExpEx.create('之', 'g'), DASH);
+    // // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
+    // // 「の」は全部DASHに変換する
+    // address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    // address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
+    // address = address?.replaceAll(RegExpEx.create('之', 'g'), DASH);
 
     if (query.city === '福井市' && query.pref === '福井県') {
       address = address?.replaceAll(RegExpEx.create('^99', 'g'), 'つくも');

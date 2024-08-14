@@ -72,24 +72,21 @@ export class Tokyo23TownTranform extends Transform {
   ) {
     const results = new QuerySet();
     for (const query of queries.values()) {
+      const target = query.tempAddress?.trimWith(DASH);
       // 行政区が判明している場合はスキップ
-      if (!query.tempAddress || 
+      if (!target || 
         query.match_level.num >= MatchLevel.CITY.num) {
         results.add(query);
         continue;
       }
       
       if (!this.initialized) {
-        await new Promise(async (resolve: (_?: unknown[]) => void) => {
-          while (!this.initialized) {
-            await timers.setTimeout(100);
-          }
-          resolve();
-        });
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
       }
 
       //　東京都〇〇区〇〇パターンを探索する
-      const target = query.tempAddress;
       const searchResults = this.tokyo23TownTrie.find({
         target,
         extraChallenges: ['区', '町', '市', '村'],
