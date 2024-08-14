@@ -51,18 +51,28 @@ export class DebugLogger {
     });
   }
   debug(message: string, ...meta: any[]) {
-    this.logger.debug(message, ...meta);
+    setImmediate(() => {
+      this.logger.debug(message, ...meta);
+    })
   }
   info(message: string, ...meta: any[]) {
+    setImmediate(() => {
     this.logger.info(message, ...meta);
+  })
   }
   warn(message: string, ...meta: any[]) {
-    this.logger.warn(message, ...meta);
+    setImmediate(() => {
+      this.logger.warn(message, ...meta);
+    })
   }
   data(message: string, ...meta: any[]) {
+    setImmediate(() => {
     this.logger.data(message, ...meta);
+  })
   }
   notice(message: string, ...meta: any[]) {
-    this.logger.notice(message, ...meta);
+    setImmediate(() => {
+      this.logger.notice(message, ...meta);
+    })
   }
 }

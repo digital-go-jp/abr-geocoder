@@ -28,6 +28,7 @@ import { SearchTarget } from '@domain/types/search-target';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 
 export type AbrGeocoderDiContainerParams = {
+  cacheDir: string;
   database: DatabaseParams;
   debug: boolean;
 };
@@ -37,6 +38,7 @@ export class AbrGeocoderDiContainer extends CommonDiContainer {
   public readonly searchTarget?: SearchTarget;
   public readonly database: GeocodeDbController;
   public readonly logger?: DebugLogger;
+  public readonly cacheDir: string;
 
   constructor(private params: AbrGeocoderDiContainerParams) {
     super();
@@ -46,6 +48,7 @@ export class AbrGeocoderDiContainer extends CommonDiContainer {
     if (params.debug) {
       this.logger = DebugLogger.getInstance();
     }
+    this.cacheDir = params.cacheDir;
     Object.freeze(this);
   }
   

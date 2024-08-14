@@ -30,10 +30,13 @@ export type ThreadJob<T> = {
   kind: 'task';
 } & ThreadChunk<T>;
 
-export type ThreadSignal = {
-  kind: 'signal';
-  data: string;
-} & Omit<ThreadChunk<string>, 'taskId'>;
+export type ThreadPing = {
+  kind: 'ping';
+} & Omit<'data', 'taskId'>;
+
+export type ThreadPong = {
+  kind: 'pong';
+} & Omit<'data', 'taskId'>;
 
 export type ThreadMessage<T> = {
   kind: 'message';

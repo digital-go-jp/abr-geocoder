@@ -35,6 +35,7 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
     // 出力するCSVカラムの順番
     'input',
     'output',
+    'other',
     'score',
     'match_level',
   ];
@@ -82,6 +83,8 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
             return `"${result.input.data.address}"`;
           case 'output':
             return `"${result.formatted.address || ''}"`;
+          case 'other':
+            return `"${result.tempAddress?.toOriginalString().trim() || ''}"`;
           case 'score':
             return result.formatted.score;
           case 'match_level':

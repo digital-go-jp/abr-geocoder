@@ -25,9 +25,8 @@ import { AsyncResource } from 'node:async_hooks';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { Heapq } from 'ts-heapq';
 import { fromSharedMemory, toSharedMemory } from './shared-memory';
-import { ThreadJob, ThreadJobResult, ThreadMessage } from './thread-task';
+import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from './thread-task';
 
 export class WorkerPoolTaskInfo<T, R> extends AsyncResource {
 
@@ -66,7 +65,7 @@ export class WorkerThread<I, T, R> extends Worker {
     return Array.from(this.tasks.values());
   }
 
-  constructor(params: {
+  private constructor(params: {
     filename: string | URL,
     initData?: I,
   }) {
@@ -80,12 +79,16 @@ export class WorkerThread<I, T, R> extends Worker {
     });
 
     this.on('message', (shareMemory: Uint8Array) => {
-      const received = fromSharedMemory<ThreadJobResult<R> | ThreadMessage<any>>(shareMemory);
+      const received = fromSharedMemory<ThreadJobResult<R> | ThreadPong>(shareMemory);
 
       if (received.kind !== 'result') {
-        this.emit('custom_message', received as ThreadMessage<any>);
         return;
       }
+
+      // if (received.kind !== 'result') {
+      //   this.emit('custom_message', received as ThreadMessage<any>);
+      //   return;
+      // }
       
       // addTask で生成した Promise の resolve を実行する
       const taskId = received.taskId;
@@ -98,6 +101,31 @@ export class WorkerThread<I, T, R> extends Worker {
       this.resolvers.delete(taskId);
       this._numOfTasks--;
       resolve(received.data);
+    });
+  }
+  private initAsync(signal?: AbortSignal) {
+    return new Promise((
+      resolve: (_?: unknown) => void,
+      reject: (_?: unknown) => void,
+    ) => {
+      signal?.addEventListener('abort', () => {
+        this.terminate();
+        reject('canceled');
+      })
+
+      const listener = (shareMemory: Uint8Array) => {
+        const received = fromSharedMemory<ThreadPong>(shareMemory);
+        if (received.kind !== 'pong') {
+          return;
+        }
+        this.off('message', listener);
+        resolve();
+      };
+
+      this.on('message', listener);
+      this.postMessage(toSharedMemory({
+        kind: 'ping',
+      } as ThreadPing));
     });
   }
 
@@ -122,128 +150,123 @@ export class WorkerThread<I, T, R> extends Worker {
     });
   }
 
+  static readonly create = async <I, T, R>(params: {
+    filename: string | URL;
+    initData?: I;
+    signal?: AbortSignal;
+  }) => {
+    const worker = new WorkerThread<I, T, R>(params);
+    await new Promise((
+      resolve: (worker: WorkerThread<I, T, R>) => void,
+      reject: (reason: unknown) => void,
+    ) => {
+      worker.initAsync(params.signal).then(() => {
+        resolve(worker);
+      })
+      .catch((reason: unknown) => {
+        reject(reason);
+      })
+    });
+    return worker;
+  }
 }
 
 export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends EventEmitter {
   private readonly kWorkerFreedEvent = Symbol('kWorkerFreedEvent');
   private workers: WorkerThread<InitData, TransformData, ReceiveData>[] = [];
-  private heap: WorkerThread<InitData, TransformData, ReceiveData>[] = [];
-  private workerQueue: Heapq<WorkerThread<InitData, TransformData, ReceiveData>>;
-  private noMoreTasks: Set<WorkerThread<InitData, TransformData, ReceiveData>> = new Set();
-  private isClosed: boolean = false;
-  private timer: NodeJS.Timeout | undefined;
+  private readonly abortControl = new AbortController();
 
   private waitingTasks: WorkerPoolTaskInfo<TransformData, ReceiveData>[] = [];
 
-  constructor(params : {
+  static readonly create = <InitData, TransformData, ReceiveData>(params : {
     filename: string;
     initData?: InitData;
     // 最大いくつまでのワーカーを生成するか
     maxConcurrency: number;
     // 1つの worker にいくつのタスクを同時に実行させるか
     maxTasksPerWorker: number;
-  }) {
-    super();
 
-    // 使用するワーカーを選ぶHeapQueue
-    this.workerQueue = new Heapq<WorkerThread<InitData, TransformData, ReceiveData>>(this.heap, (a, b) => {
-      // タスクが少ない方を選ぶ
-      return a.totalTasks > b.totalTasks;
-    })
-
-    // 最初のワーカー
-    this.addWorker({
-      filename: params.filename,
-      initData: params.initData,
+    signal?: AbortSignal;
+  }): Promise<WorkerThreadPool<InitData, TransformData, ReceiveData>> => {
+    const pool = new WorkerThreadPool<InitData, TransformData, ReceiveData>();
+    return new Promise((
+      resolve: (pool: WorkerThreadPool<InitData, TransformData, ReceiveData>) => void,
+      reject: (reason: unknown) => void,
+    ) => {
+      pool.initAsync(params).then(() => {
+        resolve(pool);
+      })
+      .catch((reason: unknown) => {
+        reject(reason);
+      })
     });
-    // if (params.filename.includes('csv')) {
+  }
 
-      // this.timer = setInterval(() => {
-      //   const fname = path.basename(params.filename);
-      //   // console.log(`${fname} : task: ${this.waitingTasks.length}, noMore: ${this.noMoreTasks.size}, que: ${this.workerQueue.length()}`);
-        
-      //   const buffer: string[] = [];
-      //   this.workers.forEach((worker, idx) => {
-      //     buffer.push(`#${idx}: ${worker.numOfTasks}`)
-      //   });
-      //   console.log(` ${fname} (${this.waitingTasks.length})  ${buffer.join(", ")}`)
-      // }, 1000);
+  private constructor() {
+    super();
+  }
 
+  private async initAsync(params : {
+    filename: string;
+    initData?: InitData;
+    // 最大いくつまでのワーカーを生成するか
+    maxConcurrency: number;
+    // 1つの worker にいくつのタスクを同時に実行させるか
+    maxTasksPerWorker: number;
+
+    signal?: AbortSignal;
+  }) {
+    const addWorkerEvent = Symbol('addWorker');
+
+    const onAddWorkerEvent = async () => {
+      if (this.workers.length === params.maxConcurrency) {
+        return;
+      }
+      await this.addWorker(params);
+      if (params.signal?.aborted) {
+        this.close();
+        return;
+      }
+      this.emit(addWorkerEvent);
+      this.off(addWorkerEvent, onAddWorkerEvent);
+    };
+
+    await this.addWorker(params);
+    this.on(addWorkerEvent, onAddWorkerEvent);
+    this.emit(addWorkerEvent)
+
+
+    // const tasks: Promise<void>[] = [];
+    // for (let i = 0; i < params.maxConcurrency; i++) {
+    //   await this.addWorker(params);
+    //   if (params.signal?.aborted) {
+    //     break;
+    //   }
     // }
-    
-    const filename = path.basename(params.filename);
-    // this.timer = setInterval(() => {
-    //   console.log(filename, `: `, this.workers.map(worker => worker.totalTasks).join(', '));
-    // }, 1000);
+    // for (let i = 0; i < params.maxConcurrency; i++) {
+    //   tasks.push(this.addWorker({
+    //     filename: params.filename,
+    //     initData: params.initData,
+    //     signal: params.signal,
+    //   }));
+    //   if (params.signal?.aborted) {
+    //     break;
+    //   }
+    // }
+    // await Promise.all(tasks);
 
     // タスクが挿入 or 1つタスクが完了したら、次のタスクを実行する
-    this.on(this.kWorkerFreedEvent, () => {
-
-      // 仕事がまだ残っていて、生成したワーカーの数が maxConcurrency 未満の場合、
-      // 新しくワーカーを追加する
-      if (this.waitingTasks.length >= params.maxTasksPerWorker &&
-        (this.noMoreTasks.size + this.heap.length < params.maxConcurrency)) {
-        this.addWorker({
-          filename: params.filename,
-          initData: params.initData,
-        });
+    // (ラウンドロビン方式で、各スレッドに均等にタスクを割り当てる)
+    let nextIdx = 0;
+    this.on(this.kWorkerFreedEvent, async () => {
+      const task = this.waitingTasks.shift();
+      if (task === undefined) {
+        return;
       }
-
-      const halfOfMaxTasksPerWorker = Math.max(params.maxTasksPerWorker >> 1, 1);
-
-      // 各スレッドのタスク量に応じて、タスクを割り振る
-      while (this.waitingTasks.length > 0 && this.heap.length > 0) {
-        while ((this.heap.length > 0) && (this.workerQueue.top().numOfTasks === params.maxTasksPerWorker)) {
-          
-          if (this.heap.length === 1) {
-            const worker = this.heap[0];
-            this.noMoreTasks.add(worker);
-            this.heap.length = 0;
-            break;
-          }
-          // 1つのワーカーがこれ以上タスクを受け付けられなければ、
-          // noMoreTasks に移動させる
-          const worker = this.workerQueue.pop();
-          this.noMoreTasks.add(worker);
-        }
-        
-        if (this.heap.length === 0) {
-          if (this.noMoreTasks.size + this.heap.length >= params.maxConcurrency) {
-            break;
-          }
-          // ワーカーが不足しているので、追加する
-          this.addWorker({
-            filename: params.filename,
-            initData: params.initData,
-          });
-        }
-        const nextWorker = this.heap[0];
-        // if (params.filename.includes('csv')) {
-          // const buffer: string[] = [];
-          // this.workers.forEach((worker, idx) => {
-          //   buffer.push(`[${idx}: ${worker.numOfTasks}]`)
-          // });
-          // console.log(`   ${path.basename(params.filename)}(rest: ${this.waitingTasks.length})${buffer.join(", ")}`)
-        // }
-
-        // キューの先頭のタスクを取り出す
-        const task = this.waitingTasks.shift();
-        if (task === undefined) {
-          break;
-        }
-
-        // まだ余裕があるので、タスクを投げる
-        nextWorker.addTask(task).then((data: ReceiveData) => {
-          // hardestWorker に入っている場合には
-          // 担当しているタスクが半分になったら
-          // workerQueueに戻す
-          if (this.noMoreTasks.has(nextWorker) &&
-          nextWorker.numOfTasks <= halfOfMaxTasksPerWorker) {
-
-            this.noMoreTasks.delete(nextWorker);
-            this.workerQueue.push(nextWorker)
-          }
-
+      const worker = this.workers[nextIdx];
+      nextIdx = (nextIdx + 1) % this.workers.length;
+      worker.addTask(task)
+        .then((data: ReceiveData) => {
           // run() で生成した Promise の resolve を実行する
           task.done(null, data);
         })
@@ -251,24 +274,32 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
           // キューをシフトさせる
           this.emit(this.kWorkerFreedEvent);
         })
-
-        // 1つのワーカーがこれ以上タスクを受け付けられなければ、
-        // noMoreTasks に移動させる
-        if (nextWorker.numOfTasks === params.maxTasksPerWorker) {
-          this.workerQueue.pop();
-          this.noMoreTasks.add(nextWorker);
-        }
-      }
     });
   }
 
-  private crateWorker(params: {
-    filename: string, 
-    initData?: InitData,
+  private async createWorker(params: {
+    filename: string;
+    initData?: InitData;
+    signal?: AbortSignal;
   }) {
-    const worker = new WorkerThread<InitData, TransformData, ReceiveData>(params);
+    if (params.signal?.aborted) {
+      return;
+    }
+    const worker = await new Promise((
+      resolve: (worker: WorkerThread<InitData, TransformData, ReceiveData>) => void,
+      reject: (reason?: any) => void,
+    ) => {
 
-    worker.on('error', (error: Error) => {
+      WorkerThread.create<InitData, TransformData, ReceiveData>(params)
+        .then(worker => {
+          resolve(worker);
+        })
+        .catch((reason: unknown) => {
+          reject(reason);
+        })
+    });
+    
+    worker.on('error', async (error: Error) => {
       worker.removeAllListeners();
       console.error(error);
 
@@ -280,43 +311,58 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
           task.done(error);
         }
       });
+      if (this.abortControl.signal.aborted) {
+        worker.terminate();
+        return;
+      }
 
       // 終了したスレッドは新しいスレッドに置換する
-      const newWorker = this.crateWorker({
+      const newWorker = await this.createWorker({
         filename: params.filename,
         initData: params.initData,
-      });
-
-      if (this.noMoreTasks.has(worker)) {
-        this.noMoreTasks.delete(worker);
+        signal: this.abortControl.signal,
+      }).catch((reason: unknown) => {
+        console.error(reason);
+      })
+      if (!newWorker) {
+        return;
       }
       const idx = this.workers.indexOf(worker);
-      const heapIdx = this.heap.indexOf(worker);
       if (idx > -1) {
         this.workers[idx] = newWorker;
       }
-      if (heapIdx > -1) {
-        this.heap[heapIdx] = newWorker;
-      }
-      
       worker.terminate();
 
       // 次のタスクを実行する
       this.emit(this.kWorkerFreedEvent);
     });
+    if (this.abortControl.signal.aborted) {
+      worker.terminate();
+      return;
+    }
     return worker;
   }
 
-  private addWorker(params: {
-    filename: string, 
-    initData?: InitData,
+  private async addWorker(params: {
+    filename: string;
+    initData?: InitData;
+    signal?: AbortSignal;
   }) {
-    const worker = this.crateWorker(params);
+    const worker = await this.createWorker(params)
+      .catch((reason: unknown) => {
+        if (typeof reason === 'string' && reason === 'canceled') {
+          return;
+        }
+        console.error(reason);
+      });
+    if (!worker) {
+      return;
+    }
+
     worker.on('custom_message', data => {
       this.emit('custom_message', data);
     })
     this.workers.push(worker);
-    this.workerQueue.push(worker);
 
     // エラーのときに再作成する場合、キューにタスクが溜まっているかもしれないので
     // 次のタスクを実行する
@@ -324,25 +370,25 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
   }
 
   // 全スレッドに対してメッセージを送信する
-  broadcastMessage<M>(data: M) {
-    if (this.isClosed) {
-      return Promise.reject('Called broadcastMessage() after closed.');
-    }
-    const sharedMemory = toSharedMemory<ThreadMessage<M>>({
-      kind: 'message',
-      data,
-    });
+  // broadcastMessage<M>(data: M) {
+  //   if (this.isClosed) {
+  //     return Promise.reject('Called broadcastMessage() after closed.');
+  //   }
+  //   const sharedMemory = toSharedMemory<ThreadMessage<M>>({
+  //     kind: 'message',
+  //     data,
+  //   });
 
-    for (const worker of this.noMoreTasks.values()) {
-      worker.postMessage(sharedMemory);
-    }
-    this.heap.forEach(worker => {
-      worker.postMessage(sharedMemory);
-    });
-  }
+  //   for (const worker of this.noMoreTasks.values()) {
+  //     worker.postMessage(sharedMemory);
+  //   }
+  //   this.heap.forEach(worker => {
+  //     worker.postMessage(sharedMemory);
+  //   });
+  // }
 
   async run(workerData: TransformData): Promise<ReceiveData> {
-    if (this.isClosed) {
+    if (this.abortControl.signal.aborted) {
       return Promise.reject('Called run() after closed.');
     }
 
@@ -362,9 +408,9 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     });
   }
 
-  async close() {
-    if (this.isClosed) {
-      return Promise.reject('Called close() after closed.');
+  close() {
+    if (this.abortControl.signal.aborted) {
+      return;
     }
     // await this.broadcastMessage<{
     //   kind: 'signal';
@@ -374,22 +420,10 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     //   data: 'before-close',
     // });
 
-    this.isClosed = true;
+    this.abortControl.abort();
 
-    // await timersPromises.setTimeout(1000);
-    
-    // for (const worker of this.noMoreTasks.values()) {
-    //   worker.terminate();
-    // }
-    // this.heap.forEach(worker => {
-    //   worker.terminate();
-    // });
     this.workers.forEach(worker => {
-      // console.log('-->terminate');
       worker.terminate();
     });
-    if (this.timer) {
-      clearInterval(this.timer);
-    }
   }
 }

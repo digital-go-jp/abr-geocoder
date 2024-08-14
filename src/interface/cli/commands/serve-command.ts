@@ -98,11 +98,12 @@ const serveCommand: CommandModule = {
         dataDir: path.join(abrgDir, 'database'),
         schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
+      cacheDir: path.join(abrgDir, 'cache'),
       debug: process.env.NODE_ENV === 'development',
     });
 
     // APIサーバー
-    const server = new AbrgApiServer(container);
+    const server = await AbrgApiServer.create(container);
     const port = argv.port || 3000;
     const host = '0.0.0.0';
     await server.listen(port, host);

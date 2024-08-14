@@ -27,11 +27,10 @@ export const createSingleProgressBar = (): SingleBar => {
   return new SingleBar({
     // Since Visual Code does not display stdError for some reason, we use stdout instead.
     stream: process.stdout,
-    format: ' {bar} {percentage}% | {value}/{total}',
+    format: ' {bar} {percentage}% | {value}/{total}  {message}',
     clearOnComplete: true,
     barCompleteChar: '\u2588',
     barIncompleteChar: '\u2591',
-    etaBuffer: 60,
     fps: 10,
   });
 };

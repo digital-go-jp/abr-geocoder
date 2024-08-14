@@ -21,21 +21,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { MatchLevel } from '@domain/types/geocode/match-level';
+import { PrefInfo } from '@domain/types/geocode/pref-info';
 import { Transform, TransformCallback } from 'node:stream';
-import { toHiragana } from '../services/to-hiragana';
+import timers from 'node:timers/promises';
 import { Query } from '../models/query';
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
+import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { MatchLevel } from '@domain/types/geocode/match-level';
-import { PrefInfo } from '@domain/types/geocode/pref-info';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { QuerySet } from '../models/query-set';
+import { toKatakana } from '../services/to-katakana';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class PrefTransform extends Transform {
 
   private readonly prefTrie: TrieAddressFinder<PrefInfo>;
   private readonly logger: DebugLogger | undefined;
+  private initialized: boolean = false;
 
   constructor(params: Required<{
     prefList: PrefInfo[];
@@ -48,27 +53,45 @@ export class PrefTransform extends Transform {
 
     // 都道府県のトライ木
     this.prefTrie = new TrieAddressFinder<PrefInfo>();
-    for (const prefInfo of params.prefList) {
-      this.prefTrie.append({
-        key: this.normalizeStr(prefInfo.pref),
-        value: prefInfo,
-      });
-    }
+    setImmediate(() => {
+      for (const prefInfo of params.prefList) {
+        this.prefTrie.append({
+          key: this.normalizeStr(prefInfo.pref),
+          value: prefInfo,
+        });
+      }
+      this.initialized = true;
+    });
   }
 
-  _transform(
-    queries: Query[],
+  async _transform(
+    queries: QuerySet,
     _: BufferEncoding,
     next: TransformCallback
-  ): void {
-
-    const results = [];
-    for (const query of queries) {
+  ) {
+    if (!this.initialized) {
+      await new Promise(async (resolve: (_?: unknown[]) => void) => {
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
+        resolve();
+      });
+    }
+ 
+    const results = new QuerySet();
+    for (const query of queries.values()) {
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      if (!target) {
+        results.add(query);
+        continue;
+      }
       // --------------------
       // 都道府県を探索する
       // --------------------
       const matched = this.prefTrie.find({
-        target: query.tempAddress!,
+        target,
 
         // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
         extraChallenges: ['道', '都', '府', '県'],
@@ -77,7 +100,7 @@ export class PrefTransform extends Transform {
       });
 
       if (!matched) {
-        results.push(query);
+        results.add(query);
         break;
       }
       let anyHit = false;
@@ -88,7 +111,7 @@ export class PrefTransform extends Transform {
         }
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;
         anyHit = true;
-        results.push(query.copy({
+        results.add(query.copy({
           pref_key: mResult.info.pref_key,
           tempAddress: mResult.unmatched,
           rep_lat: mResult.info.rep_lat,
@@ -102,11 +125,11 @@ export class PrefTransform extends Transform {
         }));
       }
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
 
-    this.logger?.info(`prefecture : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} `);
+    // this.logger?.info(`prefecture : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} `);
     next(null, results);
   }
 

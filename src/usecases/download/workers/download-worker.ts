@@ -23,12 +23,13 @@
  */
 import { DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
 import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
-import { ThreadJob, ThreadJobResult, ThreadMessage } from '@domain/services/thread/thread-task';
+import { ThreadJob, ThreadJobResult, ThreadMessage, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
 import { Readable, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
 import { DownloadDiContainer, DownloadDiContainerParams } from '../models/download-di-container';
 import { DownloadStep1Transform } from '../steps/download-step1-transform';
+import { QueryInput } from '@usecases/geocode/models/query';
 
 export type DownloadWorkerInitData = {
   containerParams: DownloadDiContainerParams;
@@ -81,11 +82,28 @@ export const downloadOnWorkerThread = async (params: Required<{
     .pipe(downloader)
     .pipe(dst);
 
-  // メインスレッドからタスク情報を受け取ったので
-  // ダウンロード処理のストリームに投げる
+  // メインスレッドからメッセージを受け取る
   params.port.on('message', (sharedMemory: Uint8Array) => {
-    const params = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
-    reader.push(params as ThreadJob<DownloadRequest>);
+    const data = fromSharedMemory<ThreadJob<DownloadRequest> | ThreadPing>(sharedMemory);
+    switch (data.kind) {
+      case 'ping': {
+        params.port.postMessage(toSharedMemory({
+          kind: 'pong',
+        } as ThreadPong));
+        return;
+      }
+
+      case 'task': {
+        // メインスレッドからタスク情報を受け取ったので
+        // ダウンロード処理のストリームに投げる
+        const data = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
+        reader.push(data);
+        return;
+      }
+
+      default:
+        throw 'not implemented';
+    }
   });
 };
 

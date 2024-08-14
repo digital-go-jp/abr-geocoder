@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, KANJI_NUMS, SPACE } from '@config/constant-values';
 import { TableKeyProvider } from '@domain/services/table-key-provider';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
@@ -31,6 +31,9 @@ import { CharNode } from '../services/trie/char-node';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { IParcelDbGeocode } from '@interface/database/common-db';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { QuerySet } from '../models/query-set';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { isDigitForCharNode } from '../services/is-number';
 
 export class ParcelTransform extends Transform {
 
@@ -44,7 +47,7 @@ export class ParcelTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
@@ -58,34 +61,34 @@ export class ParcelTransform extends Transform {
     // ------------------------
 
 
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
       if (query.searchTarget === SearchTarget.RESIDENTIAL) {
         // 住居表示検索が指定されている場合、このステップはスキップする
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       // lg_code が必要なので、CITY未満はスキップする
       if (query.match_level.num < MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
       // 既に住居表示で見つかっている場合もスキップ
       if (query.match_level.num === MatchLevel.RESIDENTIAL_BLOCK.num ||
         query.match_level.num === MatchLevel.RESIDENTIAL_DETAIL.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       if (!query.lg_code) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
       const db: IParcelDbGeocode | null = await this.params.dbCtrl.openParcelDb({
@@ -94,13 +97,13 @@ export class ParcelTransform extends Transform {
       });
       if (!db) {
         // DBをオープンできなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       const searchInfo = this.getPrcId(query);
-      if (!query.lg_code) {
-        // もし lgCode がなければスキップする
+      if (!searchInfo) {
+        results.add(query);
         continue;
       }
 
@@ -118,12 +121,12 @@ export class ParcelTransform extends Transform {
 
       // 見つからなかった
       if (findResults.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       findResults.forEach(row => {
-        results.push(query.copy({
+        results.add(query.copy({
           parcel_key: row.parcel_key,
           prc_id: row.prc_id,
           prc_num1: row.prc_num1,
@@ -139,7 +142,7 @@ export class ParcelTransform extends Transform {
       });
     }
 
-    this.params.logger?.info(`parcel : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`parcel : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 
@@ -151,28 +154,57 @@ export class ParcelTransform extends Transform {
     const PARCEL_LENGTH = 5;
     const ZERO_FILL = ''.padStart(PARCEL_LENGTH, '0');
 
-    let p: CharNode | undefined = query.tempAddress;
     const buffer: string[] = [];
     const current: string[] = [];
+    if (!query.tempAddress) {
+      return;
+    }
+
+    const [before, ...after]: CharNode[] = query.tempAddress?.split(SPACE);
+    let head: CharNode | undefined = before?.trimWith(DASH);
+    const kanjiNums = RegExpEx.create(`[${KANJI_NUMS}]`);
 
     // マッチした文字数
     let matchedCnt = 0;
-
-    while (p) {
+    while (head) {
       matchedCnt++;
-      if (p.char === DEFAULT_FUZZY_CHAR) {
+      if (head.char === DEFAULT_FUZZY_CHAR) {
         // fuzzyの場合、任意の１文字
         // TODO: Databaseごとの処理
         current.push('_');
-      } else if (/\d/.test(p.char!)) {
-        current.push(p.char!);
-      } else if (p.char === DASH) {
+      } else if (/\d/.test(head.char!)) {
+        // 数字の後ろの文字をチェック
+        // SPACE, DASH, 漢数字、または終了なら、追加する
+        const tmpBuffer: string[] = [];
+        let pointer: CharNode | undefined = head;
+        while (pointer && isDigitForCharNode(pointer) && !pointer.ignore) {
+          tmpBuffer.push(pointer.char!);
+          pointer = pointer.next?.moveToNext();
+        }
+        
+        if (!pointer || pointer.char === SPACE || kanjiNums.test(pointer.originalChar!)) {
+          current.push(...tmpBuffer);
+          buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+          head = pointer;
+          current.length = 0;
+          matchedCnt += tmpBuffer.length - 1;
+          break;
+        }
+        if (pointer.char === DASH) {
+          current.push(...tmpBuffer);
+          head = pointer;
+          matchedCnt += tmpBuffer.length - 1;
+
+          buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+          current.length = 0;
+        }
+      } else if (head.char === DASH) {
         buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
         current.length = 0;
       } else {
         break;
       }
-      p = p.next;
+      head = head?.next?.moveToNext();
     }
     if (current.length > 0) {
       buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
@@ -184,10 +216,13 @@ export class ParcelTransform extends Transform {
       buffer.push(ZERO_FILL);
     }
     const parcelKey = buffer.join('');
+
     return {
       parcel_key: parcelKey,
-      unmatched: p,
-      matchedCnt
+      unmatched: CharNode.joinWith(new CharNode({
+        char: SPACE,
+      }), head, ...after),
+      matchedCnt,
     };
   }
 }
