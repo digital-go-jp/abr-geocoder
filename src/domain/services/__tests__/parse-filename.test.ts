@@ -96,7 +96,6 @@ describe('parseFilename', () => {
       prefLgCode: "010006",
       path: "foo/bar/mt_rsdtdsp_blk_pref01.zip",
       filename: "mt_rsdtdsp_blk_pref01.zip",
-
     });
   });
   test('prefのlgCodeの値が取得できる', () => {
@@ -110,7 +109,6 @@ describe('parseFilename', () => {
       prefLgCode: "100005",
       path: "mt_pref_pref10.zip",
       filename: "mt_pref_pref10.zip",
-
     });
   });
   test('cityのlgCodeの値が取得できる', () => {
@@ -124,7 +122,6 @@ describe('parseFilename', () => {
       prefLgCode: "120006",
       path: "mt_pref_city123456.zip",
       filename: "mt_pref_city123456.zip",
-
     });
   });
   test('空文字が渡された場合は、nullが返る', () => {

@@ -30,14 +30,16 @@ import { PrefLgCode } from '../types/pref-lg-code';
 /**
  * リソースCSVファイルから、情報を読取る
  *
- * mt_rsdtdsp_blk_pref01.zip というファイル名から
+ * foo/bar/mt_rsdtdsp_blk_pref01.zip というファイル名から
  * 以下のように変換する
  *
  * {
- *   type: 'rsdtdsp_blk',
- *   fileArea: '01'
- *   path: (path to file),
- *   filename: 'mt_rsdtdsp_blk_pref01.csv',
+ *   type: "rsdtdsp_blk",
+ *   type2: "pref",
+ *   lgCode : "01",
+ *   prefLgCode: "010006",
+ *   path: "foo/bar/mt_rsdtdsp_blk_pref01.zip",
+ *   filename: "mt_rsdtdsp_blk_pref01.zip",
  * }
  *
  * @param filename
