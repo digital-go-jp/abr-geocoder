@@ -224,10 +224,13 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       }
       await this.addWorker(params);
       if (params.signal?.aborted) {
+        this.off(addWorkerEvent, onAddWorkerEvent);
         this.close();
         return;
       }
+      setImmediate(() => {
       this.emit(addWorkerEvent);
+      });
     };
 
     await this.addWorker(params);
