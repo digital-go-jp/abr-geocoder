@@ -15,3 +15,5 @@ pnpm-lock.yaml
 db/
 .clinic/
 log.txt
+./.vscode/*.csv
+./.vscode/*.json

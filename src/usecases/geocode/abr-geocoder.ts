@@ -40,23 +40,12 @@ export class AbrGeocoder {
   private isClosed = false;
   private readonly abortController = new AbortController();
 
+
   private constructor(params: {
     geocodeTransformOnMainThread: GeocodeTransform,
     container: AbrGeocoderDiContainer;
     numOfThreads: number;
-    // commonData: {
-    //   prefList: PrefInfo[];
-    //   countyAndCityList: CityMatchingInfo[];
-    //   cityAndWardList: CityMatchingInfo[];
-    //   wardAndOazaList: OazaChoMachingInfo[];
-    //   oazaChomes: OazaChoMachingInfo[];
-    //   tokyo23towns: TownMatchingInfo[];
-    //   tokyo23wards: CityMatchingInfo[];
-    //   wards: WardMatchingInfo[];
-    // };
   }) {
-    // this.abortController.signal.setMaxListeners(0);
-
     // Promiseの resolveに結果を渡す
     const dst = new Writable({
       objectMode: true,
@@ -103,13 +92,15 @@ export class AbrGeocoder {
   }
 
   async geocode(input: AbrGeocoderInput): Promise<QueryJson> {
-    // バックグラウンドスレッドが準備できるまでは
-    // メインスレッドで処理する
+    // バックグラウンドスレッドが利用できるときは、そちらで処理する
     if (this.workerPool) {
       return this.workerPool.run(input);
     }
 
     const lineId = ++this._total;
+
+    // バックグラウンドスレッドが準備できるまでは
+    // メインスレッドで処理する
     return new Promise((resolve: (result: QueryJson) => void) => {
       let taskId = Math.floor(performance.now() + Math.random() * performance.now());
       while (this.resolvers.has(taskId)) {

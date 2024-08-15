@@ -175,7 +175,6 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
   private readonly kWorkerFreedEvent = Symbol('kWorkerFreedEvent');
   private workers: WorkerThread<InitData, TransformData, ReceiveData>[] = [];
   private readonly abortControl = new AbortController();
-
   private waitingTasks: WorkerPoolTaskInfo<TransformData, ReceiveData>[] = [];
 
   static readonly create = <InitData, TransformData, ReceiveData>(params : {
