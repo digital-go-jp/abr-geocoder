@@ -38,8 +38,8 @@ export const provideDatabase = async ({
   // We use these dangerous settings to improve performance, because if data is corrupted,
   // we can always just regenerate the database.
   // ref: https://qastack.jp/programming/1711631/improve-insert-per-second-performance-of-sqlite
-  db.pragma('journal_mode = MEMORY');
-  db.pragma('synchronous = OFF');
+  // db.pragma('journal_mode = MEMORY');
+  // db.pragma('synchronous = OFF');
   db.exec(schemaSQL);
   return db;
 };
