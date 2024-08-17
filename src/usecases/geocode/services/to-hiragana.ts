@@ -24,7 +24,6 @@
 
 import { CharNode } from "./trie/char-node";
 
-
 const hiraganaMap = new Map<string, string>([
   ['ｶﾞ', 'が'],
   ['ｷﾞ', 'ぎ'],
@@ -243,7 +242,9 @@ export const toHiraganaForCharNode = (target: CharNode | undefined): CharNode | 
   let head = target;
   const root = target;
   while (head && head.char) {
-    head.char = hiraganaMap.get(head.char) || head.char;
+    if (!head.ignore) {
+      head.char = hiraganaMap.get(head.char) || head.char;
+    }
     head = head.next;
   }
   return root;

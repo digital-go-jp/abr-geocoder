@@ -31,7 +31,10 @@ import { CityMatchingInfo } from '@domain/types/geocode/city-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import timers from 'node:timers/promises';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { QuerySet } from '../models/query-set';
+import { toKatakana } from '../services/to-katakana';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class CityAndWardTransform extends Transform {
 
@@ -63,7 +66,7 @@ export class CityAndWardTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     next: TransformCallback
   ) {
@@ -74,28 +77,31 @@ export class CityAndWardTransform extends Transform {
       }
     }
 
-    const results: Query[] = [];
-    for (const query of queries) {
+    const results = new QuerySet();
+    for (const query of queries.values()) {
       // 〇〇郡〇〇市町村 が判明できていれば、スキップ
       if (query.match_level.num === MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
-      if (!query.tempAddress) {
-        results.push(query);
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      if (!target) {
+        results.add(query);
         continue;
       }
       // -----------------------------
       // 〇〇市 or 〇〇市〇〇区 を探索する
       // -----------------------------
       const matched = this.cityAndWardTrie.find({
-        target: query.tempAddress,
+        target,
         extraChallenges: ['市', '区'],
         partialMatches: true,
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!matched || matched.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
@@ -112,7 +118,7 @@ export class CityAndWardTransform extends Transform {
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;
         anyHit = true;
 
-        results.push(query.copy({
+        results.add(query.copy({
           pref: query.pref || mResult.info!.pref,
           pref_key: query.pref_key || mResult.info!.pref_key,
           city_key: mResult.info!.city_key,
@@ -130,11 +136,11 @@ export class CityAndWardTransform extends Transform {
         }));
       }
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
 
-    this.logger?.info(`city-and-ward : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.logger?.info(`city-and-ward : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     next(null, results);
   }
 

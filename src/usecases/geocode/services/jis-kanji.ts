@@ -317,6 +317,8 @@ const jisKanjiMap = new Map<string, string>([
   ['籠', '篭'],
   ['彌', '弥'],
   ['萩', '荻'],
+  ['磐', '盤'],
+  ['秦', '奏'],
 ]);
 
 

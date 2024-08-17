@@ -25,6 +25,7 @@
 import { DASH, SPACE } from "@config/constant-values";
 import { CharNode } from "./trie/char-node";
 
+
 const kanjiNum = new Map<string, number>([
   ['壱', 1],
   ['一', 1],
@@ -190,10 +191,34 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
   let lastWasTen = false; // 直前の文字が「十」かどうか
 
   let head = target;
+  let headNext: CharNode | undefined;
+
   while (head && (head.ignore || head.char)) {
     if (head.ignore || !head.char) {
+      if (buffer.length > 0) {
+        // 1文字ずつに変換する
+        const tmp = currentNumber.toString().split('');
+        for (const node of buffer) {
+          if (tmp.length === 0) {
+            break;
+          }
+          node.char = tmp.shift();
+          result.push(node); 
+        }
+        while (tmp.length > 0) {
+          result.push(new CharNode({
+            originalChar: '',
+            char: tmp.shift()!,
+          }));
+        }
+        buffer.length = 0;
+        currentNumber = 0;
+        lastWasTen = false;
+      }
+      headNext = head.next;
+      head.next = undefined;
       result.push(head);
-      head = head.next;
+      head = headNext;
       continue;
     }
 
@@ -218,14 +243,19 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
           result.push(node); 
         }
         while (tmp.length > 0) {
-          result.push(new CharNode('', tmp.shift()));
+          result.push(new CharNode({
+            originalChar: '',
+            char: tmp.shift()!,
+          }));
         }
       }
       buffer.length = 0;
       currentNumber = 0;
-      lastWasTen = false; 
+      lastWasTen = false;
+      headNext = head.next;
+      head.next = undefined; 
       result.push(head);
-      head = head.next;
+      head = headNext;
       continue;
     }
     
@@ -246,8 +276,11 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
         currentNumber = currentNumber * 10 + num;
       }
     }
+    headNext = head.next;
+    head.next = undefined;
     buffer.push(head);
-    head = head.next;
+
+    head = headNext;
   }
 
   // 最後の数値を追加（末尾が「十」の場合の処理を修正）
@@ -260,7 +293,10 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
         result.push(node); 
       }
       while (tmp.length > 0) {
-        result.push(new CharNode('', tmp.shift()));
+        result.push(new CharNode({
+          originalChar: '',
+          char: tmp.shift()!,
+        }));
       }
     } else {
       while (buffer.length > 0) {
@@ -281,7 +317,9 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
     // buffer.length = 0;
   }
 
-  const resultNode = new CharNode('', '');
+  const resultNode = new CharNode({
+    char: '',
+  });
   let tail = resultNode;
   for (const node of result) {
     tail.next = node;

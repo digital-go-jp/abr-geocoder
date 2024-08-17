@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { ChomeMachingInfo } from '@domain/types/geocode/chome-info';
@@ -34,6 +34,8 @@ import { kan2num, kan2numForCharNode } from '../services/kan2num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { QuerySet } from '../models/query-set';
+import { toKatakana, toKatakanaForCharNode } from '../services/to-katakana';
 
 export class ChomeTranform extends Transform {
 
@@ -81,32 +83,32 @@ export class ChomeTranform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
     // ------------------------
     // 丁目で当たるものがあるか
     // ------------------------
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
 
       // 丁目を探索するためには、最低限でも city_key が分かっている必要がある。)
       // match_level = unknow, prefecture はスキップする
       if (query.match_level.num < MatchLevel.CITY.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
       // 丁目が既に判明している場合はスキップ
       if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -116,7 +118,7 @@ export class ChomeTranform extends Transform {
       const conditions = this.createWhereCondition(query);
       if (!conditions) {
         // 探索する条件が絞り込めなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -134,9 +136,11 @@ export class ChomeTranform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = this.normalizeCharNode(query.tempAddress);
+      const target = query.tempAddress?.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
       if (!target) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       const findResults = trie.find({
@@ -162,7 +166,7 @@ export class ChomeTranform extends Transform {
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         // 丁目がヒットした
-        results.push(query.copy({
+        results.add(query.copy({
           chome: findResult.info.chome,
           tempAddress: findResult.unmatched,
           town_key: findResult.info.town_key,
@@ -181,11 +185,11 @@ export class ChomeTranform extends Transform {
       });
 
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
 
-    this.params.logger?.info(`chome : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`chome : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
   
@@ -193,7 +197,7 @@ export class ChomeTranform extends Transform {
     // 漢数字を半角数字に変換する
     address = kan2num(address);
 
-    // カタカナはひらがなに変換する
+    // 片仮名は平仮名に変換する
     address = toHiragana(address);
     
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
@@ -201,34 +205,38 @@ export class ChomeTranform extends Transform {
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
+    address = address?.replaceAll(RegExpEx.create('(\d)丁目?', 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
+    address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
 
     return address;
   }
   
   private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
 
-    // 漢数字を半角数字に変換する
-    address = kan2numForCharNode(address);
+    let copyed = address?.clone();
 
-    // カタカナはひらがなに変換する
-    address = toHiraganaForCharNode(address);
+    // 漢数字を半角数字に変換する
+    copyed = kan2numForCharNode(copyed);
+
+    // 片仮名は平仮名に変換する
+    copyed = toHiraganaForCharNode(copyed);
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
+    copyed = jisKanjiForCharNode(copyed);
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
+    copyed = copyed?.replaceAll(RegExpEx.create('(\d)丁目?', 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
+    copyed = copyed?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    copyed = copyed?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
 
-    return address;
+    return copyed;
   }
 }

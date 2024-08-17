@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI } from '@config/constant-values';
+import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, OAZA_BANCHO, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -35,6 +35,8 @@ import { toHankakuAlphaNum, toHankakuAlphaNumForCharNode } from '../services/to-
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { QuerySet } from '../models/query-set';
+import { toKatakana, toKatakanaForCharNode } from '../services/to-katakana';
 
 export class OazaChomeTransform extends Transform {
 
@@ -93,23 +95,23 @@ export class OazaChomeTransform extends Transform {
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback
   ) {
     // ------------------------
     // 大字・丁目・小字で当たるものがあるか
     // ------------------------
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
       if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
         // 大字が既に判明している場合はスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.push(query);
+        results.add(query);
         continue;
       }
       
@@ -130,9 +132,16 @@ export class OazaChomeTransform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = this.normalizeCharNode(query.tempAddress);
+      const copiedQuery = this.normalizeQuery(query);
+      if (!copiedQuery.tempAddress) {
+        results.add(copiedQuery);
+        continue;
+      }
+      const target = query.tempAddress.
+        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
       if (!target) {
-        results.push(query);
+        results.add(copiedQuery);
         continue;
       }
       // 小字に数字が含まれていて、それが番地にヒットする場合がある。
@@ -176,8 +185,8 @@ export class OazaChomeTransform extends Transform {
       filteredResult?.forEach(findResult => {
         // step2, step3で city_key が判別している場合で
         // city_key が異なる場合はスキップ
-        if ((query.city_key !== undefined) &&
-          (query.city_key !== findResult.info?.city_key)) {
+        if ((copiedQuery.city_key !== undefined) &&
+          (copiedQuery.city_key !== findResult.info?.city_key)) {
           return;
         }
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
@@ -186,7 +195,7 @@ export class OazaChomeTransform extends Transform {
         anyHit = true;
         if (info.rsdt_addr_flg === AMBIGUOUS_RSDT_ADDR_FLG) {
           // 大字までヒットした
-          results.push(query.copy({
+          results.add(copiedQuery.copy({
             pref_key: info.pref_key,
             city_key: info.city_key,
             town_key: info.town_key,
@@ -201,15 +210,14 @@ export class OazaChomeTransform extends Transform {
             tempAddress: findResult.unmatched,
             match_level: MatchLevel.MACHIAZA,
             coordinate_level: MatchLevel.CITY,
-            matchedCnt: query.matchedCnt + findResult.depth,
-            ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
+            matchedCnt: copiedQuery.matchedCnt + findResult.depth,
+            ambiguousCnt: copiedQuery.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
           }));
-
           return;
         }
 
         // 小字までヒットした
-        results.push(query.copy({
+        results.add(copiedQuery.copy({
           pref_key: info.pref_key,
           city_key: info.city_key,
           town_key: info.town_key,
@@ -226,36 +234,40 @@ export class OazaChomeTransform extends Transform {
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.MACHIAZA_DETAIL,
           coordinate_level: MatchLevel.MACHIAZA_DETAIL,
-          matchedCnt: query.matchedCnt + findResult.depth,
+          matchedCnt: copiedQuery.matchedCnt + findResult.depth,
         }));
       });
 
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
-    this.logger?.info(`oaza-cho : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.logger?.info(`oaza-cho : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 
   private normalizeStr(address: string): string {
-    // 漢数字を半角数字に変換する
-    address = kan2num(address);
-
     // 全角英数字は、半角英数字に変換
     address = toHankakuAlphaNum(address);
 
-    // カタカナはひらがなに変換する
+    // 片仮名は平仮名に変換する
     address = toHiragana(address);
     
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
     address = jisKanji(address);
 
+    // 漢数字を半角数字に変換する
+    address = kan2num(address);
+
     // 「無番地」を「MUBANCHI」にする
     address = address?.replace(RegExpEx.create('無番地'), MUBANCHI);
     
-    // 「番地」「番丁」「番街」「番町」「番」「番地の」をDASHにする
-    address = address?.replace(RegExpEx.create('番[丁地街町]?[の目]?'), DASH);
+    // 大字が「番町」の場合があるので、置換する
+    address = address?.replace(RegExpEx.create('番町', 'g'), OAZA_BANCHO);
+
+    // 「番地」「番丁」「番街」「番」「番地の」をDASHにする
+    address = address?.replace(RegExpEx.create('番[丁地街]'), DASH);
+    address = address?.replace(RegExpEx.create('番[の目]'), DASH);
 
     // 「大字」「字」がある場合は削除する
     address = address.replace(RegExpEx.create('大?字'), '');
@@ -269,65 +281,83 @@ export class OazaChomeTransform extends Transform {
     // 「条」「条通」「条通り」を DASH にする
     address = address.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
 
-    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
+    // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    address = address.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[地丁]?|軒|号|部|条通?|字)', 'g'), `$1${DASH}`);
+    address = address.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[地丁]?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
 
-    // 「通り」の「り」が省略されることがあるので、「通」だけにしておく
-    address = address.replace(RegExpEx.create('の?通り?'), '通');
+    // 北海道に「太田五の通り」という大字がある。DASHにする
+    address = address?.replace(RegExpEx.create('の通り?'), DASH);
+    address = address?.replace(RegExpEx.create('通り'), DASH);
 
-    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく → どうもこれ、うまく機能しない。別の方法を考える
+    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
     // address = address.replace(RegExpEx.create('(.{2,})町'), '$1');
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
-
+    address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
+    address = address?.replaceAll(RegExpEx.create('之', 'g'), DASH);
+    
     return address;
   }
-  private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
+  private normalizeQuery(query: Query): Query {
+
+    let address: CharNode | undefined = query.tempAddress?.trimWith(DASH);
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
+    // address = jisKanjiForCharNode(address);
 
-    // 全角英数字は、半角英数字に変換
-    address = toHankakuAlphaNumForCharNode(address);
+    // // 全角英数字は、半角英数字に変換
+    // address = toHankakuAlphaNumForCharNode(address);
 
-    // 半角カナ・全角カナを平仮名に変換する
-    address = toHiraganaForCharNode(address);
+    // // 半角カナ・全角カナを平仮名に変換する
+    // address = toHiraganaForCharNode(address);
 
-    // 「丁目」をDASH に変換する
-    // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replace(RegExpEx.create('番[丁地街町]?[の目]?'), DASH);
+    // // 「丁目」をDASH に変換する
+    // // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
+    // address = address?.replace(RegExpEx.create('番[丁地街]'), DASH);
+    // address = address?.replace(RegExpEx.create('番[の目]'), DASH);
 
-    // 「大字」「字」がある場合は削除する
-    address = address?.replace(RegExpEx.create('大?字'), '');
+    // // 「大字」「字」がある場合は削除する
+    // address = address?.replace(RegExpEx.create('大?字'), '');
     
-    // 「丁目」をDASH に変換する
-    // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
+    // // 「丁目」をDASH に変換する
+    // // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
+    // address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
     
-    // 京都の「四条通」の「通」が省略されることがある
-    // 北海道では「春光四条二丁目1-1」を「春光4-2-1-1」と表記する例がある
-    // 「条」「条通」「条通り」を DASH にする
-    address = address?.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
+    // // 京都の「四条通」の「通」が省略されることがある
+    // // 北海道では「春光四条二丁目1-1」を「春光4-2-1-1」と表記する例がある
+    // // 「条」「条通」「条通り」を DASH にする
+    // address = address?.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
     
-    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
-    // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
-    // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    address = address?.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[丁地街町]?|軒|号|部|条通?|字)', 'g'), `$1${DASH}`);
+    // // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
+    // // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
+    // // トライ木でマッチすれば良いだけなので、正確である必要性はない
+    // address = address?.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[丁地街町]?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
 
-    // 「通り」の「り」が省略されることがあるので、「通」だけにしておく
-    address = address?.replace(RegExpEx.create('の?通り?'), '通');
+    // // 「通り」の「り」が省略されることがあるので、「通」だけにしておく
+    // address = address?.replace(RegExpEx.create('の通り?'), '通');
+    // address = address?.replace(RegExpEx.create('通り'), '通');
 
-    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく → どうもこれ、うまく機能しない。別の方法を考える
-    // address = address?.replace(RegExpEx.create('(.{2,})町'), '$1');
+    // // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
+    // // address = address?.replace(RegExpEx.create('(.{2,})町'), '$1');
 
-    // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
-    // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
-    
-    return address;
+    // // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
+    // // 「の」は全部DASHに変換する
+    // address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    // address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
+    // address = address?.replaceAll(RegExpEx.create('之', 'g'), DASH);
+
+    if (query.city === '福井市' && query.pref === '福井県') {
+      address = address?.replaceAll(RegExpEx.create('^99', 'g'), 'つくも');
+    }
+    if (query.city === '海田町' && query.pref === '広島県' && query.county === '安芸郡') {
+      address = address?.replaceAll(RegExpEx.create('^(南)?99町', 'g'), '\$1つくも町');
+    }
+
+    return query.copy({
+      tempAddress: address,
+    });
   }
 }

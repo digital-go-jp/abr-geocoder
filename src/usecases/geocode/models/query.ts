@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DASH_SYMBOLS, NUMRIC_SYMBOLS, SPACE_SYMBOLS } from '@config/constant-values';
+import { DASH, DASH_SYMBOLS, NUMRIC_SYMBOLS, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { getLevenshteinDistanceRatio } from '../services/get-levenshtein-distance-ratio';
@@ -29,6 +29,9 @@ import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { CharNode } from '../services/trie/char-node';
 import { SearchTarget } from '@domain/types/search-target';
 import { AbrGeocoderInput } from './abrg-input-data';
+import { kan2num } from '../services/kan2num';
+import { query } from 'winston';
+import { QuerySet } from './query-set';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）
@@ -349,20 +352,24 @@ export class Query implements IQuery {
     }
 
     if (this.tempAddress) {
-      const other = this.tempAddress?.
-        replace(RegExpEx.create(`[${DASH}${SPACE_SYMBOLS}]+$`), '')?.
-        toOriginalString() || '';
-      if (
-        (
-          this.match_level.num === MatchLevel.RESIDENTIAL_DETAIL.num ||
-          this.match_level.num === MatchLevel.PARCEL.num
-        ) &&
-        (!RegExpEx.create(`^[${NUMRIC_SYMBOLS}]`).test(other)) &&
-        (!other.match(RegExpEx.create(`^[${DASH_SYMBOLS}0-9]`)))
-      ) {
-        formatted_address.push(' ');
+      const other = this.tempAddress?.toOriginalString()?.trim() || undefined;
+      if (other) {
+        if (!RegExpEx.create(`[号番通条町街丁階線F${DASH}${SPACE}]`).test(formatted_address.at(-1) || '')) {
+          const isTailDigit = RegExpEx.create('[0-9]').test(formatted_address.at(-1) || '');
+          const isHeadDigit = RegExpEx.create('[0-9]').test(other[0]);
+          const isHeadDash = other[0] === '-';
+          if (
+            // 末尾が数字 で otherの始まりも数字の場合、 1 234号室などなので、スペースを入れる
+            (isTailDigit && isHeadDigit) ||
+            // 末尾が数字 で otherの始まりはDASHではない場合、 1 234号室などなので、スペースを入れる
+            (isTailDigit && !isHeadDash)
+          ) {
+            // formatted_address.push('✅');
+            formatted_address.push(' ');
+          }
+        }
+        formatted_address.push(other);
       }
-      formatted_address.push(other);
     }
 
     // 最終的な文字列を作成

@@ -21,8 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { SINGLE_DASH_ALTERNATIVE } from '@config/constant-values';
+import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from '@config/constant-values';
 import { EnvProvider } from '@domain/models/env-provider';
+import { countRequests } from '@domain/services/count-requests';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
 import { resolveHome } from '@domain/services/resolve-home';
 import { upwardFileSearch } from '@domain/services/upward-file-search';
@@ -39,7 +40,6 @@ import path from 'node:path';
 import { Writable } from 'node:stream';
 import streamPromises from 'node:stream/promises';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
-
 
 /**
  * abrg geocode
@@ -91,7 +91,7 @@ const geocodeCommand: CommandModule = {
         describe: AbrgMessage.toString(
           AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
         ),
-        coerce: (fuzzy: string) => {
+        coerce: fuzzy => {
           if (fuzzy.length !== 1) {
             console.error(
               AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR)
@@ -159,8 +159,8 @@ const geocodeCommand: CommandModule = {
     if (!argv['inputFile']) {
       return;
     }
-    const source = argv['inputFile'];
-    const destination = argv['outputFile'];
+    const source = argv['inputFile'] as string;
+    const destination = argv['outputFile'] as string | undefined;
 
     // ジオコーディングにかかる時間を表示
     if (argv.debug) {
@@ -171,7 +171,12 @@ const geocodeCommand: CommandModule = {
     // silentの指定がなく、ファイル入力の場合のみ作成される。
     const progressBar = (argv.silent || destination === '-' || destination === undefined) ?
       undefined : createSingleProgressBar();
-    progressBar?.start(1, 0);
+    progressBar?.start(2, 0);
+    if (progressBar) {
+      progressBar.update(1, {
+        'message': 'preparing...',
+      });
+    }
 
     // ワークスペース
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
@@ -189,7 +194,7 @@ const geocodeCommand: CommandModule = {
     // 出力先（ファイル or stdout）の選択
     const outputStream: Writable = (destination => {
       if (destination === '' || destination === undefined) {
-        // ThreadGeocodeTransformで 各スレッドがstdout を使用しようとして、
+        // ThreadGeocodeTransformで　各スレッドがstdout を使用しようとして、
         // イベントリスナーを取り合いになるため、以下の警告が発生する模様。
         // 動作的には問題ないので、 process.stdout.setMaxListeners(0) として警告を殺す。
         //
@@ -218,24 +223,47 @@ const geocodeCommand: CommandModule = {
       });
     }
 
+    // ジオコーダーの作成と、ファイルからリクエスト数のカウントを並行して行う
+    const tasks: [
+      Promise<AbrGeocodeStream>,
+      Promise<number>
+    ] = [
+      // ジオコーダーの作成
+      AbrGeocodeStream.create({
+        fuzzy: argv.fuzzy || DEFAULT_FUZZY_CHAR,
+        searchTarget: argv.target || SearchTarget.ALL,
+        cacheDir: path.join(abrgDir, 'cache'),
+        database: {
+          type: 'sqlite3',
+          dataDir: path.join(abrgDir, 'database'),
+          schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
+        },
+        debug,
+        progress(current: number, total: number) {
+          progressBar?.update(current);
+        },
+      }),
+      
+      (() => {
+        if (source !== '-' && progressBar) {
+          // ファイルの場合は、先に合計数を数えておく
+          return countRequests(source);
+        } else {
+          return Promise.resolve(0);
+        }
+      })()
+    ];
+    const [geocoder, total] = await Promise.all(tasks);
+    if (progressBar) {
+      progressBar.update(0, {
+        message: 'geocoding...',
+      });
+      // 合計のリクエスト数をセット
+      progressBar?.setTotal(total);
+    }
+    
     // ジオコーディングを行う
-    const geocoder = new AbrGeocodeStream({
-      fuzzy: argv.fuzzy,
-      searchTarget: argv.target || SearchTarget.ALL,
-      database: {
-        type: 'sqlite3',
-        dataDir: path.join(abrgDir, 'database'),
-        schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
-      },
-      debug,
-      progress(current: number, total: number) {
-        progressBar?.setTotal(total);
-        progressBar?.update(current);
-      }
-    });
-
     const lineByLine = new LineStream();
-
     await streamPromises.pipeline(
       srcStream,
       lineByLine,

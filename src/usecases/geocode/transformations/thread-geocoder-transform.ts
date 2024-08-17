@@ -21,14 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { SearchTarget } from '@domain/types/search-target';
 import { Duplex } from 'node:stream';
 import timers from 'node:timers/promises';
 import { AbrGeocoder } from '../abr-geocoder';
-import { AbrGeocoderInput } from '../models/abrg-input-data';
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
+import { AbrGeocoderInput } from '../models/abrg-input-data';
 import { Query, QueryJson } from '../models/query';
-import { SearchTarget } from '@domain/types/search-target';
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 // import inspector from "node:inspector";
 
 export class ThreadGeocodeTransform extends Duplex {
@@ -79,7 +79,7 @@ export class ThreadGeocodeTransform extends Duplex {
 
     while (this.outputs.length > 0 && this.outputs[0].input.data.tag === this.nextIdx) {
       this.push(this.outputs.shift()!);
-      this.emit('progress', this.nextIdx, this.writeIdx, this.isPaused());
+      this.emit('progress', this.nextIdx, this.writeIdx);
       this.nextIdx++;
     }
     
@@ -95,15 +95,16 @@ export class ThreadGeocodeTransform extends Duplex {
     this.push(null);
   }
 
-  private async waiter(): Promise<void> {
+  private async waiter() {
     // Out of memory を避けるために、受け入れを一時停止
     // 処理済みが追いつくまで、待機する
     const waitingCnt = this.writeIdx - this.nextIdx;
     if (waitingCnt < 2000) {
       return;
     }
+
     while (this.writeIdx - this.nextIdx > 1000) {
-      await timers.setTimeout(100);
+      await timers.setTimeout(50);
     }
   }
 
@@ -115,11 +116,8 @@ export class ThreadGeocodeTransform extends Duplex {
   ) {
     await this.waiter();
 
-    // 次のタスクをもらうために、先にcallbackを呼び出す
-    setImmediate(() => callback());
-
-    // 入力順をキープするため、行番号を与える
     const lineId = ++this.writeIdx;
+
     if (typeof input === 'string') {
       input = {
         address: input,
@@ -129,7 +127,7 @@ export class ThreadGeocodeTransform extends Duplex {
       };
     }
 
-    await this.geocoder.geocode(input)
+    this.geocoder.geocode(input)
       // 処理が成功したら、別スレッドで処理した結果をQueryに変換する
       .then((result: QueryJson) => {
         this.emit(this.kShiftEvent, Query.from(result));
@@ -141,6 +139,9 @@ export class ThreadGeocodeTransform extends Duplex {
     //     match_level: MatchLevel.ERROR,
     //   }));
     // })
+
+    // 次のタスクをもらうために、callbackを呼び出す
+    callback();
   }
 
   // 前のストリームからの書き込みが終了した
