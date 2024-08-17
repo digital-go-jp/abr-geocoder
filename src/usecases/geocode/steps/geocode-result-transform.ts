@@ -21,13 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Transform, TransformCallback } from 'node:stream';
-import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE, SPACE_SYMBOLS, VIRTUAL_SPACE } from '@config/constant-values';
+import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
+import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
-import { CharNode } from '../services/trie/char-node';
 import { QuerySet } from '../models/query-set';
+import { CharNode } from '../services/trie/char-node';
 
 export class GeocodeResultTransform extends Transform {
 
@@ -165,11 +165,11 @@ export class GeocodeResultTransform extends Transform {
     result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)$'), '');
 
     // 先頭が省略可能な記号ならハイフンにする
-    result = result.replace(RegExpEx.create('^(?:番地の?|地番|番の?|の|之|丿|ノ|\-)([0-9])'), `${DASH}$1`);
+    result = result.replace(RegExpEx.create('^(?:番地の?|地番|番の?|の|之|丿|ノ|-)([0-9])'), `${DASH}$1`);
     result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)(?![室棟区館階])'), '');
       
     // 末尾が省略可能な記号”だけ”なら削除
-    result = result.replace(RegExpEx.create('([0-9])(?:号|番地|地番|番|の|之|丿|ノ|\-)([0-9])'), `$1${DASH}$2`);
+    result = result.replace(RegExpEx.create('([0-9])(?:号|番地|地番|番|の|之|丿|ノ|-)([0-9])'), `$1${DASH}$2`);
 
     // もとに戻す
     result = result.replaceAll(RegExpEx.create(DASH, 'g'), '-');

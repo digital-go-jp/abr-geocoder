@@ -26,6 +26,7 @@ import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
 import path from 'node:path';
 import { Duplex, TransformCallback } from 'node:stream';
+import timers from 'node:timers/promises';
 import { ParseWorkerInitData } from '../workers/csv-parse-worker';
 
 export class CsvParseTransform extends Duplex {

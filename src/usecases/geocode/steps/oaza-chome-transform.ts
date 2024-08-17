@@ -29,14 +29,13 @@ import { OazaChoMachingInfo } from '@domain/types/geocode/oaza-cho-info';
 import { Transform, TransformCallback } from 'node:stream';
 import timers from 'node:timers/promises';
 import { Query } from '../models/query';
-import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
+import { QuerySet } from '../models/query-set';
+import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
-import { toHankakuAlphaNum, toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
-import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
+import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
+import { toHiragana } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { QuerySet } from '../models/query-set';
-import { toKatakana, toKatakanaForCharNode } from '../services/to-katakana';
 
 export class OazaChomeTransform extends Transform {
 
@@ -281,7 +280,7 @@ export class OazaChomeTransform extends Transform {
     // 「条」「条通」「条通り」を DASH にする
     address = address.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
 
-    // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
+    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
     address = address.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[地丁]?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
@@ -290,7 +289,7 @@ export class OazaChomeTransform extends Transform {
     address = address?.replace(RegExpEx.create('の通り?'), DASH);
     address = address?.replace(RegExpEx.create('通り'), DASH);
 
-    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
+    // 「〇〇町」の「町」が省略されることがあるので、、削除しておく → どうもこれ、うまく機能しない。別の方法を考える
     // address = address.replace(RegExpEx.create('(.{2,})町'), '$1');
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
@@ -331,7 +330,7 @@ export class OazaChomeTransform extends Transform {
     // // 「条」「条通」「条通り」を DASH にする
     // address = address?.replace(RegExpEx.create(`([0-9]+)(?:条|条通|条通り)`, 'g'), `$1${DASH}`);
     
-    // // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
+    // // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
     // // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // // トライ木でマッチすれば良いだけなので、正確である必要性はない
     // address = address?.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[丁地街町]?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
@@ -340,7 +339,7 @@ export class OazaChomeTransform extends Transform {
     // address = address?.replace(RegExpEx.create('の通り?'), '通');
     // address = address?.replace(RegExpEx.create('通り'), '通');
 
-    // // 「〇〇町」の「町」が省略されることがあるので、、削除しておく　→ どうもこれ、うまく機能しない。別の方法を考える
+    // // 「〇〇町」の「町」が省略されることがあるので、、削除しておく → どうもこれ、うまく機能しない。別の方法を考える
     // // address = address?.replace(RegExpEx.create('(.{2,})町'), '$1');
 
     // // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
@@ -353,7 +352,7 @@ export class OazaChomeTransform extends Transform {
       address = address?.replaceAll(RegExpEx.create('^99', 'g'), 'つくも');
     }
     if (query.city === '海田町' && query.pref === '広島県' && query.county === '安芸郡') {
-      address = address?.replaceAll(RegExpEx.create('^(南)?99町', 'g'), '\$1つくも町');
+      address = address?.replaceAll(RegExpEx.create('^(南)?99町', 'g'), '$1つくも町');
     }
 
     return query.copy({

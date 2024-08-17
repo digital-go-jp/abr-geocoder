@@ -283,7 +283,7 @@ if (!isMainThread && parentPort) {
       objectMode: true,
       write: (query: Query, _, callback) => {
         const data = query.toJSON();
-        const sharedMemory = toSharedMemory<ThreadJobResult<any>>({
+        const sharedMemory = toSharedMemory<ThreadJobResult<unknown>>({
           taskId: query.input.taskId,
           data,
           kind: 'result',

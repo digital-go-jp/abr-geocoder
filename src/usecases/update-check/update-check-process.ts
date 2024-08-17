@@ -39,7 +39,7 @@ import { UpdateCheckResult, UpdateCheckTransform } from "./models/update-check-t
 
 export type UpdateCheckOptions = {
   // 進み具合を示すプログレスのコールバック
-  progress?: (current: number, total: number) => void;
+  progress?: (current: number) => void;
 };
 
 export class UpdateChecker {
@@ -105,12 +105,11 @@ export class UpdateChecker {
     const updatedPackageIDs: PackageInfo[] = [];
 
     // 各パッケージIDをチェック
-    const total = packages.length;
     const dst = new CounterWritable({
       write: (result: UpdateCheckResult, _, callback) => {
         // プログレスバーに進捗を出力する
         if (options.progress) {
-          setImmediate(() => options.progress && options.progress(dst.count, total));
+          setImmediate(() => options.progress && options.progress(dst.count));
         }
         if (result.needUpdate) {
           updatedPackageIDs.push(result.packageInfo)

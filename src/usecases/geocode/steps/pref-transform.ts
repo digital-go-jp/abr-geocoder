@@ -23,18 +23,16 @@
  */
 import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { PrefInfo } from '@domain/types/geocode/pref-info';
 import { Transform, TransformCallback } from 'node:stream';
 import timers from 'node:timers/promises';
-import { Query } from '../models/query';
+import { QuerySet } from '../models/query-set';
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { QuerySet } from '../models/query-set';
-import { toKatakana } from '../services/to-katakana';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class PrefTransform extends Transform {
 
@@ -70,12 +68,9 @@ export class PrefTransform extends Transform {
     next: TransformCallback
   ) {
     if (!this.initialized) {
-      await new Promise(async (resolve: (_?: unknown[]) => void) => {
-        while (!this.initialized) {
-          await timers.setTimeout(100);
-        }
-        resolve();
-      });
+      while (!this.initialized) {
+        await timers.setTimeout(100);
+      }
     }
  
     const results = new QuerySet();

@@ -21,19 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { BEGIN_SPECIAL, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, END_SPECIAL, J_DASH, KANJI_NUMS, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, NUMRIC_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS, VIRTUAL_SPACE, ZENKAKU } from '@config/constant-values';
+import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, J_DASH, KANJI_NUMS, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { Transform, TransformCallback } from 'node:stream';
 import { Query, QueryInput } from '../models/query';
+import { QuerySet } from '../models/query-set';
+import { isDigitForCharNode } from '../services/is-number';
 import { jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2numForCharNode } from '../services/kan2num';
 import { toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
 import { toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
-import { QuerySet } from '../models/query-set';
-import { toKatakanaForCharNode } from '../services/to-katakana';
-import { isDigitForCharNode } from '../services/is-number';
 
 export class NormalizeTransform extends Transform {
 
@@ -112,7 +111,7 @@ export class NormalizeTransform extends Transform {
     // 英数字を半角にする
     address = toHankakuAlphaNumForCharNode(address);
 
-    // 数字＋ダッシュ　または ダッシュ+数字　の組み合わせのとき、ダッシュを DASHにする
+    // 数字＋ダッシュ または ダッシュ+数字 の組み合わせのとき、ダッシュを DASHにする
     // (ダッシュの記号は類似するものが多いので、統一する)
     address = address?.replaceAll(
       RegExpEx.create(
@@ -124,7 +123,7 @@ export class NormalizeTransform extends Transform {
       },
     );
 
-    // 〇〇町や〇〇番地　より前にある SPACEはすべて削除
+    // 〇〇町や〇〇番地 より前にある SPACEはすべて削除
     address = address?.replace(
       RegExpEx.create(`(.+)(丁目?|番(町|地|丁)|条|軒|線|(${J_DASH})町|地割)`),
       (match: string) => {
@@ -157,7 +156,6 @@ export class NormalizeTransform extends Transform {
 
     // 12-34-56号室 や 12-34-5号棟 の場合、4-5の間の DASH をスペースに置換する
     address = insertSpaceBeforeRoomOrFacility(address);
-    const tmp = address?.toProcessedString();
     
     // 「大字」「字」を削除する
     address = address?.replaceAll(RegExpEx.create('大?字', 'g'), '');

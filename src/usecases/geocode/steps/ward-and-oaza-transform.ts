@@ -21,19 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { OazaChoMachingInfo } from '@domain/types/geocode/oaza-cho-info';
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../models/query';
+import timers from 'node:timers/promises';
+import { QuerySet } from '../models/query-set';
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import timers from 'node:timers/promises';
-import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
-import { QuerySet } from '../models/query-set';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class WardAndOazaTransform extends Transform {
 

@@ -80,7 +80,11 @@ export class CharNode {
     let root: CharNode | undefined = this.clone();
 
     if (typeof search === 'string') {
-      search = new RegExp(search, 'g');
+      if (search !== '?') {
+        search = new RegExp(search, 'g');
+      } else {
+        search = /\?/g;
+      }
     }
     const matches = this.toProcessedString().matchAll(search);
     if (!matches) {
@@ -276,7 +280,7 @@ export class CharNode {
     let match: RegExpExecArray | null;
     const txt = this.toProcessedString();
     let root: CharNode | undefined = this.clone();
-    let buffer = new CharNode({
+    const buffer = new CharNode({
       char: '',
     });
     let tail: CharNode | undefined = buffer;

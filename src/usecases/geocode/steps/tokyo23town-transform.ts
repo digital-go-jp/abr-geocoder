@@ -21,20 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Transform, TransformCallback } from 'node:stream';
 import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { TownMatchingInfo } from '@domain/types/geocode/town-info';
-import { Query } from '../models/query';
-import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
-import { kan2num, kan2numForCharNode } from '../services/kan2num';
-import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { Transform, TransformCallback } from 'node:stream';
 import timers from 'node:timers/promises';
 import { QuerySet } from '../models/query-set';
+import { jisKanji } from '../services/jis-kanji';
+import { kan2num } from '../services/kan2num';
+import { toHiragana } from '../services/to-hiragana';
+import { TrieAddressFinder } from '../services/trie/trie-finder';
 
 export class Tokyo23TownTranform extends Transform {
 
@@ -89,7 +87,7 @@ export class Tokyo23TownTranform extends Transform {
         }
       }
 
-      //　東京都〇〇区〇〇パターンを探索する
+      // 東京都〇〇区〇〇パターンを探索する
       const searchResults = this.tokyo23TownTrie.find({
         target,
         extraChallenges: ['区', '町', '市', '村'],

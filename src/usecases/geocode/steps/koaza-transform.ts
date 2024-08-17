@@ -29,14 +29,13 @@ import { MatchLevel } from '@domain/types/geocode/match-level';
 import { ICommonDbGeocode } from '@interface/database/common-db';
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
+import { QuerySet } from '../models/query-set';
 import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2num, kan2numForCharNode } from '../services/kan2num';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { QuerySet } from '../models/query-set';
-import { toKatakana, toKatakanaForCharNode } from '../services/to-katakana';
 
 export class KoazaTransform extends Transform {
 
@@ -201,10 +200,10 @@ export class KoazaTransform extends Transform {
     // 小字に「大字」「字」を含んでいることがあり、住居表示だと省略されることも多いので取り除く
     address = address.replace(RegExpEx.create('大?字'), '');
     
-    // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
+    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    address = address.replaceAll(RegExpEx.create('第?(\d+)(?:地[割区]|番地?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
+    address = address.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番地?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
 
     // 「一ノ瀬」→「一の瀬」と書くこともあるので、カタカナを平仮名にする
     // address = toHiragana(address);
@@ -236,10 +235,10 @@ export class KoazaTransform extends Transform {
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
     copyed = jisKanjiForCharNode(copyed);
     
-    // 第1地割　→　1地割　と書くこともあるので、「1(DASH)」にする
+    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    copyed = copyed?.replaceAll(RegExpEx.create('第?(\d+)(?:地[割区]|番地?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
+    copyed = copyed?.replaceAll(RegExpEx.create('第?([0-9]d+)(?:地[割区]|番地?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する

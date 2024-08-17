@@ -114,8 +114,7 @@ const updateCheckCommand: CommandModule = {
     
     // アップデートチェック
     const results = await updateChecker.updateCheck({
-      progress: (current: number, total: number) => {
-        progressBar?.setTotal(total);
+      progress: (current: number) => {
         progressBar?.update(current);
       },
     });

@@ -21,21 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { WardMatchingInfo } from '@domain/types/geocode/ward-info';
 import { ICommonDbGeocode } from '@interface/database/common-db';
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../models/query';
-import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
-import { toHankakuAlphaNum, toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
-import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { CharNode } from '../services/trie/char-node';
 import timers from 'node:timers/promises';
-import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { jisKanji } from '../services/jis-kanji';
+import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
+import { toHiragana } from '../services/to-hiragana';
+import { CharNode } from '../services/trie/char-node';
+import { TrieAddressFinder } from '../services/trie/trie-finder';
 
 export class WardTransform extends Transform {
 
@@ -78,7 +78,7 @@ export class WardTransform extends Transform {
     // Databaseから取得して、動的にトライ木を作って探索する
     // ----------------------------------------------
     // 行政区が判明できているQueryと、そうでないQueryに分ける
-    let targets: Query[] = [];
+    const targets: Query[] = [];
     for (const query of queries.values()) {
       if (query.match_level.num >= MatchLevel.CITY.num) {
         results.add(query);
@@ -94,12 +94,9 @@ export class WardTransform extends Transform {
 
     // 初期化が完了していなければ待機
     if (!this.initialized) {
-      await new Promise(async (resolve: (_?: unknown[]) => void) => {
-        while (!this.initialized) {
-          await timers.setTimeout(100);
-        }
-        resolve();
-      });
+      while (!this.initialized) {
+        await timers.setTimeout(100);
+      }
     }
 
     // 〇〇区を全て探索すると効率が悪いので、
@@ -112,7 +109,7 @@ export class WardTransform extends Transform {
         return false;
       }
 
-      // 〇〇市〇〇区　パターンを探す
+      // 〇〇市〇〇区 パターンを探す
       const searchResults2 = this.wardTrie.find({
         target: query.tempAddress,
         extraChallenges: ['市', '区'],
@@ -183,7 +180,7 @@ export class WardTransform extends Transform {
           results.add(query);
           continue;
         }
-        let matched = trie.find({
+        const matched = trie.find({
           target,
           extraChallenges: ['市', '町', '村'],
           partialMatches: true,

@@ -29,10 +29,8 @@ import { RsdtDspInfo } from '@domain/types/geocode/rsdt-dsp-info';
 import { SearchTarget } from '@domain/types/search-target';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../models/query';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { QuerySet } from '../models/query-set';
+import { TrieAddressFinder } from '../services/trie/trie-finder';
 
 export class RsdtDspTransform extends Transform {
 
