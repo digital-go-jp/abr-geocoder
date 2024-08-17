@@ -44,11 +44,10 @@ export class CharNode {
     this.char = char;
     this.ignore = ignore;
 
-    if (this.char === undefined) {
-      this.char = this.originalChar;
+    if (this.originalChar === undefined) {
+      this.originalChar = this.char;
     }
   }
-
 
   concat(...another: (CharNode | undefined)[]): CharNode | undefined {
     if (!another) {
@@ -74,39 +73,36 @@ export class CharNode {
     return head;
   }
 
-  replaceAll(search: string | RegExp, replaceValue: string | Function): CharNode | undefined {
+  replaceAll(
+    search: string | RegExp,
+    replaceValue: string | Function,
+  ): CharNode | undefined {
     let root: CharNode | undefined = this.clone();
-    let adjust = 0;
-    this.toProcessedString().replaceAll(search, (match: string, ...args: any[]): string => {
 
-      let repValue = (() => {
-        if (typeof replaceValue === 'function') {
-          return replaceValue(match);
-        } else {
-          return replaceValue;
-        }
-      })();
-
-      const hasNamedGroups = typeof args.at(-1) === "object";
-      const offset: number = hasNamedGroups ? args.at(-3) : args.at(-2);
-      
-      // グルーピングをしている場合、repValueに適用する
-      if (hasNamedGroups) {
-        for (const [key, value] of Object.entries(args.at(-1))) {
-          repValue = repValue.replaceAll(key, value);
-        }
-      }
-      const N = args.length;
-      for (let i = 0; i < N - 2 - (hasNamedGroups ? 1 : 0); i++) {
-        repValue = repValue.replaceAll(`$${i + 1}`, args[i]);
-      }
-      
-      root = root?.splice(offset - adjust, match.length, repValue);
-      adjust += match.length - repValue.length;
-
-      return repValue;
-    });
+    if (typeof search === 'string') {
+      search = new RegExp(search, 'g');
+    }
+    const matches = this.toProcessedString().matchAll(search);
+    if (!matches) {
+      return root;
+    }
     
+    const matchesArray = Array.from(matches);
+    const replacer = (() => {
+      if (typeof replaceValue === 'function') {
+        return (match: RegExpExecArray) => {
+          return (replaceValue as Function).apply(null, match);
+        };
+      } else {
+        return () => replaceValue;
+      }
+    })();
+
+    for (let i = matchesArray.length - 1; i >= 0; i--) {
+      const match = matchesArray[i];
+      const repValue = replacer(match);
+      root = root?.splice(match.index, match[0].length, repValue);
+    }
     return root;
   }
 
@@ -266,7 +262,6 @@ export class CharNode {
       return results;
     }
 
-
     // 正規表現でマッチした位置に値する部分を CharNode を使って置換していく
     // オリジナルの文字は残す
     const regexp: RegExp = (() => {
@@ -358,41 +353,47 @@ export class CharNode {
       return root.next;
     }
 
+    // const newValues: CharNode[] = CharNode.create(replaceValue)?.split('') || [];
+    let newIdx = 0;
+    const replaceValueLength = replaceValue.length;
 
-    const newValues: CharNode[] = CharNode.create(replaceValue)?.split('') || [];
-
-    while ((deleteCount > 0) && head && newValues.length > 0) {
+    // 消す文字数と挿入する文字数で、共通する文字数分だけ削除する
+    while ((deleteCount > 0) && head && newIdx < replaceValueLength) {
       while (head && head?.ignore) {
         tail = tail?.next;
         head = head?.next;
       }
-      const headNewChar = newValues.shift()!;
+      const headNewChar = new CharNode({
+        char: replaceValue[newIdx],
+        originalChar: tail?.originalChar,
+      });
+      newIdx++;
+
       head!.char = headNewChar.char;
       head = head?.next;
       tail = tail?.next;
       deleteCount--;
     }
-    if (deleteCount > 0) {
-      // 消す文字列の方が長い
-      while ((deleteCount > 0) && head) {
-        tail!.originalChar += head!.originalChar!;
-        head.char = '';
-        head.ignore = true;
-        head = head.next;
-        deleteCount--;
-      }
-    } else {
-      // 置換する文字列の方が長い or 同等
-      while (newValues.length > 0) {
-        const headNewChar = newValues.shift()!;
-        tail!.next = new CharNode({
-          originalChar: '',
-          char: headNewChar.char!,
-        });
-        tail = tail?.next;
-      }
+    
+    // 消す文字列の方が長い
+    while ((deleteCount > 0) && head) {
+      tail!.originalChar += head!.originalChar!;
+      head.char = '';
+      head.ignore = true;
+      head = head.next;
+      deleteCount--;
     }
-    // tail.next = newValue;
+
+    // 置換する文字列の方が長い or 同等
+    while (newIdx < replaceValueLength) {
+      tail!.next = new CharNode({
+        originalChar: '',
+        char: replaceValue[newIdx],
+      });
+      newIdx++;
+      tail = tail?.next;
+    }
+
     if (tail) {
       tail!.next = head;
     }

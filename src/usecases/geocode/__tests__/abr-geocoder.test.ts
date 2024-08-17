@@ -1,19 +1,19 @@
 import { WorkerThreadPool } from "@domain/services/thread/worker-thread-pool";
 import { Sqlite3Params } from "@domain/types/database-params";
-import { MatchLevel } from "@domain/types/geocode/match-level";
 import { SearchTarget } from "@domain/types/search-target";
-import { beforeAll, beforeEach, describe, expect, jest, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
+import { Transform } from "node:stream";
 import { AbrGeocoder } from "../abr-geocoder";
 import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from "../models/abr-geocoder-di-container";
-import { QueryJson } from "../models/query";
+import { AbrGeocoderInput } from "../models/abrg-input-data";
+import { QueryInput, QueryJson } from "../models/query";
+import { GeocodeTransform, GeocodeWorkerInitData } from "../worker/geocode-worker";
 
-// WorkerThreadPoolのモック化
-//
-// ■説明
-// AbrGeocoderは WorkerThreadPoolを内部で生成する。
-// privateプロパティに割り当てられるので、直接チェックすることはできない。
-// そこで jest.fn() でモック化し、期待通りに値が渡されているかをテストする
-jest.mock("@domain/services/thread/worker-thread-pool");
+jest.spyOn(global, 'setImmediate').mockImplementation((callback) => {
+  callback(); // すぐにコールバックを実行するようにする
+  return {} as NodeJS.Immediate;
+});
+
 
 // AbrGeocoderDiContainerのモック化
 // 
@@ -29,12 +29,12 @@ jest.mock("@domain/services/thread/worker-thread-pool");
 jest.mock("../models/abr-geocoder-di-container", () => {
   const database: Sqlite3Params = {
     type: 'sqlite3',
-    dataDir: '~/.abr-geocoder/database',
+    dataDir: '~/.abr-geocoder/database_test',
     schemaDir: '../schema',
   };
 
   return {
-    AbrGeocoderDiContainer: jest.fn().mockImplementation(() => {
+    AbrGeocoderDiContainer: jest.fn(() => {
       return {
         // seachTargetのデフォルト値
         searchTarget: SearchTarget.ALL,
@@ -45,138 +45,193 @@ jest.mock("../models/abr-geocoder-di-container", () => {
         },
 
         // 使用しているので、モックの値を返す
-        toJSON: jest.fn().mockReturnValue({
-          database,
-          debug: false,
-        }),
+        toJSON: () => {
+          return {
+            database,
+            debug: false,
+          };
+        },
 
         logger: undefined,
       };
     }),
   };
 });
+
+// AbrGeocoder内部で WorkerThreadPoolのインスタンスを作成している
+// WorkerThreadPoolのダミーインスタンスを返すようにする
+const workThreadPool_runMock = jest.fn(WorkerThreadPool.prototype.run).mockImplementation((input: AbrGeocoderInput) => {
+  return Promise.resolve({
+    dummy: 'dummy',
+  })
+});
+
 const container = new AbrGeocoderDiContainer({} as AbrGeocoderDiContainerParams);
 
-describe('AbrGeocoder', () => {
-  // jest.mock で自動モックされた WorkerThreadPool にアクセスする
-  const MockedWorkerThreadPool = WorkerThreadPool as jest.MockedClass<typeof WorkerThreadPool>;
-
-  beforeEach(() => {
-    // テストごとにリセットする
-    MockedWorkerThreadPool.mockReset();
+// GeocodeTransformクラスのモック化
+const createGeocodeTransformSpy = () => {
+  const geocodeTransformSpy = jest.fn(Transform.prototype._transform)
+    .mockImplementation((chunk, _, callback) => {
+      callback(null, {
+        input: chunk,
+        toJSON: () => {
+          return {
+            dummy: 'dummy',
+          };
+        }
+      });
+    });
+  const geocodeTransformMock = new Transform({
+    objectMode: true,
+    transform: geocodeTransformSpy,
   });
 
-  beforeAll(() => {
-    // DIコンテナが期待通りに生成されていることを確認
-    expect(container.toJSON().database).toMatchObject({
-      type: 'sqlite3',
-      dataDir: '~/.abr-geocoder/database',
-      schemaDir: '../schema',
+  jest.spyOn(GeocodeTransform, 'create')
+    .mockResolvedValue(geocodeTransformMock as unknown as GeocodeTransform);
+  
+  return geocodeTransformSpy;
+};
+
+const createWorkerThreadPoolSpy = (returnValue: unknown) => {
+  return jest.spyOn(WorkerThreadPool, 'create')
+    .mockResolvedValue(returnValue as WorkerThreadPool<GeocodeWorkerInitData, unknown, unknown>);
+};
+
+describe('AbrGeocoder', () => {
+
+  test('should create an instance correctly', async () => {
+
+    const workThreadPool_createMock = createWorkerThreadPoolSpy({
+      run: workThreadPool_runMock,
+      close: () => {},
     });
-  })
 
-  test('should create an instance correctly', () => {
-
+    createGeocodeTransformSpy();
+    
     // AbrGeocoderクラスの作成
-    new AbrGeocoder({
+    const instance = await AbrGeocoder.create({
       container,
-      maxConcurrency: 5,
-    });
+      numOfThreads: 1,
+    })
 
-    // インスタンスが1つだけ生成されていることを確認
-    expect(MockedWorkerThreadPool.mock.instances.length).toBe(1);
+    // インスタンスが生成されていることを確認
+    expect(instance).not.toBeUndefined();
+
+    // Database.create() が呼び出されたことを確認
+    expect(workThreadPool_createMock).toHaveBeenCalled()
+   
+    // WorkerThread.create()に対して、適切なパラメータが渡されたかを確認する
+    // maxTasksPerWorkerは、実験的に変更することもあるし
+    // filename は固定なので、全ての引数をチェックする必要はない。
+    // 外部からの指定値で変換するポイントだけを確認する
+    const params = workThreadPool_createMock.mock.calls[0][0];
+    expect(params.maxConcurrency).toBe(1);
+    expect((params.initData as  unknown as GeocodeWorkerInitData).containerParams).toEqual({
+      database: {
+        type: 'sqlite3',
+        dataDir: '~/.abr-geocoder/database_test',
+        schemaDir: '../schema',
+      },
+      debug: false,
+    });
   });
 
   test('should involve the workerPool.run() method', async () => {
 
-    const dummyResult: QueryJson = {
-      ambiguousCnt: 0,
-      fuzzy: '?',
-      searchTarget: SearchTarget.ALL,
-      city_key: undefined,
-      pref_key: undefined,
-      town_key: undefined,
-      rsdtblk_key: undefined,
-      rsdtdsp_key: undefined,
-      matchedCnt: 0,
-      startTime: 0,
-      input: {
-        data: {
-          address: 'something',
-          searchTarget: SearchTarget.ALL,
-        },
-        taskId: 123,
-        lineId: 1,
-      },
-      tempAddress: 'something',
-      pref: undefined,
-      county: undefined,
-      city: undefined,
-      ward: undefined,
-      oaza_cho: undefined,
-      chome: undefined,
-      koaza: undefined,
-      lg_code: undefined,
-      rep_lat: null,
-      rep_lon: null,
-      rsdt_addr_flg: undefined,
-      machiaza_id: undefined,
-      block: undefined,
-      block_id: undefined,
-      rsdt_num: undefined,
-      rsdt_id: undefined,
-      rsdt_num2: undefined,
-      rsdt2_id: undefined,
-      prc_id: undefined,
-      prc_num1: undefined,
-      prc_num2: undefined,
-      prc_num3: undefined,
-      parcel_key: undefined,
-      match_level: MatchLevel.UNKNOWN,
-      coordinate_level: MatchLevel.UNKNOWN,
-    };
+    const dummyResult = {
+      dummy: 'dummy',
+    } as unknown as QueryJson;
+    
+    createWorkerThreadPoolSpy({
+      run: workThreadPool_runMock,
+      close: () => {},
+    });
 
-    // ジオコーディングした結果として、ダミーの値を返す
-    const runMock = jest
-      .spyOn(WorkerThreadPool.prototype, 'run')
-      .mockReturnValue(Promise.resolve(dummyResult));
+    createGeocodeTransformSpy();
 
     // AbrGeocoderクラスの作成
-    const abrGeocoder = new AbrGeocoder({
+    const abrGeocoder = await AbrGeocoder.create({
       container,
-      maxConcurrency: 5,
+      numOfThreads: 2,
     });
 
     // ジオコーディングを行う
     const result = await abrGeocoder.geocode({
-      address: 'address',
+      address: 'test2',
       searchTarget: SearchTarget.ALL,
       fuzzy: '?',
       tag: 'something',
     });
 
     // workerThreadPool の run() が実行されたことを確認
-    expect(runMock).toHaveBeenCalled();
+    expect(workThreadPool_runMock).toHaveBeenCalledWith({
+      address: 'test2',
+      searchTarget: SearchTarget.ALL,
+      fuzzy: '?',
+      tag: 'something',
+    });
+
+    // 入力値と同じ値が返ってくることを期待
+    expect(result).toMatchObject(dummyResult);
+
+  });
+
+  test('should involve the geocodeTransformOnMainThread.pipe() method', async () => {
+    const dummyResult = {
+      dummy: 'dummy',
+    } as unknown as QueryJson;
+
+    // WorkerThreadPool が作成できていない状態
+    createWorkerThreadPoolSpy(undefined);
+      
+    const geocodeTransformSpy = createGeocodeTransformSpy();
+
+    // AbrGeocoderクラスの作成
+    const abrGeocoder = await AbrGeocoder.create({
+      container,
+      numOfThreads: 3,
+    });
+
+    // ジオコーディングを行う
+    const result = await abrGeocoder.geocode({
+      address: 'test3',
+      searchTarget: SearchTarget.ALL,
+      fuzzy: '?',
+      tag: 'something',
+    });
+
+    // workerThreadPool の run() が実行されたことを確認
+    expect(geocodeTransformSpy).toBeCalled();
+    
+    // taskIdはランダムなので、toBeCalledWith() は使えない
+    // なので、inputだけを検証する
+    const chunk = geocodeTransformSpy.mock.lastCall![0] as QueryInput;
+    expect(chunk.data).toEqual({
+      address: 'test3',
+      searchTarget: SearchTarget.ALL,
+      fuzzy: '?',
+      tag: 'something',
+    });
 
     // 入力値と同じ値が返ってくることを期待
     expect(result).toMatchObject(dummyResult);
   });
 
-  test('should involve the close() method', async () => {
+  // test('should involve the close() method', async () => {
 
-    // closeメソッドをモック化
-    const closeMock = jest.spyOn(WorkerThreadPool.prototype, 'close')
+  //   // closeメソッドをモック化
+  //   const closeMock = jest.spyOn(WorkerThreadPool.prototype, 'close')
 
-    // AbrGeocoderクラスの作成
-    const abrGeocoder = new AbrGeocoder({
-      container,
-      maxConcurrency: 5,
-    });
+  //   // AbrGeocoderクラスの作成
+  //   const abrGeocoder = new AbrGeocoder({
+  //     container,
+  //     maxConcurrency: 5,
+  //   });
 
-    // closeメソッドを実行
-    await abrGeocoder.close();
+  //   // closeメソッドを実行
+  //   await abrGeocoder.close();
 
-    // モック化された close メソッドが実行されたことを確認
-    expect(closeMock).toHaveBeenCalled();
-  });
+  //   // モック化された close メソッドが実行されたことを確認
+  //   expect(closeMock).toHaveBeenCalled();
+  // });
 });

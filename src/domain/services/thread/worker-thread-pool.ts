@@ -173,9 +173,9 @@ export class WorkerThread<I, T, R> extends Worker {
 
 export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends EventEmitter {
   private readonly kWorkerFreedEvent = Symbol('kWorkerFreedEvent');
-  private workers: WorkerThread<InitData, TransformData, ReceiveData>[] = [];
+  private readonly workers: WorkerThread<InitData, TransformData, ReceiveData>[] = [];
   private readonly abortControl = new AbortController();
-  private waitingTasks: WorkerPoolTaskInfo<TransformData, ReceiveData>[] = [];
+  private readonly waitingTasks: WorkerPoolTaskInfo<TransformData, ReceiveData>[] = [];
 
   static readonly create = <InitData, TransformData, ReceiveData>(params : {
     filename: string;
@@ -229,7 +229,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
         return;
       }
       setImmediate(() => {
-      this.emit(addWorkerEvent);
+        this.emit(addWorkerEvent);
       });
     };
 

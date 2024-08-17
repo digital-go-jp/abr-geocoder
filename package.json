@@ -3,7 +3,15 @@
   "version": "2.0.0",
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
   "author": "Japan Digital Agency (デジタル庁)",
-  "keywords": ["geocoding", "geocoder", "typescript", "nodejs", "address-parse", "address", "japanese-address"],
+  "keywords": [
+    "geocoding",
+    "geocoder",
+    "typescript",
+    "nodejs",
+    "address-parse",
+    "address",
+    "japanese-address"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/digital-go-jp/abr-geocoder.git"
@@ -20,7 +28,8 @@
     "abrg": "build/interface/cli/cli.js"
   },
   "scripts": {
-    "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/"
+    "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/",
+    "test": "npx jest"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

@@ -208,7 +208,7 @@ export class GeocodeTransform extends Duplex {
       .pipe(dst);
   }
 
-  _write(chunk: ThreadJob<QueryInput>, _: BufferEncoding, callback: (error?: Error | null) => void): void {
+  _write(chunk: QueryInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
     callback();
     this.reader.push(chunk);
   }
@@ -258,8 +258,8 @@ if (!isMainThread && parentPort) {
 
     // メインスレッドからメッセージを受け取る
     parentPort.on('message', (task: Uint8Array) => {
-      const data = fromSharedMemory<ThreadJob<QueryInput> | ThreadPing>(task);
-      switch (data.kind) {
+      const received = fromSharedMemory<ThreadJob<QueryInput> | ThreadPing>(task);
+      switch (received.kind) {
         case 'ping': {
           parentPort.postMessage(toSharedMemory({
             kind: 'pong',
@@ -268,7 +268,7 @@ if (!isMainThread && parentPort) {
         }
 
         case 'task': {
-          reader.push(data as ThreadJob<QueryInput>);
+          reader.push(received.data as QueryInput);
           return;
         }
 
