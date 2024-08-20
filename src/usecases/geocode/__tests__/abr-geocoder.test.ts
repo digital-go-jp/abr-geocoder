@@ -1,19 +1,14 @@
 import { WorkerThreadPool } from "@domain/services/thread/worker-thread-pool";
 import { Sqlite3Params } from "@domain/types/database-params";
 import { SearchTarget } from "@domain/types/search-target";
-import { describe, expect, jest, test } from "@jest/globals";
+import { beforeAll, describe, expect, jest, test } from "@jest/globals";
 import { Transform } from "node:stream";
 import { AbrGeocoder } from "../abr-geocoder";
 import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from "../models/abr-geocoder-di-container";
 import { AbrGeocoderInput } from "../models/abrg-input-data";
 import { QueryInput, QueryJson } from "../models/query";
 import { GeocodeTransform, GeocodeWorkerInitData } from "../worker/geocode-worker";
-
-jest.spyOn(global, 'setImmediate').mockImplementation((callback) => {
-  callback(); // すぐにコールバックを実行するようにする
-  return {} as NodeJS.Immediate;
-});
-
+import { setImmediateSpy } from '@mock/global';
 
 // AbrGeocoderDiContainerのモック化
 // 
@@ -98,6 +93,9 @@ const createWorkerThreadPoolSpy = (returnValue: unknown) => {
 };
 
 describe('AbrGeocoder', () => {
+  beforeAll(() => {
+    setImmediateSpy.mockClear();
+  })
 
   test('should create an instance correctly', async () => {
 
