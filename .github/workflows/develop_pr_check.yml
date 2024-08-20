@@ -7,6 +7,9 @@ on:
   pull_request:
     branches:
       - develop
+  push:
+    branches:
+      - develop
 
 jobs:
   lint_and_build:
@@ -62,18 +65,18 @@ jobs:
       #   run: |
       #     npm run test:system
       
-      # - name: create test report
-      #   uses: MishaKav/jest-coverage-comment@main
-      #   with:
-      #     github-token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-      #     summary-title: Coverage Summary
-      #     badge-title: Coverage
-      #     hide-comment: false
-      #     create-new-comment: false
-      #     hide-summary: false
-      #     coverage-summary-path: ./coverage/coverage-summary.json
-      #     junitxml-title: JUnit
-      #     junitxml-path: ./coverage/junit.xml
-      #     coverage-title: Coverage Details
-      #     coverage-path: ./coverage/coverage.txt
-      #     coverage-path-prefix: './src/'
+      - name: create test report
+        uses: MishaKav/jest-coverage-comment@main
+        with:
+          github-token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+          summary-title: Coverage Summary
+          badge-title: Coverage
+          hide-comment: false
+          create-new-comment: false
+          hide-summary: false
+          coverage-summary-path: ./coverage/coverage-summary.json
+          junitxml-title: JUnit
+          junitxml-path: ./coverage/junit.xml
+          coverage-title: Coverage Details
+          coverage-path: ./coverage/coverage.txt
+          coverage-path-prefix: './src/'
