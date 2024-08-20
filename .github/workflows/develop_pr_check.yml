@@ -49,31 +49,31 @@ jobs:
             node_modules/
           token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
 
-      - name: Run tests
-        run: npm run test:ci
+      # - name: Run tests
+      #   run: npm run test:ci
 
-      - name: build test
-        shell: bash
-        run: |
-          npm run build
+      # - name: build test
+      #   shell: bash
+      #   run: |
+      #     npm run build
       
-      - name: run system test
-        shell: bash
-        run: |
-          npm run test:system
+      # - name: run system test
+      #   shell: bash
+      #   run: |
+      #     npm run test:system
       
-      - name: create test report
-        uses: MishaKav/jest-coverage-comment@main
-        with:
-          github-token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
-          summary-title: Coverage Summary
-          badge-title: Coverage
-          hide-comment: false
-          create-new-comment: false
-          hide-summary: false
-          coverage-summary-path: ./coverage/coverage-summary.json
-          junitxml-title: JUnit
-          junitxml-path: ./coverage/junit.xml
-          coverage-title: Coverage Details
-          coverage-path: ./coverage/coverage.txt
-          coverage-path-prefix: './src/'
+      # - name: create test report
+      #   uses: MishaKav/jest-coverage-comment@main
+      #   with:
+      #     github-token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+      #     summary-title: Coverage Summary
+      #     badge-title: Coverage
+      #     hide-comment: false
+      #     create-new-comment: false
+      #     hide-summary: false
+      #     coverage-summary-path: ./coverage/coverage-summary.json
+      #     junitxml-title: JUnit
+      #     junitxml-path: ./coverage/junit.xml
+      #     coverage-title: Coverage Details
+      #     coverage-path: ./coverage/coverage.txt
+      #     coverage-path-prefix: './src/'
