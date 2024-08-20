@@ -10,14 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  fail_if_pull_request_is_draft:
-    if: github.event.pull_request.draft == true
-    runs-on: ubuntu-latest
-    steps:
-      - name: exit if dragt
-        run: exit 1
-
   lint_and_build:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
 
     # Set up concurrency so the SQLite cache can be reused between nodejs matrix versions
