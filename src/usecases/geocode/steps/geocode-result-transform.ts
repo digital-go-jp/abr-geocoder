@@ -77,10 +77,10 @@ export class GeocodeResultTransform extends Transform {
       const isBprcl = bLv === MatchLevel.PARCEL.num;
 
       switch (true) {
-        // Aが住居表示、Bが地番の場合、住居表示を優先
+      // Aが住居表示、Bが地番の場合、住居表示を優先
         case isArsdt && isBprcl:
           totalScoreA += 1;
-          break
+          break;
         
         // Aが地番、Bが住居表示の場合、住居表示を優先
         case isAprcl && isBrsdt:
@@ -88,11 +88,11 @@ export class GeocodeResultTransform extends Transform {
           break;
         
         default:
-          // if (a.match_level.num > b.match_level.num) {
-          //   totalScoreA += 1;
-          // } else if (a.match_level.num < b.match_level.num) {
-          //   totalScoreB += 1;
-          // }
+        // if (a.match_level.num > b.match_level.num) {
+        //   totalScoreA += 1;
+        // } else if (a.match_level.num < b.match_level.num) {
+        //   totalScoreB += 1;
+        // }
           break;
       }
 

@@ -226,7 +226,7 @@ const katakanaMap = new Map<string, string>([
   ['ヮ', 'ワ'],  // 捨て仮名
   ['ヲ', 'ヲ'],
   ['ン', 'ン'],
-  ['之', 'ノ'],  // 堀之内 →　堀ノ内
+  ['之', 'ノ'],  // 堀之内 → 堀ノ内
 ]);
 
 export const toKatakana = (target: string) => {

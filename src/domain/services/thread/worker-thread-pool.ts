@@ -111,7 +111,7 @@ export class WorkerThread<I, T, R> extends Worker {
       signal?.addEventListener('abort', () => {
         this.terminate();
         reject('canceled');
-      })
+      });
 
       const listener = (shareMemory: Uint8Array) => {
         const received = fromSharedMemory<ThreadPong>(shareMemory);
@@ -163,12 +163,12 @@ export class WorkerThread<I, T, R> extends Worker {
       worker.initAsync(params.signal).then(() => {
         resolve(worker);
       })
-      .catch((reason: unknown) => {
-        reject(reason);
-      })
+        .catch((reason: unknown) => {
+          reject(reason);
+        });
     });
     return worker;
-  }
+  };
 }
 
 export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends EventEmitter {
@@ -195,11 +195,11 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       pool.initAsync(params).then(() => {
         resolve(pool);
       })
-      .catch((reason: unknown) => {
-        reject(reason);
-      })
+        .catch((reason: unknown) => {
+          reject(reason);
+        });
     });
-  }
+  };
 
   private constructor() {
     super();
@@ -235,7 +235,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
 
     await this.addWorker(params);
     this.on(addWorkerEvent, onAddWorkerEvent);
-    this.emit(addWorkerEvent)
+    this.emit(addWorkerEvent);
 
 
     // const tasks: Promise<void>[] = [];
@@ -275,7 +275,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
         .finally(() => {
           // キューをシフトさせる
           this.emit(this.kWorkerFreedEvent);
-        })
+        });
     });
   }
 
@@ -287,20 +287,8 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     if (params.signal?.aborted) {
       return;
     }
-    const worker = await new Promise((
-      resolve: (worker: WorkerThread<InitData, TransformData, ReceiveData>) => void,
-      reject: (reason?: any) => void,
-    ) => {
-
-      WorkerThread.create<InitData, TransformData, ReceiveData>(params)
-        .then(worker => {
-          resolve(worker);
-        })
-        .catch((reason: unknown) => {
-          reject(reason);
-        })
-    });
     
+    const worker = await WorkerThread.create<InitData, TransformData, ReceiveData>(params);
     worker.on('error', async (error: Error) => {
       worker.removeAllListeners();
       console.error(error);
@@ -325,7 +313,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
         signal: this.abortControl.signal,
       }).catch((reason: unknown) => {
         console.error(reason);
-      })
+      });
       if (!newWorker) {
         return;
       }
@@ -363,7 +351,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
 
     worker.on('custom_message', data => {
       this.emit('custom_message', data);
-    })
+    });
     this.workers.push(worker);
 
     // エラーのときに再作成する場合、キューにタスクが溜まっているかもしれないので

@@ -45,7 +45,7 @@ export type DatasetParams = {
   fileMeta: IDatasetFileMeta;
   csvFile: ICsvFile;
   lgCodeFilter?: Set<string>;
-}
+};
 
 export type CsvLine = { [key: string]: string };
 

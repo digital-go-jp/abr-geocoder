@@ -128,6 +128,6 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 }

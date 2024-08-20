@@ -114,23 +114,25 @@ const jaMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_SERVE_PORT_OPTION]: 'REST apiのためのポート番号',
   [AbrgMessage.CANNOT_FIND_THE_ROOT_DIR]: 'ルートディレクトリを見つけることが出来ませんでした',
   [AbrgMessage.NOT_IMPLEMENTED]: '実装されていません',
-}
+};
+
+
+i18next.init({
+  fallbackLng: 'en',
+  resources: {
+    en: {
+      translation: enMessages,
+    },
+    ja: {
+      translation: jaMessages,
+    },
+  },
+});
+
+const locale = getSystemLocale();
+let originalTranslater = i18next.getFixedT(locale);
 
 export namespace AbrgMessage {
-  i18next.init({
-    fallbackLng: 'en',
-    resources: {
-      en: {
-        translation: enMessages,
-      },
-      ja: {
-        translation: jaMessages,
-      },
-    },
-  });
-
-  const locale = getSystemLocale();
-  let originalTranslater = i18next.getFixedT(locale);
 
   /**
    * 言語設定を設定します。

@@ -45,4 +45,4 @@ export const countRequests = (filePath: string) => {
         },
       }));
   });
-}
+};

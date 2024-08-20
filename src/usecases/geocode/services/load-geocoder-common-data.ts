@@ -53,7 +53,7 @@ export const loadGeocoderCommonData = async (params: {
     try {
       const encoded = await fs.promises.readFile(cacheFilePath);
       return deserialize(encoded);
-    } catch (e: unknown) {
+    } catch (_: unknown) {
       // Do nothing here
     }
   }

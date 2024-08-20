@@ -63,7 +63,7 @@ export class WardTransform extends Transform {
         value: ward,
       }));
       this.initialized = true;
-    })
+    });
   }
 
   async _transform(
@@ -134,12 +134,12 @@ export class WardTransform extends Transform {
           anyHit = true;
           possibleWards.push(result.info);
         }
-      })
+      });
       if (!anyHit) {
         results.add(query);
       }
       return anyHit;
-    })
+    });
 
     // 可能性がありそうな〇〇区を指定して、トライ木を作成する
     for await (const ward of possibleWards) {

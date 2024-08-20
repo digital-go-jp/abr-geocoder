@@ -52,7 +52,7 @@ type InternalResult<T> = {
   // fuzzy や extraChallenges を使った場合
   // 結果が間違えている可能性があるとき true
   ambiguous: boolean;
-}
+};
 
 // export class TrieNode<T> {
 //   info: T | undefined;
@@ -123,12 +123,12 @@ export class TrieAddressFinder<T> {
 
     // マッチしなかったときに、もう1文字を試してみる
     extraChallenges,
-   }: {
+  }: {
     fuzzy: string | undefined;
     target: CharNode;
     partialMatches?: boolean;
     extraChallenges?: string[];
-   }): TrieFinderResult<T>[] | undefined {
+  }): TrieFinderResult<T>[] | undefined {
 
     let node: CharNode | undefined = target;
     node = node.moveToNext();
@@ -216,7 +216,7 @@ export class TrieAddressFinder<T> {
           info,
           unmatched: node,
           depth,
-        } as InternalResult<T>)
+        } as InternalResult<T>);
       });
 
       return results;
@@ -288,7 +288,7 @@ export class TrieAddressFinder<T> {
           depth,
           ambiguous: false,
         });
-      })
+      });
       return results;
     }
 
@@ -329,7 +329,7 @@ export class TrieAddressFinder<T> {
             other.unmatched = other.unmatched.next!;
           }
           other.ambiguous = true;
-          results.push(other)
+          results.push(other);
         });
       }
     }

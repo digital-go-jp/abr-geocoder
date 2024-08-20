@@ -131,7 +131,7 @@ export class ThreadGeocodeTransform extends Duplex {
       // 処理が成功したら、別スレッドで処理した結果をQueryに変換する
       .then((result: QueryJson) => {
         this.emit(this.kShiftEvent, Query.from(result));
-      })
+      });
     // エラーが発生した
     // .catch((error: Error | string) => {
     //   const query = Query.create(input);

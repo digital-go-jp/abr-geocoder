@@ -55,6 +55,6 @@ export class AbrGeocoderDiContainer extends CommonDiContainer {
   toJSON(): AbrGeocoderDiContainerParams {
     return {
       ...this.params,
-    }
+    };
   }
 }

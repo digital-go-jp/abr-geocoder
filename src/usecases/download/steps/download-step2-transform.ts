@@ -79,8 +79,8 @@ export class DownloadStep2Transform extends Duplex {
           entry
             .pipe(fs.createWriteStream(dstPath))
             .once('finish', resolve);
-        })
-    }))
+        });
+    }));
     
     this.push({
       taskId: job.taskId,

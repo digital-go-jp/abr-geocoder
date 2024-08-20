@@ -53,7 +53,7 @@ export class CsvLoadStep1Transform extends Duplex {
       objectMode: true,
       allowHalfOpen: true,
       read() {}
-    })
+    });
   }
 
   _write(
@@ -97,7 +97,7 @@ export class CsvLoadStep1Transform extends Duplex {
         csvFile,
         datasetFile,
         fileMeta,
-      })
+      });
     }
     
     this.push({

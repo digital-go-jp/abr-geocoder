@@ -37,14 +37,14 @@ export class TableKeyProvider {
     result = stringHash(key);
     this.cache.set(key, result);
     return result;
-  }
+  };
 
   static readonly getPrefKey = (params: {
     lg_code: string;
   }): number => {
     const prefix = params.lg_code.substring(0, 2);
     return this.generateKey(prefix);
-  }
+  };
 
   static getCityKey(params: {
     lg_code: string;
@@ -70,7 +70,7 @@ export class TableKeyProvider {
     ].join('/');
 
     return this.generateKey(key);
-  }
+  };
 
   static readonly getRsdtBlkKey = (params: {
     lg_code: string;
@@ -83,7 +83,7 @@ export class TableKeyProvider {
       params.blk_id,
     ].join('/');
     return this.generateKey(key);
-  }
+  };
 
 
   static readonly getRsdtDspKey = (params: {
@@ -104,7 +104,7 @@ export class TableKeyProvider {
     ].join('/');
 
     return this.generateKey(key);
-  }
+  };
 
   static readonly getParcelKey = (params: {
     lg_code: string;
@@ -116,9 +116,9 @@ export class TableKeyProvider {
       params.machiaza_id,
       params.prc_id,
     ]
-    .filter(x => x !== null && x !== '')
-    .join('/');
+      .filter(x => x !== null && x !== '')
+      .join('/');
 
     return this.generateKey(key);
-  }
+  };
 }

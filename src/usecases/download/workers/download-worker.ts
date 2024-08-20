@@ -23,19 +23,18 @@
  */
 import { DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
 import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
-import { ThreadJob, ThreadJobResult, ThreadMessage, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
+import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
 import { Readable, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
 import { DownloadDiContainer, DownloadDiContainerParams } from '../models/download-di-container';
 import { DownloadStep1Transform } from '../steps/download-step1-transform';
-import { QueryInput } from '@usecases/geocode/models/query';
 
 export type DownloadWorkerInitData = {
   containerParams: DownloadDiContainerParams;
 
   maxTasksPerWorker: number;
-}
+};
 
 export const downloadOnWorkerThread = async (params: Required<{
   port: MessagePort;
@@ -94,8 +93,8 @@ export const downloadOnWorkerThread = async (params: Required<{
       }
 
       case 'task': {
-        // メインスレッドからタスク情報を受け取ったので
-        // ダウンロード処理のストリームに投げる
+      // メインスレッドからタスク情報を受け取ったので
+      // ダウンロード処理のストリームに投げる
         const data = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
         reader.push(data);
         return;

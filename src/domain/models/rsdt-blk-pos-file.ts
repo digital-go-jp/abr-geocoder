@@ -46,7 +46,7 @@ export class RsdtdspBlkPosFile
 
     // 続けて処理をする必要がるため、lgCodeを返す
     const lgCodes = new Set<string>();
-    const lgCode = parsedRows[0][DataField.LG_CODE.dbColumn] as string
+    const lgCode = parsedRows[0][DataField.LG_CODE.dbColumn] as string;
     lgCodes.add(lgCode);
 
     // DBに取り込む

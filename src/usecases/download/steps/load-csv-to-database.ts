@@ -39,8 +39,8 @@ const getSemaphoreIdx = (datasetFile: DatasetFile, size: number): number => {
     datasetFile.type === 'city_pos' ||
     datasetFile.type === 'town' ||
     datasetFile.type === 'town_pos') {
-      return 0;
-    }
+    return 0;
+  }
 
   return (parseInt(datasetFile.lgCode) % (size / 4 - 1)) + 1;
 };
@@ -151,4 +151,4 @@ const openDb = async (params: {
         level: AbrgErrorLevel.ERROR,
       });
   }
-}
+};

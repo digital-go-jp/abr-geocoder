@@ -160,7 +160,7 @@ export class ParcelTransform extends Transform {
       return;
     }
 
-    const [before, ...after]: CharNode[] = query.tempAddress?.split(SPACE);
+    const [before, ...after]: CharNode[] = query.tempAddress.split(SPACE);
     let head: CharNode | undefined = before?.trimWith(DASH);
     const kanjiNums = RegExpEx.create(`[${KANJI_NUMS}]`);
 

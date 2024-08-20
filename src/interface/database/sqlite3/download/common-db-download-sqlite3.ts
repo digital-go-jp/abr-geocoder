@@ -101,7 +101,7 @@ export class CommonDbDownloadSqlite3
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 
   // Cityテーブルにデータを挿入する
@@ -191,7 +191,7 @@ export class CommonDbDownloadSqlite3
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 
   // Townテーブルにデータを挿入する
@@ -283,6 +283,6 @@ export class CommonDbDownloadSqlite3
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 }

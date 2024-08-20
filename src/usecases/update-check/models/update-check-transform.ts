@@ -107,7 +107,7 @@ export class UpdateCheckTransform extends Duplex {
       case 'parcel_pos':
       case 'rsdtdsp_rsdt':
       case 'rsdtdsp_rsdt_pos': {
-        // キャッシュを使って、リソースが更新されているかチェック
+      // キャッシュを使って、リソースが更新されているかチェック
         const needUpdate = await this.needsCacheUpdate(packageInfo.packageId);
         const result = {
           needUpdate,
@@ -118,7 +118,7 @@ export class UpdateCheckTransform extends Duplex {
       }
 
       default: {
-        // 対象外の packageId なのでスキップする
+      // 対象外の packageId なのでスキップする
         const result = {
           needUpdate: false,
           packageInfo,
@@ -145,9 +145,9 @@ export class UpdateCheckTransform extends Duplex {
       const row = this.commonDb.prepare<unknown[], {
         count: number;
       }>(sql)
-      .get({
-        city_key,
-      });
+        .get({
+          city_key,
+        });
       
       // 0行なら、アップデートが必要
       if (!row || row.count === 0) {
@@ -180,9 +180,9 @@ export class UpdateCheckTransform extends Duplex {
         const row = this.commonDb.prepare<unknown[], {
           count: number;
         }>(sql)
-        .get({
-          lgCode: packageInfo.lgCode,
-        });
+          .get({
+            lgCode: packageInfo.lgCode,
+          });
         
         // 0行なら、アップデートが必要
         if (!row || row.count === 0) {
@@ -217,7 +217,7 @@ export class UpdateCheckTransform extends Duplex {
       const row = this.commonDb.prepare<unknown[], {
         count: number;
       }>(sql)
-      .get();
+        .get();
       
       // 0行なら、アップデートが必要
       if (!row || row.count === 0) {
@@ -260,9 +260,9 @@ export class UpdateCheckTransform extends Duplex {
     // CSVファイルのURLを抽出する
     const packageInfo = packageResponse.body as unknown as CkanPackageResponse;
     const csvMeta: CkanResource | undefined = packageInfo.result!.resources
-    .find(x =>
-      x.format.toLowerCase().startsWith('csv')
-    );
+      .find(x =>
+        x.format.toLowerCase().startsWith('csv')
+      );
 
     // CSVがない (予防的なコード)
     if (!csvMeta) {

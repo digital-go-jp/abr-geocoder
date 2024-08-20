@@ -67,7 +67,7 @@ export type JsonOutput = {
     rsdtblk_key: number | undefined;
     rsdtdsp_key: number | undefined;
   }
-}
+};
 export class JsonTransform extends Stream.Transform implements IFormatTransform {
 
   mimetype: string = 'application/json';

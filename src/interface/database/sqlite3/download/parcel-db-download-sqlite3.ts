@@ -118,6 +118,6 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 }

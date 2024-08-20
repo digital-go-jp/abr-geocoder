@@ -24,7 +24,7 @@
 import { DownloadQuery2, DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
 import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
-import { ThreadJob, ThreadJobResult, ThreadMessage, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
+import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
 import { Readable, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
 import { DownloadDiContainer, DownloadDiContainerParams } from '../models/download-di-container';
@@ -36,7 +36,7 @@ export type ParseWorkerInitData = {
   containerParams: DownloadDiContainerParams,
   lgCodeFilter: string[];
   semaphoreSharedMemory: SharedArrayBuffer;
-}
+};
 
 export const parseOnWorkerThread = (params: Required<{
   port: MessagePort;
@@ -104,8 +104,8 @@ export const parseOnWorkerThread = (params: Required<{
       }
 
       case 'task': {
-        // メインスレッドからタスク情報を受け取ったので
-        // ダウンロード処理のストリームに投げる
+      // メインスレッドからタスク情報を受け取ったので
+      // ダウンロード処理のストリームに投げる
         const data = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
         reader.push(data);
         return;

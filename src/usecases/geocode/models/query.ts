@@ -21,17 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DASH_SYMBOLS, NUMRIC_SYMBOLS, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
+import { DASH, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
+import { SearchTarget } from '@domain/types/search-target';
 import { getLevenshteinDistanceRatio } from '../services/get-levenshtein-distance-ratio';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { CharNode } from '../services/trie/char-node';
-import { SearchTarget } from '@domain/types/search-target';
 import { AbrGeocoderInput } from './abrg-input-data';
-import { kan2num } from '../services/kan2num';
-import { query } from 'winston';
-import { QuerySet } from './query-set';
 
 export interface IQuery {
   // ファイルから入力された住所（最後まで変更しない）
@@ -321,8 +318,8 @@ export class Query implements IQuery {
       this.chome?.trim(),
       this.koaza?.trim(),
     ]
-    .filter(value => value !== undefined && value !== '')
-    .join('');
+      .filter(value => value !== undefined && value !== '')
+      .join('');
     formatted_address.push(addressComponents);
 
     if (this.match_level.num === MatchLevel.PARCEL.num) {
@@ -346,8 +343,8 @@ export class Query implements IQuery {
         this.rsdt_num?.toString().trim(),
         this.rsdt_num2?.toString().trim(),
       ]
-      .filter(value => value !== undefined && value !== '')
-      .join('-');
+        .filter(value => value !== undefined && value !== '')
+        .join('-');
       formatted_address.push(residentialNums);
     }
 
@@ -402,7 +399,7 @@ export class Query implements IQuery {
     } else {
       return new Query(params as Omit<IQuery, 'tempAddress'> & { tempAddress: undefined });
     }
-  }
+  };
 
   static readonly create = (input: QueryInput): Query => {
     input.data.address = input.data.address.trim();

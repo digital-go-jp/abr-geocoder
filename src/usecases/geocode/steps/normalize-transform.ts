@@ -201,7 +201,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
     const nextPointer = pointer.next?.moveToNext();
     switch (true) {
       case isDigitForCharNode(pointer): {
-        // 1番地999, 2番丁999, 3番街999, 4番町999, 5丁目999, 55線86番地
+      // 1番地999, 2番丁999, 3番街999, 4番町999, 5丁目999, 55線86番地
         if (RegExpEx.create('([0-9]+)番[丁地街][の目]?([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)丁目?([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)番[丁地街]?([0-9]+)$').test(tmp) ||
@@ -226,7 +226,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
       }
 
       case RegExpEx.create('[0-9][条通線][東西南北]$').test(tmp): {
-        // 「条」を取る
+      // 「条」を取る
         const removed = stack.pop();
 
         // DASHにする
@@ -239,7 +239,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
 
       // 番地の + (数字) の場合
       case RegExpEx.create('番地[の目]$').test(tmp) && nextPointer && isDigitForCharNode(nextPointer): {
-        // 「番地」を取る
+      // 「番地」を取る
         stack.pop();
         stack.pop();
         // DASHを入れる
@@ -252,7 +252,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
       }
       // 番地 + (数字) の場合
       case tmp.endsWith('番地') && nextPointer && isDigitForCharNode(nextPointer): {
-        // 「番」を取る
+      // 「番」を取る
         stack.pop();
         // DASHを入れる
         stack.push(new CharNode({
@@ -267,7 +267,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
         tmp.endsWith('番') &&
         nextPointer && isDigitForCharNode(nextPointer):
       {
-        // DASHを入れる
+      // DASHを入れる
         stack.push(new CharNode({
           char: DASH,
           originalChar: pointer.char,
@@ -277,7 +277,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
       }
       // 番地 + (数字以外) の場合
       case tmp.endsWith('番地') && nextPointer && !isDigitForCharNode(nextPointer) && !RegExpEx.create('[の目]').test(nextPointer?.char || ''): {
-        // 「番」を取る
+      // 「番」を取る
         stack.pop();
         // スペースを入れる
         stack.push(new CharNode({
@@ -289,8 +289,8 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
       }
 
       case RegExpEx.create('[0-9]の[0-9]$').test(tmp): {
-        // 「の」を取る
-        stack.pop()
+      // 「の」を取る
+        stack.pop();
         // DASHを入れる
         stack.push(CharNode.create(DASH));
         break;
@@ -310,7 +310,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
   const tmp = charNodeToString(stack);
   if (RegExpEx.create('([0-9]+)[番号線][丁地街町]?(?![室棟館])$').test(tmp)) {
     while (!isDigitForCharNode(stack.at(-1))) {
-      stack.pop()
+      stack.pop();
     }
   }
 
@@ -350,7 +350,7 @@ const ignoreParenthesis = (address: CharNode| undefined): CharNode | undefined =
       pointer.char = ')';
     }
     if (parenthesis.has(pointer.char)) {
-      buffer.push(parenthesis.get(pointer.char)!)
+      buffer.push(parenthesis.get(pointer.char)!);
       pointer.ignore = true;
     } else if (pointer.char === buffer.at(-1)) {
       pointer.ignore = true;
@@ -368,7 +368,7 @@ const charNodeToString = (stack: (CharNode | undefined)[]): string => {
     buffer.push(node?.char || '');
   }
   return buffer.join('');
-}
+};
 
 const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNode | undefined => {
   if (!address) {
@@ -473,4 +473,4 @@ const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNod
   });
   const result = CharNode.joinWith(separator, head.next, ...after);
   return result;
-}
+};

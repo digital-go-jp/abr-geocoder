@@ -105,14 +105,14 @@ export class UpdateChecker {
     const updatedPackageIDs: PackageInfo[] = [];
 
     // 各パッケージIDをチェック
-    const dst = new CounterWritable({
+    const dst = new CounterWritable<UpdateCheckResult>({
       write: (result: UpdateCheckResult, _, callback) => {
         // プログレスバーに進捗を出力する
         if (options.progress) {
           setImmediate(() => options.progress && options.progress(dst.count));
         }
         if (result.needUpdate) {
-          updatedPackageIDs.push(result.packageInfo)
+          updatedPackageIDs.push(result.packageInfo);
         }
         callback();
       },

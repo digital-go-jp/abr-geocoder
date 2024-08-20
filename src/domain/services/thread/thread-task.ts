@@ -24,7 +24,7 @@
 export type ThreadChunk<T> = {
   taskId: number;
   data: T;
-}
+};
 
 export type ThreadJob<T> = {
   kind: 'task';

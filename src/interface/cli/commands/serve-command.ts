@@ -39,7 +39,7 @@ export type ServeCommandArgv = {
   abrgDir?: string; // 'abrgDir' または 'd' はオプショナル
   d?: string; // alias 'd' もオプショナル
   port?: number; // HTTPサーバーのポート
-}
+};
 
 const serveCommand: CommandModule = {
   command: 'serve [options]',
@@ -65,7 +65,7 @@ const serveCommand: CommandModule = {
       })
       .coerce('port', (port: number) => {
         if (port < 1 || port > 65535 || !Number.isInteger(port)) {
-          throw new Error(`port : ${port} is invalid`)
+          throw new Error(`port : ${port} is invalid`);
         }
         return port;
       });
@@ -107,7 +107,7 @@ const serveCommand: CommandModule = {
     const port = argv.port || 3000;
     const host = '0.0.0.0';
     await server.listen(port, host);
-    console.log(`server start at ${host}:${port}`)
+    console.log(`server start at ${host}:${port}`);
   }
 };
 

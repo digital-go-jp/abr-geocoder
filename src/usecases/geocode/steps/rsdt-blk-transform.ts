@@ -125,7 +125,7 @@ export class RsdtBlkTransform extends Transform {
           coordinate_level: MatchLevel.RESIDENTIAL_BLOCK,
           matchedCnt: query.matchedCnt + queryInfo.matchedCnt,
         }));
-      })
+      });
     }
 
     // this.params.logger?.info(`rsdt-blk : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
