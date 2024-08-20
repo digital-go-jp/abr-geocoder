@@ -94,7 +94,7 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     const out = this.buffer;
 

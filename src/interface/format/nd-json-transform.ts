@@ -91,7 +91,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     const output: NDJsonOutputType = {
       query: {

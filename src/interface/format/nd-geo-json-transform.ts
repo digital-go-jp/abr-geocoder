@@ -92,7 +92,7 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
 
     const output: NdGeoJsonOutput = {

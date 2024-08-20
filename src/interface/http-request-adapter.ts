@@ -164,7 +164,7 @@ export class HttpRequestAdapter {
         this.request({
           ...params,
           method: 'GET',
-          encoding: 'binary'
+          encoding: 'binary',
         })
           .then(response => {
             resolve(new JsonResponseData(
@@ -193,7 +193,7 @@ export class HttpRequestAdapter {
         this.request({
           ...params,
           method: 'GET',
-          encoding: 'binary'
+          encoding: 'binary',
         })
           .then(response => {
             resolve(new StringResponseData(
@@ -223,13 +223,13 @@ export class HttpRequestAdapter {
         this.request({
           ...params,
           method: 'GET',
-          encoding: 'binary'
+          encoding: 'binary',
         })
           .then(response => {
             const data = (response.bodyData as string[]).join('');
             resolve(new BufferResponseData(
               response.header,
-              [Buffer.from(data, 'binary')]
+              [Buffer.from(data, 'binary')],
             ));
           })
           .catch(() => {
@@ -320,10 +320,10 @@ export class HttpRequestAdapter {
         [http2.constants.HTTP2_HEADER_METHOD]: method.toUpperCase(),
         [http2.constants.HTTP2_HEADER_PATH]: [
           urlObj.pathname,
-          urlObj.search
+          urlObj.search,
         ].join(''),
         [http2.constants.HTTP2_HEADER_USER_AGENT]: this.options.userAgent,
-      }
+      },
     );
 
     await new Promise((resolve: (_?: void) => void) => {
@@ -343,7 +343,7 @@ export class HttpRequestAdapter {
       reqParams,
       {
         endStream: false,
-      }
+      },
     );
     req.setEncoding(encoding);
 
@@ -416,11 +416,11 @@ export class HttpRequestAdapter {
       {
         [http2.constants.HTTP2_HEADER_PATH]: [
           urlObj.pathname,
-          urlObj.search
+          urlObj.search,
         ].join('?'),
         [http2.constants.HTTP2_HEADER_METHOD]: 'GET',
         [http2.constants.HTTP2_HEADER_USER_AGENT]: this.options.userAgent,
-      }
+      },
     ), requestOptions);
     const onSessionClose = () => {
       console.log(`--->req.close`);

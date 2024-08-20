@@ -52,7 +52,7 @@ export class CsvLoadStep1Transform extends Duplex {
     super({
       objectMode: true,
       allowHalfOpen: true,
-      read() {}
+      read() {},
     });
   }
 
@@ -107,7 +107,7 @@ export class CsvLoadStep1Transform extends Duplex {
         dataset: job.data.dataset,
         files: results,
         status: DownloadProcessStatus.UNSET,
-      }
+      },
     } as ThreadJob<CsvLoadQuery2>);
     this.timeAmount += Date.now() - start;
   }

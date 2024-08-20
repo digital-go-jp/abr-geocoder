@@ -1,16 +1,14 @@
-import { describe, expect, jest, test } from "@jest/globals";
-import { PrefTransform } from "../pref-transform";
-import { PrefInfo } from "@domain/types/geocode/pref-info";
-import { PrefLgCode } from "@domain/types/pref-lg-code";
-import { Readable, Transform, Writable } from "node:stream";
-import { pipeline } from "node:stream/promises";
-import { QuerySet } from "@usecases/geocode/models/query-set";
-import { Query } from "@usecases/geocode/models/query";
-import { SearchTarget } from "@domain/types/search-target";
 import { DEFAULT_FUZZY_CHAR } from "@config/constant-values";
 import { MatchLevel } from "@domain/types/geocode/match-level";
-import { NormalizeTransform } from "../normalize-transform";
-import { NormalizeBanchomeTransform } from "../normalize-banchome-transform";
+import { PrefInfo } from "@domain/types/geocode/pref-info";
+import { PrefLgCode } from "@domain/types/pref-lg-code";
+import { SearchTarget } from "@domain/types/search-target";
+import { describe, expect, test } from "@jest/globals";
+import { Query } from "@usecases/geocode/models/query";
+import { QuerySet } from "@usecases/geocode/models/query-set";
+import { Readable, Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { PrefTransform } from "../pref-transform";
 
 const prefList: PrefInfo[] = [
   {
@@ -53,7 +51,7 @@ const doStreamTest = async (querySet: QuerySet): Promise<QuerySet> => {
   );
 
   return results[0];
-}
+};
 describe('PrefTransform', () => {
 
   test('should match with prepared data', async () => {
@@ -64,10 +62,10 @@ describe('PrefTransform', () => {
         address: "長野県",
         searchTarget: SearchTarget.ALL,
         fuzzy: undefined,
-        tag: undefined
+        tag: undefined,
       },
       taskId: 0,
-      lineId: 1
+      lineId: 1,
     }));
 
     // テストを行う
@@ -97,10 +95,10 @@ describe('PrefTransform', () => {
         address: "長崎",
         searchTarget: SearchTarget.ALL,
         fuzzy: undefined,
-        tag: undefined
+        tag: undefined,
       },
       taskId: 0,
-      lineId: 1
+      lineId: 1,
     }));
 
     // テストを行う
@@ -139,10 +137,10 @@ describe('PrefTransform', () => {
         address: `長${DEFAULT_FUZZY_CHAR}県`,
         searchTarget: SearchTarget.ALL,
         fuzzy: DEFAULT_FUZZY_CHAR,
-        tag: undefined
+        tag: undefined,
       },
       taskId: 0,
-      lineId: 1
+      lineId: 1,
     }));
 
     // テストを行う

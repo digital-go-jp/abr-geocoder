@@ -53,7 +53,7 @@ export const getLevenshteinDistanceRatio = (strA: string, strB: string): number 
         dp[i][j] = Math.min(
           dp[i][j - 1] + 1, // 1文字挿入
           dp[i - 1][j] + 1, // 1文字削除
-          dp[i - 1][j - 1] + (strA[i - 1] !== strB[j - 1] ? 1 : 0)
+          dp[i - 1][j - 1] + (strA[i - 1] !== strB[j - 1] ? 1 : 0),
         );
       }
     }

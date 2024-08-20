@@ -126,7 +126,7 @@ export class Downloader {
           params.progress(dst.count, total);
         }
         callback();
-      }
+      },
     });
 
     let inputCnt = 0;
@@ -169,7 +169,7 @@ export class Downloader {
     if (response.header.statusCode !== StatusCodes.OK) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_GET_PACKAGE_LIST,
-        level: AbrgErrorLevel.ERROR
+        level: AbrgErrorLevel.ERROR,
       });
     }
     
@@ -180,7 +180,7 @@ export class Downloader {
     if (!packageListResult.success) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_GET_PACKAGE_LIST,
-        level: AbrgErrorLevel.ERROR
+        level: AbrgErrorLevel.ERROR,
       });
     }
 

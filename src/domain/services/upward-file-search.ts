@@ -26,7 +26,7 @@ import path from 'node:path';
 
 export async function upwardFileSearch(
   currDir: string,
-  targetFilename: string
+  targetFilename: string,
 ): Promise<string | undefined> {
   try {
     const files = await fs.promises.readdir(currDir);

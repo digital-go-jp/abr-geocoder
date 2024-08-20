@@ -51,7 +51,7 @@ export const parseFilename = (params: {
   const filename = path.basename(params.filepath);
 
   const fileMatch = filename.match(
-    /^mt_((?:city|pref|town|parcel|rsdtdsp_(?:rsdt|blk))(?:_pos)?)_(all|pref\d{2}|city\d{6})/
+    /^mt_((?:city|pref|town|parcel|rsdtdsp_(?:rsdt|blk))(?:_pos)?)_(all|pref\d{2}|city\d{6})/,
   );
   if (!fileMatch || !isFileGroupKey(fileMatch[1])) {
     return null;

@@ -40,7 +40,7 @@ export class GeocodeResultTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
     let queryList = Array.from(queries.values());
     const orgInput = queryList[0].input;

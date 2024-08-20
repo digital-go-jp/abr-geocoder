@@ -80,7 +80,7 @@ export class CsvLoadStep2Transform extends Duplex {
         dataset: job.data.dataset,
         lgCodes,
         status: DownloadProcessStatus.SUCCESS,
-      }
+      },
     } as ThreadJob<CsvLoadResult>);
 
     // 展開したcsvファイルを消す

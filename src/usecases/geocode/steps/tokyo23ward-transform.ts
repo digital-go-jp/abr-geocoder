@@ -46,7 +46,7 @@ export class Tokyo23WardTranform extends Transform {
     '中央区',
     '港区',
     '大田区',
-    '板橋区'
+    '板橋区',
   ]);
   
   constructor(params: Required<{
@@ -75,7 +75,7 @@ export class Tokyo23WardTranform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
     const results = new QuerySet();
     for (const query of queries.values()) {

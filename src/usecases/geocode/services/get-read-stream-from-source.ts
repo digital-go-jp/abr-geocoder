@@ -27,7 +27,7 @@ import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 
 export const getReadStreamFromSource = (
-  source: string
+  source: string,
 ): NodeJS.ReadStream | fs.ReadStream => {
   if (source === SINGLE_DASH_ALTERNATIVE) {
     // パイプ処理なしで、`abrg -` とされた場合はエラー

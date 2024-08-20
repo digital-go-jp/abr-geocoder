@@ -43,7 +43,7 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
     private readonly options: {
       skipHeader: boolean;
       debug?: boolean;
-    }
+    },
   ) {
     super({
       // Data format coming from the previous stream is object mode.
@@ -73,7 +73,7 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     const line = this.columns
       .map(column => {

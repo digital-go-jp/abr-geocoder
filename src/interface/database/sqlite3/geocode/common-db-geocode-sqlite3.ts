@@ -771,7 +771,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       results.push({
         key: [(city.city || ''), city.ward].join(''),
         ...city,
-        oaza_cho: ""
+        oaza_cho: "",
       });
     }
     return results;

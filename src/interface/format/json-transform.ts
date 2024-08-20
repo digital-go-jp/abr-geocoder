@@ -94,7 +94,7 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     const out = this.buffer;
 

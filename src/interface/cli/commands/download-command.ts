@@ -57,27 +57,27 @@ const downloadCommand: CommandModule = {
         type: 'string',
         default: EnvProvider.DEFAULT_ABRG_DIR,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
       })
       .option('lgCode', {
         alias: 'c',
         type: 'array',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_DOWNLOAD_TARGET_LGCODES
+          AbrgMessage.CLI_DOWNLOAD_TARGET_LGCODES,
         ),
         coerce: (lgCode: string | number) => lgCode.toString().split(','),
       })
       .option('debug', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DEBUG_OPTION
+          AbrgMessage.CLI_COMMON_DEBUG_OPTION,
         ),
       })
       .option('silent', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_SILENT_OPTION
+          AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
       });
   },
@@ -111,7 +111,7 @@ const downloadCommand: CommandModule = {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
         schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
-      }
+      },
     });
     await downloader.download({
       // 進捗状況を知らせるコールバック
@@ -131,7 +131,7 @@ const downloadCommand: CommandModule = {
     if (argv.debug) {
       console.timeEnd("download");
     }
-  }
+  },
 };
 
 export default downloadCommand;

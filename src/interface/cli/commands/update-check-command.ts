@@ -57,19 +57,19 @@ const updateCheckCommand: CommandModule = {
         type: 'string',
         default: EnvProvider.DEFAULT_ABRG_DIR,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
       })
       .option('debug', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DEBUG_OPTION
+          AbrgMessage.CLI_COMMON_DEBUG_OPTION,
         ),
       })
       .option('silent', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_SILENT_OPTION
+          AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
       })
       .option('yes', {
@@ -77,7 +77,7 @@ const updateCheckCommand: CommandModule = {
         type: 'boolean',
         conflicts: 'no',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_YES_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE
+          AbrgMessage.CLI_YES_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE,
         ),
       })
       .option('no', {
@@ -85,7 +85,7 @@ const updateCheckCommand: CommandModule = {
         type: 'boolean',
         conflicts: 'yes',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_NO_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE
+          AbrgMessage.CLI_NO_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE,
         ),
       });
   },
@@ -109,7 +109,7 @@ const updateCheckCommand: CommandModule = {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
         schemaDir: path.join(__dirname, '..', '..', '..', 'schemas', 'sqlite3'),
-      }
+      },
     });
     
     // アップデートチェック

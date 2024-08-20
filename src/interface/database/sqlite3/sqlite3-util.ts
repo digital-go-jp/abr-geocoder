@@ -35,7 +35,7 @@ export class Sqlite3Util {
   }
 
   private readonly cache: LRUCache<string, boolean> = new LRUCache({
-    max: 30
+    max: 30,
   });
 
   hasExtraDb(params: Required<{

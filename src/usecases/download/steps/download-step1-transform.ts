@@ -90,7 +90,7 @@ export class DownloadStep1Transform extends Duplex {
           status: DownloadProcessStatus.ERROR,
           dataset: job.data.dataset,
           message: `status: ${packageResponse.header.statusCode}`,
-        }
+        },
       } as ThreadJobResult<DownloadProcessError>;
     }
 
@@ -98,7 +98,7 @@ export class DownloadStep1Transform extends Duplex {
     const packageInfo = packageResponse.body as unknown as CkanPackageResponse;
     const csvMeta: CkanResource | undefined = packageInfo.result!.resources
       .find(x =>
-        x.format.toLowerCase().startsWith('csv')
+        x.format.toLowerCase().startsWith('csv'),
       );
 
     // CSVがない (予防的なコード)
@@ -157,7 +157,7 @@ export class DownloadStep1Transform extends Duplex {
               csvFilePath: cacheFilePath,
               noUpdate: true,
               status: DownloadProcessStatus.UNSET,
-            }
+            },
           } as ThreadJobResult<DownloadQuery2>;
         }
       }
@@ -199,7 +199,7 @@ export class DownloadStep1Transform extends Duplex {
         csvFilePath,
         noUpdate: false,
         status: DownloadProcessStatus.UNSET,
-      }
+      },
     } as ThreadJobResult<DownloadQuery2>;
   }
 }

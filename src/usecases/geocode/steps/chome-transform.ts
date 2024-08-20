@@ -84,7 +84,7 @@ export class ChomeTranform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
     // ------------------------
     // 丁目で当たるものがあるか
@@ -128,7 +128,7 @@ export class ChomeTranform extends Transform {
         const key = this.normalizeStr(row.chome);
         trie.append({
           key,
-          value: row
+          value: row,
         });
       }
 

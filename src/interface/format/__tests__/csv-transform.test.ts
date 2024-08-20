@@ -43,7 +43,7 @@ class MockQuery {
       data: {
         address: '東京都千代田区',
         searchTarget: SearchTarget.ALL,
-      }
+      },
     };
     this.formatted = {
       address: '東京都千代田区',
@@ -163,7 +163,7 @@ describe('CsvTransform', () => {
         lon: '139.6917',
         lg_code: '13101',
         pref: '東京都',
-        city: '千代田区'
+        city: '千代田区',
       };
 
       // valueの検証

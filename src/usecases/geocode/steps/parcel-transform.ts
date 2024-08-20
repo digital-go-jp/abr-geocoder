@@ -49,7 +49,7 @@ export class ParcelTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
 
     // ------------------------
@@ -116,7 +116,7 @@ export class ParcelTransform extends Transform {
         town_key: TableKeyProvider.getTownKey({
           machiaza_id: query.machiaza_id,
           lg_code: query.lg_code,
-        })
+        }),
       });
 
       // 見つからなかった

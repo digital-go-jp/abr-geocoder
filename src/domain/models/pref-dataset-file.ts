@@ -67,7 +67,7 @@ export class PrefDatasetFile
   get fields(): DataField[] {
     return [
       DataField.LG_CODE,
-      DataField.PREF
+      DataField.PREF,
     ];
   }
 

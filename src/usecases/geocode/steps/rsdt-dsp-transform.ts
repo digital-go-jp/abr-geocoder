@@ -46,7 +46,7 @@ export class RsdtDspTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
 
     // ------------------------

@@ -24,7 +24,7 @@ describe("parsePackageJson", () => {
     });
     expect(result).toEqual({
       version: 'dummy',
-      description: 'dummy description'
+      description: 'dummy description',
     });
   });
 

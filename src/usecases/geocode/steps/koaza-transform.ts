@@ -75,7 +75,7 @@ export class KoazaTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
     // ----------------------------------
     // 小字を特定する

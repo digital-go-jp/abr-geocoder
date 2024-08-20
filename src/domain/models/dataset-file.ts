@@ -126,7 +126,7 @@ export abstract class DataForPosFile
     const extra = parsedRow[DataField.REP_SRID.csv].toString();
     const [longitude, latitude] = proj4(
       extra, // from
-      'WGS84' // to
+      'WGS84', // to
     ).forward([lon, lat]);
 
     parsedRow[DataField.REP_LON.dbColumn] = longitude;

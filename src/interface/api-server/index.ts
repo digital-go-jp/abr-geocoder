@@ -62,7 +62,7 @@ export class AbrgApiServer extends Server {
       response.status(StatusCodes.NOT_FOUND);
       response.json({
         status: 'error',
-        message: 'Not found'
+        message: 'Not found',
       });
     });
   }

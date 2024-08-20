@@ -75,26 +75,26 @@ const geocodeCommand: CommandModule = {
         type: 'string',
         default: EnvProvider.DEFAULT_ABRG_DIR,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
       })
       .option('target', {
         type: 'string',
         default: SearchTarget.ALL,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_GEOCODE_TARGET_OPTION
+          AbrgMessage.CLI_GEOCODE_TARGET_OPTION,
         ),
         choices: [SearchTarget.ALL, SearchTarget.RESIDENTIAL, SearchTarget.PARCEL],
       })
       .option('fuzzy', {
         type: 'string',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
+          AbrgMessage.CLI_GEOCODE_FUZZY_OPTION,
         ),
         coerce: fuzzy => {
           if (fuzzy.length !== 1) {
             console.error(
-              AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR)
+              AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR),
             );
             process.exit(1);
           }
@@ -106,7 +106,7 @@ const geocodeCommand: CommandModule = {
         type: 'string',
         default: OutputFormat.JSON,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_GEOCODE_FORMAT_OPTION
+          AbrgMessage.CLI_GEOCODE_FORMAT_OPTION,
         ),
         choices: [
           OutputFormat.CSV,
@@ -142,13 +142,13 @@ const geocodeCommand: CommandModule = {
       .option('debug', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DEBUG_OPTION
+          AbrgMessage.CLI_COMMON_DEBUG_OPTION,
         ),
       })
       .option('silent', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_SILENT_OPTION
+          AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
       });
   },
@@ -251,7 +251,7 @@ const geocodeCommand: CommandModule = {
         } else {
           return Promise.resolve(0);
         }
-      })()
+      })(),
     ];
     const [geocoder, total] = await Promise.all(tasks);
     if (progressBar) {
@@ -278,7 +278,7 @@ const geocodeCommand: CommandModule = {
     if (argv.debug) {
       console.timeEnd("geocoding");
     }
-  }
+  },
 };
 
 export default geocodeCommand;

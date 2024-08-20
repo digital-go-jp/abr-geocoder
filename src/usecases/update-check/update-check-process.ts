@@ -71,7 +71,7 @@ export class UpdateChecker {
     if (response.header.statusCode !== StatusCodes.OK) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_GET_PACKAGE_LIST,
-        level: AbrgErrorLevel.ERROR
+        level: AbrgErrorLevel.ERROR,
       });
     }
 
@@ -83,7 +83,7 @@ export class UpdateChecker {
     if (!packageListResult.success) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_GET_PACKAGE_LIST,
-        level: AbrgErrorLevel.ERROR
+        level: AbrgErrorLevel.ERROR,
       });
     }
   

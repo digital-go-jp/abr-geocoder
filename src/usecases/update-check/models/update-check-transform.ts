@@ -261,7 +261,7 @@ export class UpdateCheckTransform extends Duplex {
     const packageInfo = packageResponse.body as unknown as CkanPackageResponse;
     const csvMeta: CkanResource | undefined = packageInfo.result!.resources
       .find(x =>
-        x.format.toLowerCase().startsWith('csv')
+        x.format.toLowerCase().startsWith('csv'),
       );
 
     // CSVがない (予防的なコード)

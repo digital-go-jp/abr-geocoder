@@ -103,7 +103,7 @@ export const loadCsvToDatabase = async (params : Required<{
         }
         lgCodeSets.push(lgCodes);
       },
-    })
+    }),
   );
 
   await db.closeDb();

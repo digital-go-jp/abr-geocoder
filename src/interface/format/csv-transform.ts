@@ -37,7 +37,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
       columns: string[];
       skipHeader: boolean;
       debug?: boolean;
-    }
+    },
   ) {
     super({
       // Data format coming from the previous stream is object mode.
@@ -69,7 +69,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     // デバッグ
     // if (result.formatted.score > 0.6) {

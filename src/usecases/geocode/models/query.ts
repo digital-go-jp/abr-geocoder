@@ -190,7 +190,7 @@ export class Query implements IQuery {
     this.machiaza_id = params.machiaza_id;
     this.debug = {
       original: this.tempAddress?.toOriginalString(),
-      processed: this.tempAddress?.toProcessedString()
+      processed: this.tempAddress?.toProcessedString(),
     };
 
     this.formatted = this.getFormattedAddress();
@@ -298,8 +298,8 @@ export class Query implements IQuery {
         newValues || {},
         {
           input : this.input,
-        }
-      )
+        },
+      ),
     );
   }
 

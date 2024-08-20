@@ -66,7 +66,7 @@ export class Tokyo23TownTranform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
     const results = new QuerySet();
     for (const query of queries.values()) {

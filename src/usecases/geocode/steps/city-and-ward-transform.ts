@@ -66,7 +66,7 @@ export class CityAndWardTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    next: TransformCallback
+    next: TransformCallback,
   ) {
 
     if (!this.initialized) {

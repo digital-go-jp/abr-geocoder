@@ -47,7 +47,7 @@ export class NormalizeTransform extends Transform {
   _transform(
     input: QueryInput,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     
     // Unicode正規化を行う
@@ -116,7 +116,7 @@ export class NormalizeTransform extends Transform {
     address = address?.replaceAll(
       RegExpEx.create(
         `([${NUMRIC_AND_KANJI_SYMBOLS}][${DASH_SYMBOLS}])|([${DASH_SYMBOLS}][${NUMRIC_AND_KANJI_SYMBOLS}])`,
-        'g'
+        'g',
       ),
       (match: string) => {
         return match.replace(RegExpEx.create(`[${DASH_SYMBOLS}]`, 'g'), DASH);
@@ -128,7 +128,7 @@ export class NormalizeTransform extends Transform {
       RegExpEx.create(`(.+)(丁目?|番(町|地|丁)|条|軒|線|(${J_DASH})町|地割)`),
       (match: string) => {
         return match.replace(RegExpEx.create(`[${SPACE_SYMBOLS}]`, 'g'), '');
-      }
+      },
     );
 
     // 半角カナ・全角カナ => 平仮名

@@ -323,13 +323,13 @@ describe("CharNode", () => {
         {
           org: "test1",
           char: "test2",
-          ignore: true
+          ignore: true,
         },
         {
           org: "string",
           char: "string",
-          ignore: false
-        }
+          ignore: false,
+        },
       ];
       expect(result).toStrictEqual(expected);
     });
@@ -363,7 +363,7 @@ describe("CharNode", () => {
         { org: "t", char: "e", ignore: false },
         { org: "e", char: "x", ignore: false },
         { org: "s", char: "a", ignore: false },
-        { org: "t", char: "m", ignore: false }
+        { org: "t", char: "m", ignore: false },
       ]);
       const node = CharNode.fromString(jsonString);
       expect(node?.toProcessedString()).toBe("exam");

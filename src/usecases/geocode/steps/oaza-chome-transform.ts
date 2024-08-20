@@ -96,7 +96,7 @@ export class OazaChomeTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
     // ------------------------
     // 大字・丁目・小字で当たるものがあるか

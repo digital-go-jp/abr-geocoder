@@ -65,7 +65,7 @@ export class CountyAndCityTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    next: TransformCallback
+    next: TransformCallback,
   ) {
     // 初期化が完了していなければ待つ
     if (!this.initialized) {

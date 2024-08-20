@@ -52,14 +52,14 @@ const serveCommand: CommandModule = {
         type: 'string',
         default: EnvProvider.DEFAULT_ABRG_DIR,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
       })
       .option('port', {
         type: 'number',
         default: 3000,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_SERVE_PORT_OPTION
+          AbrgMessage.CLI_SERVE_PORT_OPTION,
         ),
         
       })
@@ -108,7 +108,7 @@ const serveCommand: CommandModule = {
     const host = '0.0.0.0';
     await server.listen(port, host);
     console.log(`server start at ${host}:${port}`);
-  }
+  },
 };
 
 export default serveCommand;

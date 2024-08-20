@@ -37,7 +37,7 @@ export class ParcelPosDatasetFile
       DataField.REP_LON,
       DataField.MACHIAZA_ID,
       DataField.PRC_ID,
-      DataField.REP_SRID
+      DataField.REP_SRID,
     ];
   }
   

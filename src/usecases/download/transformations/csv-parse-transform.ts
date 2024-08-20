@@ -81,7 +81,7 @@ export class CsvParseTransform extends Duplex {
         containerParams: params.container.toJSON(),
         semaphoreSharedMemory,
         lgCodeFilter: Array.from(params.lgCodeFilter),
-      }
+      },
     }).then(pool => {
       this.csvParsers = pool;
       if (this.isClosed) {

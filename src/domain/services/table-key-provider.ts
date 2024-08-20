@@ -26,7 +26,7 @@ import stringHash from "string-hash";
 
 export class TableKeyProvider {
   private static readonly cache = new LRUCache<string, number>({
-    max: 300
+    max: 300,
   });
 
   private static generateKey = (key: string): number => {

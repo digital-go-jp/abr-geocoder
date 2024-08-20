@@ -65,7 +65,7 @@ export class WardAndOazaTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    next: TransformCallback
+    next: TransformCallback,
   ) {
 
     const results = new QuerySet();

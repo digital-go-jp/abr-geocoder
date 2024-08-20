@@ -46,7 +46,7 @@ export class RsdtBlkTransform extends Transform {
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
 
     const results = new QuerySet();

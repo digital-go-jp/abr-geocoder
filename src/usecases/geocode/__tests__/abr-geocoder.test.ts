@@ -73,7 +73,7 @@ const createGeocodeTransformSpy = () => {
           return {
             dummy: 'dummy',
           };
-        }
+        },
       });
     });
   const geocodeTransformMock = new Transform({
@@ -95,7 +95,7 @@ const createWorkerThreadPoolSpy = (returnValue: unknown) => {
 describe('AbrGeocoder', () => {
   beforeAll(() => {
     setImmediateSpy.mockClear();
-  })
+  });
 
   test('should create an instance correctly', async () => {
 
