@@ -203,7 +203,10 @@ export class TrieAddressFinder<T> {
           if (!others) {
             continue;
           }
-          others.forEach(other => results.push(other));
+          others.forEach(other => {
+            other.ambiguous = true;
+            results.push(other);
+          });
         }
       }
 
