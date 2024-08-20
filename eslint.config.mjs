@@ -69,6 +69,7 @@ export default tseslint.config(
       '@stylistic/ts/semi': 'error',
       '@stylistic/ts/indent': ['error', 2],
       '@stylistic/js/eol-last': 'error',
+      '@stylistic/js/comma-dangle': ['error', 'always-multiline'],
     },
   }
 );
