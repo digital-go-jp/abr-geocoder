@@ -32,9 +32,8 @@ import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
 
-// @ts-ignore
+// @ts-expect-error ts-node で実行しているときは、 NODE_ENV = 'development' にする
 if (process[Symbol.for('ts-node.register.instance')]) {
-  // ts-node で実行しているときは、 NODE_ENV = 'development' にする
   process.env.NODE_ENV = 'development';
 }
 

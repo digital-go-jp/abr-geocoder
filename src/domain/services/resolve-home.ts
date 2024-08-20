@@ -29,4 +29,4 @@ export const resolveHome = (filepath: string): string => {
     return filepath;
   }
   return path.join(os.homedir(), filepath.slice(1));
-}
+};

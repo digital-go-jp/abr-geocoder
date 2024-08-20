@@ -33,7 +33,6 @@ import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { TownInfo, TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
 import { PrefLgCode } from "@domain/types/pref-lg-code";
-import { LRUCache } from "lru-cache";
 import stringHash from "string-hash";
 import { ICommonDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
@@ -61,9 +60,9 @@ type GetChomeRowsOptions = {
 
 export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbGeocode {
 
-  private readonly resultCache = new LRUCache<string, any>({
-    max: 20,
-  });
+  // private readonly resultCache = new LRUCache<string, any>({
+  //   max: 20,
+  // });
 
   getTownInfoByKey(town_key: number): Promise<TownInfo | undefined> {
     return Promise.resolve(this.prepare<{
@@ -250,15 +249,15 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       this.getCityMap(),
       
       new Promise((resolve: (rows: Omit<OazaChoMachingInfo, 'pref' | 'pref_key'>[]) => void) => {
-        if (this.resultCache.has('town_cache')) {
-          resolve(this.resultCache.get('town_cache'));
-          return;
-        }
+        // if (this.resultCache.has('town_cache')) {
+        //   resolve(this.resultCache.get('town_cache'));
+        //   return;
+        // }
         const rows = this.prepare<
           Partial<GetOazaChoPatternsOptions>,
           Omit<OazaChoMachingInfo, 'pref' | 'pref_key'>
         >(sql).all(where);
-        this.resultCache.set('town_cache', rows);
+        // this.resultCache.set('town_cache', rows);
         resolve(rows);
       }),
     ]);
@@ -372,15 +371,15 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
 
   async getPrefMap(): Promise<Map<number, PrefInfo>> {
-    if (this.resultCache.has('pref_map')) {
-      return this.resultCache.get('pref_map') as Map<number, PrefInfo>;
-    }
+    // if (this.resultCache.has('pref_map')) {
+    //   return this.resultCache.get('pref_map') as Map<number, PrefInfo>;
+    // }
     const prefRows = await this.getPrefList();
     const prefMap = new Map<number, PrefInfo>();
     prefRows.forEach(pref => {
       prefMap.set(pref.pref_key, pref);
     });
-    this.resultCache.set('pref_map', prefMap);
+    // this.resultCache.set('pref_map', prefMap);
     return prefMap;
   }
   
@@ -388,9 +387,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   // prefテーブルを HashMapにして返す
   // ------------------------------------
   async getPrefList(): Promise<PrefInfo[]> {
-    if (this.resultCache.has('pref_list')) {
-      return this.resultCache.get('pref_list') as PrefInfo[];
-    }
+    // if (this.resultCache.has('pref_list')) {
+    //   return this.resultCache.get('pref_list') as PrefInfo[];
+    // }
     return new Promise((resolve: (rows: PrefInfo[]) => void) => {
       const rows = this.prepare<unknown[], PrefInfo>(`
         SELECT
@@ -403,15 +402,15 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           ${DbTableName.PREF}
       `).all();
   
-      this.resultCache.set('pref_list', rows);
+      // this.resultCache.set('pref_list', rows);
       resolve(rows);
     });
   }
 
   async getCityList(): Promise<CityInfo[]> {
-    if (this.resultCache.has('city_list')) {
-      return this.resultCache.get('city_list') as CityInfo[];
-    }
+    // if (this.resultCache.has('city_list')) {
+    //   return this.resultCache.get('city_list') as CityInfo[];
+    // }
 
     const [
       prefMap,
@@ -440,26 +439,26 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       return {
         ...city,
         pref: prefMap.get(city.pref_key)!.pref,
-      }
+      };
     });
 
-    this.resultCache.set('city_list', results);
+    // this.resultCache.set('city_list', results);
     return results;
   }
   
 
   private async getCityMap(): Promise<Map<number, CityInfo>> {
-    if (this.resultCache.has('city_map')) {
-      return this.resultCache.get('city_map') as Map<number, CityInfo>;
-    }
+    // if (this.resultCache.has('city_map')) {
+    //   return this.resultCache.get('city_map') as Map<number, CityInfo>;
+    // }
 
     const [
       prefMap,
       cityRows,
-     ] = await Promise.all([
+    ] = await Promise.all([
       this.getPrefMap(),
       this.getCityList(),
-     ]);
+    ]);
 
     const cityMap = new Map<number, CityInfo>();
     cityRows.forEach(city => {
@@ -469,46 +468,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       });
     });
 
-    this.resultCache.set('city_map', cityMap);
+    // this.resultCache.set('city_map', cityMap);
     return cityMap;
   }
   
   async getOazaChomes(): Promise<OazaChoMachingInfo[]> {
-    // const rows = this.prepare<unknown[], OazaChoMachingInfo>(`
-    //   SELECT
-    //     p.pref_key,
-    //     c.city_key,
-    //     t.town_key,
-    //     c.${DataField.LG_CODE.dbColumn} as lg_code,
-    //     p.${DataField.PREF.dbColumn} as pref,
-    //     c.${DataField.COUNTY.dbColumn} as county,
-    //     c.${DataField.CITY.dbColumn} as city,
-    //     c.${DataField.WARD.dbColumn} as ward,
-    //     t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
-    //     t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-    //     t.${DataField.CHOME.dbColumn} as chome,
-    //     t.${DataField.KOAZA.dbColumn} as koaza,
-    //     t.${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-    //     (t.${DataField.OAZA_CHO.dbColumn} || t.${DataField.CHOME.dbColumn} || t.${DataField.KOAZA.dbColumn}) as key,
-
-    //     COALESCE(
-    //       t.${DataField.REP_LAT.dbColumn},
-    //       c.${DataField.REP_LAT.dbColumn}
-    //     ) AS rep_lat,
-
-    //     COALESCE (
-    //       t.${DataField.REP_LON.dbColumn},
-    //       c.${DataField.REP_LON.dbColumn}
-    //     ) AS rep_lon
-    //   FROM
-    //     ${DbTableName.PREF} p
-    //     JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
-    //     JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
-    //   WHERE
-    //     t.${DataField.OAZA_CHO.dbColumn} != '' AND
-    //     t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
-    // `).all();
-
     type TownRow = {
       town_key: number;
       city_key: number;
@@ -634,7 +598,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       
       type SQLParams = {
         tokyo_pref_key: number | null,
-      }
+      };
       const params = {
         tokyo_pref_key: TableKeyProvider.getPrefKey({
           lg_code: PrefLgCode.TOKYO,

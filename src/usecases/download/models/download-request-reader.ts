@@ -33,7 +33,7 @@ export class DownloadRequestReader extends Readable {
     super({
       objectMode: true,
       read() {},
-    })
+    });
   }
   public get count(): number {
     return this._count;

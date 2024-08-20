@@ -40,7 +40,7 @@ export type UpdateCheckCommandArgv = {
   silent?: boolean;
   yes?: boolean;
   no?: boolean;
-}
+};
 
 /**
  * abrg update-check
@@ -160,7 +160,7 @@ const updateCheckCommand: CommandModule = {
       silent: argv.silent,
       _: argv._,
       $0: argv.$0,
-    })
+    });
   },
 };
 const askContinueToDownload = async (): Promise<boolean> => {
@@ -178,5 +178,5 @@ const askContinueToDownload = async (): Promise<boolean> => {
   }
   ask.close();
   return answer;
-}
+};
 export default updateCheckCommand;

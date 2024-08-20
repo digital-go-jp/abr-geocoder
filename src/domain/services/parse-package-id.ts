@@ -55,13 +55,13 @@ export type PackageInfo = {
   lgCode: string;
   dataset: FileGroupKey;
   packageId: string;
-}
+};
 export const parsePackageId = (packageId: string): PackageInfo | undefined => {
   
   const elements = packageId.split(RegExpEx.create('[_\\-]'));
-    if (
-        // パターンマッチしないパッケージID
-        elements.length !== 5 ||
+  if (
+  // パターンマッチしないパッケージID
+    elements.length !== 5 ||
 
         elements[0] !== 'ba' ||
         elements[1] !== 'o1' ||
@@ -69,15 +69,15 @@ export const parsePackageId = (packageId: string): PackageInfo | undefined => {
       
         // 対象外のパッケージタイプ
         !datasetTypes.has(elements[4])
-      ) {
-      return;
-    }
+  ) {
+    return;
+  }
 
-    const lgCode = elements[2];
-    const dataset = datasetTypes.get(elements[4])!;
-    return {
-      lgCode,
-      dataset,
-      packageId,
-    };
-}
+  const lgCode = elements[2];
+  const dataset = datasetTypes.get(elements[4])!;
+  return {
+    lgCode,
+    dataset,
+    packageId,
+  };
+};

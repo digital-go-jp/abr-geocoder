@@ -33,7 +33,7 @@ export class ConsolidateTransform extends Transform {
   _transform(chunk: unknown, _: BufferEncoding, callback: TransformCallback): void {
     if (this.buffer.length < this.N) {
       this.buffer.push(chunk);
-      return callback()
+      return callback();
     }
     this.buffer.push(chunk);
     const data = this.buffer;

@@ -120,7 +120,7 @@ export class Downloader {
     });
 
     // プログレスバーに進捗を出力する
-    const dst = new CounterWritable({
+    const dst = new CounterWritable<CsvLoadResult>({
       write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
         if (params.progress) {
           params.progress(dst.count, total);

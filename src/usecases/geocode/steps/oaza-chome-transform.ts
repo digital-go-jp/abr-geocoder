@@ -58,7 +58,7 @@ export class OazaChomeTransform extends Transform {
         this.trie.append({
           key: this.normalizeStr(oazaInfo.key),
           value: oazaInfo,
-        })
+        });
       }
       this.initialized = true;
     });
@@ -176,7 +176,7 @@ export class OazaChomeTransform extends Transform {
           matched = result.info?.town_key === where.town_key;
         }
         return matched;
-      })
+      });
 
       // 複数都道府県にヒットする可能性があるので、全て試す
       let anyHit = false;

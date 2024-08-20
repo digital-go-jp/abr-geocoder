@@ -122,7 +122,7 @@ export class HttpRequestAdapter {
       if (error) {
         console.error('ping error', error);
       }
-    })
+    });
   }
   private connect() {
     this.session = http2.connect(`https://${this.options.hostname}`, {
@@ -166,17 +166,17 @@ export class HttpRequestAdapter {
           method: 'GET',
           encoding: 'binary'
         })
-        .then(response => {
-          resolve(new JsonResponseData(
-            response.header,
-            response.bodyData as string[],
-          ));
-        })
-        .catch(() => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(response => {
+            resolve(new JsonResponseData(
+              response.header,
+              response.bodyData as string[],
+            ));
+          })
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -193,19 +193,19 @@ export class HttpRequestAdapter {
         this.request({
           ...params,
           method: 'GET',
-      encoding: 'binary'
+          encoding: 'binary'
         })
-        .then(response => {
-          resolve(new StringResponseData(
-            response.header,
-            response.bodyData as string[],
-          ));
-        })
-        .catch(() => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(response => {
+            resolve(new StringResponseData(
+              response.header,
+              response.bodyData as string[],
+            ));
+          })
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -223,20 +223,20 @@ export class HttpRequestAdapter {
         this.request({
           ...params,
           method: 'GET',
-      encoding: 'binary'
+          encoding: 'binary'
         })
-        .then(response => {
-          const data = (response.bodyData as string[]).join('');
-          resolve(new BufferResponseData(
-            response.header,
-            [Buffer.from(data, 'binary')]
-          ));
-        })
-        .catch(() => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(response => {
+            const data = (response.bodyData as string[]).join('');
+            resolve(new BufferResponseData(
+              response.header,
+              [Buffer.from(data, 'binary')]
+            ));
+          })
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -260,14 +260,14 @@ export class HttpRequestAdapter {
           headers,
           encoding: 'utf-8',
         })
-        .then(response => {
-          resolve(new StringResponseData(response.header, response.bodyData as string[]));
-        })
-        .catch(() => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(response => {
+            resolve(new StringResponseData(response.header, response.bodyData as string[]));
+          })
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -290,12 +290,12 @@ export class HttpRequestAdapter {
           headers,
           encoding: 'utf-8',
         })
-        .then(resolve)
-        .catch(() => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(resolve)
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -313,7 +313,7 @@ export class HttpRequestAdapter {
     headers?: Record<string, string | undefined>;
   }): Promise<ResponseData> {
 
-    const urlObj = new URL(url)
+    const urlObj = new URL(url);
     const reqParams = Object.assign(
       headers,
       {
@@ -373,7 +373,7 @@ export class HttpRequestAdapter {
           req.removeAllListeners();
           resolve(new ResponseData(header, buffer));
         });
-      })
+      });
     });
   }
 
@@ -387,7 +387,7 @@ export class HttpRequestAdapter {
     abortController?: AbortController;
   }) {
 
-    const urlObj = new URL(url)
+    const urlObj = new URL(url);
     const requestOptions: ClientSessionRequestOptions = {
       endStream: false,
       signal: abortController?.signal,
@@ -423,7 +423,7 @@ export class HttpRequestAdapter {
       }
     ), requestOptions);
     const onSessionClose = () => {
-      console.log(`--->req.close`)
+      console.log(`--->req.close`);
       req.close();
     };
     this.session.on('close', onSessionClose);
@@ -435,7 +435,7 @@ export class HttpRequestAdapter {
     req.once('end', () => {
       req.removeAllListeners();
       this.session?.removeListener('close', onSessionClose);
-    })
+    });
 
     return req;
 

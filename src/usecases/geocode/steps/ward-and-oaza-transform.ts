@@ -59,7 +59,7 @@ export class WardAndOazaTransform extends Transform {
         });
       }
       this.initialized = true;
-    })
+    });
   }
 
   async _transform(
@@ -116,7 +116,7 @@ export class WardAndOazaTransform extends Transform {
         // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
         if (query.match_level.num === MatchLevel.PREFECTURE.num && 
           query.pref_key !== mResult.info?.pref_key) {
-            continue;
+          continue;
         }
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;
         anyHit = true;

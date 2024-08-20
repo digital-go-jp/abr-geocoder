@@ -26,7 +26,6 @@ import { AbrGeocoderDiContainer } from "@usecases/geocode/models/abr-geocoder-di
 import { StatusCodes } from 'http-status-codes';
 import { MiddlewareNext, Request, Response, Router, Server } from "hyper-express";
 import { OnGeocodeRequest } from "./on-geocode-request";
-import path from "node:path";
 
 export class AbrgApiServer extends Server {
 
@@ -44,7 +43,7 @@ export class AbrgApiServer extends Server {
       // response.setHeader('Access-Control-Allow-Methods', 'GET');
       // response.setHeader('Access-Control-Allow-Credentials', 'true');
       next();
-    }
+    };
 
     // リクエストにCORSヘッダーを付加
     this.use('/', corsMiddleware, this.router);
@@ -84,6 +83,6 @@ export class AbrgApiServer extends Server {
     });
 
     return new AbrgApiServer(geocoder);
-  }
+  };
 }
 

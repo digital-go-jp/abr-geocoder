@@ -65,6 +65,6 @@ export class DownloadDiContainer extends CommonDiContainer {
       ...this.params,
       downloadDir: this.downloadDir,
       cacheDir: this.urlCacheMgr.cacheDir,
-    }
+    };
   }
 }

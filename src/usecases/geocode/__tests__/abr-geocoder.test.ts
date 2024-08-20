@@ -60,10 +60,10 @@ jest.mock("../models/abr-geocoder-di-container", () => {
 
 // AbrGeocoder内部で WorkerThreadPoolのインスタンスを作成している
 // WorkerThreadPoolのダミーインスタンスを返すようにする
-const workThreadPool_runMock = jest.fn(WorkerThreadPool.prototype.run).mockImplementation((input: AbrGeocoderInput) => {
+const workThreadPool_runMock = jest.fn(WorkerThreadPool.prototype.run).mockImplementation((_: AbrGeocoderInput) => {
   return Promise.resolve({
     dummy: 'dummy',
-  })
+  });
 });
 
 const container = new AbrGeocoderDiContainer({} as AbrGeocoderDiContainerParams);
@@ -112,13 +112,13 @@ describe('AbrGeocoder', () => {
     const instance = await AbrGeocoder.create({
       container,
       numOfThreads: 1,
-    })
+    });
 
     // インスタンスが生成されていることを確認
     expect(instance).not.toBeUndefined();
 
     // Database.create() が呼び出されたことを確認
-    expect(workThreadPool_createMock).toHaveBeenCalled()
+    expect(workThreadPool_createMock).toHaveBeenCalled();
    
     // WorkerThread.create()に対して、適切なパラメータが渡されたかを確認する
     // maxTasksPerWorkerは、実験的に変更することもあるし

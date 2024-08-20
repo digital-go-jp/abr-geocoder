@@ -99,7 +99,7 @@ const targetPatterns = new Set<string>([
   '之',
   'ノ',
   '丿',
-])
+]);
 
 export const kan2num = (target: string) => {
   const result: string[] = [];

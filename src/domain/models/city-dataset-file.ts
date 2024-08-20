@@ -65,7 +65,7 @@ export class CityDatasetFile
 
     parsedRows.forEach(row => {
       lgCodes.add(row[DataField.LG_CODE.dbColumn] as string);
-    })
+    });
 
     // DBに取り込む
     if (!params.noUpdate) {

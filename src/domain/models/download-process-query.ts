@@ -46,7 +46,7 @@ export enum DownloadProcessStatus {
 
 export type DownloadProcessBase = {
   status: DownloadProcessStatus
-}
+};
 
 export type DownloadRequest = {
   kind: 'download';
@@ -81,7 +81,7 @@ export type DownloadResult = {
 
 export const isDownloadProcessError = (target: DownloadProcessBase): target is DownloadProcessError => {
   return target.status === DownloadProcessStatus.ERROR;
-}
+};
 
 export type CsvLoadRequest = {
   dataset: 'search' | FileGroupKey;

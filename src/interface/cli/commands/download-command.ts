@@ -40,7 +40,7 @@ export type DownloadCommandArgv = {
   c?: string[];
   debug?: boolean;
   silent?: boolean;
-}
+};
 
 /**
  * abrg download

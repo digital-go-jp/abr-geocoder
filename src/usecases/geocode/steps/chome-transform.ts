@@ -29,13 +29,12 @@ import { MatchLevel } from '@domain/types/geocode/match-level';
 import { ICommonDbGeocode } from '@interface/database/common-db';
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
+import { QuerySet } from '../models/query-set';
 import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2num, kan2numForCharNode } from '../services/kan2num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
-import { QuerySet } from '../models/query-set';
-import { toKatakana, toKatakanaForCharNode } from '../services/to-katakana';
 
 export class ChomeTranform extends Transform {
 
@@ -161,7 +160,7 @@ export class ChomeTranform extends Transform {
         // city_key が異なる場合はスキップ
         if ((query.city_key !== undefined) && 
           (query.city_key !== findResult.info.city_key)) {
-            return;
+          return;
         }
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
@@ -205,7 +204,7 @@ export class ChomeTranform extends Transform {
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('(\d)丁目?', 'g'), `$1${DASH}`);
+    address = address?.replaceAll(RegExpEx.create('([0-9])丁目?', 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
@@ -230,7 +229,7 @@ export class ChomeTranform extends Transform {
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    copyed = copyed?.replaceAll(RegExpEx.create('(\d)丁目?', 'g'), `$1${DASH}`);
+    copyed = copyed?.replaceAll(RegExpEx.create('([0-9])丁目?', 'g'), `$1${DASH}`);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する

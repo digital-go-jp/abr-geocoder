@@ -75,7 +75,7 @@ export class CharNode {
 
   replaceAll(
     search: string | RegExp,
-    replaceValue: string | Function,
+    replaceValue: string | ((substring: string, ...args: any[]) => string),
   ): CharNode | undefined {
     let root: CharNode | undefined = this.clone();
 
@@ -95,7 +95,13 @@ export class CharNode {
     const replacer = (() => {
       if (typeof replaceValue === 'function') {
         return (match: RegExpExecArray) => {
-          return (replaceValue as Function).apply(null, match);
+          const args: any[] = [];
+          let i = 0;
+          while (Object.hasOwn(match, i.toString())) {
+            args.push(match[i]);
+            i++;
+          }
+          return replaceValue.apply(this, args as [substring: string, ...args: any[]]);
         };
       } else {
         return () => replaceValue;
@@ -110,15 +116,15 @@ export class CharNode {
     return root;
   }
 
-  replace(search: string | RegExp, replaceValue: string | Function): CharNode | undefined {
+  replace(search: string | RegExp, replaceValue: string | ((substring: string, ...args: any[]) => string)): CharNode | undefined {
     let root: CharNode | undefined = this.clone();
 
     // 正規表現でマッチした位置に値する部分を CharNode を使って置換していく
     // オリジナルの文字は残す
-    this.toProcessedString().replace(search, (match: string,  ...args: any[]): string => {
+    this.toProcessedString().replace(search, (substring: string, ...args: any[]): string => {
       let repValue = (() => {
         if (typeof replaceValue === 'function') {
-          return replaceValue(match);
+          return replaceValue.apply(null, [substring, ...args]);
         } else {
           return replaceValue;
         }
@@ -130,7 +136,7 @@ export class CharNode {
       // グルーピングをしている場合、repValueに適用する
       if (hasNamedGroups) {
         for (const [key, value] of Object.entries(args.at(-1))) {
-          repValue = repValue.replaceAll(key, value);
+          repValue = repValue.replaceAll(key, value as string);
         }
       }
       const N = args.length;
@@ -138,7 +144,7 @@ export class CharNode {
         repValue = repValue.replaceAll(`$${i + 1}`, args[i]);
       }
       
-      root = root?.splice(offset, match.length, repValue);
+      root = root?.splice(offset, substring.length, repValue);
 
       return repValue;
     });
@@ -272,7 +278,7 @@ export class CharNode {
       if (typeof search === 'string') {
         return RegExpEx.create(search, 'g');
       } else if (!search.global) {
-          throw new TypeError('The regexp for split() must have a global flag');
+        throw new TypeError('The regexp for split() must have a global flag');
       }
       return search;
     })();
@@ -445,10 +451,10 @@ export class CharNode {
         return root.next;
       }
       throw 'unexpected format';
-    } catch(e) {
+    } catch(_) {
       throw 'unexpected format';
     }
-  }
+  };
 
   static joinWith(separator: CharNode, ...targets: (CharNode | undefined)[]): CharNode | undefined {
     targets = targets.filter(x => x !== undefined);

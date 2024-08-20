@@ -23,7 +23,7 @@
  */
 export const DASH_SYMBOLS: string = [
   '－', // 全角ハイフンマイナス
-  '\\\-', // 半角ハイフンマイナス
+  '\\-', // 半角ハイフンマイナス
   '−', // 全角マイナス
   '‐', // 全角ハイフン
   '‒', // フィギュアーダッシュ
@@ -44,7 +44,7 @@ export const DASH_SYMBOLS: string = [
 ].join('');
 export const NUMRIC_SYMBOLS: string = ['0-9', '０-９'].join('');
 
-export const ZENKAKU: string = '[^\x01-\x7E\xA1-\xDF]'
+export const ZENKAKU: string = '[^\x01-\x7E\xA1-\xDF]';
 
 export const KANJI_NUMS: string = '壱一二ニ弐参三四五六七八ㇵハ九零十';
 export const NUMRIC_AND_KANJI_SYMBOLS: string = [

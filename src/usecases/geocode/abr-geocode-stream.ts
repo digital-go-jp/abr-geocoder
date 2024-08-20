@@ -127,8 +127,8 @@ export class AbrGeocodeStream extends Duplex {
     const geocoder = await AbrGeocoder.create({
       container,
       numOfThreads,
-    })
+    });
 
     return new AbrGeocodeStream(geocoder, container, params);
-  }
+  };
 };

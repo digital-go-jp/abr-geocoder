@@ -110,11 +110,11 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
             lg_code: row[DataField.LG_CODE.dbColumn].toString(),
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
             blk_id: row[DataField.BLK_ID.dbColumn].toString(),
-          })
+          });
           params.upsert.run(row);
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 }

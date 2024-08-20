@@ -57,7 +57,7 @@ export class AbrGeocoder {
         this.resolvers.delete(taskId);
         resolver(query.toJSON());
       },
-    })
+    });
     this.reader.pipe(params.geocodeTransformOnMainThread).pipe(dst);
 
     setImmediate(() => {
@@ -88,7 +88,7 @@ export class AbrGeocoder {
       }).catch((reason: unknown) => {
         console.error(reason);
       });
-    })
+    });
   }
 
   async geocode(input: AbrGeocoderInput): Promise<QueryJson> {
@@ -148,5 +148,5 @@ export class AbrGeocoder {
       geocodeTransformOnMainThread,
     });
     return geocoder;
-  }
+  };
 }

@@ -49,7 +49,7 @@ export class DownloadDbController {
         break;
 
       default:
-        // Do nothing here
+      // Do nothing here
         break;
     }
   }

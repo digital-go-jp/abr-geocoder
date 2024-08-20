@@ -97,9 +97,9 @@ export class DownloadStep1Transform extends Duplex {
     // CSVファイルのURLを抽出する
     const packageInfo = packageResponse.body as unknown as CkanPackageResponse;
     const csvMeta: CkanResource | undefined = packageInfo.result!.resources
-    .find(x =>
-      x.format.toLowerCase().startsWith('csv')
-    );
+      .find(x =>
+        x.format.toLowerCase().startsWith('csv')
+      );
 
     // CSVがない (予防的なコード)
     if (!csvMeta) {

@@ -21,20 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Transform, TransformCallback } from 'node:stream';
-import { toHiragana } from '../services/to-hiragana';
-import { Query } from '../models/query';
-import { jisKanji } from '../services/jis-kanji';
-import { kan2num } from '../services/kan2num';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { CityMatchingInfo } from '@domain/types/geocode/city-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { Transform, TransformCallback } from 'node:stream';
 import timers from 'node:timers/promises';
-import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { QuerySet } from '../models/query-set';
-import { toKatakana } from '../services/to-katakana';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { jisKanji } from '../services/jis-kanji';
+import { kan2num } from '../services/kan2num';
+import { toHiragana } from '../services/to-hiragana';
+import { TrieAddressFinder } from '../services/trie/trie-finder';
 
 export class CountyAndCityTransform extends Transform {
 
@@ -61,7 +59,7 @@ export class CountyAndCityTransform extends Transform {
         });
       }
       this.initialized = true;
-    })
+    });
   }
 
   async _transform(
@@ -113,7 +111,7 @@ export class CountyAndCityTransform extends Transform {
         // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
         if (query.match_level.num === MatchLevel.PREFECTURE.num && 
           query.pref_key !== mResult.info?.pref_key) {
-            continue;
+          continue;
         }
         anyHit = true;
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;

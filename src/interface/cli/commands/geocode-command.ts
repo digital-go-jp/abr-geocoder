@@ -62,7 +62,7 @@ export type GeocodeCommandArgv = {
 
   inputFile?: string; // 'inputFile' は必須
   outputFile?: string; // 'outputFile' はオプショナル
-}
+};
 
 const geocodeCommand: CommandModule = {
   command: '$0 <inputFile> [outputFile] [options]',
@@ -194,7 +194,7 @@ const geocodeCommand: CommandModule = {
     // 出力先（ファイル or stdout）の選択
     const outputStream: Writable = (destination => {
       if (destination === '' || destination === undefined) {
-        // ThreadGeocodeTransformで　各スレッドがstdout を使用しようとして、
+        // ThreadGeocodeTransformで、各スレッドがstdoutを使用しようとして、
         // イベントリスナーを取り合いになるため、以下の警告が発生する模様。
         // 動作的には問題ないので、 process.stdout.setMaxListeners(0) として警告を殺す。
         //
@@ -239,7 +239,7 @@ const geocodeCommand: CommandModule = {
           schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
         },
         debug,
-        progress(current: number, total: number) {
+        progress(current: number) {
           progressBar?.update(current);
         },
       }),
@@ -270,7 +270,7 @@ const geocodeCommand: CommandModule = {
       geocoder,
       formatter,
       outputStream,
-    )
+    );
 
     progressBar?.stop();
 

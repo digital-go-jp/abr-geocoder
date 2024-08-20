@@ -34,7 +34,7 @@ export class DebugLogger {
     }
     this.instance = new DebugLogger();
     return this.instance;
-  }
+  };
 
   private readonly logger: winston.Logger;
   
@@ -53,26 +53,26 @@ export class DebugLogger {
   debug(message: string, ...meta: any[]) {
     setImmediate(() => {
       this.logger.debug(message, ...meta);
-    })
+    });
   }
   info(message: string, ...meta: any[]) {
     setImmediate(() => {
-    this.logger.info(message, ...meta);
-  })
+      this.logger.info(message, ...meta);
+    });
   }
   warn(message: string, ...meta: any[]) {
     setImmediate(() => {
       this.logger.warn(message, ...meta);
-    })
+    });
   }
   data(message: string, ...meta: any[]) {
     setImmediate(() => {
-    this.logger.data(message, ...meta);
-  })
+      this.logger.data(message, ...meta);
+    });
   }
   notice(message: string, ...meta: any[]) {
     setImmediate(() => {
       this.logger.notice(message, ...meta);
-    })
+    });
   }
 }

@@ -30,4 +30,4 @@ export type RsdtDspInfo = {
   rsdt_num2: number;
   rep_lat: number;
   rep_lon: number;
-}
+};

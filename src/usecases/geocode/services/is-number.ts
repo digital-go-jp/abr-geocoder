@@ -27,8 +27,8 @@ import { CharNode } from "./trie/char-node";
 
 export const isDigit = (char: string): boolean => {
   return RegExpEx.create('^[0-9]$').test(char);
-}
+};
 
 export const isDigitForCharNode = (charNode: CharNode | undefined): boolean => {
   return charNode && !charNode.ignore && charNode.char && RegExpEx.create('^[0-9]$').test(charNode.char) || false;
-}
+};

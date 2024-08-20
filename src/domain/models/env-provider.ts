@@ -34,7 +34,7 @@ export class EnvProvider {
 
   constructor() {
     this.nodeRuntimeVersion = Array
-      .from(process.version.matchAll(RegExpEx.create("(\d+)", 'g')))
+      .from(process.version.matchAll(RegExpEx.create('([0-9]+)', 'g')))
       .map(match => parseInt(match[0]));
   }
 

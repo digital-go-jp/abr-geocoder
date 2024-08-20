@@ -39,7 +39,7 @@ export async function upwardFileSearch(
 
     // 見つからない場合は1つ上の階層を探索
     return upwardFileSearch(path.resolve(currDir, '..'), targetFilename);
-  } catch (err) {
+  } catch (_: unknown) {
     // root directoryに達した時点でエラーになるはずなので、探索を辞める
     return undefined;
   }

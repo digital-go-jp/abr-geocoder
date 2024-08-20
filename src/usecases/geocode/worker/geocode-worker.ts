@@ -61,7 +61,7 @@ export type GeocodeWorkerInitData = {
   // tokyo23towns: TownMatchingInfo[];
   // tokyo23wards: CityMatchingInfo[];
   // wards: WardMatchingInfo[];
-}
+};
 
 
 export class GeocodeTransform extends Duplex {
