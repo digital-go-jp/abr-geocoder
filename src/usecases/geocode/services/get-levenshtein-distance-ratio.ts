@@ -60,7 +60,12 @@ export const getLevenshteinDistanceRatio = (strA: string, strB: string): number 
   }
 
   // 文字列長で正規化する
-  return dp[N][M] / Math.max(N, M);
+  const invertScore = dp[N][M] / Math.max(N, M);
+
+  // 浮動小数点の計算で 1 - 0.33 = 0.69999.. になるのを防ぐために
+  // (100 - 33) / 100 = 0.67 としている
+  const score = (100 - Math.floor(invertScore * 100)) / 100;
+  return score;
 };
 
 /*
