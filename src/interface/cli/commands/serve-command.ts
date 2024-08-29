@@ -83,7 +83,7 @@ const serveCommand: CommandModule = {
     // 11 unpipe listeners added to [WriteStream]. Use emitter.setMaxListeners() to increase limit
     process.stdout.setMaxListeners(0);
 
-    const rootDir = await upwardFileSearch(__dirname, 'build');
+    const rootDir = upwardFileSearch(__dirname, 'build');
     if (!rootDir) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_FIND_THE_ROOT_DIR,

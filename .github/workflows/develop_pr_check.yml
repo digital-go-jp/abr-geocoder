@@ -55,15 +55,15 @@ jobs:
       - name: Run tests
         run: npm run test
 
-      # - name: build test
-      #   shell: bash
-      #   run: |
-      #     npm run build
+      - name: build test
+        shell: bash
+        run: |
+          npm run build
       
-      # - name: run system test
-      #   shell: bash
-      #   run: |
-      #     npm run test:system
+      - name: run system test
+        shell: bash
+        run: |
+          npm run test:system
       
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main

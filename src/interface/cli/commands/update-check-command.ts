@@ -92,7 +92,7 @@ const updateCheckCommand: CommandModule = {
 
   handler: async (argv: ArgumentsCamelCase<UpdateCheckCommandArgv>) => {
     // silent = true のときは、プログレスバーを表示しない
-    const progressBar = argv.silent ? undefined : createSingleProgressBar();
+    const progressBar = argv.silent ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total}');
     progressBar?.start(1, 0);
 
     if (argv.debug) {
@@ -114,8 +114,9 @@ const updateCheckCommand: CommandModule = {
     
     // アップデートチェック
     const results = await updateChecker.updateCheck({
-      progress: (current: number) => {
+      progress: (current: number, total: number) => {
         progressBar?.update(current);
+        progressBar?.setTotal(total);
       },
     });
     
@@ -137,9 +138,15 @@ const updateCheckCommand: CommandModule = {
       return;
     }
     if (!argv.silent) {
-      console.log(AbrgMessage.toString(AbrgMessage.UPDATE_IS_AVAILABLE));
+      console.log(AbrgMessage.toString(AbrgMessage.UPDATE_IS_AVAILABLE, {
+        num_of_update: results.length,
+      }));
     }
     if (argv.yes === undefined) {
+      // 指定がなければ終了
+      if (argv.silent) {
+        return;
+      }
       // 続けてダウンロードをするか、確認する
       const continueToDownload = await askContinueToDownload();
       if (!continueToDownload) {

@@ -11,7 +11,8 @@
   },
   "include": [
     "src/**/*.ts",
-    "__mocks__/**/*.ts"
+    "__mocks__/**/*.ts",
+    ".system/**/*.ts"
   ],
   "exclude": [
     "src/**/__skips__/*",

@@ -92,6 +92,10 @@ export class CharNode {
     }
     
     const matchesArray = Array.from(matches);
+    if (matchesArray.length === 0) {
+      return root;
+    }
+
     const replacer = (() => {
       if (typeof replaceValue === 'function') {
         return (match: RegExpExecArray) => {
@@ -336,6 +340,10 @@ export class CharNode {
     let head: CharNode | undefined = root.next;
     let tail: CharNode | undefined = root;
     for (let i = 0; i < start; i++) {
+      while (head && head.ignore) {
+        tail = tail?.next;
+        head = head?.next;
+      }
       tail = tail?.next;
       head = head?.next;
     }

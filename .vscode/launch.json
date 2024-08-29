@@ -102,7 +102,9 @@
       ],
       "args": [
         "download",
-        "-c 082082"
+        "--silent",
+        "-c 131016 033812 082082 122246 122297 213624",
+        "-d ./db"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -141,6 +143,7 @@
       ],
       "args": [
         "update-check",
+        "-d ./db"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

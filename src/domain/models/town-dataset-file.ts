@@ -48,16 +48,8 @@ export class TownDatasetFile
   async process(params: Omit<ProcessOptions, 'db'> & {db : ICommonDbDownload}) {
     const parsedRows = params.lines.map(row => this.parseCsv(row));
 
-    // 続けて処理をする必要がるため、lgCodeを返す
-    const lgCodes = new Set<string>();
-    lgCodes.add(parsedRows[0][DataField.LG_CODE.dbColumn] as string);
-
     // DBに取り込む
-    if (!params.noUpdate) {
-      await params.db.townCsvRows(parsedRows);
-    }
-    
-    return lgCodes;
+    await params.db.townCsvRows(parsedRows);
   }
 
   // 町字マスター データセット

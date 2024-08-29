@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DownloadQuery2, DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
+import { CsvLoadQueryBase, DownloadQuery2, DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
 import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
 import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
@@ -73,7 +73,7 @@ export const parseOnWorkerThread = (params: Required<{
   const dst = new Writable({
     objectMode: true,
     write(job: ThreadJob<DownloadQueryBase>, _, callback) {
-      const sharedMemory = toSharedMemory<ThreadJobResult<DownloadQueryBase>>({
+      const sharedMemory = toSharedMemory<ThreadJobResult<CsvLoadQueryBase>>({
         taskId: job.taskId,
         kind: 'result',
         data: job.data,
@@ -90,8 +90,6 @@ export const parseOnWorkerThread = (params: Required<{
     .pipe(step4)
     .pipe(dst);
 
-
-
   // メインスレッドからメッセージを受け取る
   params.port.on('message', (sharedMemory: Uint8Array) => {
     const data = fromSharedMemory<ThreadJob<DownloadQuery2> | ThreadPing>(sharedMemory);
@@ -106,8 +104,8 @@ export const parseOnWorkerThread = (params: Required<{
       case 'task': {
       // メインスレッドからタスク情報を受け取ったので
       // ダウンロード処理のストリームに投げる
-        const data = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
-        reader.push(data);
+        const job = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
+        reader.push(job);
         return;
       }
 

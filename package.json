@@ -1,6 +1,6 @@
 {
   "name": "@digital-go-jp/abr-geocoder",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
   "author": "Japan Digital Agency (デジタル庁)",
   "keywords": [
@@ -30,6 +30,7 @@
   "scripts": {
     "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/",
     "test": "npx jest",
+    "test:system": "npx ts-node ./.system/test-runner.ts",
     "lint": "npx eslint"
   },
   "devDependencies": {
@@ -41,9 +42,7 @@
     "@types/busboy": "^1.5.4",
     "@types/byline": "^4.2.36",
     "@types/cli-progress": "^3.11.5",
-    "@types/eslint__js": "^8.42.3",
     "@types/i18n": "^0.13.12",
-    "@types/jest": "^29.5.12",
     "@types/node": "^20.14.9",
     "@types/proj4": "^2.5.5",
     "@types/range-parser": "^1.2.7",
@@ -52,7 +51,9 @@
     "@types/yargs": "^17.0.32",
     "@typescript-eslint/parser": "^8.1.0",
     "copyfiles": "^2.4.1",
+    "core-js": "^3.38.1",
     "eslint": "^9.8.0",
+    "execa-cjs": "^9.1.1",
     "jest": "^29.7.0",
     "jest-junit": "^16.0.0",
     "rimraf": "^5.0.7",

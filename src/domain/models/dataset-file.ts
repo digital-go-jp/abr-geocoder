@@ -52,7 +52,6 @@ export type CsvLine = { [key: string]: string };
 export type ProcessOptions = {
   lines: CsvLine[];
   db: ICommonDbDownload | IRsdtBlkDbDownload | IRsdtDspDbDownload | IParcelDbDownload;
-  noUpdate: boolean;
 };
 
 export abstract class DatasetFile implements IDatasetFileMeta {
@@ -79,7 +78,7 @@ export abstract class DatasetFile implements IDatasetFileMeta {
   }
 
   // CSVファイルの1行のデータを分析して、データベースに反映させる
-  abstract process(params: ProcessOptions): Promise<Set<string> | undefined | void>;
+  abstract process(params: ProcessOptions): Promise<void>;
 
   // CSVファイルを1行のデータを、必要な項目だけ読み込んで返す
   protected parseCsv(

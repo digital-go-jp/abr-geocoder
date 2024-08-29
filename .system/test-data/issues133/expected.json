@@ -1,0 +1,104 @@
+[
+  {
+    "query": {
+      "input": "岩手県八幡平市大更第35地割"
+    },
+    "result": {
+      "output": "岩手県八幡平市大更第３５地割",
+      "other": null,
+      "score": 1,
+      "match_level": "machiaza_detail",
+      "coordinate_level": "machiaza_detail",
+      "lat": 39.911413,
+      "lon": 141.125139,
+      "lg_code": "032140",
+      "machiaza_id": "0034128",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "岩手県",
+      "county": null,
+      "city": "八幡平市",
+      "ward": null,
+      "oaza_cho": "大更",
+      "chome": null,
+      "koaza": "第３５地割",
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "上麻生島下麻生島上野田野土打川島下唯野１字"
+    },
+    "result": {
+      "output": "福井県大野市上麻生島下麻生島上野田野土打川島下唯野１字",
+      "other": null,
+      "score": 0.78,
+      "match_level": "machiaza_detail",
+      "coordinate_level": "machiaza_detail",
+      "lat": 35.98056400000001,
+      "lon": 136.487692,
+      "lg_code": "182052",
+      "machiaza_id": "0395000",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "福井県",
+      "county": null,
+      "city": "大野市",
+      "ward": null,
+      "oaza_cho": "上麻生島下麻生島上野田野土打川島下唯野１字",
+      "chome": null,
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "志比４９字熊ケ谷その二"
+    },
+    "result": {
+      "output": "福井県永平寺町志比４９字熊ケ谷その二",
+      "other": null,
+      "score": 0.62,
+      "match_level": "machiaza_detail",
+      "coordinate_level": "machiaza_detail",
+      "lat": 36.092248,
+      "lon": 136.298724,
+      "lg_code": "183229",
+      "machiaza_id": "0018186",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "福井県",
+      "county": null,
+      "city": "永平寺町",
+      "ward": null,
+      "oaza_cho": "志比",
+      "chome": null,
+      "koaza": "４９字熊ケ谷その二",
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  }
+]

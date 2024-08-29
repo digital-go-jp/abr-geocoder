@@ -33,7 +33,7 @@ export class DownloadTransform extends Duplex {
 
   private receivedFinal: boolean = false;
   private runningTasks = 0;
-  private isClosed = false;
+  private abortCtrl = new AbortController();
 
   // ダウンロードを担当するワーカースレッド
   private downloader?: WorkerThreadPool<
@@ -43,6 +43,7 @@ export class DownloadTransform extends Duplex {
   >;
 
   constructor(params : Required<{
+    maxConcurrency: number;
     maxTasksPerWorker: number;
     container: DownloadDiContainer;
   }>) {
@@ -67,22 +68,20 @@ export class DownloadTransform extends Duplex {
         maxTasksPerWorker: params.maxTasksPerWorker,
       },
 
-      // ダウンローダーのスレッドは1つだけにする
-      // HTTP2.0で接続するので、TCPコネクションは1つだけで良い
-      maxConcurrency: 1,
+      // ダウンローダーのスレッド
+      maxConcurrency: params.maxConcurrency,
 
       // 同時ダウンロード数
       maxTasksPerWorker: params.maxTasksPerWorker,
     }).then(pool => {
       this.downloader = pool;
-      if (this.isClosed) {
-        pool.close();
-      }
     });
   }
 
   close() {
-    this.isClosed = true;
+    if (!this.abortCtrl.signal.aborted) {
+      this.abortCtrl.abort();
+    }
     this.downloader?.close();
   }
 
@@ -137,6 +136,9 @@ export class DownloadTransform extends Duplex {
         params.useCache = false;
       }
     }
+
+    this.abortCtrl.abort(`Can not download the file: ${params.packageId}`);
+    this.close();
   }
 
   _final(callback: (error?: Error | null) => void): void {

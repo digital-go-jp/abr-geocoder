@@ -173,7 +173,7 @@ export class GeocodeTransform extends Duplex {
     });
 
     // 正規表現で番地を試みる
-    const regexTranfrorm = new NormalizeBanchomeTransform({
+    const normalizeBanchomeTransform = new NormalizeBanchomeTransform({
       logger: params.logger,
     });
 
@@ -190,7 +190,7 @@ export class GeocodeTransform extends Duplex {
     });
 
     this.reader.pipe(normalizeTransform)
-      .pipe(regexTranfrorm)
+      .pipe(normalizeBanchomeTransform)
       .pipe(prefTransform)
       .pipe(countyAndCityTransform)
       .pipe(cityAndWardTransform)

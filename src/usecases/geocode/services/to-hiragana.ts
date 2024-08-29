@@ -25,11 +25,11 @@
 import { CharNode } from "./trie/char-node";
 
 const hiraganaMap = new Map<string, string>([
-  ['ｶﾞ', 'け'], // 龍ケ崎市,龍ｶﾞ崎市 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
-  ['ｷﾞ', 'ぎ'],
-  ['ｸﾞ', 'ぐ'],
-  ['ｹﾞ', 'げ'],
-  ['ｺﾞ', 'ご'],
+  ["ｶﾞ", 'け'], // 龍ケ崎市,龍ｶﾞ崎市 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
+  ["ｷﾞ", 'ぎ'],
+  ["ｸﾞ", 'ぐ'],
+  ["ｹﾞ", 'け'], // 龍ケ崎市,龍ｹ崎市 のように「ケ」を「ｹ」で表現する場合がある。「け」に統一する
+  ["ｺﾞ", 'ご'],
   ['ｻﾞ', 'ざ'],
   ['ｼﾞ', 'じ'],
   ['ｽﾞ', 'ず'],
@@ -111,7 +111,7 @@ const hiraganaMap = new Map<string, string>([
   ['ガ', 'け'], // 龍ケ崎市,龍ガ崎市 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
   ['ギ', 'ぎ'],
   ['グ', 'ぐ'],
-  ['ゲ', 'げ'],
+  ['ゲ', 'け'], // 龍ケ崎市,龍ゲ崎市 のように「ケ」を「ゲ」で表現する場合がある。「け」に統一する
   ['ゴ', 'ご'],
   ['ザ', 'ざ'],
   ['ジ', 'じ'],
@@ -156,7 +156,7 @@ const hiraganaMap = new Map<string, string>([
   ['ォ', 'お'],  // 捨て仮名
   ['ゕ', 'け'],  // 龍ケ崎市,龍ゕ崎市 のように「ケ」を「ゕ」で表現する場合がある。「け」に統一する
   ['ヵ', 'け'],  // 龍ケ崎市,龍ガ崎市 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
-  ['カ', 'か'],
+  ['カ', 'け'],  // 龍ケ崎市,龍カ崎市 のように「ケ」を「カ」で表現する場合がある。「け」に統一する
   ['キ', 'き'],
   ['ク', 'く'],
   ['ㇰ', 'く'],  // 捨て仮名
@@ -231,7 +231,11 @@ const hiraganaMap = new Map<string, string>([
 
 export const toHiragana = (target: string) => {
   const buffer: string[] = [];
-  for (const char of target) {
+  // Unicode正規化を行う
+  // https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/String/normalize
+  //
+  // NFKCは、濁音付きの半角カタカナを全角カタカナに変換する
+  for (const char of target.normalize('NFKC')) {
     buffer.push(hiraganaMap.get(char) || char);
   }
   

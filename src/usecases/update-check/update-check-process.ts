@@ -29,31 +29,28 @@ import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import { isPrefLgCode, PrefLgCode } from "@domain/types/pref-lg-code";
 import { HttpRequestAdapter } from "@interface/http-request-adapter";
 import { DownloaderOptions } from "@usecases/download/download-process";
-import { DownloadDiContainer } from "@usecases/download/models/download-di-container";
 import { StatusCodes } from "http-status-codes";
 import path from 'node:path';
 import { Stream } from "stream";
 import { pipeline } from "stream/promises";
+import { UpdateCheckDiContainer, UpdateCheckDiContainerParams } from "./models/update-check-di-container";
 import { UpdateCheckResult, UpdateCheckTransform } from "./models/update-check-transform";
 
 
 export type UpdateCheckOptions = {
   // 進み具合を示すプログレスのコールバック
-  progress?: (current: number) => void;
+  progress?: (current: number, total: number) => void;
 };
 
 export class UpdateChecker {
 
   private client: HttpRequestAdapter;
 
-  private container: DownloadDiContainer;
+  private container: UpdateCheckDiContainer;
 
-  constructor(options: DownloaderOptions) {
-    this.container = new DownloadDiContainer({
-      cacheDir: options.cacheDir,
-      downloadDir: options.downloadDir,
-      database: options.database,
-    });
+  constructor(options: UpdateCheckDiContainerParams) {
+
+    this.container = new UpdateCheckDiContainer(options);
 
     this.client = new HttpRequestAdapter({
       hostname: this.container.env.hostname,
@@ -63,9 +60,14 @@ export class UpdateChecker {
   }
 
   async updateCheck(options: UpdateCheckOptions) {
+    // データベースから、対象の lgCodeを取得する
+    const commonDb = await this.container.database.openCommonDb();
+    const lgCodes = await commonDb.getLgCodes();
+    const lgCodeSet = new Set<string>(lgCodes);
+
     // レジストリ・カタログサーバーから、パッケージの一覧を取得する
     const response = await this.client.getJSON({
-      url: `https://${this.container.env.hostname}/rc/api/3/action/package_list`,
+      url: this.container.getPackageListUrl(),
     });
 
     if (response.header.statusCode !== StatusCodes.OK) {
@@ -88,6 +90,12 @@ export class UpdateChecker {
     }
   
     // リストからジオコーディングに関するパッケージIDのみをピックアップ
+    const lgCodeFilter = (() => {
+      if (lgCodeSet.size === 0) {
+        return (_: PackageInfo) => true;
+      }
+      return (x: PackageInfo) => lgCodeSet.has(x.lgCode);
+    })();
     const packages = packageListResult.result
       .map(packageId => parsePackageId(packageId))
       .filter(x => x !== undefined)
@@ -99,7 +107,10 @@ export class UpdateChecker {
           return x.dataset.startsWith('pref');
         }
         return x.dataset.startsWith('city');
-      });
+      })
+      .filter(lgCodeFilter);
+
+    const total = packages.length;
 
     // アップデートが必要なパッケージを保持
     const updatedPackageIDs: PackageInfo[] = [];
@@ -109,7 +120,7 @@ export class UpdateChecker {
       write: (result: UpdateCheckResult, _, callback) => {
         // プログレスバーに進捗を出力する
         if (options.progress) {
-          setImmediate(() => options.progress && options.progress(dst.count));
+          setImmediate(() => options.progress && options.progress(dst.count, total));
         }
         if (result.needUpdate) {
           updatedPackageIDs.push(result.packageInfo);
@@ -123,11 +134,9 @@ export class UpdateChecker {
       objectMode: true,
     });
 
-    const checker = new UpdateCheckTransform({
-      commonDbSqlite: path.join((this.container.database.connectParams as Sqlite3Params).dataDir, 'common.sqlite'),
-      container: this.container,
-    });
+    const checker = await UpdateCheckTransform.create(this.container);
 
+    console.error(`total = ${packages.length}`);
     await pipeline(
       reader,
       checker,

@@ -49,15 +49,16 @@ export class DownloadDiContainer extends CommonDiContainer {
     makeDirIfNotExists(params.cacheDir);
     this.urlCacheMgr = new UrlCacheManager(params.cacheDir);
 
-    this.database = new DownloadDbController({
-      connectParams: params.database,
-    });
+    this.database = new DownloadDbController(params.database);
 
     Object.freeze(this);
   }
 
   getFileShowUrl() {
     return `https://${this.env.hostname}/rc/api/3/action/package_show`;
+  }
+  getPackageListUrl() {
+    return `https://${this.env.hostname}/rc/api/3/action/package_list`;
   }
 
   toJSON(): DownloadDiContainerParams {

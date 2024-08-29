@@ -149,13 +149,15 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
       };
     }
     this.buffer += JSON.stringify(output);
-    callback(null, out);
+    callback(null);
+    this.push(out);
   }
 
   _final(callback: (error?: Error | null | undefined) => void): void {
-    this.emit('data', this.buffer);
-    this.emit('data', ']');
-    this.emit('data', BREAK_AT_EOF); // ファイルの最後に改行を入れる
+    this.push(this.buffer);
+    this.push(']');
+    this.push(BREAK_AT_EOF); // ファイルの最後に改行を入れる
+    // this.push(null);
     callback();
   }
 }

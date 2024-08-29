@@ -36,10 +36,8 @@ export class DownloadDbController {
   private readonly sqlite3Util?: Sqlite3Util;
   public readonly connectParams: DatabaseParams;
 
-  constructor(params: Required<{
-    connectParams: DatabaseParams,
-  }>) {
-    this.connectParams = params.connectParams;
+  constructor(params: Required<DatabaseParams>) {
+    this.connectParams = params;
 
     switch (this.connectParams.type) {
       case 'sqlite3':

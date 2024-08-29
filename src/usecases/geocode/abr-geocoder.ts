@@ -40,7 +40,6 @@ export class AbrGeocoder {
   private isClosed = false;
   private readonly abortController = new AbortController();
 
-
   private constructor(params: {
     geocodeTransformOnMainThread: GeocodeTransform,
     container: AbrGeocoderDiContainer;
@@ -91,7 +90,7 @@ export class AbrGeocoder {
     });
   }
 
-  async geocode(input: AbrGeocoderInput): Promise<QueryJson> {
+  geocode(input: AbrGeocoderInput): Promise<QueryJson> {
     // バックグラウンドスレッドが利用できるときは、そちらで処理する
     if (this.workerPool) {
       return this.workerPool.run(input);

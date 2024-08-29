@@ -84,7 +84,7 @@ const downloadCommand: CommandModule = {
 
   handler: async (argv: ArgumentsCamelCase<DownloadCommandArgv>) => {
     // silent = true のときは、プログレスバーを表示しない
-    const progressBar = argv.silent ? undefined : createSingleProgressBar();
+    const progressBar = argv.silent ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}');
     progressBar?.start(1, 0);
 
     if (argv.debug) {
@@ -95,7 +95,7 @@ const downloadCommand: CommandModule = {
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
 
     // ルートディレクトリを探す
-    const rootDir = await upwardFileSearch(__dirname, 'build');
+    const rootDir = upwardFileSearch(__dirname, 'build');
     if (!rootDir) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_FIND_THE_ROOT_DIR,

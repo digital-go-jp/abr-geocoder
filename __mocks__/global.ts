@@ -1,7 +1,8 @@
 import { jest } from "@jest/globals";
 
-export const setImmediateSpy = jest.spyOn(global, 'setImmediate')
-  .mockImplementation((callback) => {
-    callback(); // すぐにコールバックを実行するようにする
+export const setImmediateSpy = () => {
+  return jest.spyOn(global, 'setImmediate').mockImplementation((callback) => {
+    callback();
     return {} as NodeJS.Immediate;
   });
+};

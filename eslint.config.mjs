@@ -24,7 +24,9 @@ export default tseslint.config(
       'build/**',
       "**/*.mjs",
       "eslint.config.mjs",
-      "**/*.js"
+      "**/*.js",
+      ".system/**",
+      "__mocks__/**",
     ],
   },
   {

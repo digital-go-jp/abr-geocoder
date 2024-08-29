@@ -1,5 +1,6 @@
 import { describe, expect, it, jest, test } from '@jest/globals';
 import { CharNode } from '../char-node';
+import { DASH, SPACE } from '@config/constant-values';
 
 // 単体テストなので`toHankakuAlphaNum`はmockする。
 jest.mock("../../to-hankaku-alpha-num", () => ({
@@ -222,6 +223,13 @@ describe("CharNode", () => {
         return `${alpha.toUpperCase()}${num}`;
       });
       expect(result?.toProcessedString()).toBe("TEST123_string_TEST78");
+    });
+
+    it("should remove only the last dash", () => {
+      const node = CharNode.create(`あいう${DASH}`);
+      node!.next!.ignore = true;
+      const result = node!.replaceAll(new RegExp(`[${SPACE}${DASH}]$`, 'g'), '');
+      expect(result?.toProcessedString()).toBe("あう");
     });
   });
 
