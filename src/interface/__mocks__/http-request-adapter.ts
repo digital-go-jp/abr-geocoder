@@ -83,6 +83,6 @@ module.exports = {
         return Promise.resolve(ErrorResponse);
       },
       close: () => {},
-    }
+    };
   }),
 };

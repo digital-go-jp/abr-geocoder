@@ -86,7 +86,7 @@ export class CsvParseTransform extends Duplex {
       signal: this.abortCtrl.signal,
     }).then(pool => {
       this.csvParsers = pool;
-    })
+    });
   }
 
   close() {
@@ -127,7 +127,7 @@ export class CsvParseTransform extends Duplex {
 
       this.abortCtrl.abort(`Can not parse the file: ${[downloadResult.csvFilePath]}`);
       this.close();
-    })
+    });
   }
 
   _final(callback: (error?: Error | null) => void): void {

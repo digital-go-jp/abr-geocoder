@@ -121,8 +121,8 @@ export class NormalizeBanchomeTransform extends Transform {
           stack.at(-2)!.ignore = true;
           
           const replaced: string[] = [
-            pointer2.originalChar!,
-            pointer2.next.moveToNext()?.originalChar!,
+            pointer2.originalChar || '',
+            pointer2.next.moveToNext()?.originalChar || '',
           ];
           
           const dash = new CharNode({

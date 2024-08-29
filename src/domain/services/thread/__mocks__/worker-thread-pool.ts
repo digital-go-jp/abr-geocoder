@@ -14,9 +14,9 @@ const WorkerThreadPool = {
   create: jest.fn().mockImplementation(() => {
     return Promise.resolve(new MockWorkerThreadPool());
   }),
-}
+};
 
 module.exports = {
   ...Object.assign({}, originalModule),
   WorkerThreadPool,
-}
+};

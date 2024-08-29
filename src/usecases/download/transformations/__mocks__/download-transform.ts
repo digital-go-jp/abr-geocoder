@@ -23,8 +23,8 @@ export class MockDownloadTransform extends Transform {
           contentLength: 12345,
           lastModified: 12345,
           noUpdate: false,
-        }
-      ]
+        },
+      ],
     });
   }
 

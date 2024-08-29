@@ -23,14 +23,11 @@
  */
 import { CounterWritable } from "@domain/services/counter-writable";
 import { PackageInfo, parsePackageId } from "@domain/services/parse-package-id";
-import { Sqlite3Params } from "@domain/types/database-params";
 import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
 import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import { isPrefLgCode, PrefLgCode } from "@domain/types/pref-lg-code";
 import { HttpRequestAdapter } from "@interface/http-request-adapter";
-import { DownloaderOptions } from "@usecases/download/download-process";
 import { StatusCodes } from "http-status-codes";
-import path from 'node:path';
 import { Stream } from "stream";
 import { pipeline } from "stream/promises";
 import { UpdateCheckDiContainer, UpdateCheckDiContainerParams } from "./models/update-check-di-container";

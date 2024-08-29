@@ -52,7 +52,7 @@ export const removeGeocoderCommonDataCache = async (params: {
     return;
   }
   fs.unlinkSync(cacheFilePath);
-}
+};
 
 // ジオコーディングに必要なデータを返す
 //

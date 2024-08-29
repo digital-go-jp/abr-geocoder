@@ -91,7 +91,7 @@ export const loadCsvToDatabase = async (params : Required<{
           db,
         }).catch((e) => {
           console.error(`error: ${e}`);
-        })
+        });
 
         // 書き込みロックを解除
         params.semaphore.leave(semaphoreIdx);

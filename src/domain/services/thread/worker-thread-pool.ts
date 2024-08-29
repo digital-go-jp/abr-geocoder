@@ -195,9 +195,9 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       pool.initAsync(params).then(() => {
         resolve(pool);
       })
-      .catch((reason: unknown) => {
-        reject(reason);
-      });
+        .catch((reason: unknown) => {
+          reject(reason);
+        });
     });
   };
 

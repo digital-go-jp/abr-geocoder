@@ -85,7 +85,7 @@ export class CommonDbUpdateCheckSqlite3
         city_key = @city_key
       LIMIT 1
     `).get({
-      city_key
+      city_key,
     });
     return Promise.resolve(row?.count !== 0);
   }
@@ -110,7 +110,7 @@ export class CommonDbUpdateCheckSqlite3
         city_key = @city_key
       LIMIT 1
     `).get({
-      city_key
+      city_key,
     });
     return Promise.resolve(row?.count !== 0);
   }
