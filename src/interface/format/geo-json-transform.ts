@@ -113,7 +113,7 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
       properties: {
         input: result.input.data.address,
         output: result.formatted.address,
-        other: result.tempAddress?.toOriginalString() || BLANK_CHAR,
+        other: result.tempAddress?.toOriginalString()?.trim() || BLANK_CHAR,
         score: result.formatted.score,
         match_level: result.match_level.str,
         coordinate_level: result.coordinate_level.str,

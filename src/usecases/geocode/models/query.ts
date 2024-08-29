@@ -374,9 +374,10 @@ export class Query implements IQuery {
       .replaceAll(RegExpEx.create(' +', 'g'), ' ').trim();
     
     // 最終的な文字列と一番最初のクエリ文字列の類似度を計算する
+    const originalInput = this.input.data.address.replaceAll(RegExpEx.create('[ 　]+', 'g'), ' ');
     const score = getLevenshteinDistanceRatio(
       toHankakuAlphaNum(result),
-      toHankakuAlphaNum(this.input.data.address.replaceAll(RegExpEx.create(' +', 'g'), ' ')),
+      toHankakuAlphaNum(originalInput),
     );
 
     return {

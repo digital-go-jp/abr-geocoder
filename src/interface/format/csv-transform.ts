@@ -25,6 +25,7 @@
 import { Query } from '@usecases/geocode/models/query';
 import { Stream, TransformCallback } from 'node:stream';
 import { IFormatTransform } from './iformat-transform';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class CsvTransform extends Stream.Transform implements IFormatTransform {
   mimetype: string = 'text/x-csv';
@@ -81,8 +82,11 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
           case 'id':
             return result.input.taskId;
 
-          case 'input':
-            return `"${result.input.data.address}"`;
+          case 'input': {
+            // ダブルクォートを含む場合は、ダブルクォートは2つ並べて（""）エスケープする。
+            const input = result.input.data.address.replaceAll(RegExpEx.create('"{1,2}', 'g'), '""');
+            return `"${input}"`;
+          }
 
           case 'output':
             return `"${result.formatted.address}"`;
@@ -133,7 +137,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             if (!result.tempAddress) {
               return '';
             }
-            return `"${result.tempAddress.toOriginalString()}"`;
+            return `"${result.tempAddress.toOriginalString().trim()}"`;
 
           case 'blk_num':
             return result.block?.toString() || '';

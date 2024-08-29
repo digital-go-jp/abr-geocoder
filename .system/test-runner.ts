@@ -22,11 +22,17 @@ const lgCodes = [
 
   // issue #157
   '011011', // 北海道札幌市
+
+  // issue #123
+  '442011', // 大分県大分市
+  
+  // issue #122
+  '014257', // 北海道空知郡上砂川町
 ];
 
 $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`
   .then(() => {
-    return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}`
+    return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`
   })
   .then(() => {
     return $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`

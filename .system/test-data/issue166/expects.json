@@ -377,7 +377,7 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市松葉二丁目9 松葉小学校",
-      "other": " 松葉小学校",
+      "other": "松葉小学校",
       "score": 0.79,
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
@@ -479,7 +479,7 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市久保台二丁目3 久保台小学校",
-      "other": " 久保台小学校",
+      "other": "久保台小学校",
       "score": 0.81,
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
@@ -513,7 +513,7 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市城ノ内五丁目27 城ノ内小学校",
-      "other": " 城ノ内小学校",
+      "other": "城ノ内小学校",
       "score": 0.78,
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
@@ -547,7 +547,7 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市中央二丁目1-1 鎌ケ谷小学校",
-      "other": " 鎌ケ谷小学校",
+      "other": "鎌ケ谷小学校",
       "score": 0.82,
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
@@ -649,7 +649,7 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市鎌ケ谷八丁目3-11 東部小学校",
-      "other": " 東部小学校",
+      "other": "東部小学校",
       "score": 0.79,
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
@@ -717,7 +717,7 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市道野辺中央三丁目12-3 中部小学校",
-      "other": " 中部小学校",
+      "other": "中部小学校",
       "score": 0.84,
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
@@ -751,7 +751,7 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市東初富一丁目20-1 初富小学校",
-      "other": " 初富小学校",
+      "other": "初富小学校",
       "score": 0.83,
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
@@ -785,7 +785,7 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市東道野辺五丁目5-1 道野辺小学校",
-      "other": " 道野辺小学校",
+      "other": "道野辺小学校",
       "score": 0.84,
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
@@ -819,7 +819,7 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市南初富一丁目16-1 五本松小学校",
-      "other": " 五本松小学校",
+      "other": "五本松小学校",
       "score": 0.84,
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
