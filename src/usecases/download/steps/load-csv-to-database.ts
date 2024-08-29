@@ -50,7 +50,7 @@ export const loadCsvToDatabase = async (params : Required<{
   datasetFile: DatasetFile;
   databaseCtrl: DownloadDbController;
 }>): Promise<void> => {
-  console.log(`     > ${params.datasetFile.filename}`);
+  // console.log(`     > ${params.datasetFile.filename}`);
 
   const semaphoreIdx = getSemaphoreIdx(params.datasetFile, params.semaphore.size);
 
