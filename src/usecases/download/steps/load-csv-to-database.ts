@@ -54,13 +54,6 @@ export const loadCsvToDatabase = async (params : Required<{
 
   const semaphoreIdx = getSemaphoreIdx(params.datasetFile, params.semaphore.size);
 
-  const db = await openDb({
-    dbCtrl: params.databaseCtrl,
-    datasetFile: params.datasetFile,
-  });
-  if (!db) {
-    return;
-  }
 
   await pipeline(
     fs.createReadStream(params.datasetFile.csvFile.path, {
@@ -78,20 +71,26 @@ export const loadCsvToDatabase = async (params : Required<{
     new Writable({
       objectMode: true,
       async write(csvLines: CsvLine[], _, next) {
-        if (!db) {
-          return next();
-        }
-
         // セマフォで同時書き込みの排除
         await params.semaphore.enterAwait(semaphoreIdx);
 
-        // データを一時テーブルに読み込む
-        await params.datasetFile.process({
-          lines: csvLines,
-          db,
-        }).catch((e) => {
-          console.error(`error: ${e}`);
+        // DBを開く
+        const db = await openDb({
+          dbCtrl: params.databaseCtrl,
+          datasetFile: params.datasetFile,
         });
+        
+        if (db) {
+          // データを一時テーブルに読み込む
+          await params.datasetFile.process({
+            lines: csvLines,
+            db,
+          }).catch((e) => {
+            console.error(`error: ${e}`);
+          });
+
+          await db.closeDb();
+        }
 
         // 書き込みロックを解除
         params.semaphore.leave(semaphoreIdx);
@@ -100,8 +99,6 @@ export const loadCsvToDatabase = async (params : Required<{
       },
     }),
   );
-
-  await db.closeDb();
 };
 
 const openDb = (params: {

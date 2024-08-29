@@ -37,16 +37,23 @@ describe('Normal cases', () => {
 describe('issues', () => {
   test('#133: 「地割」が「koaza」に正規化されない', async () => {
     const { stdout } = await execCLI({
-      inputFile: `${__dirname}/../test-data/issues133/input.txt`,
+      inputFile: `${__dirname}/../test-data/issue133/input.txt`,
     });
-    const expectedOutput = readJsonFile(`issues133/expected.json`);
+    const expectedOutput = readJsonFile(`issue133/expected.json`);
+    expect(JSON.parse(stdout)).toEqual(expectedOutput);
+  });
+  test('#157: エッジケース：階数を含むケース', async () => {
+    const { stdout } = await execCLI({
+      inputFile: `${__dirname}/../test-data/issue157/input.txt`,
+    });
+    const expectedOutput = readJsonFile(`issue157/expected.json`);
     expect(JSON.parse(stdout)).toEqual(expectedOutput);
   });
   test('#166: 半角カタカナの「ｹ」がマッチしない', async () => {
     const { stdout } = await execCLI({
-      inputFile: `${__dirname}/../test-data/issues166/input.txt`,
+      inputFile: `${__dirname}/../test-data/issue166/input.txt`,
     });
-    const expectedOutput = readJsonFile(`issues166/expected.json`);
+    const expectedOutput = readJsonFile(`issue166/expected.json`);
     expect(JSON.parse(stdout)).toEqual(expectedOutput);
   });
 });

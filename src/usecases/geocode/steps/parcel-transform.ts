@@ -187,17 +187,19 @@ export class ParcelTransform extends Transform {
           buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
           head = pointer;
           current.length = 0;
-          matchedCnt += tmpBuffer.length - 1;
+          matchedCnt += tmpBuffer.length;
           break;
         }
-        if (pointer.char === DASH) {
-          current.push(...tmpBuffer);
-          head = pointer;
-          matchedCnt += tmpBuffer.length - 1;
-
-          buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
-          current.length = 0;
+        if (pointer.char !== DASH) {
+          break;
         }
+        
+        current.push(...tmpBuffer);
+        head = pointer;
+        matchedCnt += tmpBuffer.length;
+
+        buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+        current.length = 0;
       } else if (head.char === DASH) {
         buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
         current.length = 0;

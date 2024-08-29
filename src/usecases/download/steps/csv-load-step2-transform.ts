@@ -66,7 +66,9 @@ export class CsvLoadStep2Transform extends Duplex {
     });
 
     // await promise.all() で DBへの取り込み処理が完了するまで待つ
-    await Promise.all(tasks);
+    await Promise.all(tasks).catch(e => {
+      console.error(`[error]`, e);
+    });
 
     this.push({
       taskId: job.taskId,

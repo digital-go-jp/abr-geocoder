@@ -19,6 +19,9 @@ const lgCodes = [
   '183229', // 福井県永平寺町
   '182052', // 福井県大野市
   '032140', // 岩手県八幡平市
+
+  // issue #157
+  '011011', // 北海道札幌市
 ];
 
 $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`

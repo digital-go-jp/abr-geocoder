@@ -12,7 +12,7 @@ const { roots, moduleDirectories, tsconfig } = (() => {
   ];
   let tsconfig = '';
 
-  if (targetTestFile.includes('.system')) {
+  if (targetTestFile && targetTestFile.includes('.system')) {
     roots.push('<rootDir>/.system/');
     moduleDirectories.push(".system");
     tsconfig = "./tsconfig.system-test.json";
