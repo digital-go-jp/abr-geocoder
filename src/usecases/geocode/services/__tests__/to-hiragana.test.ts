@@ -23,29 +23,27 @@ describe("toHiragana", () => {
     expect(result).toBe("あいうえお");
   });
   it("should convert Katakana with voiced sound mark to Hiragana", () => {
+    // 「ガ」「ゲ」は「け」に統一する
     const result = toHiragana("ガギグゲゴ");
-    expect(result).toBe("がぎぐげご");
+    expect(result).toBe("けぎぐけご");
   });
   it("should convert Katakana with semi-voiced sound mark to Hiragana", () => {
     const result = toHiragana("パピプペポ");
     expect(result).toBe("ぱぴぷぺぽ");
   });
   it("should convert Katakana to half-width Hiragana", () => {
+    // 「ｶ」は「け」に統一する
     const result = toHiragana("あいうﾊﾝｶｸえお");
-    expect(result).toBe("あいうはんかくえお");
+    expect(result).toBe("あいうはんけくえお");
   });
-  /**
-     * HiraganaMapでは'ｶﾞ'は'が'に対応しているが、
-     * toHiraganaの`const char of target`では'ｶ',''ﾞ'に分割されている。
-     * これは想定通り？
-     **/
+  
   it("should convert half-width Katakana with voiced sound mark to Hiragana and half-width voiced sound mark", () => {
     const result = toHiragana("ｶﾞｷﾞｸﾞｹﾞｺﾞ");
-    expect(result).toBe("かﾞきﾞくﾞけﾞこﾞ");
+    expect(result).toBe("けぎぐけご");
   });
-  it("should convert 'ケ' to 'が' (for 竜ケ崎, 八ケ岳, etc.)", () => {
+  it("should convert 'カ' to 'け' (for 竜ケ崎, 竜カ崎, 八ケ岳, etc.)", () => {
     const result = toHiragana("カキクケコ");
-    expect(result).toBe("かきくがこ");
+    expect(result).toBe("けきくけこ");
   });
   it("should convert 'ゑ' to 'え', 'ヱ' to 'え', and '之' to 'の'", () => {
     const result = toHiragana("ゑヱ之");

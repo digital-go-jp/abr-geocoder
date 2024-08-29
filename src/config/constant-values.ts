@@ -99,7 +99,7 @@ export const SPACE_SYMBOLS: string = [
 export const DEFAULT_FUZZY_CHAR: string = '?';
 
 // yargs が '-' を解析できないので、別の文字に置き換える
-export const SINGLE_DASH_ALTERNATIVE: string = '<stdin>';
+export const STDIN_FILEPATH: string = '<stdin>';
 
 // 出力の最後に改行を追加するためのマーク
 export const BREAK_AT_EOF = '\n';

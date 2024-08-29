@@ -21,18 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DbTableName } from "@config/db-table-name";
 import { getUrlHash } from "@domain/services/get-url-hash";
 import { PackageInfo } from "@domain/services/parse-package-id";
-import { TableKeyProvider } from "@domain/services/table-key-provider";
 import { CkanPackageResponse, CkanResource } from "@domain/types/download/ckan-package";
 import { isPrefLgCode } from "@domain/types/pref-lg-code";
+import { ICommonDbUpdateCheck } from "@interface/database/common-db";
 import { HttpRequestAdapter } from "@interface/http-request-adapter";
-import { DownloadDiContainer } from "@usecases/download/models/download-di-container";
-import BetterSqlite3 from "better-sqlite3";
 import { StatusCodes } from "http-status-codes";
 import timers from 'node:timers/promises';
 import { Duplex, TransformCallback } from "stream";
+import { UpdateCheckDiContainer } from "./update-check-di-container";
 
 export type UpdateCheckResult = {
   needUpdate: boolean;
@@ -40,37 +38,29 @@ export type UpdateCheckResult = {
 };
 
 export class UpdateCheckTransform extends Duplex {
-  private readonly commonDb: BetterSqlite3.Database;
-  private container: DownloadDiContainer;
-  private client: HttpRequestAdapter;
   private receiveFinal: boolean = false;
   private numOfRunning: number = 0;
 
-  constructor(params: {
-    commonDbSqlite : string;
-    container: DownloadDiContainer;
-  }) {
+  private constructor(
+    private readonly commonDb: ICommonDbUpdateCheck,
+    private readonly client: HttpRequestAdapter,
+    private readonly container: UpdateCheckDiContainer,
+  ) {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
-    this.commonDb = new BetterSqlite3(params.commonDbSqlite);
 
-    this.container = params.container;
+    this.container = container;
   
-    this.client = new HttpRequestAdapter({
-      hostname: this.container.env.hostname,
-      userAgent: this.container.env.userAgent,
-      peerMaxConcurrentStreams: 100,
-    });
   }
   
   async _write(packageInfo: PackageInfo, _: BufferEncoding, callback: TransformCallback) {
     this.numOfRunning++;
     
     while (this.numOfRunning > 200) {
-      await timers.setTimeout(200);
+      await timers.setTimeout(50 + Math.random() * 100);
       if (this.numOfRunning <= 100) {
         break;
       }
@@ -138,24 +128,23 @@ export class UpdateCheckTransform extends Duplex {
   private async checkTownDataset(packageInfo: PackageInfo) {
     try {
       // Townテーブルに1行あるかどうかチェック
-      const sql = `select count(city_key) as count FROM ${DbTableName.TOWN} where city_key = @city_key limit 1`;
-      const city_key = TableKeyProvider.getCityKey({
-        lg_code: packageInfo.lgCode,
-      });
-      const row = this.commonDb.prepare<unknown[], {
-        count: number;
-      }>(sql)
-        .get({
-          city_key,
-        });
-      
+      const existTownRows = await this.commonDb.hasTownRows(packageInfo);
+      console.error(`existTownRows = ${existTownRows}`);
+    
       // 0行なら、アップデートが必要
-      if (!row || row.count === 0) {
+      if (!existTownRows) {
         return {
           needUpdate: true,
           packageInfo,
         };
       }
+
+      // キャッシュを使って、リソースが更新されているかチェック
+      const needUpdate = await this.needsCacheUpdate(packageInfo.packageId);
+      return {
+        needUpdate,
+        packageInfo,
+      };
     } catch (_) {
       // SQLエラー（そもそもテーブルが無いなど）のときは、更新が必要
       return {
@@ -163,29 +152,17 @@ export class UpdateCheckTransform extends Duplex {
         packageInfo,
       };
     }
-
-    // キャッシュを使って、リソースが更新されているかチェック
-    const needUpdate = await this.needsCacheUpdate(packageInfo.packageId);
-    return {
-      needUpdate,
-      packageInfo,
-    };
   }
 
   private async checkCityDataset(packageInfo: PackageInfo) {
     if (!isPrefLgCode(packageInfo.lgCode)) {
       try {
         // Cityテーブルの行数をチェック(1行あれば良い)
-        const sql = `select count(city_key) as count FROM ${DbTableName.CITY} where lg_code = @lgCode Limit 1`;
-        const row = this.commonDb.prepare<unknown[], {
-          count: number;
-        }>(sql)
-          .get({
-            lgCode: packageInfo.lgCode,
-          });
-        
+        const existCityRow = await this.commonDb.hasCityRows(packageInfo);
+        console.error(`existCityRow = ${existCityRow}`);
+
         // 0行なら、アップデートが必要
-        if (!row || row.count === 0) {
+        if (!existCityRow) {
           return {
             needUpdate: true,
             packageInfo,
@@ -213,19 +190,23 @@ export class UpdateCheckTransform extends Duplex {
   private async checkPrefDataset(packageInfo: PackageInfo) {
     // Prefテーブルの行数をチェック(1行あれば良い)
     try {
-      const sql = `select count(pref_key) as count from ${DbTableName.PREF} limit 1`;
-      const row = this.commonDb.prepare<unknown[], {
-        count: number;
-      }>(sql)
-        .get();
+      const existPrefRows = await this.commonDb.hasPrefRows();
+      console.error(`existPrefRows = ${existPrefRows}`);
       
       // 0行なら、アップデートが必要
-      if (!row || row.count === 0) {
+      if (!existPrefRows) {
         return {
           needUpdate: true,
           packageInfo,
         };
       }
+      
+      // キャッシュを使って、リソースが更新されているかチェック
+      const needUpdate = await this.needsCacheUpdate(packageInfo.packageId);
+      return {
+        needUpdate,
+        packageInfo,
+      };
     } catch (_) {
       // SQLエラー（そもそもテーブルが無いなど）のときは、更新が必要
       return {
@@ -233,13 +214,6 @@ export class UpdateCheckTransform extends Duplex {
         packageInfo,
       };
     }
-
-    // キャッシュを使って、リソースが更新されているかチェック
-    const needUpdate = await this.needsCacheUpdate(packageInfo.packageId);
-    return {
-      needUpdate,
-      packageInfo,
-    };
   }
 
   private async needsCacheUpdate(packageId: string) {
@@ -306,5 +280,17 @@ export class UpdateCheckTransform extends Duplex {
     this.receiveFinal = true;
     callback();
   }
+
+  static create = async (container: UpdateCheckDiContainer) => {
+    const commonDb = await container.database.openCommonDb();
+
+    const client = new HttpRequestAdapter({
+      hostname: container.env.hostname,
+      userAgent: container.env.userAgent,
+      peerMaxConcurrentStreams: 100,
+    });
+
+    return new UpdateCheckTransform(commonDb, client, container);
+  };
 }
     

@@ -32,13 +32,15 @@ import { RsdtBlkGeocodeSqlite3 } from "./sqlite3/geocode/rsdt-blk-db-geocode-sql
 import { RsdtDspGeocodeSqlite3 } from "./sqlite3/geocode/rsdt-dsp-db-geocode-sqlite3";
 import { Sqlite3Util } from "./sqlite3/sqlite3-util";
 
+export type GeocodeDbControllerOptions = {
+  connectParams: DatabaseParams,
+};
+
 export class GeocodeDbController {
   private readonly sqlite3Util?: Sqlite3Util;
   public readonly connectParams: DatabaseParams;
 
-  constructor(params: Required<{
-    connectParams: DatabaseParams,
-  }>) {
+  constructor(params: Required<GeocodeDbControllerOptions>) {
     this.connectParams = params.connectParams;
 
     switch (this.connectParams.type) {

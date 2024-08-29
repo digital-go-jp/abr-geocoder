@@ -30,10 +30,10 @@ import { ICommonDbGeocode } from '@interface/database/common-db';
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
-import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
-import { kan2num, kan2numForCharNode } from '../services/kan2num';
+import { jisKanji } from '../services/jis-kanji';
+import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
-import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
+import { toHiragana } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 
@@ -211,40 +211,13 @@ export class KoazaTransform extends Transform {
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
     address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
-    address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
+    
+    address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}$2`);
+
+    address = address?.
+      replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+      replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
 
     return address;
-  }
-  
-  private normalize(address: CharNode | undefined): CharNode | undefined {
-    let copyed = address?.clone();
-
-    // 「丁目」をDASH に変換する
-    // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    copyed = copyed?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
-
-    // 小字に「大字」「字」を含んでいることがあり、住居表示だと省略されることも多いので取り除く
-    copyed = copyed?.replace(RegExpEx.create('大?字'), '');
-
-    // 漢数字を半角数字に変換する
-    copyed = kan2numForCharNode(copyed);
-
-    // 片仮名は平仮名に変換する
-    copyed = toHiraganaForCharNode(copyed);
-
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    copyed = jisKanjiForCharNode(copyed);
-    
-    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
-    // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
-    // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    copyed = copyed?.replaceAll(RegExpEx.create('第?([0-9]d+)(?:地[割区]|番地?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
-
-    // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
-    // 「の」は全部DASHに変換する
-    copyed = copyed?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
-    copyed = copyed?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
-    
-    return copyed;
   }
 }

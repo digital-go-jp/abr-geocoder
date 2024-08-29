@@ -51,7 +51,7 @@ export type DownloadProcessBase = {
 export type DownloadRequest = {
   kind: 'download';
   lgCode: string;
-  dataset: FileGroupKey | 'search';
+  dataset: FileGroupKey;
   useCache?: boolean;
   packageId: string;
 };
@@ -84,7 +84,7 @@ export const isDownloadProcessError = (target: DownloadProcessBase): target is D
 };
 
 export type CsvLoadRequest = {
-  dataset: 'search' | FileGroupKey;
+  dataset: FileGroupKey;
 };
 
 export type CsvLoadQueryBase = DownloadProcessBase & CsvLoadRequest;
@@ -99,5 +99,4 @@ export type CsvLoadQuery2 = {
 
 export type CsvLoadResult = {
   kind: 'result';
-  lgCodes: Set<string> | undefined;
 } & CsvLoadQueryBase;

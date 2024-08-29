@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { PackageInfo } from "@domain/services/parse-package-id";
 import { ChomeMachingInfo } from "@domain/types/geocode/chome-info";
 import { CityInfo, CityMatchingInfo } from "@domain/types/geocode/city-info";
 import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
@@ -32,6 +33,13 @@ import { RsdtDspInfo } from "@domain/types/geocode/rsdt-dsp-info";
 import { TownInfo, TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
 
+export interface ICommonDbUpdateCheck {
+  getLgCodes(): Promise<string[]>;
+  hasPrefRows(): Promise<boolean>;
+  hasCityRows(packageInfo: PackageInfo): Promise<boolean>;
+  hasTownRows(packageInfo: PackageInfo): Promise<boolean>;
+  closeDb(): Promise<void>;
+}
 export interface ICommonDbDownload {
   prefCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   prefPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;

@@ -23,18 +23,20 @@
  */
 import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
 import { CsvLoadResult, DownloadProcessError, DownloadRequest } from '@domain/models/download-process-query';
+import { CounterWritable } from '@domain/services/counter-writable';
 import { createPackageTree } from '@domain/services/create-package-tree';
 import { DatabaseParams } from '@domain/types/database-params';
 import { FileGroupKey } from '@domain/types/download/file-group';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { PrefLgCode, isPrefLgCode } from '@domain/types/pref-lg-code';
+import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
+import { loadGeocoderCommonData, removeGeocoderCommonDataCache } from '@usecases/geocode/services/load-geocoder-common-data';
 import { StatusCodes } from 'http-status-codes';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import timers from 'node:timers/promises';
-import { CounterWritable } from '@domain/services/counter-writable';
 import { DownloadDiContainer } from './models/download-di-container';
 import { CsvParseTransform } from './transformations/csv-parse-transform';
 import { DownloadTransform } from './transformations/download-transform';
@@ -48,11 +50,13 @@ export type DownloaderOptions = {
   downloadDir: string;
 };
 
+export type DownloadOptionsProgressCallback = (current: number, total: number) => void;
+
 export type DownloadOptions = {
   // ダウンロードするデータの対象を示す都道府県コード
   lgCodes?: string[];
   // 進み具合を示すプログレスのコールバック
-  progress?: (current: number, total: number) => void;
+  progress?: DownloadOptionsProgressCallback;
 
   //同時ダウンロード数
   concurrentDownloads: number;
@@ -103,18 +107,21 @@ export class Downloader {
     });
     
     const reader = Readable.from(requests);
-    
+    const parallel = this.container.env.availableParallelism();
+
     // ダウンロード処理を行う
+    // 最大6コネクション
+    const numOfDownloadThreads = Math.min(Math.max(parallel >> 1, 1), 6);
     const downloadTransform = new DownloadTransform({
       container: this.container,
+      maxConcurrency: numOfDownloadThreads,
       maxTasksPerWorker: Math.min(params.concurrentDownloads || MAX_CONCURRENT_DOWNLOAD),
     });
 
-    // ダウンロードしたzipファイルからcsvファイルを取り出して、
-    // データベースに登録する
-    const parallel = this.container.env.availableParallelism();
+    // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
+    const numOfCsvParserThreads = Math.max(parallel - numOfDownloadThreads, 1);
     const csvParseTransform = new CsvParseTransform({
-      maxConcurrency: Math.floor(parallel * 1.2),
+      maxConcurrency: numOfCsvParserThreads,
       container: this.container,
       lgCodeFilter,
     });
@@ -123,7 +130,7 @@ export class Downloader {
     const dst = new CounterWritable<CsvLoadResult>({
       write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
         if (params.progress) {
-          params.progress(dst.count, total);
+          params.progress(dst.count, total + 1);
         }
         callback();
       },
@@ -156,15 +163,31 @@ export class Downloader {
       downloadTransform,
       csvParseTransform,
       dst,
-    );
+    ).catch((e: unknown) => {
+      console.error(e);
+    });
     await downloadTransform.close();
     await csvParseTransform.close();
+
+    // キャッシュの削除
+    await removeGeocoderCommonDataCache({
+      cacheDir: this.container.urlCacheMgr.cacheDir,
+    });
+    // キャッシュの作成
+    const geocodeDbCtrl = new GeocodeDbController({
+      connectParams: this.container.database.connectParams,
+    });
+    const geocodeCommonDb = await geocodeDbCtrl.openCommonDb();
+    await loadGeocoderCommonData({
+      cacheDir: this.container.urlCacheMgr.cacheDir,
+      commonDb: geocodeCommonDb,
+    });
   }
   
 
   private async createDownloadRequests(downloadTargetLgCodes: Set<string>): Promise<DownloadRequest[]> {
     // レジストリ・カタログサーバーから、パッケージの一覧を取得する
-    const response = await this.getJSON(`https://${this.container.env.hostname}/rc/api/3/action/package_list`);
+    const response = await this.getJSON(this.container.getPackageListUrl());
 
     if (response.header.statusCode !== StatusCodes.OK) {
       throw new AbrgError({
@@ -187,9 +210,7 @@ export class Downloader {
     // 各lgCodeが何のdatasetType を持っているのかをツリー構造にする
     // lgcode -> dataset -> packageId
     const lgCodePackages = createPackageTree(packageListResult.result);
-
     const results: DownloadRequest[] = [];
-
     const targetPrefixes = new Set<string>();
     const cityPrefixes = new Set<string>();
     downloadTargetLgCodes.forEach(lgCode => {
@@ -279,25 +300,33 @@ export class Downloader {
     if (lgCodes === undefined) {
       return new Set();
     }
-    const results = new Map<string, string>();
-
     // params.lgCodesに含まれるlgCodeが prefLgCode(都道府県を示すlgCode)なら、
     // 市町村レベルのlgCodeは必要ないので省く。
-    lgCodes.forEach(lgCode => {
-      if (lgCode === PrefLgCode.ALL.toString()) {
+
+    const results = new Set<string>();
+    const others: string[] = [];
+    lgCodes.forEach(code => {
+      if (code === PrefLgCode.ALL) {
         return;
       }
-      const prefix = lgCode.substring(0, 2);
-      if (isPrefLgCode(lgCode)) {
-        // 都道府県コードの場合、格納 or 上書き
-        results.set(prefix, `${prefix}....`);
-      } else if (!results.has(prefix)) {
-        // 市町村コードをそのまま格納
-        results.set(prefix, lgCode);
+      if (!isPrefLgCode(code)) {
+        others.push(code);
+        return;
       }
+      const prefix = code.substring(0, 2);
+      results.add(`${prefix}....`);
     });
 
-    return new Set(results.values());
+    others.forEach(code => {
+      const prefix = code.substring(0, 2);
+      if (results.has(`${prefix}....`)) {
+        return;
+      }
+      // 市町村コードをそのまま格納
+      results.add(code);
+    });
+
+    return results;
   }
 }
 

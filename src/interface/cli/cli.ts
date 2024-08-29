@@ -44,7 +44,7 @@ export const main = async (
   nodeEnv: string | undefined,
   ...processArgv: string[]
 ) => {
-  const { version } = await getPackageInfo();
+  const { version } = getPackageInfo();
   const parsedArgs = parseHelper(processArgv);
 
   /**
@@ -73,12 +73,10 @@ export const main = async (
       // Otherwise, show the error message
       console.error(`[error] ${msg || e.message}`, e);
     
-      if (process.env.NODE_ENV !== 'test') {
+      if (process.env.NODE_ENV !== 'development') {
         process.exit(1);
       }
     })
     .parse();
 };
-if (process.env.NODE_ENV !== 'test') {
-  main(process.env.NODE_ENV, ...process.argv);
-}
+main(process.env.NODE_ENV, ...process.argv);

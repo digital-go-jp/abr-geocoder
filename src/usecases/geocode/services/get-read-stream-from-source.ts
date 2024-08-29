@@ -22,14 +22,14 @@
  * SOFTWARE.
  */
 import fs from 'node:fs';
-import { SINGLE_DASH_ALTERNATIVE } from '@config/constant-values';
+import { STDIN_FILEPATH } from '@config/constant-values';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 
 export const getReadStreamFromSource = (
   source: string,
 ): NodeJS.ReadStream | fs.ReadStream => {
-  if (source === SINGLE_DASH_ALTERNATIVE) {
+  if (source === STDIN_FILEPATH) {
     // パイプ処理なしで、`abrg -` とされた場合はエラー
     if (process.stdin.isTTY) {
       throw new AbrgError({

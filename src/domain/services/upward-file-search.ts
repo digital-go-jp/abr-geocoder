@@ -24,12 +24,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export async function upwardFileSearch(
+export function upwardFileSearch(
   currDir: string,
   targetFilename: string,
-): Promise<string | undefined> {
+): string | undefined {
   try {
-    const files = await fs.promises.readdir(currDir);
+    const files = fs.readdirSync(currDir);
     const existFile = files.some(file => file.endsWith(targetFilename));
 
     // 見つかった場合は探索終了

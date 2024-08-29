@@ -50,10 +50,6 @@ export class NormalizeTransform extends Transform {
     callback: TransformCallback,
   ): void {
     
-    // Unicode正規化を行う
-    // https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/String/normalize
-    input.data.address = input.data.address.normalize('NFC');
-
     // 重複する空白をまとめる
     input.data.address = input.data.address.replaceAll(RegExpEx.create(' +', 'g'), ' ');
 

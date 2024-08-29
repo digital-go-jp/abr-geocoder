@@ -107,12 +107,43 @@ export class NormalizeBanchomeTransform extends Transform {
       //   head.next = space;
       //   continue;
       // }
-      // 他の置換により、「1番(DASH)」「2番地(DASH)」「3号(DASH)「4条(DASH)」になっているときは、DASHだけにする
+
+      // 「第1地番」「第2地区」のようになっているときは、「第」を取る
+      if (stack.at(-2)?.char === '第' && isDigitForCharNode(top)) {
+        let pointer2: CharNode | undefined = head.next?.moveToNext();
+        while (pointer2 && isDigitForCharNode(pointer2)) {
+          pointer2 = pointer2.next?.moveToNext();
+        }
+        if (pointer2?.char === '地' && 
+          (pointer2?.next?.moveToNext()?.char === '割' || pointer2?.next?.moveToNext()?.char === '区')) {
+          
+          // 「第」を無視する
+          stack.at(-2)!.ignore = true;
+          
+          const replaced: string[] = [
+            pointer2.originalChar || '',
+            pointer2.next.moveToNext()?.originalChar || '',
+          ];
+          
+          const dash = new CharNode({
+            char: DASH,
+            originalChar: replaced.join(''),
+          });
+          dash.next = pointer2.next.moveToNext()?.next;
+          top.next = dash;
+          head.next = top;
+          continue;
+        }
+      }
+
+      // 他の置換により、「1番(DASH)」「2番地(DASH)」「3号(DASH)「4条(DASH)」「5地割(DASH)」「6地区(DASH)」になっているときは、DASHだけにする
       if ((isDigitForCharNode(stack.at(-2)) && stack.at(-1)?.char === '番' && top.char === '地' && head.next?.moveToNext()?.char === DASH) ||
         (isDigitForCharNode(stack.at(-1)) && top.char === '番' && head.next?.moveToNext()?.char === DASH) ||
         (isDigitForCharNode(stack.at(-1)) && top.char === '号' && head.next?.moveToNext()?.char === DASH) ||
         (isDigitForCharNode(stack.at(-1)) && top.char === '条' && head.next?.moveToNext()?.char === DASH) ||
         (isDigitForCharNode(stack.at(-1)) && top.char === '丁' && head.next?.moveToNext()?.char === '目') ||
+        // (isDigitForCharNode(stack.at(-1)) && top.char === '地' && head.next?.moveToNext()?.char === '割') ||
+        // (isDigitForCharNode(stack.at(-1)) && top.char === '地' && head.next?.moveToNext()?.char === '区') ||
         (isDigitForCharNode(stack.at(-1)) && top.char === '町' && head.next?.moveToNext()?.char === '目')) {
 
         const replaced: string[] = [];

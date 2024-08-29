@@ -23,14 +23,15 @@
  */
 import { SingleBar } from 'cli-progress';
 
-export const createSingleProgressBar = (): SingleBar => {
+export const createSingleProgressBar = (format: string): SingleBar => {
   return new SingleBar({
     // Since Visual Code does not display stdError for some reason, we use stdout instead.
     stream: process.stdout,
-    format: ' {bar} {percentage}% | {value}/{total}  {message}',
+    format,
     clearOnComplete: true,
     barCompleteChar: '\u2588',
     barIncompleteChar: '\u2591',
-    fps: 10,
+    fps: 3,
+    etaBuffer: 60,
   });
 };

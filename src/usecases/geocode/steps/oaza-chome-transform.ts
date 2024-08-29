@@ -294,8 +294,8 @@ export class OazaChomeTransform extends Transform {
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
-    address = address?.replaceAll(RegExpEx.create('の([0-9])', 'g'), `${DASH}$1`);
+    address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}`);
+    address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}$2`);
     address = address?.replaceAll(RegExpEx.create('之', 'g'), DASH);
     
     return address;

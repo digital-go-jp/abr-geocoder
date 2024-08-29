@@ -73,9 +73,9 @@ export interface IQuery {
   rsdt_num2?: number;
   rsdt2_id?: string;
   
-  prc_num1?: number;
-  prc_num2?: number;
-  prc_num3?: number;
+  prc_num1?: string;
+  prc_num2?: string;
+  prc_num3?: string;
   prc_id?: string;
   parcel_key?: number;
 
@@ -131,9 +131,9 @@ export class Query implements IQuery {
   public readonly rsdt_id?: string;
   public readonly rsdt_num2?: number;
   public readonly rsdt2_id?: string;
-  public readonly prc_num1?: number;
-  public readonly prc_num2?: number;
-  public readonly prc_num3?: number;
+  public readonly prc_num1?: string;
+  public readonly prc_num2?: string;
+  public readonly prc_num3?: string;
   public readonly prc_id?: string;
   public readonly rsdt_addr_flg?: number;
   public readonly match_level: MatchLevel;

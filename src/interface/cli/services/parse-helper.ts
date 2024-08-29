@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DEFAULT_FUZZY_CHAR, SINGLE_DASH_ALTERNATIVE } from "@config/constant-values";
+import { DEFAULT_FUZZY_CHAR, STDIN_FILEPATH } from "@config/constant-values";
 import fs from 'node:fs';
 
 // yargs が '-' を解析できないので、別の文字に置き換える
@@ -68,7 +68,7 @@ export const parseHelper = (processArgv: string[]): string[] => {
     let word = buffer.join('');
     switch (word) {
       case '-':
-        word = SINGLE_DASH_ALTERNATIVE;
+        word = STDIN_FILEPATH;
         break;
 
       case '--fuzzy':

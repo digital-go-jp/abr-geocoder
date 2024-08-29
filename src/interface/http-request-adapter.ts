@@ -99,17 +99,24 @@ export class JsonResponseData extends ResponseData {
   }
 }
 
+export type HttpRequestAdapterOptions = {
+  hostname: string;
+  userAgent: string;
+  peerMaxConcurrentStreams: number;
+};
+
+export type GetJsonOptions = {
+  url: string;
+  headers?: Record<string, string>;
+};
+
 export class HttpRequestAdapter {
   private session: http2.ClientHttp2Session | undefined;
   private noLongerReconnect: boolean = false;
   private readonly windowSize: number = 2 ** 25; // 初期ウィンドウサイズを2MBに設定
   private readonly timer: NodeJS.Timeout;
 
-  constructor(public readonly options: Required<{
-    hostname: string;
-    userAgent: string;
-    peerMaxConcurrentStreams: number;
-  }>) {
+  constructor(public readonly options: Required<HttpRequestAdapterOptions>) {
     this.connect();
     this.timer = setInterval(() => this.sendPing(), 45000);
   }
@@ -128,7 +135,7 @@ export class HttpRequestAdapter {
     this.session = http2.connect(`https://${this.options.hostname}`, {
       peerMaxConcurrentStreams: this.options.peerMaxConcurrentStreams,
     });
-    this.session.setMaxListeners(this.options.peerMaxConcurrentStreams);
+    this.session.setMaxListeners(0);
     this.session.once('session', (session: Http2Session) => {
       console.log(`  ->session connect`);
       session.setLocalWindowSize(this.windowSize);
@@ -153,10 +160,7 @@ export class HttpRequestAdapter {
     });
   }
 
-  public async getJSON(params: {
-    url: string;
-    headers?: Record<string, string>;
-  }): Promise<JsonResponseData> {
+  public getJSON(params: GetJsonOptions): Promise<JsonResponseData> {
     return new Promise<JsonResponseData>((
       resolve: (result: JsonResponseData) => void,
     ) => {

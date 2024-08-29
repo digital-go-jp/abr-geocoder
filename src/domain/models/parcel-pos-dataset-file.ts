@@ -42,9 +42,6 @@ export class ParcelPosDatasetFile
   }
   
   async process(params: Omit<ProcessOptions, 'db'> & {db : IParcelDbDownload}) {
-    if (params.noUpdate) {
-      return;
-    }
     const parsedRows = params.lines.map(row => this.parseCsv(row));
     await params.db.parcelPosCsvRows(parsedRows);
   }

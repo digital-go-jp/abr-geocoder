@@ -42,6 +42,22 @@ export type GeocodeWorkerCommonData = {
   wards: WardMatchingInfo[];
 };
 
+// キャッシュファイルの削除
+export const removeGeocoderCommonDataCache = async (params: {
+  cacheDir: string;
+}) => {
+  const cacheFilePath = path.join(params.cacheDir, 'geocoder-common-data.bin');
+  const isExist = fs.existsSync(cacheFilePath);
+  if (!isExist) {
+    return;
+  }
+  fs.unlinkSync(cacheFilePath);
+};
+
+// ジオコーディングに必要なデータを返す
+//
+// キャッシュファイルが存在すれば、キャッシュファイルから読み取る
+// なければ再作成。
 export const loadGeocoderCommonData = async (params: {
   commonDb: ICommonDbGeocode;
   cacheDir: string;

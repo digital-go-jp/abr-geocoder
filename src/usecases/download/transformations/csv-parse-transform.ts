@@ -33,7 +33,7 @@ export class CsvParseTransform extends Duplex {
 
   private receivedFinal: boolean = false;
   private runningTasks = 0;
-  private isClosed = false;
+  private abortCtrl = new AbortController();
 
   // ダウンロードされた zip ファイルを展開して、データベースに登録するワーカースレッド
   private csvParsers?: WorkerThreadPool<
@@ -82,16 +82,17 @@ export class CsvParseTransform extends Duplex {
         semaphoreSharedMemory,
         lgCodeFilter: Array.from(params.lgCodeFilter),
       },
+
+      signal: this.abortCtrl.signal,
     }).then(pool => {
       this.csvParsers = pool;
-      if (this.isClosed) {
-        pool.close();
-      }
     });
   }
 
   close() {
-    this.isClosed = true;
+    if (!this.abortCtrl.signal.aborted) {
+      this.abortCtrl.abort();
+    }
     this.csvParsers?.close();
   }
 
@@ -112,16 +113,21 @@ export class CsvParseTransform extends Duplex {
     this.runningTasks++;
 
     // CSVファイルを分析して、データベースに登録する
-    const parseResult = await this.csvParsers.run(downloadResult);
-    this.push(parseResult);
-    this.runningTasks--;
+    this.csvParsers.run(downloadResult).then((parseResult) => {
+      this.push(parseResult);
+      this.runningTasks--;
+      
+      // 全てタスクが完了したかをチェック
+      if (this.runningTasks === 0 && this.receivedFinal) {
+        if (!this.closed) {
+          this.push(null);
+        }
+      }
+    }).catch((_) => {
 
-    // console.log(`--> ${downloadResult.csvFilePath}`);
-    
-    // 全てタスクが完了したかをチェック
-    if (this.runningTasks === 0 && this.receivedFinal) {
-      this.push(null);
-    }
+      this.abortCtrl.abort(`Can not parse the file: ${[downloadResult.csvFilePath]}`);
+      this.close();
+    });
   }
 
   _final(callback: (error?: Error | null) => void): void {

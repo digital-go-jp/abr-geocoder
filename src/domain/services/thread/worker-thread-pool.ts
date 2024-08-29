@@ -104,14 +104,14 @@ export class WorkerThread<I, T, R> extends Worker {
     });
   }
   private initAsync(signal?: AbortSignal) {
+    signal?.addEventListener('abort', () => {
+      this.terminate();
+      // reject('cancelled');
+    });
     return new Promise((
       resolve: (_?: unknown) => void,
-      reject: (_?: unknown) => void,
+      // reject: (_?: unknown) => void,
     ) => {
-      signal?.addEventListener('abort', () => {
-        this.terminate();
-        reject('canceled');
-      });
 
       const listener = (shareMemory: Uint8Array) => {
         const received = fromSharedMemory<ThreadPong>(shareMemory);
@@ -223,7 +223,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
         return;
       }
       await this.addWorker(params);
-      if (params.signal?.aborted) {
+      if (params.signal?.aborted || this.abortControl.signal.aborted) {
         this.off(addWorkerEvent, onAddWorkerEvent);
         this.close();
         return;
@@ -236,26 +236,6 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     await this.addWorker(params);
     this.on(addWorkerEvent, onAddWorkerEvent);
     this.emit(addWorkerEvent);
-
-
-    // const tasks: Promise<void>[] = [];
-    // for (let i = 0; i < params.maxConcurrency; i++) {
-    //   await this.addWorker(params);
-    //   if (params.signal?.aborted) {
-    //     break;
-    //   }
-    // }
-    // for (let i = 0; i < params.maxConcurrency; i++) {
-    //   tasks.push(this.addWorker({
-    //     filename: params.filename,
-    //     initData: params.initData,
-    //     signal: params.signal,
-    //   }));
-    //   if (params.signal?.aborted) {
-    //     break;
-    //   }
-    // }
-    // await Promise.all(tasks);
 
     // タスクが挿入 or 1つタスクが完了したら、次のタスクを実行する
     // (ラウンドロビン方式で、各スレッドに均等にタスクを割り当てる)
@@ -273,6 +253,9 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
           task.done(null, data);
         })
         .finally(() => {
+          if (this.waitingTasks.length === 0) {
+            return;
+          }
           // キューをシフトさせる
           this.emit(this.kWorkerFreedEvent);
         });
@@ -284,7 +267,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     initData?: InitData;
     signal?: AbortSignal;
   }) {
-    if (params.signal?.aborted) {
+    if (params.signal?.aborted || this.abortControl.signal.aborted) {
       return;
     }
     
@@ -340,7 +323,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
   }) {
     const worker = await this.createWorker(params)
       .catch((reason: unknown) => {
-        if (typeof reason === 'string' && reason === 'canceled') {
+        if (typeof reason === 'string' && reason === 'cancelled') {
           return;
         }
         console.error(reason);
@@ -379,7 +362,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
 
   async run(workerData: TransformData): Promise<ReceiveData> {
     if (this.abortControl.signal.aborted) {
-      return Promise.reject('Called run() after closed.');
+      return Promise.reject('cancelled');
     }
 
     return await new Promise((
