@@ -55,10 +55,11 @@ jobs:
       - name: Run tests
         run: npm run test
 
-      - name: build test
-        shell: bash
-        run: |
-          npm run build
+      # system testでビルドを行うので、ここではテストを行わない
+      # - name: build test
+      #   shell: bash
+      #   run: |
+      #     npm run build
       
       - name: run system test
         shell: bash
