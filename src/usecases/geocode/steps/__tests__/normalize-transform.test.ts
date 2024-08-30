@@ -52,7 +52,7 @@ describe('NormalizeTransform', () => {
     expect(queries.length).toBe(1);
 
     const processedStr = queries[0].tempAddress?.toProcessedString();
-    expect(processedStr).toBe(`どこか1${DASH}3`)
+    expect(processedStr).toBe(`どこか1${DASH}3`);
   });
 
 });

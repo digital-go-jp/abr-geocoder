@@ -122,7 +122,7 @@ export class NormalizeTransform extends Transform {
     // (算用数字)+(漢数字の「一」)+(算用数字)の場合、(漢数字の「一」)を DASHに置き換える
     address = address?.replaceAll(
       RegExpEx.create('([0-9])一([0-9])', 'g'),
-      `\$1${DASH}\$2`,
+      `$1${DASH}$2`,
     );
 
     // 〇〇町や〇〇番地 より前にある SPACEはすべて削除
