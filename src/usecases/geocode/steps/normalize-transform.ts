@@ -119,6 +119,12 @@ export class NormalizeTransform extends Transform {
       },
     );
 
+    // (算用数字)+(漢数字の「一」)+(算用数字)の場合、(漢数字の「一」)を DASHに置き換える
+    address = address?.replaceAll(
+      RegExpEx.create('([0-9])一([0-9])', 'g'),
+      `\$1${DASH}\$2`,
+    );
+
     // 〇〇町や〇〇番地 より前にある SPACEはすべて削除
     address = address?.replace(
       RegExpEx.create(`(.+)(丁目?|番(町|地|丁)|条|軒|線|(${J_DASH})町|地割)`),
@@ -130,9 +136,6 @@ export class NormalizeTransform extends Transform {
     // 半角カナ・全角カナ => 平仮名
     address = toHiraganaForCharNode(address);
 
-    // 全角英数字は、半角英数字に変換
-    address = toHankakuAlphaNumForCharNode(address);
-    
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
     address = jisKanjiForCharNode(address);
 
@@ -160,14 +163,7 @@ export class NormalizeTransform extends Transform {
     address = address?.replace(RegExpEx.create('無番地'), MUBANCHI);
 
     // 「番地」「番丁」「番町」「番街」「番」「番地の」をDASHにする
-    // address = address?.replaceAll(RegExpEx.create('([0-9]+)番[丁地街町][の目]?([0-9]+)', 'g'), `$1${DASH}$2`);
-    // address = address?.replaceAll(RegExpEx.create('([0-9]+)番[の目]?([0-9]+)', 'g'), `$1${DASH}$2`);
-    // address = address?.replaceAll(RegExpEx.create('([0-9]+)番[丁地街町]', 'g'), '$1');
     address = replaceBanchome(address);
-
-    // 「〇〇番地〇〇号」の「号」を DASH にする
-    // 「〇〇号室」「〇〇号棟」「〇〇号区」「〇〇F」「〇〇階」は変換しない
-    // address = address?.replaceAll(RegExpEx.create(`(${DASH}[0-9]+)号(?![室棟区館階])`, 'g'), '$1');
 
     // this.params.logger?.info(`normalize : ${((Date.now() - query.startTime) / 1000).toFixed(2)} s`);
     const results = new QuerySet();
@@ -416,6 +412,7 @@ const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNod
 
     // 算用数字と漢数字の間にスペースを入れる
     if (isDigitForCharNode(top) && !kanjiNums.test(top.originalChar!) &&
+      head.next?.moveToNext()?.char !== DASH &&  // (数字)+(漢数字の「一」)+(数字)の場合、「一」をDashに置き換えるため
       kanjiNums.test(head.next?.moveToNext()?.originalChar || '')) {
     // if (
     //   !RegExpEx.create(`[${DASH}${SPACE}]`).test(stack.at(-1)?.char || '') &&

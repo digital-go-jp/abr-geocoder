@@ -114,7 +114,12 @@ export class CharNode {
 
     for (let i = matchesArray.length - 1; i >= 0; i--) {
       const match = matchesArray[i];
-      const repValue = replacer(match);
+      let repValue = replacer(match);
+
+      for (let i = 1; i < match.length; i++) {
+        repValue = repValue.replaceAll(`$${i}`, match[i]);
+      }
+
       root = root?.splice(match.index, match[0].length, repValue);
     }
     return root;

@@ -26,12 +26,12 @@ const runGeocoder = (output: OutputFormat, execaOptions: {} = {}) => {
 const readJsonFile = (filename: string) => {
   const contents = fs.readFileSync(`${__dirname}/../test-data/${filename}`, 'utf-8');
   return JSON.parse(contents);
-}
-const readCsvFile = async (filename: string) => {
-  const results: {}[] = [];
+};
+
+const readCsvFile = (filename: string) => {
   const reader = fs.createReadStream(`${__dirname}/../test-data/${filename}`, 'utf-8');
   return toCsvRows(reader);
-}
+};
 
 const toCsvRows = (reader: NodeJS.ReadStream | fs.ReadStream) => {
   const results: {}[] = [];
@@ -51,7 +51,7 @@ const toCsvRows = (reader: NodeJS.ReadStream | fs.ReadStream) => {
       .pipe(dst)
       .once('close', () => resolve(results));
   });
-}
+};
 
 describe('General cases', () => {
   test('一般的なケースのテスト', async () => {
@@ -76,6 +76,53 @@ describe('General cases', () => {
 });
 
 describe('issues', () => {
+  // test('#131: test', async () => {
+  //   const { stdout } = await runGeocoder(OutputFormat.JSON, {
+  //     input: '紀尾井町1一3 漢数字いち',
+  //   });
+  //   expect(JSON.parse(stdout)).toMatchObject([{
+  //     "query": {
+  //       "input": "紀尾井町1一3 漢数字いち"
+  //     },
+  //     "result": {
+  //       "output": "東京都千代田区紀尾井町1-3 漢数字いち",
+  //       "other": "漢数字いち",
+  //       "score": 0.6,
+  //       "match_level": "residential_detail",
+  //       "coordinate_level": "residential_detail",
+  //       "lat": 35.679107172,
+  //       "lon": 139.736394597,
+  //       "lg_code": "131016",
+  //       "machiaza_id": "0056000",
+  //       "rsdt_addr_flg": 1,
+  //       "blk_id": "001",
+  //       "rsdt_id": "003",
+  //       "rsdt2_id": null,
+  //       "prc_id": null,
+  //       "pref": "東京都",
+  //       "county": null,
+  //       "city": "千代田区",
+  //       "ward": null,
+  //       "oaza_cho": "紀尾井町",
+  //       "chome": null,
+  //       "koaza": null,
+  //       "blk_num": "1",
+  //       "rsdt_num": 3,
+  //       "rsdt_num2": null,
+  //       "prc_num1": null,
+  //       "prc_num2": null,
+  //       "prc_num3": null
+  //     }
+  //   }]);
+  // });
+  test('#131: ハイフンのゆらぎ', async () => {
+    const { stdout } = await runGeocoder(OutputFormat.JSON, {
+      inputFile: `${__dirname}/../test-data/issue131/input.txt`,
+    });
+    const expectedOutput = readJsonFile(`issue131/expects.json`);
+    expect(JSON.parse(stdout)).toEqual(expectedOutput);
+  });
+
   test('#133: 「地割」が「koaza」に正規化されない', async () => {
     const { stdout } = await runGeocoder(OutputFormat.JSON, {
       inputFile: `${__dirname}/../test-data/issue133/input.txt`,
