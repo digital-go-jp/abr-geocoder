@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE } from '@config/constant-values';
+import { BANGAICHI, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { KoazaMachingInfo } from '@domain/types/geocode/koaza-info';
@@ -36,6 +36,7 @@ import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class KoazaTransform extends Transform {
 
@@ -115,6 +116,7 @@ export class KoazaTransform extends Transform {
       const trie = new TrieAddressFinder<KoazaMachingInfo>();
       for (const row of rows) {
         const key = this.normalizeStr(row.koaza);
+        row.koaza = toHankakuAlphaNum(row.koaza);
         trie.append({
           key,
           value: row,
@@ -124,9 +126,8 @@ export class KoazaTransform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = query.tempAddress.
-        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
-        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      const target = trimDashAndSpace(query.tempAddress)?.
+        replace(RegExpEx.create('^([0-9]+)地割', 'g'), `$1${DASH}`);
       if (!target) {
         results.add(query);
         continue;
@@ -150,11 +151,8 @@ export class KoazaTransform extends Transform {
         const params: Record<string, CharNode | number | string | MatchLevel> = {
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.MACHIAZA_DETAIL,
-          coordinate_level: MatchLevel.MACHIAZA_DETAIL,
           town_key: findResult.info.town_key,
           city_key: findResult.info.city_key,
-          rep_lat: findResult.info.rep_lat,
-          rep_lon: findResult.info.rep_lon,
           rsdt_addr_flg: findResult.info.rsdt_addr_flg,
           oaza_cho: findResult.info.oaza_cho,
           chome: findResult.info.chome,
@@ -163,7 +161,13 @@ export class KoazaTransform extends Transform {
           matchedCnt: query.matchedCnt + findResult.depth,
           ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
         };
-        results.add(query.copy(params));
+        if (findResult.info.rep_lat && findResult.info.rep_lon) {
+          params.coordinate_level = MatchLevel.MACHIAZA_DETAIL;
+          params.rep_lat = findResult.info.rep_lat;
+          params.rep_lon = findResult.info.rep_lon;
+        }
+        const copied = query.copy(params);
+        results.add(copied);
 
         anyHit = true;
       });
@@ -192,6 +196,9 @@ export class KoazaTransform extends Transform {
 
     // 「無番地」を「MUBANCHI」にする
     address = address?.replace(RegExpEx.create('無番地'), MUBANCHI);
+    
+    // 「番外地」を「BANGAICHI」にする
+    address = address?.replace(RegExpEx.create('番外地'), BANGAICHI);
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている

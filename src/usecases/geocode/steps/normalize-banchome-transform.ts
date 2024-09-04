@@ -28,6 +28,7 @@ import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
 import { isDigitForCharNode } from '../services/is-number';
 import { CharNode } from '../services/trie/char-node';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class NormalizeBanchomeTransform extends Transform {
 
@@ -59,10 +60,13 @@ export class NormalizeBanchomeTransform extends Transform {
       const normalized = this.normalize(before);
 
       // 結合する
-      const tempAddress = CharNode.joinWith(new CharNode({
+      let tempAddress = CharNode.joinWith(new CharNode({
         originalChar: SPACE,
         char: SPACE,
       }), normalized, ...after);
+
+      // 先頭と末尾にDASHかSPACEが付いていたら取る
+      tempAddress = trimDashAndSpace(tempAddress);
       
       results.add(query.copy({
         tempAddress,

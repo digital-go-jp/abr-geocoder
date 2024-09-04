@@ -33,6 +33,30 @@ export class MatchLevel {
   toString(): string {
     return this.str;
   }
+  static readonly from = (number: number): MatchLevel => {
+    switch (number) {
+      case -1: 
+        return MatchLevel.ERROR;
+      case 0: 
+        return MatchLevel.UNKNOWN;
+      case 1: 
+        return MatchLevel.PREFECTURE;
+      case 2: 
+        return MatchLevel.CITY;
+      case 3: 
+        return MatchLevel.MACHIAZA;
+      case 4: 
+        return MatchLevel.MACHIAZA_DETAIL;
+      case 5: 
+        return MatchLevel.RESIDENTIAL_BLOCK;
+      case 6: 
+        return MatchLevel.RESIDENTIAL_DETAIL;
+      case 7: 
+        return MatchLevel.PARCEL;
+      default:
+        throw `Unknown match level number: ${number}`;
+    }
+  };
 
   // 何かエラーが発生した
   static readonly ERROR = new MatchLevel(-1, 'error');

@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -31,8 +31,11 @@ import timers from 'node:timers/promises';
 import { QuerySet } from '../models/query-set';
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
+import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana } from '../services/to-hiragana';
+import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class Tokyo23TownTranform extends Transform {
 
@@ -70,9 +73,7 @@ export class Tokyo23TownTranform extends Transform {
   ) {
     const results = new QuerySet();
     for (const query of queries.values()) {
-      const target = query.tempAddress?.
-        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
-        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      const target = trimDashAndSpace(query.tempAddress);
         
       // 行政区が判明している場合はスキップ
       if (!target || 
@@ -109,18 +110,14 @@ export class Tokyo23TownTranform extends Transform {
         anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
         anyHit = true;
 
-        results.add(query.copy({
+        const params: Record<string, CharNode | number | string | MatchLevel | null> = {
           pref_key: searchResult.info.pref_key,
           city_key: searchResult.info.city_key,
           town_key: searchResult.info.town_key,
           rsdt_addr_flg: searchResult.info.rsdt_addr_flg,
           tempAddress: searchResult.unmatched,
-          match_level: MatchLevel.MACHIAZA_DETAIL,
-          coordinate_level: MatchLevel.MACHIAZA_DETAIL,
           matchedCnt: query.matchedCnt + searchResult.depth,
-          rep_lat: searchResult.info.rep_lat,
-          rep_lon: searchResult.info.rep_lon,
-          koaza: searchResult.info.koaza,
+          koaza: toHankakuAlphaNum(searchResult.info.koaza),
           pref: searchResult.info.pref,
           county: searchResult.info.county,
           city: searchResult.info.city,
@@ -130,7 +127,19 @@ export class Tokyo23TownTranform extends Transform {
           machiaza_id: searchResult.info.machiaza_id,
           chome: searchResult.info.chome,
           ambiguousCnt: query.ambiguousCnt + (searchResult.ambiguous ? 1 : 0), 
-        }));
+        };
+        if (searchResult.info.machiaza_id.endsWith('000')) {
+          params.match_level = MatchLevel.MACHIAZA;
+        } else {
+          params.match_level = MatchLevel.MACHIAZA_DETAIL;
+        }
+
+        if (searchResult.info.rep_lat && searchResult.info.rep_lon) {
+          params.rep_lat = searchResult.info.rep_lat;
+          params.rep_lon = searchResult.info.rep_lon;
+          params.coordinate_level = params.match_level;
+        }
+        results.add(query.copy(params));
       });
       if (!anyHit || anyAmbiguous) {
         results.add(query);

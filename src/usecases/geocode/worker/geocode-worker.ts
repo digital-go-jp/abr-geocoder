@@ -49,6 +49,7 @@ import { Tokyo23TownTranform } from '../steps/tokyo23town-transform';
 import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
 import { WardTransform } from '../steps/ward-transform';
+import { AbrGeocoderInput } from '../models/abrg-input-data';
 
 export type GeocodeWorkerInitData = {
   containerParams: AbrGeocoderDiContainerParams;
@@ -208,7 +209,7 @@ export class GeocodeTransform extends Duplex {
       .pipe(dst);
   }
 
-  _write(chunk: QueryInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
+  _write(chunk: AbrGeocoderInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
     callback();
     this.reader.push(chunk);
   }
@@ -268,7 +269,10 @@ if (!isMainThread && parentPort) {
         }
 
         case 'task': {
-          reader.push(received.data as QueryInput);
+          // abr-geocoder.ts でメインスレッドでの処理とバックグラウンドでの処理を
+          // 両方しようしているため、QueryInputが2重になってしまう。
+          // ここでQueryInputの正しい形に直す
+          reader.push(received);
           return;
         }
 

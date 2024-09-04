@@ -14,14 +14,9 @@ describe("kan2num", () => {
     const result = kan2num("神戸市四百四十四丁目マンション三〇二号室");
     expect(result).toBe("神戸市四百44丁目マンション302号室");
   });
-  /**
-     * kan2numのif (val === 0)のブロックで、
-     * current=0のため'00'がpushされている。
-     * これは想定通り(もしくは、想定しなくてよい)?
-     */
-  it("should convert only Kanji zero to 00", () => {
+  it("should convert only Kanji zero to 0", () => {
     const result = kan2num("神戸市四百四十四丁目マンション零号室");
-    expect(result).toBe("神戸市四百44丁目マンション00号室");
+    expect(result).toBe("神戸市四百44丁目マンション0号室");
   });
   it("convert 大字 like 壱, 弐, 参 to numbers", () => {
     const result = kan2num("神戸市弐丁目");

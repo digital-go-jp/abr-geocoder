@@ -21,9 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { CityMatchingInfo } from '@domain/types/geocode/city-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Transform, TransformCallback } from 'node:stream';
@@ -33,6 +32,7 @@ import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class CityAndWardTransform extends Transform {
 
@@ -82,9 +82,7 @@ export class CityAndWardTransform extends Transform {
         results.add(query);
         continue;
       }
-      const target = query.tempAddress?.
-        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
-        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      const target = trimDashAndSpace(query.tempAddress);
       if (!target) {
         results.add(query);
         continue;

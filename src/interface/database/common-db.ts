@@ -75,11 +75,11 @@ export interface ICommonDbGeocode {
 
   getOazaChomes(): Promise<OazaChoMachingInfo[]>;
 
-  getOazaChoPatterns(where: Partial<{
-    pref_key: number;
-    city_key: number;
-    town_key: number;
-  }>): Promise<OazaChoMachingInfo[]>;
+  // getOazaChoPatterns(where: Partial<{
+  //   pref_key: number;
+  //   city_key: number;
+  //   town_key: number;
+  // }>): Promise<OazaChoMachingInfo[]>;
   getWardAndOazaChoList(): Promise<OazaChoMachingInfo[]>;
 
   getChomeRows(where: Partial<{

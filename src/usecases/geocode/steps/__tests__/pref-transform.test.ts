@@ -65,7 +65,6 @@ describe('PrefTransform', () => {
         tag: undefined,
       },
       taskId: 0,
-      lineId: 1,
     }));
 
     // テストを行う
@@ -98,7 +97,6 @@ describe('PrefTransform', () => {
         tag: undefined,
       },
       taskId: 0,
-      lineId: 1,
     }));
 
     // テストを行う
@@ -140,7 +138,6 @@ describe('PrefTransform', () => {
         tag: undefined,
       },
       taskId: 0,
-      lineId: 1,
     }));
 
     // テストを行う

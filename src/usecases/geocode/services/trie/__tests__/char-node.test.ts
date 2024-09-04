@@ -106,6 +106,31 @@ describe("CharNode", () => {
     });
   });
 
+  describe("trimWith", () => {
+    it("should return remove the SPACEs at prefix and suffix.", () => {
+      
+      const node = CharNode.create(`${SPACE}あいう${DASH}えお${SPACE}${SPACE}`);
+      const result = node?.trimWith();
+      expect(result?.toProcessedString()).toBe(`あいう${DASH}えお`);
+      expect(result?.toOriginalString()).toBe(`あいう${DASH}えお`);
+    });
+    it("should return remove the DASHs at prefix and suffix.", () => {
+      
+      const node = CharNode.create(`${DASH}${DASH}あいう${DASH}えお${DASH}`);
+      const result = node?.trimWith(DASH);
+      expect(result?.toProcessedString()).toBe(`あいう${DASH}えお`);
+      expect(result?.toOriginalString()).toBe(`あいう${DASH}えお`);
+    });
+    it("should keep the characters which are marked as ignored.", () => {
+      
+      let node = CharNode.create(`(KEEP)${DASH}あいう${DASH}えお${DASH}(KEEP)`);
+      node = node?.replaceAll('(KEEP)', '');  // Set ignore = true on "(KEEP)" words.
+      const result = node?.trimWith(DASH);
+      expect(result?.toProcessedString()).toBe(`あいう${DASH}えお`);
+      expect(result?.toOriginalString()).toBe(`(KEEP)あいう${DASH}えお(KEEP)`);
+    });
+  });
+
   describe("clone", () => {
     it("should create a deep copy", () => {
       const original = CharNode.create("test aあアﾎﾟ亜1");

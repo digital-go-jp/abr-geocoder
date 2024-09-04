@@ -70,6 +70,11 @@ export const DASH: string = '@';
 export const BEGIN_SPECIAL = '<';
 export const END_SPECIAL = '>';
 
+// 北海道勇払郡安平町字安平番外地 のように「番外地」の部分は、「番外地」で当たるべきである。
+// 「番」が含まれているため、上手く処理できないので
+// 別の文字列に置き換える
+export const BANGAICHI: string = `${BEGIN_SPECIAL}BG${END_SPECIAL}`;
+
 // 東京都青ヶ島村無番地 のように「無番地」の部分は、「無番地」で当たるべきである。
 // 「番地」が含まれているため、上手く処理できないので
 // 別の文字列に置き換える

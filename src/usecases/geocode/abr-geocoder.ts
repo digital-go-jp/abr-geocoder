@@ -22,23 +22,67 @@
  * SOFTWARE.
  */
 import { WorkerThreadPool } from "@domain/services/thread/worker-thread-pool";
+import { AsyncResource } from "node:async_hooks";
 import path from 'node:path';
 import { Readable, Writable } from "node:stream";
 import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
 import { AbrGeocoderInput } from "./models/abrg-input-data";
-import { Query, QueryInput, QueryJson } from "./models/query";
+import { Query, QueryJson } from "./models/query";
 import { GeocodeTransform, GeocodeWorkerInitData } from "./worker/geocode-worker";
 
+export class AbrGeocoderTaskInfo extends AsyncResource {
+  next: AbrGeocoderTaskInfo | undefined;
+  result?: Query;
+  error?: null | undefined | Error;
+
+  private _isResolved: boolean = false;
+
+  get isResolved(): boolean {
+    return this._isResolved;
+  }
+
+  constructor(
+    public readonly data: AbrGeocoderInput,
+    public readonly resolve: (value: Query) => void,
+    public readonly reject: (err: Error) => void,
+  ) {
+    super('AbrGeocoderTaskInfo');
+  }
+
+  emit(): boolean {
+    if (!this.isResolved) {
+      return false;
+    }
+    if (this.error) {
+      this.runInAsyncScope(this.reject, this, this.error);
+    } else {
+      this.runInAsyncScope(this.resolve, this, this.result);
+    }
+    this.emitDestroy();
+    return true;
+  }
+
+  setResult(err: null | undefined | Error, result?: Query) {
+    this._isResolved = true;
+    if (err) {
+      this.error = err;
+    } else {
+      this.result = result;
+    }
+  }
+}
 export class AbrGeocoder {
   private workerPool?: WorkerThreadPool<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>;
   private readonly reader = new Readable({
     objectMode: true,
     read() {},
   });
-  private resolvers: Map<number, (data: QueryJson) => void> = new Map();
-  private _total: number = 0;
   private isClosed = false;
   private readonly abortController = new AbortController();
+  private taskHead: AbrGeocoderTaskInfo | undefined;
+  private taskTail: AbrGeocoderTaskInfo | undefined;
+  private readonly taskToNodeMap: Map<number, AbrGeocoderTaskInfo> = new Map();
+  private flushing: boolean = false;
 
   private constructor(params: {
     geocodeTransformOnMainThread: GeocodeTransform,
@@ -50,11 +94,15 @@ export class AbrGeocoder {
       objectMode: true,
       write: (query: Query, _, callback) => {
         callback();
-        
         const taskId = query.input.taskId;
-        const resolver = this.resolvers.get(taskId)!;
-        this.resolvers.delete(taskId);
-        resolver(query.toJSON());
+        if (!this.taskToNodeMap.has(taskId)) {
+          throw `Can not find the taskId: ${taskId}`;
+        }
+
+        const taskNode = this.taskToNodeMap.get(taskId);
+        this.taskToNodeMap.delete(taskId);
+        taskNode?.setResult(null, query);
+        this.flushResults();
       },
     });
     this.reader.pipe(params.geocodeTransformOnMainThread).pipe(dst);
@@ -90,31 +138,67 @@ export class AbrGeocoder {
     });
   }
 
-  geocode(input: AbrGeocoderInput): Promise<QueryJson> {
-    // バックグラウンドスレッドが利用できるときは、そちらで処理する
-    if (this.workerPool) {
-      return this.workerPool.run(input);
+  private flushResults() {
+    if (this.flushing) {
+      return;
     }
+    this.flushing = true;
+    while (this.taskHead && this.taskHead.isResolved) {
+      // resolve or reject を実行する
+      this.taskHead.emit();
+      const nextTask = this.taskHead.next;
+      this.taskHead.next = undefined;
+      this.taskHead = nextTask;
+    }
+    if (!this.taskHead) {
+      this.taskTail = undefined;
+    }
+    this.flushing = false;
+  }
 
-    const lineId = ++this._total;
+  geocode(input: AbrGeocoderInput): Promise<Query> {
+    let taskId = Math.floor(performance.now() + Math.random() * performance.now());
+    while (this.taskToNodeMap.has(taskId)) {
+      taskId = Math.floor(performance.now() + Math.random() * performance.now());
+    }
 
     // バックグラウンドスレッドが準備できるまでは
     // メインスレッドで処理する
-    return new Promise((resolve: (result: QueryJson) => void) => {
-      let taskId = Math.floor(performance.now() + Math.random() * performance.now());
-      while (this.resolvers.has(taskId)) {
-        taskId = Math.floor(performance.now() + Math.random() * performance.now());
+    return new Promise((
+      resolve: (result: Query) => void,
+      reject: (err: Error) => void,
+    ) => {
+      const taskNode = new AbrGeocoderTaskInfo(input, resolve, reject);
+      this.taskToNodeMap.set(taskId, taskNode);
+
+      if (this.taskHead) {
+        this.taskTail!.next = taskNode;
+        this.taskTail = taskNode;
+      } else {
+        this.taskHead = taskNode;
+        this.taskTail = taskNode;
       }
-
-      this.resolvers.set(taskId, resolve);
-
-      const queryInput: QueryInput = {
+      
+      // バックグラウンドスレッドが利用できるときは、そちらで処理する
+      if (this.workerPool) {
+        this.workerPool
+          .run(input)
+          .then((result: QueryJson) => {
+            const query = Query.from(result);
+            taskNode.setResult(null, query);
+          })
+          .catch((error: Error) => {
+            taskNode.setResult(error);
+          })
+          .finally(() => this.flushResults());
+        return;
+      }
+      
+      // バックグラウンドが準備中なので、メインスレッドで処理する
+      this.reader.push({
         data: input,
         taskId,
-        lineId,
-      };
-
-      this.reader.push(queryInput);
+      });
     });
   }
   
@@ -129,17 +213,9 @@ export class AbrGeocoder {
     container: AbrGeocoderDiContainer;
     numOfThreads: number;
   }>): Promise<AbrGeocoder> => {
-    // const dbCtrl = params.container.database;
-    // const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
-    // const commonData = await loadGeocoderCommonData({
-    //   commonDb,
-    //   cacheDir: params.container.cacheDir,
-    // });
-
     // geocode-worker の初期化中はメインスレッドで処理を行う
     const geocodeTransformOnMainThread = await GeocodeTransform.create({
       containerParams: params.container.toJSON(),
-      // commonData: toSharedMemory(commonData),
     });
 
     const geocoder = new AbrGeocoder({

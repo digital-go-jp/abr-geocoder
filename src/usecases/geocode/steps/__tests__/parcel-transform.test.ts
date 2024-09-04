@@ -89,7 +89,6 @@ describe('ParcelTransform', () => {
         tag: undefined,
       },
       taskId: 0,
-      lineId: 1,
     });
     const tempAddress = CharNode.create(`5${DASH}3F`);
     
@@ -150,7 +149,6 @@ describe('ParcelTransform', () => {
         tag: undefined,
       },
       taskId: 0,
-      lineId: 1,
     });
     const tempAddress = CharNode.create(`5${DASH}303号室`);
     

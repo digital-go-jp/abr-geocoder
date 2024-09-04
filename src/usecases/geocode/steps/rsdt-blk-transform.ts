@@ -31,6 +31,7 @@ import { CharNode } from '../services/trie/char-node';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { QuerySet } from '../models/query-set';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtBlkTransform extends Transform {
 
@@ -80,9 +81,7 @@ export class RsdtBlkTransform extends Transform {
         results.add(query);
         continue;
       }
-      const target = query.tempAddress?.
-        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
-        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      const target = trimDashAndSpace(query.tempAddress);
       if (!target || !query.lg_code) {
         results.add(query);
         continue;
@@ -114,17 +113,21 @@ export class RsdtBlkTransform extends Transform {
       }
       
       findResults.forEach(result => {
-        results.add(query.copy({
+        const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
           block: result.blk_num.toString(),
           block_id: result.blk_id,
-          rep_lat: result.rep_lat,
-          rep_lon: result.rep_lon,
           rsdtblk_key: result.rsdtblk_key,
           tempAddress: queryInfo.unmatched,
           match_level: MatchLevel.RESIDENTIAL_BLOCK,
-          coordinate_level: MatchLevel.RESIDENTIAL_BLOCK,
           matchedCnt: query.matchedCnt + queryInfo.matchedCnt,
-        }));
+        };
+        if (result.rep_lat && result.rep_lon) {
+          params.coordinate_level = MatchLevel.RESIDENTIAL_BLOCK;
+          params.rep_lat = result.rep_lat;
+          params.rep_lon = result.rep_lon;
+        }
+        const copied = query.copy(params);
+        results.add(copied);
       });
     }
 

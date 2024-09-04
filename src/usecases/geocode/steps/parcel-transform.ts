@@ -34,6 +34,7 @@ import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { QuerySet } from '../models/query-set';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { isDigitForCharNode } from '../services/is-number';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class ParcelTransform extends Transform {
 
@@ -126,19 +127,23 @@ export class ParcelTransform extends Transform {
       }
 
       findResults.forEach(row => {
-        results.add(query.copy({
+        const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
           parcel_key: row.parcel_key,
           prc_id: row.prc_id,
           prc_num1: row.prc_num1,
           prc_num2: row.prc_num2,
           prc_num3: row.prc_num3,
-          rep_lat: row.rep_lat,
-          rep_lon: row.rep_lon,
           tempAddress: searchInfo.unmatched,
           match_level: MatchLevel.PARCEL,
-          coordinate_level: MatchLevel.PARCEL,
           matchedCnt: query.matchedCnt + searchInfo.matchedCnt,
-        }));
+        };
+        if (row.rep_lat && row.rep_lon) {
+          params.coordinate_level = MatchLevel.PARCEL;
+          params.rep_lat = row.rep_lat;
+          params.rep_lon = row.rep_lon;
+        }
+        const copied = query.copy(params);
+        results.add(copied);
       });
     }
 
@@ -156,11 +161,12 @@ export class ParcelTransform extends Transform {
 
     const buffer: string[] = [];
     const current: string[] = [];
-    if (!query.tempAddress) {
+    const target = trimDashAndSpace(query.tempAddress);
+    if (!target) {
       return;
     }
 
-    const [before, ...after]: CharNode[] = query.tempAddress.split(SPACE);
+    const [before, ...after]: CharNode[] = target.split(SPACE);
     let head: CharNode | undefined = before?.trimWith(DASH);
     const kanjiNums = RegExpEx.create(`[${KANJI_NUMS}]`);
 

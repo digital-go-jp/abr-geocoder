@@ -21,21 +21,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+import { MatchLevel } from "./match-level";
+
 export type OazaChoMachingInfo = {
   key: string;
   pref: string;
   city: string;
   county: string;
   ward: string;
+  koaza: string;
   chome: string;
   lg_code: string;
   oaza_cho: string;
-  koaza: string;
   machiaza_id: string;
   pref_key: number;
   city_key: number;
-  town_key: number;
-  rep_lat: number;
-  rep_lon: number;
+  town_key: number | null;
+  rep_lat: number | null;
+  rep_lon: number | null;
   rsdt_addr_flg: number;
+  match_level: MatchLevel;
+  coordinate_level: MatchLevel;
 };

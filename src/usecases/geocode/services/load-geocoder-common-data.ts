@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { CityMatchingInfo } from "@domain/types/geocode/city-info";
 import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import { PrefInfo } from "@domain/types/geocode/pref-info";
@@ -73,6 +74,8 @@ export const loadGeocoderCommonData = async (params: {
       // Do nothing here
     }
   }
+  makeDirIfNotExists(params.cacheDir);
+  
   const [
     prefList,
     countyAndCityList,

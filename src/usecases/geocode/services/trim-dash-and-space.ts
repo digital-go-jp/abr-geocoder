@@ -1,3 +1,4 @@
+
 /*!
  * MIT License
  *
@@ -21,51 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Query } from './query';
-import stringHash from 'string-hash';
+import { DASH, SPACE } from "@config/constant-values";
+import { CharNode } from "./trie/char-node";
 
-export class QuerySet {
-
-  private memory: Map<number, Query> = new Map();
-
-  static toKey(query: Query) {
-    const values: (string | number | undefined)[] = [
-      query.pref_key,
-      query.city_key,
-      query.town_key,
-      query.parcel_key,
-      query.rsdtblk_key,
-      query.rsdtdsp_key,
-      query.tempAddress?.toProcessedString(),
-    ];
-    const keyStr = values
-      .filter(x => x !== undefined && x !== null)
-      .map(x => x.toString())
-      .join(':');
-    return stringHash(keyStr);
-  }
-  add(query: Query) {
-    const key = QuerySet.toKey(query);
-    if (this.memory.has(key)) {
-      return;
-    }
-    this.memory.set(key, query);
-  }
-
-  values(): Iterable<Query> {
-    return this.memory.values();
-  }
-
-  delete(query: Query) {
-    const key = QuerySet.toKey(query);
-    if (!this.memory.has(key)) {
-      return;
-    }
-    return this.memory.delete(key);
-  }
-
-  clear() {
-    this.memory.clear();
-  }
-  
-}
+export const trimDashAndSpace = (target: CharNode | undefined): CharNode | undefined => {
+  // 末尾にDASHが付いていたら取る
+  // 正規表現だと DASH の元の文字を残す(ように実装してある)ので、
+  // DASHがマッチしない場合に、元の文字が結果に残ってしまう。
+  // trimWith() は連結リストから完全に取り除くので、こちらを使う。
+  return target?.trimWith(DASH)?.trimWith(SPACE);
+};

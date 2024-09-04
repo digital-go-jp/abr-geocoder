@@ -39,7 +39,6 @@ class MockQuery {
     // デフォルトのダミー値
     this.input = {
       taskId: 1,
-      lineId: 1,
       data: {
         address: '東京都千代田区',
         searchTarget: SearchTarget.ALL,

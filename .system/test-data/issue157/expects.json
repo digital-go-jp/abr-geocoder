@@ -6,7 +6,6 @@
     "result": {
       "output": "北海道札幌市中央区南二条西一丁目5 2F",
       "other": "2F",
-      "score": 0.6,
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 43.058730899,

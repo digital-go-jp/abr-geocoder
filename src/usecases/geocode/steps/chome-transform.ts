@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { ChomeMachingInfo } from '@domain/types/geocode/chome-info';
@@ -35,6 +35,8 @@ import { kan2num, kan2numForCharNode } from '../services/kan2num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
+import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 
 export class ChomeTranform extends Transform {
 
@@ -135,9 +137,7 @@ export class ChomeTranform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = query.tempAddress?.
-        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
-        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      const target = trimDashAndSpace(query.tempAddress);
       if (!target) {
         results.add(query);
         continue;
@@ -165,7 +165,7 @@ export class ChomeTranform extends Transform {
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         // 丁目がヒットした
-        results.add(query.copy({
+        const params: Record<string, CharNode | number | string | MatchLevel> = {
           chome: findResult.info.chome,
           tempAddress: findResult.unmatched,
           town_key: findResult.info.town_key,
@@ -173,12 +173,16 @@ export class ChomeTranform extends Transform {
           machiaza_id: findResult.info.machiaza_id,
           match_level: MatchLevel.MACHIAZA_DETAIL,
           matchedCnt: query.matchedCnt + findResult.depth,
-          rep_lat: findResult.info.rep_lat,
-          rep_lon: findResult.info.rep_lon,
-          koaza: findResult.info.koaza,
-          coordinate_level: MatchLevel.MACHIAZA_DETAIL,
+          koaza: toHankakuAlphaNum(findResult.info.koaza),
           ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
-        }));
+        };
+        if (findResult.info.rep_lat && findResult.info.rep_lon) {
+          params.rep_lat = findResult.info.rep_lat;
+          params.rep_lon = findResult.info.rep_lon;
+          params.coordinate_level = MatchLevel.MACHIAZA_DETAIL;
+        }
+        const copied = query.copy(params);
+        results.add(copied);
 
         anyHit = true;
       });

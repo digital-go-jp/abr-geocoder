@@ -25,7 +25,6 @@ import { OutputFormat } from "@domain/types/output-format";
 import { SearchTarget } from "@domain/types/search-target";
 import { FormatterProvider } from "@interface/format/formatter-provider";
 import { AbrGeocoder } from "@usecases/geocode/abr-geocoder";
-import { Query } from "@usecases/geocode/models/query";
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "hyper-express";
 
@@ -114,8 +113,7 @@ export class OnGeocodeRequest {
     });
 
     // 
-    const query = Query.from(result);
-    formatTransform.write(query);
+    formatTransform.write(result);
     formatTransform.end();
   }
 

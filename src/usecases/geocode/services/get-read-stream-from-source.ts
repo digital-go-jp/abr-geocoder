@@ -37,6 +37,8 @@ export const getReadStreamFromSource = (
         level: AbrgErrorLevel.ERROR,
       });
     }
+
+    // パイプ処理の場合は、stdinを返す
     return process.stdin;
   }
 

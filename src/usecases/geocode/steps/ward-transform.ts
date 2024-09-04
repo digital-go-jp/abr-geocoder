@@ -21,9 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AMBIGUOUS_RSDT_ADDR_FLG, DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { WardMatchingInfo } from '@domain/types/geocode/ward-info';
 import { ICommonDbGeocode } from '@interface/database/common-db';
@@ -36,6 +35,7 @@ import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class WardTransform extends Transform {
 
@@ -103,7 +103,8 @@ export class WardTransform extends Transform {
     // 類似度が高い（もしくは一致する）〇〇区を探す
     const possibleWards: WardMatchingInfo[] = [];
     const filteredTargets = targets.filter(query => {
-      if (!query.tempAddress) {
+      const target = trimDashAndSpace(query.tempAddress);
+      if (!target) {
         // 探索する文字がなければスキップ
         results.add(query);
         return false;
@@ -111,7 +112,7 @@ export class WardTransform extends Transform {
 
       // 〇〇市〇〇区 パターンを探す
       const searchResults2 = this.wardTrie.find({
-        target: query.tempAddress,
+        target,
         extraChallenges: ['市', '区'],
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
@@ -163,7 +164,8 @@ export class WardTransform extends Transform {
       }));
 
       for (const query of filteredTargets) {
-        if (!query.tempAddress) {
+        const target = trimDashAndSpace(query.tempAddress);
+        if (!target) {
           results.add(query);
           continue;
         }
@@ -173,13 +175,6 @@ export class WardTransform extends Transform {
           continue;
         } 
 
-        const target = query.tempAddress?.
-          replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
-          replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
-        if (!target) {
-          results.add(query);
-          continue;
-        }
         const matched = trie.find({
           target,
           extraChallenges: ['市', '町', '村'],

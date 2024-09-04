@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
+import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, OAZA_BANCHO, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Transform, TransformCallback } from 'node:stream';
@@ -143,7 +143,12 @@ export class GeocodeResultTransform extends Transform {
   }
 
   private restoreCharNode(query: Query): Query {
-    let result: string = (query.tempAddress?.toOriginalString() || '');
+
+    let tempAddress: CharNode | undefined = query.tempAddress;
+    tempAddress = tempAddress?.replace(RegExpEx.create(MUBANCHI), '無番地');
+    tempAddress = tempAddress?.replace(RegExpEx.create(BANGAICHI), '番外地');
+    tempAddress = tempAddress?.replace(RegExpEx.create(OAZA_BANCHO), '番町');
+    let result: string = (tempAddress?.toOriginalString() || '');
 
     // 最初の空白文字、または末尾までの間に
     // result = result.replace(RegExpEx.create(`^([^${SPACE_SYMBOLS}]+)`, 'g'), (match: string) => {
@@ -161,20 +166,24 @@ export class GeocodeResultTransform extends Transform {
     // 末尾が(DASH)+(空白)なら削除
     result = result.replace(RegExpEx.create(`[${DASH}${SPACE_SYMBOLS}]+$`), '');
 
-    // 末尾が省略可能な記号”だけ”なら削除
-    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)$'), '');
-
+    // 末尾が省略可能な記号なら削除
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番|地割)$'), '');
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番|地割) '), '');
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)([0-9])', 'g'), `${DASH}$1`);
+    if (query.koaza?.endsWith('地割') && result.startsWith('地割')) {
+      result = result.substring(2);
+    }
+    
     // 先頭が省略可能な記号ならハイフンにする
     result = result.replace(RegExpEx.create('^(?:番地の?|地番|番の?|の|之|丿|ノ|-)([0-9])'), `${DASH}$1`);
-    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)(?![室棟区館階])'), '');
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)(?![室棟区館階]|外地)'), '');
       
     // 末尾が省略可能な記号”だけ”なら削除
-    result = result.replace(RegExpEx.create('([0-9])(?:号|番地|地番|番|の|之|丿|ノ|-)([0-9])'), `$1${DASH}$2`);
+    result = result.replace(RegExpEx.create('([0-9])(?:号|番地|地番|地割|番|の|之|丿|ノ|-)([0-9])'), `$1${DASH}$2`);
 
     // もとに戻す
     result = result.replaceAll(RegExpEx.create(DASH, 'g'), '-');
     result = result.replaceAll(RegExpEx.create(SPACE, 'g'), ' ');
-    result = result.replace(RegExpEx.create(MUBANCHI), '無番地');
 
     // ダッシュ記号は、半角ハイフンに統一
     // ただし「トーヨーハイツ」のように建物名にハイフンが含まれる場合もあるので、

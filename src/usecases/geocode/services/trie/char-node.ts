@@ -229,6 +229,7 @@ export class CharNode {
     let head: CharNode | undefined;
     const stack: CharNode[] = this.split('');
     while (stack.length > 0) {
+      // 末尾から取り出す
       const top = stack.pop()!;
       if (!foundBody) {
 
@@ -250,11 +251,27 @@ export class CharNode {
       top.next = head;
       head = top;
     }
+    // 先頭のignore部分はスキップ
+    let prefixTail: CharNode | undefined;
+    const headAnchor = new CharNode({
+      char: '',
+    });
+    headAnchor.next = head;
+    while (head && head.ignore) {
+      prefixTail = head;
+      head = head.next;
+    }
     // 先頭にtarget がある場合は排除
     while (head && head.char === target) {
       head = head.next;
     }
-    return head;
+    if (prefixTail) {
+      prefixTail.next = head;
+    } else {
+      headAnchor.next = head;
+    }
+
+    return headAnchor.next;
   }
 
   split(search: string | RegExp, limit?: number): CharNode[] {

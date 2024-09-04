@@ -140,6 +140,11 @@ export class WorkerThread<I, T, R> extends Worker {
       }
       this.tasks.set(taskId, task);
   
+      // console.error(JSON.stringify({
+      //   taskId,
+      //   kind: 'task',
+      //   data: task.data,
+      // }, null, 2));
       this.postMessage(toSharedMemory<ThreadJob<T>>({
         taskId,
         kind: 'task',
@@ -156,17 +161,7 @@ export class WorkerThread<I, T, R> extends Worker {
     signal?: AbortSignal;
   }) => {
     const worker = new WorkerThread<I, T, R>(params);
-    await new Promise((
-      resolve: (worker: WorkerThread<I, T, R>) => void,
-      reject: (reason: unknown) => void,
-    ) => {
-      worker.initAsync(params.signal).then(() => {
-        resolve(worker);
-      })
-        .catch((reason: unknown) => {
-          reject(reason);
-        });
-    });
+    await worker.initAsync(params.signal);
     return worker;
   };
 }
@@ -192,9 +187,10 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       resolve: (pool: WorkerThreadPool<InitData, TransformData, ReceiveData>) => void,
       reject: (reason: unknown) => void,
     ) => {
-      pool.initAsync(params).then(() => {
-        resolve(pool);
-      })
+      pool.initAsync(params)
+        .then(() => {
+          resolve(pool);
+        })
         .catch((reason: unknown) => {
           reject(reason);
         });

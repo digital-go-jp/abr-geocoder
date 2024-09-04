@@ -49,9 +49,6 @@ describe("toHiragana", () => {
     const result = toHiragana("ゑヱ之");
     expect(result).toBe("ええの");
   });
-  /**
-     * HiraganaMapに登録されているが、理由は不明
-     */
   it("should convert 'ょ' to 'よ', 'ョ' to 'よ', and 'ｮ' to 'よ'", () => {
     const result = toHiragana("きょうキョウｷｮｳ");
     expect(result).toBe("きようきようきよう");

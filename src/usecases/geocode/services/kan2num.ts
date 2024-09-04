@@ -136,7 +136,9 @@ export const kan2num = (target: string) => {
 
       if (val === 0) {
         tempResult.push(current.toString());
-        tempResult.push('0');
+        if (current !== 0) {
+          tempResult.push('0');
+        }
         current = 0;
         continue;
 

@@ -91,9 +91,6 @@ export type QueryInput = {
   data: AbrGeocoderInput;
   // worker-thread-poolのtaskId
   taskId: number;
-
-  // geocoderの順番を制御するためのID
-  lineId: number;
 };
 
 export type FormattedAddres = {
@@ -387,6 +384,9 @@ export class Query implements IQuery {
   }
 
   static readonly from = (params: Omit<IQuery, 'tempAddress'> & { tempAddress: string | undefined; } ): Query => {
+    if (params.match_level === undefined) {
+      params.match_level = MatchLevel.UNKNOWN;
+    }
     if (params.tempAddress) {
       const tempAddress = params.tempAddress;
       delete params.tempAddress;

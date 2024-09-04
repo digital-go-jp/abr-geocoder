@@ -21,18 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, J_DASH, KANJI_NUMS, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS } from '@config/constant-values';
+import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, J_DASH, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { Transform, TransformCallback } from 'node:stream';
 import { Query, QueryInput } from '../models/query';
 import { QuerySet } from '../models/query-set';
+import { insertSpaceBeforeRoomOrFacility } from '../services/insert-space-before-room-or-facility';
 import { isDigitForCharNode } from '../services/is-number';
 import { jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2numForCharNode } from '../services/kan2num';
 import { toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
 import { toHiraganaForCharNode } from '../services/to-hiragana';
 import { CharNode } from '../services/trie/char-node';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class NormalizeTransform extends Transform {
 
@@ -162,8 +164,14 @@ export class NormalizeTransform extends Transform {
     // 「無番地」を「MUBANCHI」にする
     address = address?.replace(RegExpEx.create('無番地'), MUBANCHI);
 
+    // 「番外地」を「BANGAICHI」にする
+    address = address?.replace(RegExpEx.create('番外地'), BANGAICHI);
+
     // 「番地」「番丁」「番町」「番街」「番」「番地の」をDASHにする
     address = replaceBanchome(address);
+
+    // 先頭と末尾にあるDASHとSPACEを削除
+    address = trimDashAndSpace(address);
 
     // this.params.logger?.info(`normalize : ${((Date.now() - query.startTime) / 1000).toFixed(2)} s`);
     const results = new QuerySet();
@@ -193,9 +201,10 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
     const nextPointer = pointer.next?.moveToNext();
     switch (true) {
       case isDigitForCharNode(pointer): {
-      // 1番地999, 2番丁999, 3番街999, 4番町999, 5丁目999, 55線86番地
+      // 1番地999, 2番丁999, 3番街999, 4番町999, 5丁目999, 55線86番地, 66地割77
         if (RegExpEx.create('([0-9]+)番[丁地街][の目]?([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)丁目?([0-9]+)$').test(tmp) ||
+            // RegExpEx.create('([0-9]+)地割([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)番[丁地街]?([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)[条通]([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)の?通りの?([0-9]+)$').test(tmp) ||
@@ -254,6 +263,18 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
         skipPush = true;
         break;
       }
+      // 地割 + (数字) の場合
+      // case tmp.endsWith('地割') && nextPointer && isDigitForCharNode(nextPointer): {
+      // // 「地」を取る
+      //   stack.pop();
+      //   // DASHを入れる
+      //   stack.push(new CharNode({
+      //     char: DASH,
+      //     originalChar: '地割',
+      //   }));
+      //   skipPush = true;
+      //   break;
+      // }
       // (数字) + 番 + (数字) の場合
       case isDigitForCharNode(stack.at(-1)) && 
         tmp.endsWith('番') &&
@@ -279,6 +300,18 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
         skipPush = true;
         break;
       }
+      // 地割 + (数字以外) の場合
+      // case tmp.endsWith('地割') && nextPointer && !isDigitForCharNode(nextPointer) && !RegExpEx.create('[の目]').test(nextPointer?.char || ''): {
+      // // 「地」を取る
+      //   stack.pop();
+      //   // スペースを入れる
+      //   stack.push(new CharNode({
+      //     char: SPACE,
+      //     originalChar: '地割',
+      //   }));
+      //   skipPush = true;
+      //   break;
+      // }
 
       case RegExpEx.create('[0-9]の[0-9]$').test(tmp): {
       // 「の」を取る
@@ -362,108 +395,4 @@ const charNodeToString = (stack: (CharNode | undefined)[]): string => {
   return buffer.join('');
 };
 
-const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNode | undefined => {
-  if (!address) {
-    return;
-  }
 
-  // 最初に空白がある位置より前と後に分ける
-  const [before, ...after] = address.split(RegExpEx.create(SPACE, 'g'));
-
-  const kanjiNums = RegExpEx.create(`[${KANJI_NUMS}]`);
-
-  const stack: CharNode[] = before.split('');
-  const head: CharNode = new CharNode({
-    char: '',
-  });
-  let top: CharNode;
-  while (stack.length > 0) {
-    top = stack.pop()!;
-    if (top.ignore || !top.char) {
-      top.next = head.next;
-      head.next = top;
-      continue;
-    }
-    
-    // (数字) + 「の」+ (数字」)の場合、「の」をDASHにする
-    if (
-      (
-        kanjiNums.test(stack.at(-2)?.originalChar || '') ||
-        isDigitForCharNode(stack.at(-2))
-      ) &&
-      RegExpEx.create('[のノ丿之]').test(stack.at(-1)?.char || '') &&
-      (
-        kanjiNums.test(top?.originalChar || '') ||
-        isDigitForCharNode(top)
-      )
-    ) {
-      // 「の」を取る
-      const removed = stack.pop();
-      // DASHにする
-      const dash = new CharNode({
-        char: DASH,
-        originalChar: removed?.originalChar,
-      });
-      top.next = head.next;
-      dash.next = top;
-      head.next = dash;
-      continue;
-    }
-
-    // 算用数字と漢数字の間にスペースを入れる
-    if (isDigitForCharNode(top) && !kanjiNums.test(top.originalChar!) &&
-      head.next?.moveToNext()?.char !== DASH &&  // (数字)+(漢数字の「一」)+(数字)の場合、「一」をDashに置き換えるため
-      kanjiNums.test(head.next?.moveToNext()?.originalChar || '')) {
-    // if (
-    //   !RegExpEx.create(`[${DASH}${SPACE}]`).test(stack.at(-1)?.char || '') &&
-    //   isDigitForCharNode(top) && !kanjiNums.test(top.originalChar!) &&
-    //   !RegExpEx.create(`[号番通条線町街丁階F${DASH}${SPACE}]`).test(head.next?.moveToNext()?.char || '') &&
-    //   (!isDigitForCharNode(head.next?.moveToNext()) || kanjiNums.test(head.next?.moveToNext()?.originalChar || ''))) {
-      const space = new CharNode({
-        char: SPACE,
-      });
-      space.next = head.next?.moveToNext();
-      top.next = space;
-      head.next = top;
-      continue;
-    }
-
-    // 12-34-56号室のとき、4-5の間のDashをスペースに置き換える
-    // https://github.com/digital-go-jp/abr-geocoder/issues/157
-    if (isDigitForCharNode(stack.at(-1)) && top.char === '号' && head.next?.char === '室') {
-      // 号を headにつなげる
-      top.next = head.next;
-      head.next = top;
-      // 数字を headにつなげる
-      while (isDigitForCharNode(stack.at(-1))) {
-        const num = stack.pop()!;
-        num.next = head.next;
-        head.next = num;
-      }
-      const buffer: string[] = [];
-      while (RegExpEx.create(`[号番通条${DASH}${SPACE}]`).test(stack.at(-1)?.char || '')) {
-        const removed = stack.pop();
-        if (removed && removed.originalChar) {
-          buffer.push(removed.originalChar);
-        }
-      }
-      const space = new CharNode({
-        char: SPACE,
-        originalChar: buffer.reverse().join(''),
-      });
-      space.next = head.next;
-      head.next = space;
-      continue;
-    }
-
-    top.next = head.next;
-    head.next = top;
-  }
-
-  // 結合する
-  const separator = new CharNode({
-    char: SPACE,
-  });
-  const result = CharNode.joinWith(separator, head.next, ...after);
-  return result;
-};

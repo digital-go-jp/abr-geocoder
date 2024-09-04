@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -30,7 +30,9 @@ import { SearchTarget } from '@domain/types/search-target';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
+import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtDspTransform extends Transform {
 
@@ -94,9 +96,7 @@ export class RsdtDspTransform extends Transform {
         continue;
       }
 
-      const target = query.tempAddress?.
-        replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
-        replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      const target = trimDashAndSpace(query.tempAddress);
       if (!target) {
         results.add(query);
         continue;
@@ -133,22 +133,25 @@ export class RsdtDspTransform extends Transform {
         // 番地がヒットした
         const info = findResult.info! as RsdtDspInfo;
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
-
-        results.add(query.copy({
+        const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
           rsdtdsp_key: info.rsdtdsp_key,
           rsdtblk_key: info.rsdtblk_key,
           rsdt_num: info.rsdt_num,
           rsdt_id: info.rsdt_id,
           rsdt_num2: info.rsdt_num2,
           rsdt2_id: info.rsdt2_id,
-          rep_lat: info.rep_lat,
-          rep_lon: info.rep_lon,
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.RESIDENTIAL_DETAIL,
-          coordinate_level: MatchLevel.RESIDENTIAL_DETAIL,
           matchedCnt: query.matchedCnt + findResult.depth,
           ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
-        }));
+        };
+        if (info.rep_lat && info.rep_lon) {
+          params.coordinate_level = MatchLevel.RESIDENTIAL_DETAIL;
+          params.rep_lat = info.rep_lat;
+          params.rep_lon = info.rep_lon;
+        }
+        const copied = query.copy(params);
+        results.add(copied);
       }
       if (!anyHit || anyAmbiguous) {
         results.add(query);

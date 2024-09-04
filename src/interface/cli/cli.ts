@@ -32,9 +32,9 @@ import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
 
-// @ts-expect-error ts-node で実行しているときは、 NODE_ENV = 'development' にする
+// @ts-expect-error ts-node で実行しているときは、 NODE_ENV = 'test' にする
 if (process[Symbol.for('ts-node.register.instance')]) {
-  process.env.NODE_ENV = 'development';
+  process.env.NODE_ENV = 'test';
 }
 
 // const terminalWidth = Math.min(yargs.terminalWidth(), 120);
@@ -50,7 +50,7 @@ export const main = async (
   /**
    * CLIパーサー (通常のプログラムのエントリーポイント)
    */
-  yargs(hideBin(parsedArgs))
+  return yargs(hideBin(parsedArgs))
     .version(version)
     .wrap(terminalWidth)
     .scriptName('abrg')
@@ -73,7 +73,7 @@ export const main = async (
       // Otherwise, show the error message
       console.error(`[error] ${msg || e.message}`, e);
     
-      if (process.env.NODE_ENV !== 'development') {
+      if (process.env.NODE_ENV !== 'test') {
         process.exit(1);
       }
     })
