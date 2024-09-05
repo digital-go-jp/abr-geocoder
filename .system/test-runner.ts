@@ -8,6 +8,7 @@ const cliPath = path.join(rootDir, 'build', 'interface', 'cli', 'cli.js');
 const lgCodes = [
   // basic-test-cases
   '131016', // 東京都千代田区
+  '011045', // 北海道札幌市白石区 (小字に丁目が入る)
 
   // general-test-cases
   '033812', // 岩手県胆沢郡金ケ崎町

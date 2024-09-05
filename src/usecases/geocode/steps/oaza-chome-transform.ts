@@ -58,6 +58,7 @@ export class OazaChomeTransform extends Transform {
       for (const oazaInfo of params.oazaChomes) {
         oazaInfo.oaza_cho = toHankakuAlphaNum(oazaInfo.oaza_cho);
         oazaInfo.chome = toHankakuAlphaNum(oazaInfo.chome);
+        oazaInfo.koaza = toHankakuAlphaNum(oazaInfo.koaza);
         this.trie.append({
           key: this.normalizeStr(oazaInfo.key),
           value: oazaInfo,
@@ -282,6 +283,8 @@ export class OazaChomeTransform extends Transform {
     address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}`);
     address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}$2`);
     address = address?.replaceAll(RegExpEx.create('之', 'g'), DASH);
+
+    address = address?.replace(RegExpEx.create(`${DASH}+$`), '');
     
     return address;
   }

@@ -84,42 +84,80 @@ const jsonTestRunner = async (testCaseName: string) => {
 }
 
 describe('debug', () => {
-  test('霞ヶ関', async () => {
-    const input = '霞ヶ関';
+  test('北海道札幌市白石区平和通１丁目南６番１６号', async () => {
+    const input = '北海道札幌市白石区平和通１丁目南６番１６号';
     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
       input,
     });
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "霞ヶ関"
+        "input": "北海道札幌市白石区平和通１丁目南６番１６号"
       },
       "result": {
-        "output": "東京都千代田区霞が関",
+        "output": "北海道札幌市白石区平和通一丁目南6-16",
         "other": null,
-        "score": 0.2,
-        "match_level": "machiaza",
-        "coordinate_level": "city",
-        "lat": 35.694003,
-        "lon": 139.753634,
-        "lg_code": "131016",
-        "machiaza_id": "0002000",
-        "rsdt_addr_flg": -1,
+        "match_level": "residential_detail",
+        "coordinate_level": "residential_detail",
+        "lat": 43.054140181,
+        "lon": 141.407126409,
+        "lg_code": "011045",
+        "machiaza_id": "0099102",
+        "blk_id": "006",
+        "blk_num": "6",
+        "rsdt_id": "016",
+        "rsdt2_id": null,
+        "prc_id": null,
+        "pref": "北海道",
+        "county": null,
+        "city": "札幌市",
+        "ward": "白石区",
+        "oaza_cho": "平和通",
+        "chome": null,
+        "koaza": "一丁目南",
+        "rsdt_num": 16,
+        "rsdt_num2": null,
+        "prc_num1": null,
+        "prc_num2": null,
+        "prc_num3": null
+      }
+    });
+  });
+
+  test('大分県大分市大字荏隈394-1(小野ビル101号)', async () => {
+    const input = '大分市大字荏隈394-1(小野ビル101号)';
+    const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
+      input,
+    });
+    expect(JSON.parse(stdout)).toMatchObject({
+      "query": {
+        "input": "大分市大字荏隈394-1(小野ビル101号)"
+      },
+      "result": {
+        "output": "大分県大分市大字荏隈394-1 (小野ビル101号)",
+        "other": "(小野ビル101号)",
+        "match_level": "parcel",
+        "coordinate_level": "machiaza",
+        "lat": 33.214209,
+        "lon": 131.58031,
+        "lg_code": "442011",
+        "machiaza_id": "0042000",
+        "rsdt_addr_flg": 0,
         "blk_id": null,
         "rsdt_id": null,
         "rsdt2_id": null,
-        "prc_id": null,
-        "pref": "東京都",
+        "prc_id": "003940000100000",
+        "pref": "大分県",
         "county": null,
-        "city": "千代田区",
+        "city": "大分市",
         "ward": null,
-        "oaza_cho": "霞が関",
+        "oaza_cho": "大字荏隈",
         "chome": null,
         "koaza": null,
         "blk_num": null,
         "rsdt_num": null,
         "rsdt_num2": null,
-        "prc_num1": null,
-        "prc_num2": null,
+        "prc_num1": "394",
+        "prc_num2": "1",
         "prc_num3": null
       }
     });

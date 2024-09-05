@@ -422,7 +422,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * 霞が関三丁目 -> 35.671825,139.746988
         */
       this.exec(`
-        INSERT INTO resultTable
+        REPLACE INTO resultTable
         SELECT
           (city_key || ${DataField.OAZA_CHO.dbColumn} || ${DataField.CHOME.dbColumn}) as pkey,
           town_key,
@@ -544,6 +544,43 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       `);
 
       /*
+       * パターン5： 〇〇(大字)〇〇(小字)
+       */
+      this.exec(`
+        REPLACE INTO resultTable
+        SELECT
+          (city_key || ${DataField.OAZA_CHO.dbColumn} || ${DataField.KOAZA.dbColumn}) as pkey,
+          town_key,
+          city_key,
+          ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+          ${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+          '' as chome,
+          ${DataField.KOAZA.dbColumn} as koaza,
+          ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
+          ${DataField.REP_LAT.dbColumn} as rep_lat,
+          ${DataField.REP_LON.dbColumn} as rep_lon,
+          ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
+          IIF(
+            ${DataField.REP_LAT.dbColumn} IS NULL,
+            ${MatchLevel.UNKNOWN.num},
+            ${MatchLevel.MACHIAZA_DETAIL.num}
+          ) as coordinate_level
+        FROM
+          ${DbTableName.TOWN}
+        WHERE
+          (
+            ${DataField.OAZA_CHO.dbColumn} != '' AND
+            ${DataField.OAZA_CHO.dbColumn} IS NOT NULL
+          ) AND (
+            ${DataField.CHOME.dbColumn} = '' OR
+            ${DataField.CHOME.dbColumn} IS NULL
+          ) AND (
+            ${DataField.KOAZA.dbColumn} != '' AND
+            ${DataField.KOAZA.dbColumn} IS NOT NULL
+          )
+      `);
+
+      /*
         * パターン4： 〇〇(大字)
         *
         * 大字だけで town にレコードがある場合、上書きする
@@ -558,36 +595,101 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       this.exec(`
         REPLACE INTO resultTable
         SELECT
-          (city_key || ${DataField.OAZA_CHO.dbColumn}) as pkey,
-          town_key,
-          city_key,
-          ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
-          ${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-          ${DataField.CHOME.dbColumn} as chome,
-          '' as koaza,
-          ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-          ${DataField.REP_LAT.dbColumn} as rep_lat,
-          ${DataField.REP_LON.dbColumn} as rep_lon,
-          ${MatchLevel.MACHIAZA.num} as match_level,
-          IIF(
-            ${DataField.REP_LAT.dbColumn} IS NULL,
-            ${MatchLevel.UNKNOWN.num},
-            ${MatchLevel.MACHIAZA.num}
-          ) as coordinate_level
-        FROM
-          ${DbTableName.TOWN}
-        WHERE
-          (
-            ${DataField.OAZA_CHO.dbColumn} != '' AND
-            ${DataField.OAZA_CHO.dbColumn} IS NOT NULL
-          ) AND (
-            ${DataField.CHOME.dbColumn} = '' OR
-            ${DataField.CHOME.dbColumn} IS NULL
-          ) AND (
-            ${DataField.KOAZA.dbColumn} = '' OR
-            ${DataField.KOAZA.dbColumn} IS NULL
-          )
+            (city_key || ${DataField.OAZA_CHO.dbColumn}) as pkey,
+            town_key,
+            city_key,
+            ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+            ${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+            ${DataField.CHOME.dbColumn} as chome,
+            '' as koaza,
+            ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
+            ${DataField.REP_LAT.dbColumn} as rep_lat,
+            ${DataField.REP_LON.dbColumn} as rep_lon,
+            ${MatchLevel.MACHIAZA.num} as match_level,
+            IIF(
+              ${DataField.REP_LAT.dbColumn} IS NULL,
+              ${MatchLevel.UNKNOWN.num},
+              ${MatchLevel.MACHIAZA.num}
+            ) as coordinate_level
+          FROM
+            ${DbTableName.TOWN}
+          WHERE
+            (
+              ${DataField.OAZA_CHO.dbColumn} != '' AND
+              ${DataField.OAZA_CHO.dbColumn} IS NOT NULL
+            ) AND (
+              ${DataField.CHOME.dbColumn} = '' OR
+              ${DataField.CHOME.dbColumn} IS NULL
+            ) AND (
+              ${DataField.KOAZA.dbColumn} = '' OR
+              ${DataField.KOAZA.dbColumn} IS NULL
+            )
       `);
+
+      // this.exec(`
+      //   UPDATE resultTable
+      //   SET
+      //     rsdt_addr_flg = other.rsdt_addr_flg
+      //   FROM (
+      //     SELECT
+      //       (city_key || ${DataField.OAZA_CHO.dbColumn}) as pkey,
+      //       ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg
+      //     FROM
+      //       ${DbTableName.TOWN}
+      //     WHERE
+      //       (
+      //         ${DataField.OAZA_CHO.dbColumn} != '' AND
+      //         ${DataField.OAZA_CHO.dbColumn} IS NOT NULL
+      //       ) AND (
+      //         ${DataField.CHOME.dbColumn} = '' OR
+      //         ${DataField.CHOME.dbColumn} IS NULL
+      //       ) AND (
+      //         ${DataField.KOAZA.dbColumn} = '' OR
+      //         ${DataField.KOAZA.dbColumn} IS NULL
+      //       )
+      //   ) as other
+      //   WHERE
+      //     resultTable.rsdt_addr_flg != other.rsdt_addr_flg
+      //     AND
+      //     resultTable.pkey like concat(other.pkey, '%')
+      // `);
+
+      this.exec(`
+        UPDATE resultTable
+        SET
+          rep_lat = other.rep_lat,
+          rep_lon = other.rep_lon,
+          coordinate_level = other.coordinate_level
+        FROM (
+          SELECT
+            (city_key || ${DataField.OAZA_CHO.dbColumn}) as pkey,
+            ${DataField.REP_LAT.dbColumn} as rep_lat,
+            ${DataField.REP_LON.dbColumn} as rep_lon,
+            IIF(
+              ${DataField.REP_LAT.dbColumn} IS NULL,
+              ${MatchLevel.UNKNOWN.num},
+              ${MatchLevel.MACHIAZA.num}
+            ) as coordinate_level
+          FROM
+            ${DbTableName.TOWN}
+          WHERE
+            (
+              ${DataField.OAZA_CHO.dbColumn} != '' AND
+              ${DataField.OAZA_CHO.dbColumn} IS NOT NULL
+            ) AND (
+              ${DataField.CHOME.dbColumn} = '' OR
+              ${DataField.CHOME.dbColumn} IS NULL
+            ) AND (
+              ${DataField.KOAZA.dbColumn} = '' OR
+              ${DataField.KOAZA.dbColumn} IS NULL
+            )
+        ) as other
+        WHERE
+          resultTable.rep_lat IS NULL
+          AND
+          resultTable.pkey like concat(other.pkey, '%')
+      `);
+
 
       const townRows = this.prepare<unknown[], TownRow>('SELECT * FROM resultTable').all();
       this.exec('DROP TABLE resultTable');

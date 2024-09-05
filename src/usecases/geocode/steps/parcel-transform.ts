@@ -75,6 +75,12 @@ export class ParcelTransform extends Transform {
         results.add(query);
         continue;
       }
+
+      // 住居表示実施地区の場合はスキップ
+      if (query.rsdt_addr_flg !== 0) {
+        results.add(query);
+        continue;
+      }
       
       // 既に住居表示で見つかっている場合もスキップ
       if (query.match_level.num === MatchLevel.RESIDENTIAL_BLOCK.num ||
@@ -102,49 +108,85 @@ export class ParcelTransform extends Transform {
         continue;
       }
 
+      let anyHit = false;
       const searchInfo = this.getPrcId(query);
-      if (!searchInfo) {
-        results.add(query);
-        continue;
-      }
+      if (searchInfo) {
+        // city_key, town_key で指定した地番情報を取得
+        const findResults = await db.getParcelRows({
+          prc_id: searchInfo.parcel_key,
+          city_key: TableKeyProvider.getCityKey({
+            lg_code: query.lg_code,
+          }),
+          town_key: TableKeyProvider.getTownKey({
+            machiaza_id: query.machiaza_id,
+            lg_code: query.lg_code,
+          }),
+        });
 
-      // city_key, town_key で指定した地番情報を取得
-      const findResults = await db.getParcelRows({
-        prc_id: searchInfo.parcel_key,
-        city_key: TableKeyProvider.getCityKey({
-          lg_code: query.lg_code,
-        }),
-        town_key: TableKeyProvider.getTownKey({
-          machiaza_id: query.machiaza_id,
-          lg_code: query.lg_code,
-        }),
-      });
-
-      // 見つからなかった
-      if (findResults.length === 0) {
-        results.add(query);
-        continue;
-      }
-
-      findResults.forEach(row => {
-        const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
-          parcel_key: row.parcel_key,
-          prc_id: row.prc_id,
-          prc_num1: row.prc_num1,
-          prc_num2: row.prc_num2,
-          prc_num3: row.prc_num3,
-          tempAddress: searchInfo.unmatched,
-          match_level: MatchLevel.PARCEL,
-          matchedCnt: query.matchedCnt + searchInfo.matchedCnt,
-        };
-        if (row.rep_lat && row.rep_lon) {
-          params.coordinate_level = MatchLevel.PARCEL;
-          params.rep_lat = row.rep_lat;
-          params.rep_lon = row.rep_lon;
+        if (findResults.length > 0) {
+          anyHit = true;
+          findResults.forEach(row => {
+            const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
+              parcel_key: row.parcel_key,
+              prc_id: row.prc_id,
+              prc_num1: row.prc_num1,
+              prc_num2: row.prc_num2,
+              prc_num3: row.prc_num3,
+              tempAddress: searchInfo.unmatched,
+              match_level: MatchLevel.PARCEL,
+              matchedCnt: query.matchedCnt + searchInfo.matchedCnt,
+            };
+            if (row.rep_lat && row.rep_lon) {
+              params.coordinate_level = MatchLevel.PARCEL;
+              params.rep_lat = row.rep_lat;
+              params.rep_lon = row.rep_lon;
+            }
+            const copied = query.copy(params);
+            results.add(copied);
+          });
         }
-        const copied = query.copy(params);
-        results.add(copied);
-      });
+      }
+      const searchInfo2 = this.getPrcIdWithNum1(query);
+      if (searchInfo2) {
+        // city_key, town_key で指定した地番情報を取得
+        const findResults = await db.getParcelRows({
+          prc_id: searchInfo2.parcel_key,
+          city_key: TableKeyProvider.getCityKey({
+            lg_code: query.lg_code,
+          }),
+          town_key: TableKeyProvider.getTownKey({
+            machiaza_id: query.machiaza_id,
+            lg_code: query.lg_code,
+          }),
+        });
+
+        if (findResults.length > 0) {
+          anyHit = true;
+          findResults.forEach(row => {
+            const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
+              parcel_key: row.parcel_key,
+              prc_id: row.prc_id,
+              prc_num1: row.prc_num1,
+              prc_num2: row.prc_num2,
+              prc_num3: row.prc_num3,
+              tempAddress: searchInfo2.unmatched,
+              match_level: MatchLevel.PARCEL,
+              matchedCnt: query.matchedCnt + searchInfo2.matchedCnt,
+            };
+            if (row.rep_lat && row.rep_lon) {
+              params.coordinate_level = MatchLevel.PARCEL;
+              params.rep_lat = row.rep_lat;
+              params.rep_lon = row.rep_lon;
+            }
+            const copied = query.copy(params);
+            results.add(copied);
+          });
+        }
+      }
+      
+      if (!anyHit) {
+        results.add(query);
+      }
     }
 
     // this.params.logger?.info(`parcel : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
@@ -172,7 +214,7 @@ export class ParcelTransform extends Transform {
 
     // マッチした文字数
     let matchedCnt = 0;
-    while (head) {
+    while (head && !head.ignore) {
       matchedCnt++;
       if (head.char === DEFAULT_FUZZY_CHAR) {
         // fuzzyの場合、任意の１文字
@@ -185,10 +227,10 @@ export class ParcelTransform extends Transform {
         let pointer: CharNode | undefined = head;
         while (pointer && isDigitForCharNode(pointer) && !pointer.ignore) {
           tmpBuffer.push(pointer.char!);
-          pointer = pointer.next?.moveToNext();
+          pointer = pointer.next;
         }
         
-        if (!pointer || pointer.char === SPACE || kanjiNums.test(pointer.originalChar!)) {
+        if (!pointer || pointer?.ignore || pointer.char === SPACE || kanjiNums.test(pointer.originalChar!)) {
           current.push(...tmpBuffer);
           buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
           head = pointer;
@@ -212,7 +254,7 @@ export class ParcelTransform extends Transform {
       } else {
         break;
       }
-      head = head?.next?.moveToNext();
+      head = head?.next;
     }
     if (current.length > 0) {
       buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
@@ -225,11 +267,102 @@ export class ParcelTransform extends Transform {
     }
     const parcelKey = buffer.join('');
 
+    let unmatched: CharNode | undefined = head;
+    if (after.length > 0) {
+      unmatched = CharNode.joinWith(new CharNode({
+        char: SPACE,
+      }), unmatched, ...after)
+    }
+
     return {
       parcel_key: parcelKey,
-      unmatched: CharNode.joinWith(new CharNode({
+      unmatched,
+      matchedCnt,
+    };
+  }
+
+  private getPrcIdWithNum1(query: Query) {
+    const PARCEL_LENGTH = 5;
+    const ZERO_FILL = ''.padStart(PARCEL_LENGTH, '0');
+
+    const buffer: string[] = [];
+    const current: string[] = [];
+    const target = trimDashAndSpace(query.tempAddress);
+    if (!target) {
+      return;
+    }
+
+    const [before, ...after]: CharNode[] = target.split(SPACE);
+    let head: CharNode | undefined = before?.trimWith(DASH);
+    const kanjiNums = RegExpEx.create(`[${KANJI_NUMS}]`);
+
+    // マッチした文字数
+    let matchedCnt = 0;
+    while (head && !head.ignore) {
+      if (buffer.length > 0) {
+        break;
+      }
+      matchedCnt++;
+      if (head.char === DEFAULT_FUZZY_CHAR) {
+        // fuzzyの場合、任意の１文字
+        // TODO: Databaseごとの処理
+        current.push('_');
+      } else if (/\d/.test(head.char!)) {
+        // 数字の後ろの文字をチェック
+        // SPACE, DASH, 漢数字、または終了なら、追加する
+        const tmpBuffer: string[] = [];
+        let pointer: CharNode | undefined = head;
+        while (pointer && isDigitForCharNode(pointer) && !pointer.ignore) {
+          tmpBuffer.push(pointer.char!);
+          pointer = pointer.next;
+        }
+        
+        if (!pointer || pointer?.ignore || pointer.char === SPACE || kanjiNums.test(pointer.originalChar!)) {
+          current.push(...tmpBuffer);
+          buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+          head = pointer;
+          current.length = 0;
+          matchedCnt += tmpBuffer.length;
+          break;
+        }
+        if (pointer.char !== DASH) {
+          break;
+        }
+        
+        current.push(...tmpBuffer);
+        head = pointer;
+        matchedCnt += tmpBuffer.length;
+
+        buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+        break;
+      } else if (head.char === DASH) {
+        buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+        break;
+      } else {
+        break;
+      }
+      head = head?.next;
+    }
+    // if (current.length > 0) {
+    //   buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
+    // }
+
+    // prc_idは prc_num1, prc_num2, prc_num3を
+    // 5桁ずつの数字（Zero fill) して結合したもの
+    for (let i = buffer.length; i < 3; i++) {
+      buffer.push(ZERO_FILL);
+    }
+    const parcelKey = buffer.join('');
+    let unmatched: CharNode | undefined = head;
+    if (after.length > 0) {
+      unmatched = CharNode.joinWith(new CharNode({
         char: SPACE,
-      }), head, ...after),
+      }), unmatched, ...after)
+    }
+
+    return {
+      parcel_key: parcelKey,
+      unmatched,
       matchedCnt,
     };
   }
