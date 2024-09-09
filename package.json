@@ -1,5 +1,5 @@
 {
-  "name": "@digital-go-jp/abr-geocoder",
+  "name": "@nekoyasan/abr-geocoder-workers",
   "version": "2.0.0",
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
   "author": "Japan Digital Agency (デジタル庁)",
@@ -22,6 +22,7 @@
     "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240903.0",
     "@types/better-sqlite3": "^7.6.10",
     "@types/busboy": "^1.5.4",
     "@types/byline": "^4.2.36",
@@ -38,15 +39,18 @@
     "ts-add-js-extension": "^1.6.4",
     "ts-node": "^10.9.2",
     "ts-patch": "^3.2.0",
-    "typescript-transform-paths": "^3.4.7"
+    "typescript-transform-paths": "^3.4.7",
+    "wrangler": "^3.75.0"
   },
   "dependencies": {
+    "@hono/node-server": "^1.12.2",
     "better-sqlite3": "^11.1.2",
     "buffer-crc32": "^1.0.0",
     "busboy": "^1.6.0",
     "byline": "^5.0.0",
     "cli-progress": "^3.12.0",
     "csv-parser": "^3.0.0",
+    "hono": "^4.5.11",
     "http-status-codes": "^2.3.0",
     "hyper-express": "^6.16.4",
     "i18next": "^23.11.5",
@@ -60,5 +64,6 @@
     "unzipper": "^0.11.6",
     "winston": "^3.13.0",
     "yargs": "^17.7.2"
-  }
+  },
+  "packageManager": "pnpm@9.9.0+sha512.60c18acd138bff695d339be6ad13f7e936eea6745660d4cc4a776d5247c540d0edee1a563695c183a66eb917ef88f2b4feb1fc25f32a7adcadc7aaf3438e99c1"
 }

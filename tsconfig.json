@@ -11,6 +11,7 @@
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true,
+    "skipLibCheck": true,
     "typeRoots": [
       "./node_modules/@types",
       "./node_modules/@jest"
@@ -27,7 +28,7 @@
       "@domain/*": ["src/domain/*"],
       "@interface/*": ["src/interface/*"],
       "@usecases/*": ["src/usecases/*"],
-      "@config/*": ["src/config/*"],
+      "@config/*": ["src/config/*"]
       // "@mock/*": ["__mocks__/*"],
       // "@cli/*": ["src/cli/*"],
       // "@domain/*": ["src/domain/*"],
