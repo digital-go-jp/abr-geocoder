@@ -30,9 +30,7 @@ import downloadCommand from './commands/download-command';
 import geocodeCommand from './commands/geocode-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
-import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import serveCommand from './commands/serve-command';
-import honoCommand from "@interface/cli/commands/hono-command";
 
 // @ts-ignore
 if (process[Symbol.for('ts-node.register.instance')]) {
@@ -61,7 +59,6 @@ export const main = async (
     .command(downloadCommand)
     .command(geocodeCommand)
     .command(serveCommand)
-    .command(honoCommand)
     .fail((msg: string, e: Error, yargs: Argv<{}>): void => {
       if (parsedArgs.length <= 2) {
         // Show help if no options are provided.

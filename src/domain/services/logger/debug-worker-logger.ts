@@ -22,19 +22,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { CommandModule } from 'yargs';
-import { serve } from '@hono/node-server'
-import app from '@interface/hono-server';
 
+export class DebugWorkerLogger {
 
-const serveCommand: CommandModule = {
-  command: 'hono',
+  private static instance: DebugWorkerLogger | undefined;
 
-  handler: async () => {
-    serve(app, (info) => {
-      console.log(`Listening on http://localhost:${info.port}`) // Listening on http://localhost:3000
-    })
+  static readonly getInstance = (): DebugWorkerLogger => {
+    if (this.instance) {
+      return this.instance;
+    }
+    this.instance = new DebugWorkerLogger();
+    return this.instance;
   }
-};
 
-export default serveCommand;
+  debug(message: string, ...meta: any[]) {
+    console.log("DEBUG", message, ...meta);
+  }
+  info(message: string, ...meta: any[]) {
+    console.log("INFO", message, ...meta);
+  }
+  warn(message: string, ...meta: any[]) {
+    console.log("WARN", message, ...meta);
+  }
+  data(message: string, ...meta: any[]) {
+    console.log("DATA", message, ...meta);
+  }
+  notice(message: string, ...meta: any[]) {
+    console.log("NOTICE", message, ...meta);
+  }
+}

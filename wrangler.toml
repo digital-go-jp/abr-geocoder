@@ -1,22 +1,12 @@
 name = "abr-geocoder-workers"
+main = "src/interface/hono-server/index.ts"
 compatibility_date = "2024-09-08"
 compatibility_flags = [ "nodejs_compat" ]
+minify = true
 
-# [vars]
-# MY_VAR = "my-variable"
 
-# [[kv_namespaces]]
-# binding = "MY_KV_NAMESPACE"
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# [[r2_buckets]]
-# binding = "MY_BUCKET"
-# bucket_name = "my-bucket"
-
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "my-database"
-# database_id = ""
-
-# [ai]
-# binding = "AI"
+[[d1_databases]]
+binding = "DB"
+database_name = "abr-geocoder"
+database_id = "2f24283c-352c-488f-af77-4bfcc07a0775"
+preview_database_id = "local-test-db"

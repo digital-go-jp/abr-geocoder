@@ -23,21 +23,15 @@
  * SOFTWARE.
  */
 import { DatabaseParams } from "@domain/types/database-params";
-import path from "node:path";
-import { ICommonDbGeocode, IParcelDbGeocode, IRsdtBlkDbGeocode, IRsdtDspDbGeocode } from "./common-db";
-import { CommonDbGeocodeSqlite3 } from "./sqlite3/geocode/common-db-geocode-sqlite3";
-import { ParcelDbGeocodeSqlite3 } from "./sqlite3/geocode/parcel-db-geocode-sqlite3";
-import { RsdtBlkGeocodeSqlite3 } from "./sqlite3/geocode/rsdt-blk-db-geocode-sqlite3";
-import { RsdtDspGeocodeSqlite3 } from "./sqlite3/geocode/rsdt-dsp-db-geocode-sqlite3";
-import { Sqlite3Util } from "./sqlite3/sqlite3-util";
+import { ICommonDbGeocode, IParcelDbGeocode, IRsdtBlkDbGeocode, IRsdtDspDbGeocode } from "@interface/database/common-db";
+
 import type { D1Database } from "@cloudflare/workers-types";
 import {CommonDbGeocodeD1} from "@interface/database/D1/geocode/common-db-geocode-d1";
 import {RsdtBlkGeocodeD1} from "@interface/database/D1/geocode/rsdt-blk-db-geocode-d1";
 import {RsdtDspGeocodeD1} from "@interface/database/D1/geocode/rsdt-dsp-db-geocode-d1";
 import {ParcelDbGeocodeD1} from "@interface/database/D1/geocode/parcel-db-geocode-d1";
 
-export class GeocodeDbController {
-  private readonly sqlite3Util?: Sqlite3Util;
+export class GeocodeWorkerD1Controller {
   private readonly d1Client?: D1Database;
   public readonly connectParams: DatabaseParams;
 
@@ -47,11 +41,6 @@ export class GeocodeDbController {
     this.connectParams = params.connectParams;
 
     switch (this.connectParams.type) {
-      case 'sqlite3':
-        this.sqlite3Util = new Sqlite3Util({
-          dataDir: this.connectParams.dataDir,
-        });
-        break;
       case 'd1':
         this.d1Client = this.connectParams.d1Client;
         break;
@@ -63,12 +52,6 @@ export class GeocodeDbController {
 
   async openCommonDb(): Promise<ICommonDbGeocode> {
     switch(this.connectParams.type) {
-      case 'sqlite3':
-        return new CommonDbGeocodeSqlite3({
-          sqliteFilePath: path.join(this.connectParams.dataDir, 'common.sqlite'),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-common.sql'),
-          readonly: true,
-        });
       case 'd1':
         if (!this.d1Client) {
           throw 'D1 client is not initialized';
@@ -84,19 +67,6 @@ export class GeocodeDbController {
     createIfNotExists: boolean;
   }>): Promise<IRsdtBlkDbGeocode | null> {
     switch(this.connectParams.type) {
-      case 'sqlite3':
-        const hasTheDbFile = this.sqlite3Util?.hasExtraDb({
-          lg_code: params.lg_code,
-        });
-        if (!hasTheDbFile && !params.createIfNotExists) {
-          return null;
-        }
-
-        return new RsdtBlkGeocodeSqlite3({
-          sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
-          readonly: true,
-        });
       case 'd1':
         if (!this.d1Client) {
           throw 'D1 client is not initialized';
@@ -112,19 +82,6 @@ export class GeocodeDbController {
     createIfNotExists: boolean;
   }>): Promise<IRsdtDspDbGeocode | null> {
     switch (this.connectParams.type) {
-      case 'sqlite3':
-        const hasTheDbFile = this.sqlite3Util?.hasExtraDb({
-          lg_code: params.lg_code,
-        });
-        if (!hasTheDbFile && !params.createIfNotExists) {
-          return null;
-        }
-
-        return new RsdtDspGeocodeSqlite3({
-          sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
-          readonly: true,
-        });
       case 'd1':
         if (!this.d1Client) {
           throw 'D1 client is not initialized';
@@ -140,19 +97,6 @@ export class GeocodeDbController {
     createIfNotExists: boolean;
   }>): Promise<IParcelDbGeocode | null> {
     switch (this.connectParams.type) {
-      case 'sqlite3':
-        const hasTheDbFile = this.sqlite3Util?.hasExtraDb({
-          lg_code: params.lg_code,
-        });
-        if (!hasTheDbFile && !params.createIfNotExists) {
-          return null;
-        }
-
-        return new ParcelDbGeocodeSqlite3({
-          sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
-          readonly: true,
-        });
       case 'd1':
         if (!this.d1Client) {
           throw 'D1 client is not initialized';

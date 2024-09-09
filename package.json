@@ -19,7 +19,9 @@
     "abrg": "build/interface/cli/cli.js"
   },
   "scripts": {
-    "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/"
+    "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/",
+    "cf-dev": "wrangler dev",
+    "cf-deploy": "wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240903.0",
