@@ -4,10 +4,10 @@
   "compilerOptions": {
     "outDir": "./build",
     "lib": [
-      "es2023"
+      "ESNext"
     ],
-    "target": "es2022",
-    "module": "NodeNext",
+    "target": "ESNext",
+    "module": "ESNext",
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true,
@@ -18,10 +18,11 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "types": [
-      "node"
+      "node",
+      "@cloudflare/workers-types/2023-07-01"
     ],
     "resolveJsonModule": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "Bundler",
     "baseUrl": ".",
     "paths": {
       "@domain/*": ["src/domain/*"],
