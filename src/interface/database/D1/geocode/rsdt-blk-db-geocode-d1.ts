@@ -29,11 +29,12 @@ import { IRsdtBlkDbGeocode } from "../../common-db";
 import {D1Database} from "@cloudflare/workers-types";
 
 export class RsdtBlkGeocodeD1 implements IRsdtBlkDbGeocode {
-
   private readonly d1Client: D1Database;
+  private readonly lg_code: string;
 
-  constructor(d1Client: D1Database) {
+  constructor(d1Client: D1Database, lg_code: string) {
     this.d1Client = d1Client;
+    this.lg_code = lg_code;
   }
 
 
@@ -55,7 +56,7 @@ export class RsdtBlkGeocodeD1 implements IRsdtBlkDbGeocode {
         ${DataField.REP_LAT.dbColumn} as rep_lat,
         ${DataField.REP_LON.dbColumn} as rep_lon
       FROM
-        ${DbTableName.RSDT_BLK}
+        ${DbTableName.RSDT_BLK}_${this.lg_code}
       WHERE
         town_key = ?1 AND
         ${DataField.BLK_NUM.dbColumn} LIKE ?2

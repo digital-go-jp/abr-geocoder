@@ -30,9 +30,11 @@ import {D1Database} from "@cloudflare/workers-types";
 
 export class ParcelDbGeocodeD1 implements IParcelDbGeocode {
   private readonly d1Client: D1Database;
+  private readonly lg_code: string;
 
-  constructor(d1Client: D1Database) {
+  constructor(d1Client: D1Database, lg_code: string) {
     this.d1Client = d1Client;
+    this.lg_code = lg_code;
   }
 
 
@@ -44,7 +46,7 @@ export class ParcelDbGeocodeD1 implements IParcelDbGeocode {
   async getParcelRows(where: Required<{
     city_key: number;
     town_key?: number | null;
-    prc_id: string; 
+    prc_id: string;
   }>): Promise<ParcelInfo[]> {
     where.town_key = where.town_key || null;
     const stmt = this.d1Client.prepare(`
@@ -57,7 +59,7 @@ export class ParcelDbGeocodeD1 implements IParcelDbGeocode {
           ${DataField.REP_LAT.dbColumn} as rep_lat,
           ${DataField.REP_LON.dbColumn} as rep_lon
         FROM
-          ${DbTableName.PARCEL}
+          ${DbTableName.PARCEL}_${this.lg_code}
         WHERE
           town_key = ?1 AND
           ${DataField.PRC_ID.dbColumn} LIKE ?2

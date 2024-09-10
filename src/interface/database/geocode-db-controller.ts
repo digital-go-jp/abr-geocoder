@@ -101,7 +101,7 @@ export class GeocodeDbController {
         if (!this.d1Client) {
           throw 'D1 client is not initialized';
         }
-        return new RsdtBlkGeocodeD1(this.d1Client);
+        return new RsdtBlkGeocodeD1(this.d1Client, params.lg_code);
       default:
         throw 'Not implemented';
     }
@@ -129,7 +129,7 @@ export class GeocodeDbController {
         if (!this.d1Client) {
           throw 'D1 client is not initialized';
         }
-        return new RsdtDspGeocodeD1(this.d1Client);
+        return new RsdtDspGeocodeD1(this.d1Client, params.lg_code);
       default:
         throw 'Not implemented';
     }
@@ -157,7 +157,7 @@ export class GeocodeDbController {
         if (!this.d1Client) {
           throw 'D1 client is not initialized';
         }
-        return new ParcelDbGeocodeD1(this.d1Client);
+        return new ParcelDbGeocodeD1(this.d1Client, params.lg_code);
 
       default:
         throw 'Not implemented';

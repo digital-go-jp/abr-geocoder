@@ -30,9 +30,11 @@ import {D1Database} from "@cloudflare/workers-types";
 
 export class RsdtDspGeocodeD1 implements IRsdtDspDbGeocode {
   private readonly d1Client: D1Database;
+  private readonly lg_code: string;
 
-  constructor(d1Client: D1Database) {
+  constructor(d1Client: D1Database, lg_code: string) {
     this.d1Client = d1Client;
+    this.lg_code = lg_code;
   }
 
 
@@ -66,7 +68,7 @@ export class RsdtDspGeocodeD1 implements IRsdtDspDbGeocode {
           ${DataField.REP_LAT.dbColumn} as rep_lat,
           ${DataField.REP_LON.dbColumn} as rep_lon
         FROM
-          ${DbTableName.RSDT_DSP}
+          ${DbTableName.RSDT_DSP}_${this.lg_code}
         WHERE
           rsdtblk_key = ?1
       `).bind(where.rsdtblk_key);
