@@ -19,6 +19,14 @@ module.exports = {
   },
   moduleDirectories,
   modulePaths: [compilerOptions.baseUrl],
+  moduleNameMapper: {
+    // 'node:fs': '<rootDir>/__mocks__/fs.ts',
+    // 'node:os': '<rootDir>/__mocks__/os.ts',
+    // 'better-sqlite3': '<rootDir>/__mocks__/better-sqlite3.ts',
+    // 'csv-parser': '<rootDir>/__mocks__/csv-parser.ts',
+    // '^(\\.{1,2}/.*)\\.js$': '$1',  // JavaScriptファイルの拡張子を補完
+    ...pathsToModuleNameMapper(compilerOptions.paths),
+  },
   // テストファイルの場所
   roots,
   // transformIgnorePatterns: [

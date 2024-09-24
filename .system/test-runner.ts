@@ -59,5 +59,5 @@ $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`
     return $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`
   })
   .then(() => {
-    $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.system-test.config.js`
+    $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.config.js`
   })

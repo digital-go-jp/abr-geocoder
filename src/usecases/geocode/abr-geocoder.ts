@@ -30,7 +30,7 @@ import { AbrGeocoderInput } from "./models/abrg-input-data";
 import { Query, QueryJson } from "./models/query";
 import { GeocodeTransform, GeocodeWorkerInitData } from "./worker/geocode-worker";
 
-export class AbrGeocoderTaskInfo extends AsyncResource {
+class AbrGeocoderTaskInfo extends AsyncResource {
   next: AbrGeocoderTaskInfo | undefined;
   result?: Query;
   error?: null | undefined | Error;
@@ -106,6 +106,12 @@ export class AbrGeocoder {
       },
     });
     this.reader.pipe(params.geocodeTransformOnMainThread).pipe(dst);
+
+    // ts-jestがworker threadに未対応なため、
+    // 開発時には、メインスレッドのみで処理する
+    if (process.env.NODE_ENV === 'test:system' && process.env.JEST_WORKER_ID) {
+      return;
+    }
 
     setImmediate(() => {
       WorkerThreadPool.create<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({

@@ -41,7 +41,6 @@ if (process[Symbol.for('ts-node.register.instance')]) {
 const terminalWidth = 120;
 
 export const main = async (
-  nodeEnv: string | undefined,
   ...processArgv: string[]
 ) => {
   const { version } = getPackageInfo();
@@ -79,4 +78,4 @@ export const main = async (
     })
     .parse();
 };
-main(process.env.NODE_ENV, ...process.argv);
+main(...process.argv);

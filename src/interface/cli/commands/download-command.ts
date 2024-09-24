@@ -84,7 +84,7 @@ const downloadCommand: CommandModule = {
 
   handler: async (argv: ArgumentsCamelCase<DownloadCommandArgv>) => {
     // silent = true のときは、プログレスバーを表示しない
-    const progressBar = argv.silent ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}');
+    const progressBar = argv.silent ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total}');
     progressBar?.start(1, 0);
 
     if (argv.debug) {

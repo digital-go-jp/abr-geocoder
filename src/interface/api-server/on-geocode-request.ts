@@ -50,7 +50,7 @@ export class OnGeocodeRequest {
     response.setDefaultEncoding('utf-8');
 
     // TS-node でデバッグしているときのみ、デバッグ情報を出力する
-    const debug = process.env.NODE_ENV === 'development';
+    const debug = process.env.NODE_ENV?.startsWith('test');
 
     // リクエストを行う
     const address = request.query_parameters['address']?.trim();

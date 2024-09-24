@@ -1,8 +1,9 @@
+const { verbose } = require('winston');
 const { compilerOptions } = require('./tsconfig.json')
 const { pathsToModuleNameMapper } = require('ts-jest')
 
 const targetTestFile = process.argv[2];
-const { roots, moduleDirectories, tsconfig } = (() => {
+const { roots, moduleDirectories } = (() => {
   const moduleDirectories = [
     "node_modules/",
     "src",
@@ -10,31 +11,26 @@ const { roots, moduleDirectories, tsconfig } = (() => {
   const roots = [
     '<rootDir>/src/',
   ];
-  let tsconfig = '';
 
   if (targetTestFile && targetTestFile.includes('.system')) {
     roots.push('<rootDir>/.system/');
     moduleDirectories.push(".system");
-    tsconfig = "./tsconfig.system-test.json";
-    tsconfig = "./tsconfig.spec.json";
   } else {
     moduleDirectories.push("__mocks__");
-    tsconfig = "./tsconfig.spec.json";
   }
   return {
     roots,
     moduleDirectories,
-    tsconfig,
   };
 })();
 module.exports = {
-  preset: 'ts-jest',  // ESM用のpresetを指定
+  preset: 'ts-jest',
   testEnvironment: 'node',
   testRunner: 'jest-circus/runner',
   moduleFileExtensions: ["js", "ts"],
   transform: {
     "^.+\\.ts$": [ "ts-jest", {
-      "tsconfig": tsconfig,
+      "tsconfig": "./tsconfig.spec.json",
     }]
   },
   moduleDirectories,

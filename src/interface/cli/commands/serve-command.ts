@@ -99,7 +99,7 @@ const serveCommand: CommandModule = {
         schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
       cacheDir: path.join(abrgDir, 'cache'),
-      debug: process.env.NODE_ENV === 'development',
+      debug: process.env.NODE_ENV?.startsWith('test') === true,
     });
 
     // APIサーバー

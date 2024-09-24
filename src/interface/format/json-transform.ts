@@ -75,8 +75,6 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
   private buffer: string = '';
   private lineNum: number = 0;
 
-  public readonly mimeType = 'application/json';
-
   constructor(private readonly options: {
     debug?: boolean;
   }) {

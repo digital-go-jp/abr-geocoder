@@ -145,7 +145,15 @@ export class ParcelTransform extends Transform {
             results.add(copied);
           });
         }
+        // 枝番2,3 がないなら、getPrcIdWithNum1 を実行する必要はない
+        if (searchInfo.parcel_key.endsWith('0000000000')) {
+          continue;
+        }
       }
+
+      // 〇〇1-2 の枝番2がDB内に存在しないが、
+      // 〇〇1 までならDB内に存在するケースがあるので
+      // 枝番1だけで探索する
       const searchInfo2 = this.getPrcIdWithNum1(query);
       if (searchInfo2) {
         // city_key, town_key で指定した地番情報を取得
@@ -271,7 +279,7 @@ export class ParcelTransform extends Transform {
     if (after.length > 0) {
       unmatched = CharNode.joinWith(new CharNode({
         char: SPACE,
-      }), unmatched, ...after)
+      }), unmatched, ...after);
     }
 
     return {
@@ -357,7 +365,7 @@ export class ParcelTransform extends Transform {
     if (after.length > 0) {
       unmatched = CharNode.joinWith(new CharNode({
         char: SPACE,
-      }), unmatched, ...after)
+      }), unmatched, ...after);
     }
 
     return {

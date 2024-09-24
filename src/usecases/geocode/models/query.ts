@@ -368,7 +368,9 @@ export class Query implements IQuery {
 
     // 最終的な文字列を作成
     const result = formatted_address.join('')
-      .replaceAll(RegExpEx.create(' +', 'g'), ' ').trim();
+      .replaceAll(RegExpEx.create(' +', 'g'), ' ')
+      .replace(RegExpEx.create('丁目-([0-9])', 'g'), '丁目$1')  
+      .trim();
     
     // 最終的な文字列と一番最初のクエリ文字列の類似度を計算する
     const originalInput = this.input.data.address.replaceAll(RegExpEx.create('[ 　]+', 'g'), ' ');

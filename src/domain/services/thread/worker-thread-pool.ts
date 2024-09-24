@@ -270,7 +270,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     const worker = await WorkerThread.create<InitData, TransformData, ReceiveData>(params);
     worker.on('error', async (error: Error) => {
       worker.removeAllListeners();
-      console.error(error);
+      console.error(`[createWorker error]`, error);
 
       // エラーが発生したら、rejectを呼び出す
       // (どうするかは呼び出し元で考える)
@@ -322,7 +322,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
         if (typeof reason === 'string' && reason === 'cancelled') {
           return;
         }
-        console.error(reason);
+        console.error(`[worker error]`, reason);
       });
     if (!worker) {
       return;

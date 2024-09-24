@@ -1,8 +1,11 @@
 import { describe, expect, jest, test } from '@jest/globals';
+import { LineStream } from 'byline';
 import { execaNode } from 'execa-cjs';
 import fs from 'node:fs';
 import path from 'node:path';
-import { OutputFormat } from '../../src/domain/types/output-format';
+import { Readable, Writable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { AbrGeocodeStream, DEFAULT_FUZZY_CHAR, FormatterProvider, OutputFormat, SearchTarget } from '../../src/index';
 
 const SECONDS = 1000;
 jest.setTimeout(5 * 60 * SECONDS);
@@ -12,60 +15,72 @@ const rootDir = path.dirname(packageJsonPath);
 const dbPath = path.join(rootDir, 'db');
 const cliPath = path.join(rootDir, 'build', 'interface', 'cli', 'cli.js');
 
-// // @ts-expect-error ts-node で実行しているときは、 NODE_ENV = 'test' にする
-// if ((process as unknown)[Symbol.for('ts-node.register.instance')]) {
-//   process.env.NODE_ENV = 'test';
-// }
+// @ts-expect-error ts-node で実行しているときは、 NODE_ENV = 'test:system' にする
+if ((process as unknown)[Symbol.for('ts-node.register.instance')]) {
+  process.env.NODE_ENV = 'test:system';
+}
 
 const readJsonFile = (filename: string) => {
   const contents = fs.readFileSync(`${__dirname}/../test-data/${filename}`, 'utf-8');
   return JSON.parse(contents);
 };
 
-const runGeocoder = (output: OutputFormat, execaOptions: { input?: string, inputFile?: string, } = {}) => {
-  // if (process.env.NODE_ENV === 'test') {
+const runGeocoder = async (output: OutputFormat, execaOptions: { input?: string, inputFile?: string, } = {}) => {
+  if (process.env.NODE_ENV === 'test') {
+    // VSCode でデバッグする場合は、geocode-command.ts と同様の処理をすることで
+    // ビルドしないでもデバッグできる
+    const geocoderStream = await AbrGeocodeStream.create({
+      fuzzy: DEFAULT_FUZZY_CHAR,
+      searchTarget: SearchTarget.ALL,
+      cacheDir: path.join(dbPath, 'cache'),
+      database: {
+        type: 'sqlite3',
+        dataDir: path.join(dbPath, 'database'),
+        schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
+      },
+      debug: false,
+      progress(current: number) {},
+    });
 
-  //   const geocoderStream = await AbrGeocodeStream.create({
-  //     fuzzy: DEFAULT_FUZZY_CHAR,
-  //     searchTarget: SearchTarget.ALL,
-  //     cacheDir: path.join(dbPath, 'cache'),
-  //     database: {
-  //       type: 'sqlite3',
-  //       dataDir: path.join(dbPath, 'database'),
-  //       schemaDir: path.join(dbPath, 'schemas', 'sqlite3'),
-  //     },
-  //     debug: false,
-  //     progress(current: number) {},
-  //   });
+    const reader = (() => {
+      if (execaOptions.input) {
+        return Readable.from([execaOptions.input]);
+      } else if (execaOptions.inputFile) {
+        return fs.createReadStream(execaOptions.inputFile);
+      } else {
+        throw 'unknown input';
+      }
+    })();
 
-  //   const buffer: string[] = [];
-  //   const reader = (() => {
-  //     if (execaOptions.input) {
-  //       return Readable.from([execaOptions.input]);
-  //     } else if (execaOptions.inputFile) {
-  //       return fs.createReadStream(execaOptions.inputFile);
-  //     } else {
-  //       throw 'unknown input';
-  //     }
-  //   })();
-  //   const dst = new Writable({
-  //     write(chunk, _, callback) {
-  //       buffer.push(chunk.toString());
-  //       callback();
-  //     },
-  //   });
+    const formatter = FormatterProvider.get({
+      type: output,
+      debug: false,
+    });
 
-  //   return new Promise((resolve: (result: {stdout: string}) => void) => {
-  //     reader.pipe(geocoderStream).pipe(dst).once("finish", () => {
-  //       resolve({
-  //         stdout: buffer.join(''),
-  //       });
-  //     })
-  //   });
+    const chunks: Buffer[] = [];
+    const dst = new Writable({
+      write(chunk, _, callback) {
+        chunks.push(Buffer.from(chunk));
+        callback();
+      },
+    });
 
-  //   // return execa(execaOptions)`npx ts-node ${cliTsPath} - -f ${output} -d ${dbPath}`;
-  // }
+    const lineByLine = new LineStream();
 
+    await pipeline(
+      reader,
+      lineByLine,
+      geocoderStream,
+      formatter,
+      dst,
+    );
+
+    return {
+      stdout: Buffer.concat(chunks).toString('utf8'),
+    };
+  }
+
+  // コマンドラインからテストを実行する場合は、CLIから行う
   return execaNode(execaOptions)(cliPath, [
     "-",
     "-silient",
@@ -123,41 +138,41 @@ describe('debug', () => {
     });
   });
 
-  test('大分県大分市大字荏隈394-1(小野ビル101号)', async () => {
-    const input = '大分市大字荏隈394-1(小野ビル101号)';
+  test('北海道札幌市北区北２４条西７丁目１番１０号', async () => {
+    const input = '北海道札幌市北区北２４条西７丁目１番１０号';
     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
       input,
     });
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "大分市大字荏隈394-1(小野ビル101号)"
+        "input": "北海道札幌市北区北２４条西７丁目１番１０号"
       },
       "result": {
-        "output": "大分県大分市大字荏隈394-1 (小野ビル101号)",
-        "other": "(小野ビル101号)",
-        "match_level": "parcel",
-        "coordinate_level": "machiaza",
-        "lat": 33.214209,
-        "lon": 131.58031,
-        "lg_code": "442011",
-        "machiaza_id": "0042000",
-        "rsdt_addr_flg": 0,
-        "blk_id": null,
+        "output": "北海道札幌市北区北二十四条西七丁目1-10",
+        "other": "-10",
+        "match_level": "residential_block",
+        "coordinate_level": "residential_block",
+        "lat": 43.090336,
+        "lon": 141.33904,
+        "lg_code": "011029",
+        "machiaza_id": "0021007",
+        "rsdt_addr_flg": 1,
+        "blk_id": "001",
         "rsdt_id": null,
         "rsdt2_id": null,
-        "prc_id": "003940000100000",
-        "pref": "大分県",
+        "prc_id": null,
+        "pref": "北海道",
         "county": null,
-        "city": "大分市",
-        "ward": null,
-        "oaza_cho": "大字荏隈",
-        "chome": null,
+        "city": "札幌市",
+        "ward": "北区",
+        "oaza_cho": "北二十四条西",
+        "chome": "七丁目",
         "koaza": null,
-        "blk_num": null,
+        "blk_num": "1",
         "rsdt_num": null,
         "rsdt_num2": null,
-        "prc_num1": "394",
-        "prc_num2": "1",
+        "prc_num1": null,
+        "prc_num2": null,
         "prc_num3": null
       }
     });

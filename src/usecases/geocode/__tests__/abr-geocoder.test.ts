@@ -62,8 +62,7 @@ describe('AbrGeocoder', () => {
     mockSetImmediate.mockRestore();
   });
 
-  // TODO: 後日調整
-  test.skip('should involve the workerPool.run() method', async () => {
+  test('should involve the workerPool.run() method', async () => {
 
     // setImmediateをモック化する
     const mockSetImmediate = setImmediateSpy();
@@ -75,12 +74,13 @@ describe('AbrGeocoder', () => {
     });
 
     // ジオコーディングを行う
-    const result = await abrGeocoder.geocode({
-      address: 'test2',
+    const input = {
+      address: '/abr-geocoder/passthrough',
       searchTarget: SearchTarget.ALL,
       fuzzy: '?',
       tag: 'something',
-    });
+    };
+    const result = await abrGeocoder.geocode(input);
 
     // create メソッドが呼ばれたことを確認
     const mockCreate = mockedWorkerThreadPool.create;
@@ -88,16 +88,13 @@ describe('AbrGeocoder', () => {
 
     // workerThreadPool の run() が実行されたことを確認
     const mockPool = await (mockCreate.mock.results.at(-1)?.value) as { run: jest.Mock };
-    expect(mockPool.run).toHaveBeenCalledWith({
-      address: 'test2',
-      searchTarget: SearchTarget.ALL,
-      fuzzy: '?',
-      tag: 'something',
-    });
+    expect(mockPool.run).toHaveBeenCalledWith(input);
 
     // 入力値と同じ値が返ってくることを期待
     expect(result).toMatchObject({
-      dummy: 'dummy',
+      input: {
+        data: input,
+      },
     });
 
     // setImmediateを元に戻す
@@ -105,8 +102,7 @@ describe('AbrGeocoder', () => {
   });
 
 
-  // TODO: 後日調整
-  test.skip('should involve the geocodeTransformOnMainThread.pipe() method', async () => {
+  test('should involve the geocodeTransformOnMainThread.pipe() method', async () => {
 
     // AbrGeocoderクラスの作成
     const abrGeocoder = await AbrGeocoder.create({
@@ -115,12 +111,13 @@ describe('AbrGeocoder', () => {
     });
 
     // ジオコーディングを行う
-    const result = await abrGeocoder.geocode({
-      address: 'test3',
+    const input = {
+      address: '/abr-geocoder/passthrough',
       searchTarget: SearchTarget.ALL,
       fuzzy: '?',
       tag: 'something',
-    });
+    };
+    const result = await abrGeocoder.geocode(input);
 
     // このテストでは、setImmediate()をモック化していないので、
     // メインスレッドのGeocodeTransformが使用されるはず。
@@ -131,17 +128,14 @@ describe('AbrGeocoder', () => {
 
     const chunk = mockPool._write.mock.calls[0][0];
     expect(chunk).toMatchObject({
-      data: {
-        address: 'test3',
-        searchTarget: SearchTarget.ALL,
-        fuzzy: '?',
-        tag: 'something',
-      },
+      data: input,
     });
 
     // 入力値と同じ値が返ってくることを期待
     expect(result).toMatchObject({
-      dummy: 'dummy',
+      input: {
+        data: input,
+      },
     });
   });
 
