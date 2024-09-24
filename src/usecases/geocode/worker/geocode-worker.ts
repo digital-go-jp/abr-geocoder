@@ -64,7 +64,6 @@ export type GeocodeWorkerInitData = {
   // wards: WardMatchingInfo[];
 };
 
-
 export class GeocodeTransform extends Duplex {
 
   private readonly reader = new Readable({
@@ -83,6 +82,7 @@ export class GeocodeTransform extends Duplex {
       read() {},
       allowHalfOpen: true,
     });
+    
     // 都道府県を試す
     const prefTransform = new PrefTransform({
       prefList: params.commonData.prefList,

@@ -20,6 +20,7 @@ export class MockGeocodeTransform extends Duplex {
         input: chunk,
         toJSON: () => {
           return {
+            input: chunk,
             dummy: 'dummy',
           };
         },
