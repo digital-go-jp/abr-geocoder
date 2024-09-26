@@ -13,4 +13,10 @@ describe('jisKanji', () => {
     const expectedOutput = '兵庫県神戸市桜木町';
     expect(jisKanji(input)).toBe(expectedOutput);
   });
+
+  test('東京都千代田区麹町一丁目', () => {
+    const input = '東京都千代田区麹町一丁目';
+    const expectedOutput = '東京都千代田区糀町一丁目';
+    expect(jisKanji(input)).toBe(expectedOutput);
+  });
 });
