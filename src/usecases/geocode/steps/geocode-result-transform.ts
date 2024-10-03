@@ -24,6 +24,7 @@
 import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, OAZA_BANCHO, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
+import { SearchTarget } from '@domain/types/search-target';
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
@@ -64,6 +65,7 @@ export class GeocodeResultTransform extends Transform {
         query.match_level.num >= MatchLevel.CITY.num);
     });
 
+    const searchTarget = queryList[0].searchTarget;
     queryList.sort((a, b) => {
       // いくつかの項目を比較して、合計値の高い方を優先する
       let totalScoreA = 0;
@@ -77,16 +79,26 @@ export class GeocodeResultTransform extends Transform {
       const isBprcl = bLv === MatchLevel.PARCEL.num;
 
       switch (true) {
-      // Aが住居表示、Bが地番の場合、住居表示を優先
-        case isArsdt && isBprcl:
+        // SearchTarget.ALL or SearchTarget.RESIDENTIAL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
+        case (searchTarget === SearchTarget.ALL || searchTarget === SearchTarget.RESIDENTIAL) && isArsdt && isBprcl:
           totalScoreA += 1;
           break;
-        
-        // Aが地番、Bが住居表示の場合、住居表示を優先
-        case isAprcl && isBrsdt:
+
+        // SearchTarget.ALL or SearchTarget.RESIDENTIAL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
+        case (searchTarget === SearchTarget.ALL || searchTarget === SearchTarget.RESIDENTIAL) && isAprcl && isBrsdt:
           totalScoreB += 1;
           break;
         
+        // SearchTarget.PARCEL のとき、Aが地番、Bが住居表示の場合、地番を優先
+        case (searchTarget === SearchTarget.PARCEL) && isAprcl && isBrsdt:
+          totalScoreA += 1;
+          break;
+
+        // SearchTarget.PARCEL のとき、Aが住居表示、Bが地番の場合、地番を優先
+        case (searchTarget === SearchTarget.PARCEL) && isArsdt && isBprcl:
+          totalScoreB += 1;
+          break;
+
         default:
         // if (a.match_level.num > b.match_level.num) {
         //   totalScoreA += 1;
@@ -126,7 +138,7 @@ export class GeocodeResultTransform extends Transform {
         return totalScoreB - totalScoreA;
       }
 
-      // どうしても同じなら、ambiguousCnt が少ない方を優先
+      // ambiguousCnt が少ない方を優先
       if (a.ambiguousCnt < b.ambiguousCnt) {
         return -1;
       } else if (a.ambiguousCnt > b.ambiguousCnt) {

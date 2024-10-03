@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS "town" (
   "chome" TEXT,
   "koaza" TEXT,
   "rsdt_addr_flg" INTEGER,
+  "koaza_aka_code" INTEGER,
 
   -- mt_town_pos_prefXX から結合
   "rep_lat" REAL DEFAULT null,

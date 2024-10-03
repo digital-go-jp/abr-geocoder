@@ -67,7 +67,7 @@ jobs:
       - name: run system test
         shell: bash
         run: |
-          npm run test:system
+          npm run test:e2e
       
       - name: create test report
         uses: MishaKav/jest-coverage-comment@main

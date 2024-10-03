@@ -107,9 +107,12 @@ export class AbrGeocoder {
     });
     this.reader.pipe(params.geocodeTransformOnMainThread).pipe(dst);
 
-    // ts-jestがworker threadに未対応なため、
-    // 開発時には、メインスレッドのみで処理する
-    if (process.env.NODE_ENV === 'test:system' && process.env.JEST_WORKER_ID) {
+    if (
+      // 開発時には、メインスレッドのみで処理するが、
+      // ユニットテスト時は続くコードにつなげる
+      process.env.JEST_WORKER_ID && process.env.NODE_ENV !== 'test' ||
+      // e2eテスト時はメインスレッドのみで行う
+      process.env.NODE_ENV === 'test:e2e') {
       return;
     }
 

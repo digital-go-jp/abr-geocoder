@@ -21,11 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { CommonDiContainer } from '@domain/models/common-di-container';
-import { makeDirIfNotExists } from '@domain/services/make-dir-if-not-exists';
+import { EnvProvider } from '@domain/models/env-provider';
 import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { DatabaseParams } from '@domain/types/database-params';
 import { DownloadDbController } from '@interface/database/download-db-controller';
+import { jest } from '@jest/globals';
+
+// @domain/services/__mocks__/url-cache-manager
+jest.mock('@domain/services/url-cache-manager');
+
+// @interface/database/__mocks__/download-db-controller
+jest.mock('@interface/database/download-db-controller');
+
+// @domain/models/__mocks__/env-provider
+jest.mock('@domain/models/env-provider');
 
 export type DownloadDiContainerParams = {
   cacheDir: string;
@@ -33,35 +42,25 @@ export type DownloadDiContainerParams = {
   database: DatabaseParams;
 };
 
-export class DownloadDiContainer extends CommonDiContainer {
-
-  public readonly urlCacheMgr: UrlCacheManager;
-  public readonly downloadDir: string;
-  public readonly database: DownloadDbController;
-
-  constructor(private params: DownloadDiContainerParams) {
-    super();
-
-    this.downloadDir = params.downloadDir;
-    makeDirIfNotExists(params.downloadDir);
-
-    // ダウンロードディレクトリにキャッシュファイルを保存する
-    makeDirIfNotExists(params.cacheDir);
-    this.urlCacheMgr = new UrlCacheManager(params.cacheDir);
-
-    this.database = new DownloadDbController(params.database);
-
-    Object.freeze(this);
-  }
-
-  getFileShowUrl() {
-    return `https://${this.env.hostname}/rc/api/3/action/package_show`;
-  }
-  getPackageListUrl() {
-    return `https://${this.env.hostname}/rc/api/3/action/package_list`;
-  }
-
-  toJSON(): DownloadDiContainerParams {
-    return this.params;
-  }
-}
+const DownloadDiContainer = jest.fn((params: DownloadDiContainerParams) => {
+  const urlCacheMgr = new UrlCacheManager(params.cacheDir);
+  const toJSON = () => {
+    return params;
+  };
+  const downloadDir = params.downloadDir;
+  const database = new DownloadDbController(params.database);
+  const env = new EnvProvider();
+  
+  return {
+    env,
+    database,
+    downloadDir,
+    urlCacheMgr,
+    getFileShowUrl: () => 'http://localhost/rc/api/3/action/package_show',
+    getPackageListUrl: () => 'http://localhost/rc/api/3/action/package_list',
+    toJSON,
+  };
+});
+module.exports = {
+  DownloadDiContainer,
+};

@@ -42,6 +42,7 @@ export class TownDatasetFile
       DataField.CHOME,
       DataField.KOAZA,
       DataField.RSDT_ADDR_FLG,
+      DataField.KOAZA_AKA_CODE,
     ];
   }
 

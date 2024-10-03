@@ -30,7 +30,7 @@
   "scripts": {
     "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/",
     "test": "npx jest",
-    "test:system": "npx ts-node ./.system/test-runner.ts",
+    "test:e2e": "npx ts-node ./e2e/test-runner.ts",
     "lint": "npx eslint",
     "lint:fix": "npx eslint --fix"
   },

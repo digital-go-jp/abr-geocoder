@@ -63,7 +63,7 @@ jobs:
         if: github.event_name != 'workflow_dispatch' 
         shell: bash
         run: |
-          npm run test:system
+          npm run test:e2e
       
       - name: create test report
         if: github.event_name != 'workflow_dispatch' 

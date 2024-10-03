@@ -15,10 +15,9 @@ const rootDir = path.dirname(packageJsonPath);
 const dbPath = path.join(rootDir, 'db');
 const cliPath = path.join(rootDir, 'build', 'interface', 'cli', 'cli.js');
 
-// @ts-expect-error ts-node で実行しているときは、 NODE_ENV = 'test:system' にする
-if ((process as unknown)[Symbol.for('ts-node.register.instance')]) {
-  process.env.NODE_ENV = 'test:system';
-}
+// AbrGeocoderをメインスレッドのみで動作させたいので、
+// 'test:e2e' をセットする
+process.env.NODE_ENV = 'test:e2e';
 
 const readJsonFile = (filename: string) => {
   const contents = fs.readFileSync(`${__dirname}/../test-data/${filename}`, 'utf-8');
@@ -138,37 +137,38 @@ describe('debug', () => {
     });
   });
 
-  test('北海道札幌市北区北２４条西７丁目１番１０号', async () => {
-    const input = '北海道札幌市北区北２４条西７丁目１番１０号';
+  test('京都市上京区下立売通新町西入薮ノ内町', async () => {
+    const input = '京都市上京区下立売通新町西入薮ノ内町';
     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
       input,
     });
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "北海道札幌市北区北２４条西７丁目１番１０号"
+        "input": "京都市上京区下立売通新町西入薮ノ内町"
       },
       "result": {
-        "output": "北海道札幌市北区北二十四条西七丁目1-10",
-        "other": "-10",
-        "match_level": "residential_block",
-        "coordinate_level": "residential_block",
-        "lat": 43.090336,
-        "lon": 141.33904,
-        "lg_code": "011029",
-        "machiaza_id": "0021007",
-        "rsdt_addr_flg": 1,
-        "blk_id": "001",
+        "output": "京都府京都市上京区下立売通新町西入藪之内町",
+        "other": null,
+        "score": 0.77,
+        "match_level": "machiaza_detail",
+        "coordinate_level": "machiaza_detail",
+        "lat": 35.02141,
+        "lon": 135.755632,
+        "lg_code": "261025",
+        "machiaza_id": "0562102",
+        "rsdt_addr_flg": 0,
+        "blk_id": null,
         "rsdt_id": null,
         "rsdt2_id": null,
         "prc_id": null,
-        "pref": "北海道",
+        "pref": "京都府",
         "county": null,
-        "city": "札幌市",
-        "ward": "北区",
-        "oaza_cho": "北二十四条西",
-        "chome": "七丁目",
-        "koaza": null,
-        "blk_num": "1",
+        "city": "京都市",
+        "ward": "上京区",
+        "oaza_cho": "藪之内町",
+        "chome": null,
+        "koaza": "下立売通新町西入",
+        "blk_num": null,
         "rsdt_num": null,
         "rsdt_num2": null,
         "prc_num1": null,
@@ -188,6 +188,10 @@ describe('General cases', () => {
     await jsonTestRunner('general-test-cases');
   });
   
+  test('京都通り名のテスト', async () => {
+    await jsonTestRunner('kyoto-street-name-cases');
+  });
+
   test('標準入力からのテスト', async () => {
     const input = '東京都千代田区紀尾井町1-3　デジタル庁';
     const { stdout } = await runGeocoder(OutputFormat.JSON, {

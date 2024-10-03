@@ -21,14 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { BANGAICHI, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { KoazaMachingInfo } from '@domain/types/geocode/koaza-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
-import { ICommonDbGeocode } from '@interface/database/common-db';
+import { PrefLgCode } from '@domain/types/pref-lg-code';
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../models/query';
+import timers from 'node:timers/promises';
 import { QuerySet } from '../models/query-set';
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
@@ -38,65 +38,56 @@ import { CharNode } from '../services/trie/char-node';
 import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
-export class KoazaTransform extends Transform {
+export class KyotoStreetTransform extends Transform {
 
-  constructor(private params: Required<{
-    db: ICommonDbGeocode;
+  private readonly trie: TrieAddressFinder<KoazaMachingInfo>;
+  private readonly logger: DebugLogger | undefined;
+  private initialized: boolean = false;
+
+  constructor(params: Required<{
+    kyotoStreetRows: KoazaMachingInfo[];
     logger: DebugLogger | undefined;
   }>) {
     super({
       objectMode: true,
     });
+    this.logger = params.logger;
+
+    this.trie = new TrieAddressFinder<KoazaMachingInfo>();
+    setImmediate(() => {
+      for (const streetInfo of params.kyotoStreetRows) {
+        streetInfo.oaza_cho = toHankakuAlphaNum(streetInfo.oaza_cho);
+        streetInfo.chome = toHankakuAlphaNum(streetInfo.chome);
+        streetInfo.koaza = toHankakuAlphaNum(streetInfo.koaza);
+        this.trie.append({
+          key: this.normalizeStr(streetInfo.key),
+          value: streetInfo,
+        });
+      }
+      this.initialized = true;
+    });
   }
-
-  private createWhereCondition(query: Query) {
-
-    const conditions: Partial<{
-      city_key: number;
-      oaza_cho: string;
-      chome: string;
-    }> = {
-      city_key: query.city_key,
-    };
-    // if (query.town_key) {
-    //   // town_keyが判明している場合もある
-    //   conditions.koaza = query.town_key;
-    // }
-    if (query.oaza_cho) {
-      // 大字が判明している場合もある
-      conditions.oaza_cho = query.oaza_cho;
-    }
-    if (query.chome) {
-      // 丁目が判明している場合もある
-      conditions.chome = query.chome;
-    }
-    return conditions;
-  }
-
+  
   async _transform(
     queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback,
   ) {
-    // ----------------------------------
-    // 小字を特定する
-    // ----------------------------------
+    // ------------------------
+    // 通り名・大字で当たるものがあるか
+    // ------------------------
     const results = new QuerySet();
+    const KYOTO_PREF_LG_CODE = PrefLgCode.KYOTO.substring(0, 2);
     for await (const query of queries.values()) {
-
-      // 最低限、市区町村レベルまでは分かっている必要がある
-      if (query.match_level.num < MatchLevel.CITY.num) {
+      if (query.match_level.num > MatchLevel.MACHIAZA.num) {
+        // 大字以降が既に判明しているものはスキップ
         results.add(query);
         continue;
       }
-      // 既に判明している場合はスキップ
-      // if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
-      //   results.push(query);
-      //   continue;
-      // }
 
-      // 小字が判明している場合はスキップ
-      if (query.town_key && query.koaza) {
+      if (query.match_level.num === MatchLevel.CITY.num &&
+          query.lg_code?.substring(0, 2) !== KYOTO_PREF_LG_CODE) {
+        // 京都府以外の場合はスキップ
         results.add(query);
         continue;
       }
@@ -106,48 +97,38 @@ export class KoazaTransform extends Transform {
         results.add(query);
         continue;
       }
-
+      
       // ------------------------------------
-      // Queryの情報を使って、DBから情報を取得する
+      // 初期化が完了していない場合は待つ
       // ------------------------------------
-      const conditions = this.createWhereCondition(query);
-      const rows = await this.params.db.getKoazaRows(conditions);
-  
-      const trie = new TrieAddressFinder<KoazaMachingInfo>();
-      for (const row of rows) {
-        const key = this.normalizeStr(row.key);
-        row.koaza = toHankakuAlphaNum(row.koaza);
-        trie.append({
-          key,
-          value: row,
-        });
+      if (!this.initialized) {
+        while (!this.initialized) {
+          await timers.setTimeout(100);
+        }
       }
 
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = trimDashAndSpace(query.tempAddress)?.
-        replace(RegExpEx.create('^([0-9]+)地割', 'g'), `$1${DASH}`);
+      const target = trimDashAndSpace(query.tempAddress);
       if (!target) {
         results.add(query);
         continue;
       }
-      const findResults = trie.find({
+      
+      let anyHit = false;
+      const findResults = this.trie.find({
         target,
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
-      
-      let anyHit = false;
-      let anyAmbiguous = false;
 
       // 複数にヒットする可能性がある
       findResults?.forEach(findResult => {
         if (!findResult.info) {
           throw new Error('findResult.info is empty');
         }
-        anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
-        // 小字がヒットした
+        // 小字(通り名)がヒットした
         const params: Record<string, CharNode | number | string | MatchLevel> = {
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.MACHIAZA_DETAIL,
@@ -157,9 +138,9 @@ export class KoazaTransform extends Transform {
           oaza_cho: findResult.info.oaza_cho,
           chome: findResult.info.chome,
           koaza: findResult.info.koaza,
+          koaza_aka_code: 2,
           machiaza_id: findResult.info.machiaza_id,
-          matchedCnt: query.matchedCnt + findResult.depth,
-          ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
+          matchedCnt: query.matchedCnt + findResult.depth, 
         };
         if (findResult.info.rep_lat && findResult.info.rep_lon) {
           params.coordinate_level = MatchLevel.MACHIAZA_DETAIL;
@@ -172,7 +153,7 @@ export class KoazaTransform extends Transform {
         anyHit = true;
       });
 
-      if (!anyHit || anyAmbiguous) {
+      if (!anyHit) {
         results.add(query);
       }
     }
@@ -193,27 +174,6 @@ export class KoazaTransform extends Transform {
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
     address = jisKanji(address);
-
-    // 「無番地」を「MUBANCHI」にする
-    address = address?.replace(RegExpEx.create('無番地'), MUBANCHI);
-    
-    // 「番外地」を「BANGAICHI」にする
-    address = address?.replace(RegExpEx.create('番外地'), BANGAICHI);
-    
-    // 「丁目」をDASH に変換する
-    // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address.replaceAll(RegExpEx.create('丁目?', 'g'), DASH);
-
-    // 小字に「大字」「字」を含んでいることがあり、住居表示だと省略されることも多いので取り除く
-    address = address.replace(RegExpEx.create('大?字'), '');
-    
-    // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
-    // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
-    // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    address = address.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番地?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`);
-
-    // 「一ノ瀬」→「一の瀬」と書くこともあるので、カタカナを平仮名にする
-    // address = toHiragana(address);
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する

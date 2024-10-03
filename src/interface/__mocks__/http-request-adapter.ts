@@ -2,7 +2,7 @@ import { GetJsonOptions } from '@interface/http-request-adapter';
 import { jest } from '@jest/globals';
 import { StatusCodes } from 'http-status-codes';
 
-const OkStatus = {
+const PackageListResponse = {
   header: {
     statusCode: StatusCodes.OK,
     contentLength: 100,
@@ -21,6 +21,7 @@ const OkStatus = {
       "ba-o1-000000_g2-000009",
       "ba-o1-000000_g2-000012",
       "ba-o1-000000_g2-000013",
+      "ba-o1-000000_g2-000026",
       "ba-o1-130001_g2-000008",
       "ba-o1-130001_g2-000009",
       "ba-o1-130001_g2-000013",
@@ -35,6 +36,36 @@ const OkStatus = {
       "ba-o1-131016_g2-000011",
       "ba-o1-131024_g2-000003",
       "ba-o1-131024_g2-000004",
+      "ba-o1-260002_g2-000002",
+      "ba-o1-260002_g2-000003",
+      "ba-o1-260002_g2-000004",
+      "ba-o1-260002_g2-000005",
+      "ba-o1-260002_g2-000006",
+      "ba-o1-260002_g2-000007",
+      "ba-o1-260002_g2-000008",
+      "ba-o1-260002_g2-000009",
+      "ba-o1-260002_g2-000013",
+      "ba-o1-262013_g2-000003",
+      "ba-o1-262013_g2-000004",
+      "ba-o1-262013_g2-000006",
+      "ba-o1-262013_g2-000007",
+      "ba-o1-262013_g2-000009",
+      "ba-o1-262013_g2-000010",
+      "ba-o1-262013_g2-000011",
+      "ba-o1-262021_g2-000003",
+      "ba-o1-262021_g2-000004",
+      "ba-o1-262021_g2-000006",
+      "ba-o1-262021_g2-000007",
+      "ba-o1-262021_g2-000009",
+      "ba-o1-262021_g2-000010",
+      "ba-o1-262021_g2-000011",
+      "ba-o1-262030_g2-000003",
+      "ba-o1-262030_g2-000004",
+      "ba-o1-262030_g2-000006",
+      "ba-o1-262030_g2-000007",
+      "ba-o1-262030_g2-000009",
+      "ba-o1-262030_g2-000010",
+      "ba-o1-262030_g2-000011",
       "cn000001",
       "ed000001",
       "ed000030",
@@ -74,8 +105,8 @@ module.exports = {
     return {
       getJSON: (params: GetJsonOptions) => {
         switch (params.url) {
-          case 'http://localhost/ok_url':
-            return Promise.resolve(OkStatus);
+          case 'http://localhost/rc/api/3/action/package_list':
+            return Promise.resolve(PackageListResponse);
 
           case 'http://localhost/404_url':
             return Promise.resolve(ErrorStauts404);

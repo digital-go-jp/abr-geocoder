@@ -1,4 +1,3 @@
-const { verbose } = require('winston');
 const { compilerOptions } = require('./tsconfig.json')
 const { pathsToModuleNameMapper } = require('ts-jest')
 
@@ -12,9 +11,9 @@ const { roots, moduleDirectories } = (() => {
     '<rootDir>/src/',
   ];
 
-  if (targetTestFile && targetTestFile.includes('.system')) {
-    roots.push('<rootDir>/.system/');
-    moduleDirectories.push(".system");
+  if (targetTestFile && targetTestFile.includes('e2e')) {
+    roots.push('<rootDir>/e2e/');
+    moduleDirectories.push("e2e");
   } else {
     moduleDirectories.push("__mocks__");
   }

@@ -187,7 +187,8 @@ export class Downloader {
 
   private async createDownloadRequests(downloadTargetLgCodes: Set<string>): Promise<DownloadRequest[]> {
     // レジストリ・カタログサーバーから、パッケージの一覧を取得する
-    const response = await this.getJSON(this.container.getPackageListUrl());
+    const packageListUrl = this.container.getPackageListUrl();
+    const response = await this.getJSON(packageListUrl);
 
     if (response.header.statusCode !== StatusCodes.OK) {
       throw new AbrgError({

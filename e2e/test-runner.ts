@@ -5,6 +5,8 @@ const rootDir = path.dirname(packageJsonPath);
 const dbPath = path.join(rootDir, 'db');
 const cliPath = path.join(rootDir, 'build', 'interface', 'cli', 'cli.js');
 
+console.log(packageJsonPath);
+
 const lgCodes = [
   // basic-test-cases
   '131016', // 東京都千代田区
@@ -49,6 +51,12 @@ const lgCodes = [
 
   // issue #122
   '014257', // 北海道空知郡上砂川町
+
+  // 京都通り名
+  '261041', // 京都府京都市中京区
+  '261025', // 京都市上京区
+  '261068', // 京都市下京区
+
 ];
 
 $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`
@@ -59,5 +67,5 @@ $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`
     return $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`
   })
   .then(() => {
-    $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.config.js`
+    $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js`
   })

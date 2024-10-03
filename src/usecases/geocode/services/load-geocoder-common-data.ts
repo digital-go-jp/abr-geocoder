@@ -23,6 +23,7 @@
  */
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { CityMatchingInfo } from "@domain/types/geocode/city-info";
+import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
 import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { TownMatchingInfo } from "@domain/types/geocode/town-info";
@@ -31,6 +32,7 @@ import { ICommonDbGeocode } from "@interface/database/common-db";
 import fs from 'node:fs';
 import path from 'node:path';
 import { deserialize, serialize } from "node:v8";
+import { getPackageInfo } from '@domain/services/package/get-package-info';
 
 export type GeocodeWorkerCommonData = {
   prefList: PrefInfo[];
@@ -38,6 +40,7 @@ export type GeocodeWorkerCommonData = {
   cityAndWardList: CityMatchingInfo[];
   wardAndOazaList: OazaChoMachingInfo[];
   oazaChomes: OazaChoMachingInfo[];
+  kyotoStreetRows: KoazaMachingInfo[];
   tokyo23towns: TownMatchingInfo[];
   tokyo23wards: CityMatchingInfo[];
   wards: WardMatchingInfo[];
@@ -55,16 +58,7 @@ export const removeGeocoderCommonDataCache = async (params: {
   fs.unlinkSync(cacheFilePath);
 };
 
-// ジオコーディングに必要なデータを返す
-//
-// キャッシュファイルが存在すれば、キャッシュファイルから読み取る
-// なければ再作成。
-export const loadGeocoderCommonData = async (params: {
-  commonDb: ICommonDbGeocode;
-  cacheDir: string;
-}): Promise<GeocodeWorkerCommonData> => {
-  const commonDb = params.commonDb;
-  const cacheFilePath = path.join(params.cacheDir, 'geocoder-common-data.bin');
+const loadData = async <T>(cacheFilePath: string, loader: () => Promise<T[]>): Promise<T[]> => {
   const isExist = fs.existsSync(cacheFilePath);
   if (isExist) {
     try {
@@ -74,14 +68,34 @@ export const loadGeocoderCommonData = async (params: {
       // Do nothing here
     }
   }
-  makeDirIfNotExists(params.cacheDir);
-  
+
+  const rows = await loader();
+  const buffer = serialize(rows);
+  await fs.promises.writeFile(cacheFilePath, buffer);
+  return rows;
+};
+
+// ジオコーディングに必要なデータを返す
+//
+// キャッシュファイルが存在すれば、キャッシュファイルから読み取る
+// なければ再作成。
+export const loadGeocoderCommonData = async (params: {
+  commonDb: ICommonDbGeocode;
+  cacheDir: string;
+}): Promise<GeocodeWorkerCommonData> => {
+  const commonDb = params.commonDb;
+
+  const { version } = getPackageInfo();
+  const dstDir = path.join(params.cacheDir, version);
+  makeDirIfNotExists(dstDir);
+
   const [
     prefList,
     countyAndCityList,
     cityAndWardList,
     wardAndOazaList,
     oazaChomes,
+    kyotoStreetRows,
     tokyo23towns,
     tokyo23wards,
     wards,
@@ -91,18 +105,20 @@ export const loadGeocoderCommonData = async (params: {
     CityMatchingInfo[],
     OazaChoMachingInfo[],
     OazaChoMachingInfo[],
+    KoazaMachingInfo[],
     TownMatchingInfo[],
     CityMatchingInfo[],
     WardMatchingInfo[],
   ] = await Promise.all([
-    commonDb.getPrefList(),
-    commonDb.getCountyAndCityList(),
-    commonDb.getCityAndWardList(),
-    commonDb.getWardAndOazaChoList(),
-    commonDb.getOazaChomes(),
-    commonDb.getTokyo23Towns(),
-    commonDb.getTokyo23Wards(),
-    commonDb.getWards(),
+    loadData(path.join(dstDir, 'pref.bin'), () => commonDb.getPrefList()),
+    loadData(path.join(dstDir, 'countyAndCity.bin'), () => commonDb.getCountyAndCityList()),
+    loadData(path.join(dstDir, 'cityAndWard.bin'), () => commonDb.getCityAndWardList()),
+    loadData(path.join(dstDir, 'wardAndOazaCho.bin'), () => commonDb.getWardAndOazaChoList()),
+    loadData(path.join(dstDir, 'oazaChomes.bin'), () => commonDb.getOazaChomes()),
+    loadData(path.join(dstDir, 'kyotoStreetRows.bin'), () => commonDb.getKyotoStreetRows()),
+    loadData(path.join(dstDir, 'tokyo23Towns.bin'), () => commonDb.getTokyo23Towns()),
+    loadData(path.join(dstDir, 'tokyo23Wards.bin'), () => commonDb.getTokyo23Wards()),
+    loadData(path.join(dstDir, 'wards.bin'), () => commonDb.getWards()),
   ]);
 
   const cache = {
@@ -111,12 +127,11 @@ export const loadGeocoderCommonData = async (params: {
     cityAndWardList,
     wardAndOazaList,
     oazaChomes,
+    kyotoStreetRows,
     tokyo23towns,
     tokyo23wards,
     wards,
   };
 
-  const buffer = serialize(cache);
-  await fs.promises.writeFile(cacheFilePath, buffer);
   return cache;
 };

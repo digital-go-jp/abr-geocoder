@@ -1,11 +1,12 @@
 const { compilerOptions } = require('./tsconfig.json')
+const { pathsToModuleNameMapper } = require('ts-jest')
 
-const roots = ['<rootDir>/src', '<rootDir>/.system'];
+const roots = ['<rootDir>/src', '<rootDir>/e2e'];
 const moduleDirectories = [
   "node_modules/",
   "src",
 ];
-const tsconfig = "./tsconfig.system-test.json";
+const tsconfig = "./tsconfig.e2e.json";
 
 module.exports = {
   preset: 'ts-jest',
@@ -33,7 +34,7 @@ module.exports = {
   //   // esmが使われているパッケージを除いてIgnoreする
   //   // `node_modules/(?!(${esmPackages.join("|")})/)`,
   // ],
-  testRegex: '.system/__tests__/.*\\.(test|spec)?\\.ts$',
+  testRegex: 'e2e/__tests__/.*\\.(test|spec)?\\.ts$',
   testPathIgnorePatterns: [
     "lib/", 
     "build/",

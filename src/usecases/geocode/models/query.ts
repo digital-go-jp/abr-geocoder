@@ -52,6 +52,7 @@ export interface IQuery {
   rsdtblk_key?: number;
   rsdtdsp_key?: number;
   rsdt_addr_flg?: number;
+  koaza_aka_code?: number;
 
   county?: string;
   city?: string;
@@ -133,6 +134,7 @@ export class Query implements IQuery {
   public readonly prc_num3?: string;
   public readonly prc_id?: string;
   public readonly rsdt_addr_flg?: number;
+  public readonly koaza_aka_code?: number;
   public readonly match_level: MatchLevel;
   public readonly coordinate_level: MatchLevel;
   public readonly matchedCnt: number = 0;
@@ -175,6 +177,7 @@ export class Query implements IQuery {
     this.rep_lat = params.rep_lat;
     this.rep_lon = params.rep_lon;
     this.rsdt_addr_flg = params.rsdt_addr_flg;
+    this.koaza_aka_code = params.koaza_aka_code;
     this.rsdt_num = params.rsdt_num;
     this.rsdt_id = params.rsdt_id;
     this.rsdt_num2 = params.rsdt_num2;
@@ -219,6 +222,7 @@ export class Query implements IQuery {
       rep_lat: this.rep_lat as number || null,
       rep_lon: this.rep_lon as number || null,
       rsdt_addr_flg: this.rsdt_addr_flg,
+      koaza_aka_code: this.koaza_aka_code,
       machiaza_id: this.machiaza_id as string,
       block: this.block,
       block_id: this.block_id,
@@ -284,6 +288,7 @@ export class Query implements IQuery {
           rep_lat : this.rep_lat,
           rep_lon : this.rep_lon,
           rsdt_addr_flg : this.rsdt_addr_flg,
+          koaza_aka_code : this.koaza_aka_code,
           machiaza_id : this.machiaza_id,
           prc_num1 : this.prc_num1,
           prc_num2 : this.prc_num2,
@@ -300,24 +305,41 @@ export class Query implements IQuery {
     );
   }
 
+  private eliminateEmptyElement(strList: (string | undefined)[]): string[] {
+    return strList.filter(value => value !== undefined && value !== '') as string[];
+  }
 
   //
   // formatted_address を生成する
   //
   private getFormattedAddress(): FormattedAddres {
     const formatted_address: string[] = [];
-    const addressComponents = [
+    const addressComponents = this.eliminateEmptyElement([
       this.pref?.trim(),
       this.county?.trim(),
       this.city?.trim(),
       this.ward?.trim(),
-      this.oaza_cho?.trim(),
-      this.chome?.trim(),
-      this.koaza?.trim(),
-    ]
-      .filter(value => value !== undefined && value !== '')
-      .join('');
+    ]).join('');
     formatted_address.push(addressComponents);
+
+    if (this.koaza_aka_code === 2) {
+      // 京都の通り名の場合、(小字 = 通り名)(大字) になっている
+      formatted_address.push(
+        this.eliminateEmptyElement([
+          this.koaza?.trim(),
+          this.oaza_cho?.trim(),
+        ]).join(''),
+      );
+    } else {
+      // 通常は (大字)(丁目)(小字) の順になっている
+      formatted_address.push(
+        this.eliminateEmptyElement([
+          this.oaza_cho?.trim(),
+          this.chome?.trim(),
+          this.koaza?.trim(),
+        ]).join(''),
+      );
+    }
 
     if (this.match_level.num === MatchLevel.PARCEL.num) {
       // 地番表記
@@ -335,13 +357,11 @@ export class Query implements IQuery {
       formatted_address.push(parcelNums.join('-'));
     } else {
       // 住居番号の街区・番地
-      const residentialNums = [
+      const residentialNums = this.eliminateEmptyElement([
         this.block?.toString().trim(),
         this.rsdt_num?.toString().trim(),
         this.rsdt_num2?.toString().trim(),
-      ]
-        .filter(value => value !== undefined && value !== '')
-        .join('-');
+      ]).join('-');
       formatted_address.push(residentialNums);
     }
 
@@ -362,7 +382,14 @@ export class Query implements IQuery {
             formatted_address.push(' ');
           }
         }
-        formatted_address.push(other);
+
+        // "123どこかのビル” のようになっているとき、"123" と "どこかのビル"の間にスペースを入れる
+        // if (RegExpEx.create(`^([0-9]+)(?![号番通条町街丁階線F \-])`).test(other)) {
+        //   other = other.replace(RegExpEx.create(`^([0-9]+)((?![号番通条町街丁階線F \-]))`, 'g'), '$1 $2');
+        // }
+        if (other) {
+          formatted_address.push(other);
+        }
       }
     }
 

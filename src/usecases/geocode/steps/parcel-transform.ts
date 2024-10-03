@@ -77,10 +77,10 @@ export class ParcelTransform extends Transform {
       }
 
       // 住居表示実施地区の場合はスキップ
-      if (query.rsdt_addr_flg !== 0) {
-        results.add(query);
-        continue;
-      }
+      // if (query.rsdt_addr_flg !== 0) {
+      //   results.add(query);
+      //   continue;
+      // }
       
       // 既に住居表示で見つかっている場合もスキップ
       if (query.match_level.num === MatchLevel.RESIDENTIAL_BLOCK.num ||
@@ -144,10 +144,10 @@ export class ParcelTransform extends Transform {
             const copied = query.copy(params);
             results.add(copied);
           });
-        }
-        // 枝番2,3 がないなら、getPrcIdWithNum1 を実行する必要はない
-        if (searchInfo.parcel_key.endsWith('0000000000')) {
-          continue;
+          // 枝番2,3 がないなら、getPrcIdWithNum1 を実行する必要はない
+          if (searchInfo.parcel_key.endsWith('0000000000')) {
+            continue;
+          }
         }
       }
 

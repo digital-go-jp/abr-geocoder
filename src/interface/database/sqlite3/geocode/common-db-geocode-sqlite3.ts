@@ -24,6 +24,7 @@
 import { AMBIGUOUS_RSDT_ADDR_FLG } from "@config/constant-values";
 import { DataField } from "@config/data-field";
 import { DbTableName } from "@config/db-table-name";
+import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { TableKeyProvider } from "@domain/services/table-key-provider";
 import { ChomeMachingInfo } from "@domain/types/geocode/chome-info";
 import { CityInfo, CityMatchingInfo } from "@domain/types/geocode/city-info";
@@ -31,12 +32,11 @@ import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
 import { MatchLevel } from "@domain/types/geocode/match-level";
 import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import { PrefInfo } from "@domain/types/geocode/pref-info";
-import { TownInfo, TownMatchingInfo } from "@domain/types/geocode/town-info";
+import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
 import { PrefLgCode } from "@domain/types/pref-lg-code";
 import { ICommonDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
-import { RegExpEx } from "@domain/services/reg-exp-ex";
 
 type GetWardRowsOptions = {
   ward: string;
@@ -61,65 +61,105 @@ type GetChomeRowsOptions = {
 
 export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbGeocode {
 
-  getTownInfoByKey(town_key: number): Promise<TownInfo | undefined> {
-    return Promise.resolve(this.prepare<{
-      town_key: number;
-    }, TownInfo>(`
-      SELECT
-        town_key,
-        ${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-        ${DataField.CHOME.dbColumn} as chome,
-        ${DataField.KOAZA.dbColumn} as koaza,
-        ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
-        ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg
-      from 
-        ${DbTableName.TOWN}
-      where
-        town_key = @town_key
-    `).get({
-      town_key,
-    }));
-  }
+  // getTownInfoByKey(town_key: number): Promise<TownInfo | undefined> {
+  //   return Promise.resolve(this.prepare<{
+  //     town_key: number;
+  //   }, TownInfo>(`
+  //     SELECT
+  //       town_key,
+  //       ${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+  //       ${DataField.CHOME.dbColumn} as chome,
+  //       ${DataField.KOAZA.dbColumn} as koaza,
+  //       ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+  //       ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg
+  //     from 
+  //       ${DbTableName.TOWN}
+  //     where
+  //       town_key = @town_key
+  //   `).get({
+  //     town_key,
+  //   }));
+  // }
 
-  getCityInfoByKey(city_key: number): Promise<CityInfo | undefined> {
-    return Promise.resolve(this.prepare<{
-      city_key: number;
-    }, CityInfo>(`
-      SELECT
-        city_key,
-        pref_key,
-        ${DataField.COUNTY.dbColumn} as county,
-        ${DataField.CITY.dbColumn} as city,
-        ${DataField.WARD.dbColumn} as ward,
-        ${DataField.LG_CODE.dbColumn} as lg_code,
-        ${DataField.REP_LAT.dbColumn} as rep_lat,
-        ${DataField.REP_LON.dbColumn} as rep_lon
-      FROM
-        ${DbTableName.CITY}
-      WHERE
-        city_key = @city_key
-    `).get({
-      city_key,
-    }));
-  }
+  // getCityInfoByKey(city_key: number): Promise<CityInfo | undefined> {
+  //   return Promise.resolve(this.prepare<{
+  //     city_key: number;
+  //   }, CityInfo>(`
+  //     SELECT
+  //       city_key,
+  //       pref_key,
+  //       ${DataField.COUNTY.dbColumn} as county,
+  //       ${DataField.CITY.dbColumn} as city,
+  //       ${DataField.WARD.dbColumn} as ward,
+  //       ${DataField.LG_CODE.dbColumn} as lg_code,
+  //       ${DataField.REP_LAT.dbColumn} as rep_lat,
+  //       ${DataField.REP_LON.dbColumn} as rep_lon
+  //     FROM
+  //       ${DbTableName.CITY}
+  //     WHERE
+  //       city_key = @city_key
+  //   `).get({
+  //     city_key,
+  //   }));
+  // }
 
-  getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined> {
-    const results = this.prepare<{
-      pref_key: number;
-    }, PrefInfo>(`
+  // getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined> {
+  //   const results = this.prepare<{
+  //     pref_key: number;
+  //   }, PrefInfo>(`
+  //     SELECT
+  //       pref_key,
+  //       ${DataField.LG_CODE.dbColumn} as lg_code,
+  //       ${DataField.PREF.dbColumn} as pref,
+  //       ${DataField.REP_LAT.dbColumn} as rep_lat,
+  //       ${DataField.REP_LON.dbColumn} as rep_lon
+  //     FROM
+  //       ${DbTableName.PREF}
+  //     WHERE
+  //       pref_key = @pref_key
+  //   `).get({
+  //     pref_key,
+  //   });
+  //   return Promise.resolve(results);
+  // }
+
+  getKyotoStreetRows(): Promise<KoazaMachingInfo[]> {
+    const results = this.prepare<{}, KoazaMachingInfo>(`
       SELECT
-        pref_key,
-        ${DataField.LG_CODE.dbColumn} as lg_code,
-        ${DataField.PREF.dbColumn} as pref,
-        ${DataField.REP_LAT.dbColumn} as rep_lat,
-        ${DataField.REP_LON.dbColumn} as rep_lon
+        c.city_key,
+        t.town_key,
+        c.pref_key,
+        p.${DataField.PREF.dbColumn} as pref,
+        t.${DataField.CHOME.dbColumn} as chome,
+        p.${DataField.PREF.dbColumn} as pref,
+        c.${DataField.CITY.dbColumn} as city,
+        c.${DataField.COUNTY.dbColumn} as county,
+        c.${DataField.WARD.dbColumn} as ward,
+        c.${DataField.LG_CODE.dbColumn} AS lg_code,
+        t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+        t.${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
+
+        -- koaza_aka_code = 2 のときは、京都の通り名
+        -- koaza に通り名が格納されている
+        -- (通り名)(大字) になっているので、keyに大字を含める
+        (
+          t.${DataField.KOAZA.dbColumn} ||
+          t.${DataField.OAZA_CHO.dbColumn}
+        ) as key,
+        t.${DataField.KOAZA.dbColumn} as koaza,
+        t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+        t.${DataField.REP_LAT.dbColumn} as rep_lat,
+        t.${DataField.REP_LON.dbColumn} as rep_lon
       FROM
-        ${DbTableName.PREF}
+        ${DbTableName.PREF} p
+        JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
+        JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
       WHERE
-        pref_key = @pref_key
-    `).get({
-      pref_key,
-    });
+        t.${DataField.KOAZA.dbColumn} != '' AND
+        t.${DataField.KOAZA.dbColumn} IS NOT NULL AND
+        t.${DataField.KOAZA_AKA_CODE.dbColumn} = 2
+    `).all({});
+
     return Promise.resolve(results);
   }
 
@@ -157,6 +197,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         c.${DataField.LG_CODE.dbColumn} AS lg_code,
         t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
         t.${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
+        t.${DataField.KOAZA.dbColumn} as key,
         t.${DataField.KOAZA.dbColumn} as koaza,
         t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
         t.${DataField.REP_LAT.dbColumn} as rep_lat,
@@ -168,6 +209,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       WHERE
         t.${DataField.KOAZA.dbColumn} != '' AND
         t.${DataField.KOAZA.dbColumn} IS NOT NULL AND
+        t.${DataField.KOAZA_AKA_CODE.dbColumn} != 2 AND
         ${WHERE_CONDITION}
     `).all(where);
 
@@ -779,6 +821,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
             t.${DataField.CHOME.dbColumn} ||
             t.${DataField.KOAZA.dbColumn}
           ) AS key,
+          
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           t.${DataField.CHOME.dbColumn} as chome,
           t.${DataField.KOAZA.dbColumn} as koaza,
@@ -791,6 +834,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
         where
           c.${DataField.CITY.dbColumn} like '%区' AND
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} != 2 AND
           c.pref_key = @tokyo_pref_key
       `).all(params);
       resolve(results);
@@ -817,8 +861,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       }
       resolve(results);
     });
-    
-
   }
 
   // -----------------------------------------

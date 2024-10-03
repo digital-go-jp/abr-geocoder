@@ -21,19 +21,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export type KoazaMachingInfo = {
-  key: string;
-  oaza_cho: string;
-  chome: string;
-  pref: string;
-  city: string;
-  county: string;
-  ward: string;
-  koaza: string;
-  rsdt_addr_flg: number;
-  machiaza_id: string;
-  rep_lat: number;
-  rep_lon: number;
-  city_key: number;
-  town_key: number;
+import { jest } from '@jest/globals';
+
+jest.mock('@domain/services/url-cache-manager');
+jest.mock('@interface/database/download-db-controller');
+
+const EnvProvider = jest.fn(() => {
+  const DEFAULT_ABRG_DIR = './';
+  const hostname = 'localhost';
+  const userAgent = 'curl/7.81.0';
+  const nodeRuntimeVersion = [20, 17, 0];
+
+  return {
+    DEFAULT_ABRG_DIR,
+    hostname,
+    userAgent,
+    nodeRuntimeVersion,
+    availableParallelism: () => 14,
+  };
+});
+module.exports = {
+  EnvProvider,
 };

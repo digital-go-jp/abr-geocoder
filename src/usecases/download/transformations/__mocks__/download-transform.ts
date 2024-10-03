@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 import { Transform, TransformCallback } from 'node:stream';
 
 export class MockDownloadTransform extends Transform {
-  constructor() {
+  constructor(public params: any) {
     super({
       objectMode: true,
     });
@@ -31,6 +31,6 @@ export class MockDownloadTransform extends Transform {
   close() {}
 }
 
-export const DownloadTransform = jest.fn().mockImplementation(() => {
-  return new MockDownloadTransform();
+export const DownloadTransform = jest.fn((params: any) => {
+  return new MockDownloadTransform(params);
 });

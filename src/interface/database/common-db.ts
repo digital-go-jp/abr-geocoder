@@ -30,7 +30,7 @@ import { ParcelInfo } from "@domain/types/geocode/parcel-info";
 import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { RsdtBlkInfo } from "@domain/types/geocode/rsdt-blk-info";
 import { RsdtDspInfo } from "@domain/types/geocode/rsdt-dsp-info";
-import { TownInfo, TownMatchingInfo } from "@domain/types/geocode/town-info";
+import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
 
 export interface ICommonDbUpdateCheck {
@@ -58,9 +58,9 @@ export interface ICommonDbGeocode {
   getPrefList(): Promise<PrefInfo[]>;
   getCityList(): Promise<CityInfo[]>;
 
-  getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined>;
-  getCityInfoByKey(city_key: number): Promise<CityInfo | undefined>;
-  getTownInfoByKey(town_key: number): Promise<TownInfo | undefined>;
+  // getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined>;
+  // getCityInfoByKey(city_key: number): Promise<CityInfo | undefined>;
+  // getTownInfoByKey(town_key: number): Promise<TownInfo | undefined>;
   
   getCountyAndCityList(): Promise<CityMatchingInfo[]>;
   getCityAndWardList(): Promise<CityMatchingInfo[]>;
@@ -74,6 +74,7 @@ export interface ICommonDbGeocode {
   }>): Promise<WardMatchingInfo[]>;
 
   getOazaChomes(): Promise<OazaChoMachingInfo[]>;
+  getKyotoStreetRows(): Promise<KoazaMachingInfo[]>;
 
   // getOazaChoPatterns(where: Partial<{
   //   pref_key: number;

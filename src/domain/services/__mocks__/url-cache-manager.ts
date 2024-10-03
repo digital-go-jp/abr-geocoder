@@ -21,19 +21,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export type KoazaMachingInfo = {
-  key: string;
-  oaza_cho: string;
-  chome: string;
-  pref: string;
-  city: string;
-  county: string;
-  ward: string;
-  koaza: string;
-  rsdt_addr_flg: number;
-  machiaza_id: string;
-  rep_lat: number;
-  rep_lon: number;
-  city_key: number;
-  town_key: number;
+import { DatabaseParams } from '@domain/types/database-params';
+import { jest } from '@jest/globals';
+
+// @domain/services/__mocks__/url-cache-manager
+jest.mock('@domain/services/url-cache-manager');
+
+// @interface/database/__mocks__/download-db-controller
+jest.mock('@interface/database/download-db-controller');
+
+// @domain/models/__mocks__/env-provider
+jest.mock('@domain/models/env-provider');
+
+export type DownloadDiContainerParams = {
+  cacheDir: string;
+  downloadDir: string;
+  database: DatabaseParams;
+};
+
+const UrlCacheManager = jest.fn((cacheDir: string) => {
+  
+  return {
+    cacheDir,
+    readCache: jest.fn(async (_params: { key: string; }) => {
+      return {
+        dummy: 'data',
+      };
+    }),
+    writeCache: jest.fn(),
+    deleteCache: jest.fn(),
+  };
+});
+module.exports = {
+  UrlCacheManager,
 };

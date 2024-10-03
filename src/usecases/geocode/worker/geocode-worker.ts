@@ -50,6 +50,7 @@ import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
 import { WardTransform } from '../steps/ward-transform';
 import { AbrGeocoderInput } from '../models/abrg-input-data';
+import { KyotoStreetTransform } from '../steps/kyoto-street-transform';
 
 export type GeocodeWorkerInitData = {
   containerParams: AbrGeocoderDiContainerParams;
@@ -108,6 +109,12 @@ export class GeocodeTransform extends Duplex {
     // 大字を試す
     const oazaChomeTransform = new OazaChomeTransform({
       oazaChomes: params.commonData.oazaChomes,
+      logger: params.logger,
+    });
+
+    // 京都の通り名を試す
+    const kyotoStreetTransform = new KyotoStreetTransform({
+      kyotoStreetRows: params.commonData.kyotoStreetRows,
       logger: params.logger,
     });
 
@@ -199,6 +206,7 @@ export class GeocodeTransform extends Duplex {
       .pipe(wardTransform)
       .pipe(tokyo23TownTransform)
       .pipe(tokyo23WardTransform)
+      .pipe(kyotoStreetTransform)
       .pipe(oazaChomeTransform)
       .pipe(chomeTransform)
       .pipe(koazaTransform)

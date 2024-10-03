@@ -204,7 +204,8 @@ export class CommonDbDownloadSqlite3
         ${DataField.OAZA_CHO.dbColumn},
         ${DataField.CHOME.dbColumn},
         ${DataField.KOAZA.dbColumn},
-        ${DataField.RSDT_ADDR_FLG.dbColumn}
+        ${DataField.RSDT_ADDR_FLG.dbColumn},
+        ${DataField.KOAZA_AKA_CODE.dbColumn}
       ) VALUES (
         @town_key,
         @city_key,
@@ -212,13 +213,15 @@ export class CommonDbDownloadSqlite3
         @oaza_cho,
         @chome,
         @koaza,
-        @rsdt_addr_flg
+        @rsdt_addr_flg,
+        @koaza_aka_code
       ) ON CONFLICT (town_key) DO UPDATE SET
         ${DataField.MACHIAZA_ID.dbColumn} = @machiaza_id,
         ${DataField.OAZA_CHO.dbColumn} = @oaza_cho,
         ${DataField.CHOME.dbColumn} = @chome,
         ${DataField.KOAZA.dbColumn} = @koaza,
-        ${DataField.RSDT_ADDR_FLG.dbColumn} = @rsdt_addr_flg
+        ${DataField.RSDT_ADDR_FLG.dbColumn} = @rsdt_addr_flg,
+        ${DataField.KOAZA_AKA_CODE.dbColumn} = @koaza_aka_code
       WHERE 
         town_key = @town_key
     `;

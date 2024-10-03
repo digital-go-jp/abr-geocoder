@@ -38,8 +38,8 @@
     },
     "result": {
       "output": "東京都調布市国領町三丁目8-15 都営くすのきアパート2号棟1階",
-      "other": "-8-15 都営くすのきアパート2号棟1階",
-      "match_level": "machiaza_detail",
+      "other": "都営くすのきアパート2号棟1階",
+      "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.649614,
       "lon": 139.560117,
@@ -49,7 +49,7 @@
       "blk_id": null,
       "rsdt_id": null,
       "rsdt2_id": null,
-      "prc_id": null,
+      "prc_id": "000080001500000",
       "pref": "東京都",
       "county": null,
       "city": "調布市",
@@ -60,8 +60,8 @@
       "blk_num": null,
       "rsdt_num": null,
       "rsdt_num2": null,
-      "prc_num1": null,
-      "prc_num2": null,
+      "prc_num1": "8",
+      "prc_num2": "15",
       "prc_num3": null
     }
   },
@@ -500,8 +500,8 @@
     },
     "result": {
       "output": "兵庫県三田市三輪二丁目1 三田市役所",
-      "other": "-1 三田市役所",
-      "match_level": "machiaza_detail",
+      "other": "三田市役所",
+      "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 34.892084,
       "lon": 135.223939,
@@ -511,7 +511,7 @@
       "blk_id": null,
       "rsdt_id": null,
       "rsdt2_id": null,
-      "prc_id": null,
+      "prc_id": "000010000000000",
       "pref": "兵庫県",
       "county": null,
       "city": "三田市",
@@ -522,7 +522,7 @@
       "blk_num": null,
       "rsdt_num": null,
       "rsdt_num2": null,
-      "prc_num1": null,
+      "prc_num1": "1",
       "prc_num2": null,
       "prc_num3": null
     }
@@ -533,8 +533,8 @@
     },
     "result": {
       "output": "兵庫県三田市三輪二丁目1-1 三田市役所",
-      "other": "-1-1 三田市役所",
-      "match_level": "machiaza_detail",
+      "other": "-1 三田市役所",
+      "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 34.892084,
       "lon": 135.223939,
@@ -544,7 +544,7 @@
       "blk_id": null,
       "rsdt_id": null,
       "rsdt2_id": null,
-      "prc_id": null,
+      "prc_id": "000010000000000",
       "pref": "兵庫県",
       "county": null,
       "city": "三田市",
@@ -555,7 +555,7 @@
       "blk_num": null,
       "rsdt_num": null,
       "rsdt_num2": null,
-      "prc_num1": null,
+      "prc_num1": "1",
       "prc_num2": null,
       "prc_num3": null
     }

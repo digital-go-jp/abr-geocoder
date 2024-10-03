@@ -12,7 +12,7 @@
   "include": [
     "src/**/*.ts",
     "__mocks__/**/*.ts",
-    ".system/**/*.ts"
+    "e2e/**/*.ts"
   ],
   "exclude": [
     "src/**/__skips__/*",
