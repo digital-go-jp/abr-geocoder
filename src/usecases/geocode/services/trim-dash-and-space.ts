@@ -23,7 +23,7 @@
  * SOFTWARE.
  */
 import { DASH, SPACE } from "@config/constant-values";
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 export const trimDashAndSpace = (target: CharNode | undefined): CharNode | undefined => {
   // 末尾にDASHが付いていたら取る

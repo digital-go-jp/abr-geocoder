@@ -22,11 +22,12 @@
  * SOFTWARE.
  */
 import { BANGAICHI, DASH, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { KoazaMachingInfo } from '@domain/types/geocode/koaza-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { ICommonDbGeocode } from '@interface/database/common-db';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
@@ -34,16 +35,13 @@ import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana } from '../services/to-hiragana';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class KoazaTransform extends Transform {
 
-  constructor(private params: Required<{
-    db: ICommonDbGeocode;
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly db: ICommonDbGeocode,
+  ) {
     super({
       objectMode: true,
     });
@@ -111,7 +109,7 @@ export class KoazaTransform extends Transform {
       // Queryの情報を使って、DBから情報を取得する
       // ------------------------------------
       const conditions = this.createWhereCondition(query);
-      const rows = await this.params.db.getKoazaRows(conditions);
+      const rows = await this.db.getKoazaRows(conditions);
   
       const trie = new TrieAddressFinder<KoazaMachingInfo>();
       for (const row of rows) {
@@ -177,7 +175,6 @@ export class KoazaTransform extends Transform {
       }
     }
 
-    // this.params.logger?.info(`koaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
 

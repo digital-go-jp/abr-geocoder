@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { EnvProvider } from "@domain/models/env-provider";
 import { OutputFormat } from "@domain/types/output-format";
 import { SearchTarget } from "@domain/types/search-target";
 import { FormatterProvider } from "@interface/format/formatter-provider";
@@ -48,9 +49,6 @@ export class OnGeocodeRequest {
 
   async run(request: Request, response: Response) {
     response.setDefaultEncoding('utf-8');
-
-    // TS-node でデバッグしているときのみ、デバッグ情報を出力する
-    const debug = process.env.NODE_ENV?.startsWith('test');
 
     // リクエストを行う
     const address = request.query_parameters['address']?.trim();
@@ -93,10 +91,12 @@ export class OnGeocodeRequest {
       return;
     }
 
+    const isDebugMode = EnvProvider.isDebug || request.query_parameters['debug'].toLowerCase() === 'true';
+
     // フォーマッターの出力結果を response に書き込む
     const formatTransform = FormatterProvider.get({
       type: format,
-      debug,
+      debug: isDebugMode,
     });
     response.type(formatTransform.mimetype);
     formatTransform.pipe(response);

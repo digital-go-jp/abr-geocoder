@@ -33,17 +33,16 @@ import { QuerySet } from '../models/query-set';
 import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2num, kan2numForCharNode } from '../services/kan2num';
 import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 
 export class ChomeTranform extends Transform {
 
-  constructor(private params: Required<{
-    db: ICommonDbGeocode;
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly db: ICommonDbGeocode,
+  ) {
     super({
       objectMode: true,
     });
@@ -123,7 +122,7 @@ export class ChomeTranform extends Transform {
         continue;
       }
 
-      const rows = await this.params.db.getChomeRows(conditions);
+      const rows = await this.db.getChomeRows(conditions);
   
       const trie = new TrieAddressFinder<ChomeMachingInfo>();
       for (const row of rows) {
@@ -192,7 +191,6 @@ export class ChomeTranform extends Transform {
       }
     }
 
-    // this.params.logger?.info(`chome : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }
   

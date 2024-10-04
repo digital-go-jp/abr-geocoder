@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 /*
  * JIS 第2水準 => 第1水準 及び 旧字体 => 新字体、及び
@@ -331,6 +331,7 @@ const jisKanjiMap = new Map<string, string>([
   ['﨑', '崎'],
   ['埴', '植'],
   ['塚', '塚'],
+  ['糀', '麹'],  // 糀町
   ['麴', '麹'],  // 麹町
   ['都', '都'],  // 宇都宮
   ['神', '神'],

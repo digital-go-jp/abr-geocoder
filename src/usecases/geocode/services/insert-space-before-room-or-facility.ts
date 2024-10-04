@@ -24,7 +24,7 @@
 import { SPACE, KANJI_NUMS, DASH } from "@config/constant-values";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { isDigitForCharNode } from "./is-number";
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNode | undefined => {
   if (!address) {

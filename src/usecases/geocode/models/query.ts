@@ -27,7 +27,7 @@ import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
 import { getLevenshteinDistanceRatio } from '../services/get-levenshtein-distance-ratio';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
-import { CharNode } from '../services/trie/char-node';
+import { CharNode } from './trie/char-node';
 import { AbrGeocoderInput } from './abrg-input-data';
 
 export interface IQuery {

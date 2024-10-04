@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 const hiraganaMap = new Map<string, string>([
   ["ｶﾞ", 'け'], // 龍ケ崎市,龍ｶﾞ崎市 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する

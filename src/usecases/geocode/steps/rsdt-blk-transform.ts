@@ -22,23 +22,22 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
+import { GeocodeDbController } from '@interface/database/geocode-db-controller';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
-import { CharNode } from '../services/trie/char-node';
-import { GeocodeDbController } from '@interface/database/geocode-db-controller';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { QuerySet } from '../models/query-set';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtBlkTransform extends Transform {
 
-  constructor(private readonly params: Required<{
-    dbCtrl: GeocodeDbController;
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly dbCtrl: GeocodeDbController,
+  ) {
     super({
       objectMode: true,
     });
@@ -87,7 +86,7 @@ export class RsdtBlkTransform extends Transform {
         continue;
       }
 
-      const db = await this.params.dbCtrl.openRsdtBlkDb({
+      const db = await this.dbCtrl.openRsdtBlkDb({
         lg_code: query.lg_code,
         createIfNotExists: false,
       });

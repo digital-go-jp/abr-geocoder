@@ -24,7 +24,6 @@
 import { CommonDiContainer } from '@domain/models/common-di-container';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { DatabaseParams } from '@domain/types/database-params';
-import { SearchTarget } from '@domain/types/search-target';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 
 export type AbrGeocoderDiContainerParams = {
@@ -35,7 +34,6 @@ export type AbrGeocoderDiContainerParams = {
 
 export class AbrGeocoderDiContainer extends CommonDiContainer {
 
-  public readonly searchTarget?: SearchTarget;
   public readonly database: GeocodeDbController;
   public readonly logger?: DebugLogger;
   public readonly cacheDir: string;

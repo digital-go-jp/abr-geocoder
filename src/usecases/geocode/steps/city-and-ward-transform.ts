@@ -22,44 +22,19 @@
  * SOFTWARE.
  */
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { CityMatchingInfo } from '@domain/types/geocode/city-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Transform, TransformCallback } from 'node:stream';
-import timers from 'node:timers/promises';
+import { CityAndWardTrieFinder } from '../models/city-and-ward-trie-finder';
 import { QuerySet } from '../models/query-set';
-import { jisKanji } from '../services/jis-kanji';
-import { kan2num } from '../services/kan2num';
-import { toHiragana } from '../services/to-hiragana';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class CityAndWardTransform extends Transform {
 
-  private readonly cityAndWardTrie: TrieAddressFinder<CityMatchingInfo>;
-  private logger: DebugLogger | undefined;
-  private initialized: boolean = false;
-
-  constructor(params: Required<{
-    cityAndWardList: CityMatchingInfo[];
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly cityAndWardTrie: CityAndWardTrieFinder,
+  ) {
     super({
       objectMode: true,
-    });
-
-    this.logger = params.logger;
-    
-    // 〇〇市〇〇区のトライ木
-    this.cityAndWardTrie = new TrieAddressFinder();
-    setImmediate(() => {
-      for (const city of params.cityAndWardList) {
-        this.cityAndWardTrie.append({
-          key: this.normalizeStr(city.key),
-          value: city,
-        });
-      }
-      this.initialized = true;
     });
   }
 
@@ -68,12 +43,6 @@ export class CityAndWardTransform extends Transform {
     _: BufferEncoding,
     next: TransformCallback,
   ) {
-
-    if (!this.initialized) {
-      while (!this.initialized) {
-        await timers.setTimeout(100);
-      }
-    }
 
     const results = new QuerySet();
     for (const query of queries.values()) {
@@ -136,20 +105,6 @@ export class CityAndWardTransform extends Transform {
       }
     }
 
-    // this.logger?.info(`city-and-ward : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     next(null, results);
-  }
-
-  private normalizeStr(value: string): string {
-    // 半角カナ・全角カナ => 平仮名
-    value = toHiragana(value);
-
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    value = jisKanji(value);
-
-    // 漢数字 => 算用数字
-    value = kan2num(value);
-
-    return value;
   }
 }

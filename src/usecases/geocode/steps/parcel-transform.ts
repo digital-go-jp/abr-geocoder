@@ -22,26 +22,25 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR, KANJI_NUMS, SPACE } from '@config/constant-values';
+import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { TableKeyProvider } from '@domain/services/table-key-provider';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
+import { IParcelDbGeocode } from '@interface/database/common-db';
+import { GeocodeDbController } from '@interface/database/geocode-db-controller';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
-import { CharNode } from '../services/trie/char-node';
-import { GeocodeDbController } from '@interface/database/geocode-db-controller';
-import { IParcelDbGeocode } from '@interface/database/common-db';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { QuerySet } from '../models/query-set';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { isDigitForCharNode } from '../services/is-number';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class ParcelTransform extends Transform {
 
-  constructor(private readonly params: Required<{
-    dbCtrl: GeocodeDbController;
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly dbCtrl: GeocodeDbController,
+  ) {
     super({
       objectMode: true,
     });
@@ -98,7 +97,7 @@ export class ParcelTransform extends Transform {
         results.add(query);
         continue;
       }
-      const db: IParcelDbGeocode | null = await this.params.dbCtrl.openParcelDb({
+      const db: IParcelDbGeocode | null = await this.dbCtrl.openParcelDb({
         lg_code: query.lg_code,
         createIfNotExists: false,
       });

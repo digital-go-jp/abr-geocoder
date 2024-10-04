@@ -29,6 +29,7 @@ import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
 import { AbrGeocoderInput } from "./models/abrg-input-data";
 import { Query, QueryJson } from "./models/query";
 import { GeocodeTransform, GeocodeWorkerInitData } from "./worker/geocode-worker";
+import { EnvProvider } from "@domain/models/env-provider";
 
 class AbrGeocoderTaskInfo extends AsyncResource {
   next: AbrGeocoderTaskInfo | undefined;
@@ -107,12 +108,7 @@ export class AbrGeocoder {
     });
     this.reader.pipe(params.geocodeTransformOnMainThread).pipe(dst);
 
-    if (
-      // 開発時には、メインスレッドのみで処理するが、
-      // ユニットテスト時は続くコードにつなげる
-      process.env.JEST_WORKER_ID && process.env.NODE_ENV !== 'test' ||
-      // e2eテスト時はメインスレッドのみで行う
-      process.env.NODE_ENV === 'test:e2e') {
+    if (process.env.NODE_ENV === 'test:e2e') {
       return;
     }
 

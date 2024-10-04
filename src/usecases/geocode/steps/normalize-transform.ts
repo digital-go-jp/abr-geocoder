@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, J_DASH, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { Query, QueryInput } from '../models/query';
 import { QuerySet } from '../models/query-set';
@@ -33,14 +33,11 @@ import { jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2numForCharNode } from '../services/kan2num';
 import { toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
 import { toHiraganaForCharNode } from '../services/to-hiragana';
-import { CharNode } from '../services/trie/char-node';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class NormalizeTransform extends Transform {
 
-  constructor(private params: {
-    logger?: DebugLogger;
-  }) {
+  constructor() {
     super({
       objectMode: true,
     });

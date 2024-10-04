@@ -31,11 +31,7 @@ import geocodeCommand from './commands/geocode-command';
 import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
-
-// @ts-expect-error ts-node で実行しているときは、 NODE_ENV = 'test' にする
-if (process[Symbol.for('ts-node.register.instance')]) {
-  process.env.NODE_ENV = 'test';
-}
+import { EnvProvider } from '@domain/models/env-provider';
 
 // const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 const terminalWidth = 120;
@@ -72,7 +68,7 @@ export const main = async (
       // Otherwise, show the error message
       console.error(`[error] ${msg || e.message}`, e);
     
-      if (process.env.NODE_ENV !== 'test') {
+      if (!EnvProvider.isDebug) {
         process.exit(1);
       }
     })

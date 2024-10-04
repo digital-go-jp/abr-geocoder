@@ -23,7 +23,7 @@
  */
 
 import { RegExpEx } from "@domain/services/reg-exp-ex";
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 export const isDigit = (char: string): boolean => {
   return RegExpEx.create('^[0-9]$').test(char);

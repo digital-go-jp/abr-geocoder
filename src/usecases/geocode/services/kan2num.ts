@@ -23,7 +23,7 @@
  */
 
 import { DASH, SPACE } from "@config/constant-values";
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 
 const kanjiNum = new Map<string, number>([

@@ -107,10 +107,7 @@
         "-d ./db"
       ],
       "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "env": {
-        "NODE_ENV": "development"
-      }
+      "internalConsoleOptions": "neverOpen"
     },
 
     {

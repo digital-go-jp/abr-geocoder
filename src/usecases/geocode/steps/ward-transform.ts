@@ -22,48 +22,31 @@
  * SOFTWARE.
  */
 import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { WardMatchingInfo } from '@domain/types/geocode/ward-info';
 import { ICommonDbGeocode } from '@interface/database/common-db';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
-import timers from 'node:timers/promises';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
-import { jisKanji } from '../services/jis-kanji';
-import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
-import { toHiragana } from '../services/to-hiragana';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { WardTrieFinder } from '../models/ward-trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class WardTransform extends Transform {
 
-  private readonly wardTrie: TrieAddressFinder<WardMatchingInfo>;
-  private readonly logger: DebugLogger | undefined;
+  private readonly wardTrie: WardTrieFinder;
   private readonly db: ICommonDbGeocode;
-  private initialized: boolean = false;
 
   constructor(params: Required<{
-    wards: WardMatchingInfo[];
+    wardTrie: WardTrieFinder;
     db: ICommonDbGeocode;
-    logger: DebugLogger | undefined;
   }>) {
     super({
       objectMode: true,
     });
-    this.logger = params.logger;
+    this.wardTrie = params.wardTrie;
     this.db = params.db;
-
-    // 〇〇区を探すためのトライ木
-    this.wardTrie = new TrieAddressFinder<WardMatchingInfo>();
-    setImmediate(() => {
-      params.wards.forEach(ward => this.wardTrie.append({
-        key: this.normalizeStr(ward.key),
-        value: ward,
-      }));
-      this.initialized = true;
-    });
   }
 
   async _transform(
@@ -90,13 +73,6 @@ export class WardTransform extends Transform {
     // 全て行政区が判明できているなら、スキップする
     if (targets.length === 0) {
       return callback(null, results);
-    }
-
-    // 初期化が完了していなければ待機
-    if (!this.initialized) {
-      while (!this.initialized) {
-        await timers.setTimeout(100);
-      }
     }
 
     // 〇〇区を全て探索すると効率が悪いので、
@@ -158,10 +134,21 @@ export class WardTransform extends Transform {
         city_key: ward.city_key,
       });
 
-      townRows.forEach(row => trie.append({
-        key: this.normalizeStr(row.key),
-        value: row,
-      }));
+      townRows.forEach(row => {
+        // 〇〇市〇〇区〇〇大字
+        trie.append({
+          key: WardTrieFinder.normalizeStr(row.key),
+          value: row,
+        });
+        const extraKey = `${row.ward}${row.oaza_cho || ''}`;
+        if (extraKey !== row.key) {
+          // 〇〇区〇〇大字
+          trie.append({
+            key: WardTrieFinder.normalizeStr(extraKey),
+            value: row,
+          });
+        }
+      });
 
       for (const query of filteredTargets) {
         const target = trimDashAndSpace(query.tempAddress);
@@ -182,7 +169,7 @@ export class WardTransform extends Transform {
           fuzzy: DEFAULT_FUZZY_CHAR,
         });
 
-        if (!matched) {
+        if (!matched || matched.length === 0) {
           results.add(query);
           continue;
         }
@@ -236,26 +223,6 @@ export class WardTransform extends Transform {
       }
     }
 
-    // if (results.length > 0) {
-    //   this.logger?.info(`ward : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
-    // } else {
-    //   this.logger?.info(`ward : ${((Date.now() - targets[0].startTime) / 1000).toFixed(2)} s`);
-    // }
     callback(null, results);
-  }
-
-
-  private normalizeStr(address: string): string {
-
-    // 漢数字を半角英数字にする
-    address = toHankakuAlphaNum(address);
-
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanji(address);
-
-    // カタカナは全てひらがなにする（南アルプス市）
-    address = toHiragana(address);
-
-    return address;
   }
 }

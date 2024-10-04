@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 const katakanaMap = new Map<string, string>([
   ['ｶﾞ', 'ガ'],

@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "../models/trie/char-node";
 
 const zenkakuHankakuMap = new Map<string, string>([
   ['Ａ', 'A'],

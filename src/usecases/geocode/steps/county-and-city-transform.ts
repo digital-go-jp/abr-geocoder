@@ -22,43 +22,19 @@
  * SOFTWARE.
  */
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { CityMatchingInfo } from '@domain/types/geocode/city-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Transform, TransformCallback } from 'node:stream';
-import timers from 'node:timers/promises';
+import { CountyAndCityTrieFinder } from '../models/county-and-city-trie-finder';
 import { QuerySet } from '../models/query-set';
-import { jisKanji } from '../services/jis-kanji';
-import { kan2num } from '../services/kan2num';
-import { toHiragana } from '../services/to-hiragana';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class CountyAndCityTransform extends Transform {
 
-  private readonly countyAndCityTrie: TrieAddressFinder<CityMatchingInfo>;
-  private readonly logger: DebugLogger | undefined;
-  private initialized: boolean = false;
-
-  constructor(params: Required<{
-    countyAndCityList: CityMatchingInfo[];
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly countyAndCityTrie: CountyAndCityTrieFinder,
+  ) {
     super({
       objectMode: true,
-    });
-    this.logger = params.logger;
-    
-    // 〇〇郡〇〇市町村のトライ木
-    this.countyAndCityTrie = new TrieAddressFinder();
-    setImmediate(() => {
-      for (const city of params.countyAndCityList) {
-        this.countyAndCityTrie.append({
-          key: this.normalizeStr(city.key),
-          value: city,
-        });
-      }
-      this.initialized = true;
     });
   }
 
@@ -67,13 +43,6 @@ export class CountyAndCityTransform extends Transform {
     _: BufferEncoding,
     next: TransformCallback,
   ) {
-    // 初期化が完了していなければ待つ
-    if (!this.initialized) {
-      while (!this.initialized) {
-        await timers.setTimeout(100);
-      }
-    }
-
     const results = new QuerySet();
     for (const query of queries.values()) {
       // 既に判明している場合はスキップ
@@ -135,20 +104,6 @@ export class CountyAndCityTransform extends Transform {
         results.add(query);
       }
     }
-    // this.logger?.info(`county-and-city : ${((Date.now() - filteredReslts[0].startTime) / 1000).toFixed(2)} s`);
     next(null, results);
-  }
-
-  private normalizeStr(value: string): string {
-    // 半角カナ・全角カナ => 平仮名
-    value = toHiragana(value);
-
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    value = jisKanji(value);
-
-    // 漢数字 => 算用数字
-    value = kan2num(value);
-
-    return value;
   }
 }

@@ -32,7 +32,7 @@ import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { PrefLgCode, isPrefLgCode } from '@domain/types/pref-lg-code';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
-import { loadGeocoderCommonData, removeGeocoderCommonDataCache } from '@usecases/geocode/services/load-geocoder-common-data';
+import { loadGeocoderTrees, removeGeocoderCaches } from '@usecases/geocode/services/load-geoder-trees';
 import { StatusCodes } from 'http-status-codes';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -170,17 +170,14 @@ export class Downloader {
     await csvParseTransform.close();
 
     // キャッシュの削除
-    await removeGeocoderCommonDataCache({
+    await removeGeocoderCaches({
       cacheDir: this.container.urlCacheMgr.cacheDir,
     });
     // キャッシュの作成
-    const geocodeDbCtrl = new GeocodeDbController({
-      connectParams: this.container.database.connectParams,
-    });
-    const geocodeCommonDb = await geocodeDbCtrl.openCommonDb();
-    await loadGeocoderCommonData({
+    await loadGeocoderTrees({
       cacheDir: this.container.urlCacheMgr.cacheDir,
-      commonDb: geocodeCommonDb,
+      database: this.container.database.connectParams,
+      debug: false,
     });
   }
   

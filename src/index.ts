@@ -27,3 +27,4 @@ export { OutputFormat } from '@domain/types/output-format';
 export { SearchTarget } from '@domain/types/search-target';
 export { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 export { FormatterProvider } from '@interface/format/formatter-provider';
+export { EnvProvider } from '@domain/models/env-provider';

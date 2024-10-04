@@ -27,42 +27,41 @@ import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/serv
 import { ICommonDbGeocode } from '@interface/database/common-db';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { Duplex } from 'node:stream';
-import { MessagePort } from 'node:worker_threads';
+import { isMainThread, MessagePort, parentPort, workerData } from "node:worker_threads";
 import { Readable, Writable } from "stream";
-import { isMainThread, parentPort, workerData } from "worker_threads";
 import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from '../models/abr-geocoder-di-container';
+import { AbrGeocoderInput } from '../models/abrg-input-data';
+import { CityAndWardTrieFinder } from '../models/city-and-ward-trie-finder';
+import { CountyAndCityTrieFinder } from '../models/county-and-city-trie-finder';
+import { KyotoStreetTrieFinder } from '../models/kyoto-street-trie-finder';
+import { OazaChoTrieFinder } from '../models/oaza-cho-trie-finder';
+import { PrefTrieFinder } from '../models/pref-trie-finder';
 import { Query, QueryInput } from '../models/query';
-import { GeocodeWorkerCommonData, loadGeocoderCommonData } from '../services/load-geocoder-common-data';
+import { Tokyo23TownTrieFinder } from '../models/tokyo23-town-finder';
+import { Tokyo23WardTrieFinder } from '../models/tokyo23-ward-trie-finder';
+import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
+import { WardTrieFinder } from '../models/ward-trie-finder';
+import { loadGeocoderTrees } from '../services/load-geoder-trees';
 import { ChomeTranform } from '../steps/chome-transform';
 import { CityAndWardTransform } from '../steps/city-and-ward-transform';
 import { CountyAndCityTransform } from '../steps/county-and-city-transform';
 import { GeocodeResultTransform } from '../steps/geocode-result-transform';
 import { KoazaTransform } from '../steps/koaza-transform';
+import { KyotoStreetTransform } from '../steps/kyoto-street-transform';
+import { NormalizeBanchomeTransform } from '../steps/normalize-banchome-transform';
 import { NormalizeTransform } from '../steps/normalize-transform';
 import { OazaChomeTransform } from '../steps/oaza-chome-transform';
 import { ParcelTransform } from '../steps/parcel-transform';
 import { PrefTransform } from '../steps/pref-transform';
-import { NormalizeBanchomeTransform } from '../steps/normalize-banchome-transform';
 import { RsdtBlkTransform } from '../steps/rsdt-blk-transform';
 import { RsdtDspTransform } from '../steps/rsdt-dsp-transform';
 import { Tokyo23TownTranform } from '../steps/tokyo23town-transform';
 import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
 import { WardTransform } from '../steps/ward-transform';
-import { AbrGeocoderInput } from '../models/abrg-input-data';
-import { KyotoStreetTransform } from '../steps/kyoto-street-transform';
 
 export type GeocodeWorkerInitData = {
   containerParams: AbrGeocoderDiContainerParams;
-  // commonData: Uint8Array;
-  // prefList: PrefInfo[];
-  // countyAndCityList: CityMatchingInfo[];
-  // cityAndWardList: CityMatchingInfo[];
-  // wardAndOazaList: OazaChoMachingInfo[];
-  // oazaChomes: OazaChoMachingInfo[];
-  // tokyo23towns: TownMatchingInfo[];
-  // tokyo23wards: CityMatchingInfo[];
-  // wards: WardMatchingInfo[];
 };
 
 export class GeocodeTransform extends Duplex {
@@ -76,7 +75,15 @@ export class GeocodeTransform extends Duplex {
     dbCtrl: GeocodeDbController;
     commonDb: ICommonDbGeocode;
     logger?: DebugLogger;
-    commonData: GeocodeWorkerCommonData;
+    prefTrie: PrefTrieFinder;
+    countyAndCityTrie: CountyAndCityTrieFinder;
+    oazaChoTrie: OazaChoTrieFinder;
+    kyotoStreetTrie: KyotoStreetTrieFinder;
+    cityAndWardTrie: CityAndWardTrieFinder;
+    wardAndOazaTrie: WardAndOazaTrieFinder;
+    wardTrie: WardTrieFinder;
+    tokyo23WardTrie: Tokyo23WardTrieFinder;
+    tokyo23TownTrie: Tokyo23TownTrieFinder;
   }) {
     super({
       objectMode: true,
@@ -85,57 +92,34 @@ export class GeocodeTransform extends Duplex {
     });
     
     // 都道府県を試す
-    const prefTransform = new PrefTransform({
-      prefList: params.commonData.prefList,
-      logger: params.logger,
-    });
+    const prefTransform = new PrefTransform(params.prefTrie);
+    
     // 〇〇郡〇〇市を試す
-    const countyAndCityTransform = new CountyAndCityTransform({
-      countyAndCityList: params.commonData.countyAndCityList,
-      logger: params.logger,
-    });
+    const countyAndCityTransform = new CountyAndCityTransform(params.countyAndCityTrie);
+
     // 〇〇市〇〇区を試す
-    const cityAndWardTransform = new CityAndWardTransform({
-      cityAndWardList: params.commonData.cityAndWardList,
-      logger: params.logger,
-    });
+    const cityAndWardTransform = new CityAndWardTransform(params.cityAndWardTrie);
 
     // 〇〇市 (〇〇郡が省略された場合）を試す
-    const wardAndOazaTransform = new WardAndOazaTransform({
-      wardAndOazaList: params.commonData.wardAndOazaList,
-      logger: params.logger,
-    });
+    const wardAndOazaTransform = new WardAndOazaTransform(params.wardAndOazaTrie);
 
     // 大字を試す
-    const oazaChomeTransform = new OazaChomeTransform({
-      oazaChomes: params.commonData.oazaChomes,
-      logger: params.logger,
-    });
+    const oazaChomeTransform = new OazaChomeTransform(params.oazaChoTrie);
 
     // 京都の通り名を試す
-    const kyotoStreetTransform = new KyotoStreetTransform({
-      kyotoStreetRows: params.commonData.kyotoStreetRows,
-      logger: params.logger,
-    });
+    const kyotoStreetTransform = new KyotoStreetTransform(params.kyotoStreetTrie);
 
     // 東京23区を試す
     // 〇〇区＋大字の組み合わせで探す
-    const tokyo23TownTransform = new Tokyo23TownTranform({
-      tokyo23towns: params.commonData.tokyo23towns,
-      logger: params.logger,
-    });
+    const tokyo23TownTransform = new Tokyo23TownTranform(params.tokyo23TownTrie);
 
     // 東京23区を試す
-    const tokyo23WardTransform = new Tokyo23WardTranform({
-      tokyo23wards: params.commonData.tokyo23wards,
-      logger: params.logger,
-    });
+    const tokyo23WardTransform = new Tokyo23WardTranform(params.tokyo23WardTrie);
 
     // 〇〇区で始まるパターン(東京23区以外)
     const wardTransform = new WardTransform({
       db: params.commonDb,
-      wards: params.commonData.wards,
-      logger: params.logger,
+      wardTrie: params.wardTrie,
     });
 
     // 住所の正規化処理
@@ -146,44 +130,25 @@ export class GeocodeTransform extends Duplex {
     //  ↓
     // 東京都千代田区紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階
     //
-    const normalizeTransform = new NormalizeTransform({
-      logger: params.logger,
-    });
+    const normalizeTransform = new NormalizeTransform();
 
     // 丁目を試す
-    const chomeTransform = new ChomeTranform({
-      db: params.commonDb,
-      logger: params.logger,
-    });
+    const chomeTransform = new ChomeTranform(params.commonDb);
 
     // 小字を試す
-    const koazaTransform = new KoazaTransform({
-      db: params.commonDb,
-      logger: params.logger,
-    });
+    const koazaTransform = new KoazaTransform(params.commonDb);
     
     // 地番の特定を試みる
-    const parcelTransform = new ParcelTransform({
-      dbCtrl: params.dbCtrl,
-      logger: params.logger,
-    });
+    const parcelTransform = new ParcelTransform(params.dbCtrl);
 
     // 街区符号の特定を試みる
-    const rsdtBlkTransform = new RsdtBlkTransform({
-      dbCtrl: params.dbCtrl,
-      logger: params.logger,
-    });
+    const rsdtBlkTransform = new RsdtBlkTransform(params.dbCtrl);
 
     // 住居番号の特定を試みる
-    const rsdtDspTransform = new RsdtDspTransform({
-      dbCtrl: params.dbCtrl,
-      logger: params.logger,
-    });
+    const rsdtDspTransform = new RsdtDspTransform(params.dbCtrl);
 
     // 正規表現で番地を試みる
-    const normalizeBanchomeTransform = new NormalizeBanchomeTransform({
-      logger: params.logger,
-    });
+    const normalizeBanchomeTransform = new NormalizeBanchomeTransform();
 
     // 最終的な結果にまとめる
     const geocodeResultTransform = new GeocodeResultTransform();
@@ -233,16 +198,13 @@ export class GeocodeTransform extends Duplex {
     const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
     const logger: DebugLogger | undefined = container.logger;
 
-    const commonData = await loadGeocoderCommonData({
-      commonDb,
-      cacheDir: container.cacheDir,
-    });
-
+    const trees = await loadGeocoderTrees(params.containerParams);
+    
     const result = new GeocodeTransform({
       dbCtrl,
       commonDb,
       logger,
-      commonData,
+      ...trees,
     });
 
     return result;

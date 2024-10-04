@@ -5,7 +5,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { AbrGeocodeStream, DEFAULT_FUZZY_CHAR, FormatterProvider, OutputFormat, SearchTarget } from '../../src/index';
+import {
+  AbrGeocodeStream,
+  DEFAULT_FUZZY_CHAR,
+  FormatterProvider,
+  OutputFormat,
+  SearchTarget,
+  EnvProvider,
+} from '../../src/index';
 
 const SECONDS = 1000;
 jest.setTimeout(5 * 60 * SECONDS);
@@ -25,7 +32,7 @@ const readJsonFile = (filename: string) => {
 };
 
 const runGeocoder = async (output: OutputFormat, execaOptions: { input?: string, inputFile?: string, } = {}) => {
-  if (process.env.NODE_ENV === 'test') {
+  if (EnvProvider.isDebug) {
     // VSCode でデバッグする場合は、geocode-command.ts と同様の処理をすることで
     // ビルドしないでもデバッグできる
     const geocoderStream = await AbrGeocodeStream.create({
@@ -98,44 +105,6 @@ const jsonTestRunner = async (testCaseName: string) => {
 }
 
 describe('debug', () => {
-  test('北海道札幌市白石区平和通１丁目南６番１６号', async () => {
-    const input = '北海道札幌市白石区平和通１丁目南６番１６号';
-    const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
-      input,
-    });
-    expect(JSON.parse(stdout)).toMatchObject({
-      "query": {
-        "input": "北海道札幌市白石区平和通１丁目南６番１６号"
-      },
-      "result": {
-        "output": "北海道札幌市白石区平和通一丁目南6-16",
-        "other": null,
-        "match_level": "residential_detail",
-        "coordinate_level": "residential_detail",
-        "lat": 43.054140181,
-        "lon": 141.407126409,
-        "lg_code": "011045",
-        "machiaza_id": "0099102",
-        "blk_id": "006",
-        "blk_num": "6",
-        "rsdt_id": "016",
-        "rsdt2_id": null,
-        "prc_id": null,
-        "pref": "北海道",
-        "county": null,
-        "city": "札幌市",
-        "ward": "白石区",
-        "oaza_cho": "平和通",
-        "chome": null,
-        "koaza": "一丁目南",
-        "rsdt_num": 16,
-        "rsdt_num2": null,
-        "prc_num1": null,
-        "prc_num2": null,
-        "prc_num3": null
-      }
-    });
-  });
 
   test('京都市上京区下立売通新町西入薮ノ内町', async () => {
     const input = '京都市上京区下立売通新町西入薮ノ内町';

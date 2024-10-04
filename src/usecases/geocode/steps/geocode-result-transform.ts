@@ -28,7 +28,7 @@ import { SearchTarget } from '@domain/types/search-target';
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
-import { CharNode } from '../services/trie/char-node';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 export class GeocodeResultTransform extends Transform {
 

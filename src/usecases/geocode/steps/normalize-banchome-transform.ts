@@ -22,19 +22,16 @@
  * SOFTWARE.
  */
 import { DASH, SPACE } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
 import { isDigitForCharNode } from '../services/is-number';
-import { CharNode } from '../services/trie/char-node';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class NormalizeBanchomeTransform extends Transform {
 
-  constructor(private params: {
-    logger: DebugLogger | undefined;
-  }) {
+  constructor() {
     super({
       objectMode: true,
     });

@@ -21,48 +21,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { MatchLevel } from '@domain/types/geocode/match-level';
-import { TownMatchingInfo } from '@domain/types/geocode/town-info';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
-import timers from 'node:timers/promises';
 import { QuerySet } from '../models/query-set';
-import { jisKanji } from '../services/jis-kanji';
-import { kan2num } from '../services/kan2num';
+import { Tokyo23TownTrieFinder } from '../models/tokyo23-town-finder';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
-import { toHiragana } from '../services/to-hiragana';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class Tokyo23TownTranform extends Transform {
-
-  private readonly tokyo23TownTrie: TrieAddressFinder<TownMatchingInfo>;
-  private readonly logger: DebugLogger | undefined;
-  private initialized: boolean = false;
   
-  constructor(params: Required<{
-    tokyo23towns: TownMatchingInfo[];
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly tokyo23TownTrie: Tokyo23TownTrieFinder,
+  ) {
     super({
       objectMode: true,
-    });
-    this.logger = params.logger;
-
-    // 東京23区を探すためのトライ木
-    this.tokyo23TownTrie = new TrieAddressFinder<TownMatchingInfo>();
-    setImmediate(() => {
-      params.tokyo23towns.forEach(town => {
-        const key = this.normalizeStr(town.key);
-        this.tokyo23TownTrie.append({
-          key,
-          value: town,
-        });
-      });
-      this.initialized = true;
     });
   }
 
@@ -80,12 +54,6 @@ export class Tokyo23TownTranform extends Transform {
         query.match_level.num >= MatchLevel.CITY.num) {
         results.add(query);
         continue;
-      }
-      
-      if (!this.initialized) {
-        while (!this.initialized) {
-          await timers.setTimeout(100);
-        }
       }
 
       // 東京都〇〇区〇〇パターンを探索する
@@ -145,24 +113,6 @@ export class Tokyo23TownTranform extends Transform {
         results.add(query);
       }
     }
-
-    // this.logger?.info(`tokyo23 : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
-  }
-
-  private normalizeStr(address: string): string {
-    // 片仮名を平仮名に変換する
-    address = toHiragana(address);
-
-    // 漢数字を半角数字に変換する
-    address = kan2num(address);
-    
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanji(address);
-
-    // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
-    address = address?.replaceAll(RegExpEx.create(`(\\d+)${DASH}?[番号町地丁目]+の?`, 'g'), `$1${DASH}`);
-
-    return address;
   }
 }

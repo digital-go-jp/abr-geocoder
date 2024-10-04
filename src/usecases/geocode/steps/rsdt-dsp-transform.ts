@@ -28,18 +28,17 @@ import { MatchLevel } from '@domain/types/geocode/match-level';
 import { RsdtDspInfo } from '@domain/types/geocode/rsdt-dsp-info';
 import { SearchTarget } from '@domain/types/search-target';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtDspTransform extends Transform {
 
-  constructor(private readonly params: Required<{
-    dbCtrl: GeocodeDbController;
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly dbCtrl: GeocodeDbController,
+  ) {
     super({
       objectMode: true,
     });
@@ -60,7 +59,7 @@ export class RsdtDspTransform extends Transform {
         // 地番検索が指定されている場合、このステップはスキップする
         continue;
       }
-      const db = await this.params.dbCtrl.openRsdtDspDb({
+      const db = await this.dbCtrl.openRsdtDspDb({
         lg_code: query.lg_code!,
         createIfNotExists: false,
       });
