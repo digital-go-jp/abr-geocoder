@@ -143,6 +143,7 @@ export class RsdtDspTransform extends Transform {
           match_level: MatchLevel.RESIDENTIAL_DETAIL,
           matchedCnt: query.matchedCnt + findResult.depth,
           ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
+          rsdt_addr_flg: 1,
         };
         if (info.rep_lat && info.rep_lon) {
           params.coordinate_level = MatchLevel.RESIDENTIAL_DETAIL;

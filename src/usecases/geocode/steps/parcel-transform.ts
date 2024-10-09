@@ -134,6 +134,7 @@ export class ParcelTransform extends Transform {
               tempAddress: searchInfo.unmatched,
               match_level: MatchLevel.PARCEL,
               matchedCnt: query.matchedCnt + searchInfo.matchedCnt,
+              rsdt_addr_flg: 0,
             };
             if (row.rep_lat && row.rep_lon) {
               params.coordinate_level = MatchLevel.PARCEL;
@@ -179,6 +180,7 @@ export class ParcelTransform extends Transform {
               tempAddress: searchInfo2.unmatched,
               match_level: MatchLevel.PARCEL,
               matchedCnt: query.matchedCnt + searchInfo2.matchedCnt,
+              rsdt_addr_flg: 0,
             };
             if (row.rep_lat && row.rep_lon) {
               params.coordinate_level = MatchLevel.PARCEL;

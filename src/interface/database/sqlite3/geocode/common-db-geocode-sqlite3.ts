@@ -865,6 +865,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     type WardAndOazaRow = {
       key: string;
       match_level: number;
+      coordinate_level: number;
       town_key: number;
       city_key: number;
       pref_key: number;
@@ -892,8 +893,39 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         c.${DataField.WARD.dbColumn} as ward,
         t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
         (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000') AS machiaza_id,
-        c.${DataField.REP_LAT.dbColumn} as rep_lat,
-        c.${DataField.REP_LON.dbColumn} as rep_lon,
+        
+        IIF(
+          (t.${DataField.KOAZA.dbColumn} IS NULL OR t.${DataField.KOAZA.dbColumn} = '') AND 
+          (t.${DataField.CHOME.dbColumn} IS NULL OR t.${DataField.CHOME.dbColumn} = ''),
+          -- chome,koaza がない場合は、大字で確定
+          t.${DataField.RSDT_ADDR_FLG.dbColumn},
+
+          -- 大字・小字に rsdt_addr_flg で 0,1 が混在する可能性があるので
+          -- AMBIGUOUS_RSDT_ADDR_FLG(-1)
+          ${AMBIGUOUS_RSDT_ADDR_FLG}
+        ) as rsdt_addr_flg,
+
+        IIF(
+          (t.${DataField.KOAZA.dbColumn} IS NULL OR t.${DataField.KOAZA.dbColumn} = '') AND 
+          (t.${DataField.CHOME.dbColumn} IS NULL OR t.${DataField.CHOME.dbColumn} = ''),
+          t.${DataField.REP_LAT.dbColumn},
+          c.${DataField.REP_LAT.dbColumn}
+        ) as rep_lat,
+         
+        IIF(
+          (t.${DataField.KOAZA.dbColumn} IS NULL OR t.${DataField.KOAZA.dbColumn} = '') AND 
+          (t.${DataField.CHOME.dbColumn} IS NULL OR t.${DataField.CHOME.dbColumn} = ''),
+          t.${DataField.REP_LON.dbColumn},
+          c.${DataField.REP_LON.dbColumn}
+        ) as rep_lon,
+         
+        IIF(
+          (t.${DataField.KOAZA.dbColumn} IS NULL OR t.${DataField.KOAZA.dbColumn} = '') AND 
+          (t.${DataField.CHOME.dbColumn} IS NULL OR t.${DataField.CHOME.dbColumn} = ''),
+          ${MatchLevel.MACHIAZA.num},
+          ${MatchLevel.CITY.num}
+        ) as coordinate_level,
+         
         (c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn}) as key
       FROM
         ${DbTableName.PREF} p
@@ -909,6 +941,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     `).all();
 
     const results: OazaChoMachingInfo[] = rows.map(row => {
+      const coordinate_level = row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA;
       return {
         key: row.key,
         pref: row.pref,
@@ -919,7 +952,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         koaza: '',
         chome: '',
         match_level: MatchLevel.MACHIAZA,
-        coordinate_level: MatchLevel.CITY,
+        coordinate_level,
         county: row.county,
         ward: row.ward,
         lg_code: row.lg_code,
@@ -927,7 +960,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         machiaza_id: row.machiaza_id,
         rep_lat: row.rep_lat && parseFloat(row.rep_lat) || null,
         rep_lon: row.rep_lon && parseFloat(row.rep_lon) || null,
-        rsdt_addr_flg: AMBIGUOUS_RSDT_ADDR_FLG,
+        rsdt_addr_flg: row.rsdt_addr_flg,
       };
     });
     return Promise.resolve(results);

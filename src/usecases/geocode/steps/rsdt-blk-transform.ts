@@ -119,6 +119,7 @@ export class RsdtBlkTransform extends Transform {
           tempAddress: queryInfo.unmatched,
           match_level: MatchLevel.RESIDENTIAL_BLOCK,
           matchedCnt: query.matchedCnt + queryInfo.matchedCnt,
+          rsdt_addr_flg: 1,
         };
         if (result.rep_lat && result.rep_lon) {
           params.coordinate_level = MatchLevel.RESIDENTIAL_BLOCK;

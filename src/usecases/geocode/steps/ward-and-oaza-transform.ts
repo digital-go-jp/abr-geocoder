@@ -103,13 +103,10 @@ export class WardAndOazaTransform extends Transform {
           rep_lat: mResult.info!.rep_lat,
           rep_lon: mResult.info!.rep_lon,
           machiaza_id: mResult.info!.machiaza_id,
-
-          // 大字・小字に rsdt_addr_flg で 0,1 が混在する可能性があるので
-          // この時点では不明。なので AMBIGUOUS_RSDT_ADDR_FLG
-          rsdt_addr_flg: AMBIGUOUS_RSDT_ADDR_FLG,
+          rsdt_addr_flg: mResult.info!.rsdt_addr_flg,
           oaza_cho: mResult.info!.oaza_cho,
-          match_level: MatchLevel.MACHIAZA,
-          coordinate_level: MatchLevel.CITY,
+          match_level: mResult.info!.match_level,
+          coordinate_level: mResult.info!.coordinate_level,
           matchedCnt: query.matchedCnt + mResult.depth,
           ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
         }));
