@@ -21,6 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+import { MatchLevel } from "./match-level";
+
 export type WardInfo = {
   pref_key: number;
   pref: string;
@@ -28,10 +31,13 @@ export type WardInfo = {
   county: string;
   ward: string;
   oaza_cho: string;
+  rsdt_addr_flg: number;
+  machiaza_id?: string;
   lg_code: string;
   city_key: number;
   rep_lat: number;
   rep_lon: number;
+  coordinate_level: MatchLevel;
 };
 export type WardMatchingInfo = {
   key: string;

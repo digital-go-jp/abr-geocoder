@@ -23,6 +23,7 @@
  */
 
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "../models/trie/trie-finder";
 
 /*
  * JIS 第2水準 => 第1水準 及び 旧字体 => 新字体、及び
@@ -32,7 +33,7 @@ import { CharNode } from "@usecases/geocode/models/trie/char-node";
  * トライ木には本来の漢字表記が入っているので、
  * このシステムでは問題ない。
  */
-const jisKanjiMap = new Map<string, string>([
+const kanji_table: string[][] = [
   ['淵', '渕'],
   ['曾', '会'],
   ['亞', '亜'],
@@ -422,33 +423,108 @@ const jisKanjiMap = new Map<string, string>([
   ['㞍', '尻'], // 見掛ノ㞍
   ['崕', '崖'], // 浜崕
   ['鸙', '雲雀'], // 鸙野
-]);
+  ['楠木', '楠'],
+  ['樟', '楠'],
+];
 
+const tree = new TrieAddressFinder<string>();
+for (const oldAndNew of kanji_table) {
+  tree.append({
+    key: oldAndNew[0],
+    value: oldAndNew[1],
+  });
+}
 
 export const jisKanji = (target: string): string => {
+  let head = CharNode.create(target);
   const buffer: string[] = [];
-  for (const char of target) {
-    buffer.push(jisKanjiMap.get(char) || char);
+
+  while (head) {
+    const matches = tree.find({
+      target: head,
+      fuzzy: undefined,
+    });
+    if (!matches || matches.length === 0) {
+      buffer.push(head.char!);
+      head = head.next;
+      continue;
+    }
+    buffer.push(matches[0].info!);
+    head = matches[0].unmatched;
   }
+
   return buffer.join('');
 };
 
 export const jisKanjiForCharNode = (target: CharNode | undefined): CharNode | undefined => {
   let head = target;
-  const root = target;
-  let newChar;
-  while (head && head.char) {
-    newChar = jisKanjiMap.get(head.char) || head.char;
-    head.char = newChar[0];
-    if (newChar.length > 1) {
-      const rest = head.next;
-      for (let i = 1; i < newChar.length; i++) {
-        head!.next = CharNode.create(newChar[i]);
-        head = head?.next;
-      }
-      head!.next = rest;
+  const buffer: CharNode[] = [];
+
+  while (head) {
+    if (head.ignore) {
+      const headNext = head.next;
+      const charNode = head;
+      charNode.next = undefined;
+      buffer.push(charNode);
+
+      head = headNext;
+      continue;
     }
-    head = head!.next;
+
+    const matches = tree.find({
+      target: head,
+      fuzzy: undefined,
+    });
+    if (!matches || matches.length === 0) {
+      const headNext = head.next;
+      const charNode = head;
+      charNode.next = undefined;
+      buffer.push(charNode);
+      head = headNext;
+      continue;
+    }
+
+    let cnt = matches[0].depth;
+    let i = 0;
+    while (head && i < cnt) {
+      if (head.ignore) {
+        const headNext: CharNode | undefined = head.next;
+        const charNode = head;
+        charNode.next = undefined;
+        buffer.push(charNode);
+  
+        head = headNext;
+        continue;
+      }
+      const ignore = i >= matches[0].info!.length;
+      const char = ignore ? '' : matches[0].info![i];
+      buffer.push(new CharNode({
+        originalChar: head.originalChar,
+        char,
+        ignore,
+      }));
+      i++;
+      head = head.next;
+    }
+    
+    while (i < cnt) {
+      const char = i < matches[0].info!.length ? matches[0].info![i] : '';
+      buffer.push(new CharNode({
+        originalChar: '',
+        char,
+        ignore: true,
+      }));
+      i++;
+    }
+
+    head = matches[0].unmatched;
   }
-  return root;
+  let tail: CharNode | undefined = undefined;
+  while (buffer.length > 0) {
+    const charNode = buffer.pop()!;
+    charNode.next = tail;
+    tail = charNode;
+  }
+
+  return tail;
 };

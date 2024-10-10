@@ -68,10 +68,10 @@ export interface ICommonDbGeocode {
   getTokyo23Towns(): Promise<TownMatchingInfo[]>;
   getWards(): Promise<WardMatchingInfo[]>;
   getTokyo23Wards(): Promise<CityMatchingInfo[]>;
-  getWardRows(where: Required<{
-    ward: string;
-    city_key: number;
-  }>): Promise<WardMatchingInfo[]>;
+  // getWardRows(where: Required<{
+  //   ward: string;
+  //   city_key: number;
+  // }>): Promise<WardMatchingInfo[]>;
 
   getOazaChomes(): Promise<OazaChoMachingInfo[]>;
   getKyotoStreetRows(): Promise<KoazaMachingInfo[]>;

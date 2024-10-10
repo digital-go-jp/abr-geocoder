@@ -54,6 +54,7 @@ export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
         key: WardTrieFinder.normalizeStr(row.key),
         value: row,
       });
+      // partial match させるために、〇〇区だけでも登録する
       tree.append({
         key: WardTrieFinder.normalizeStr(row.ward),
         value: row,

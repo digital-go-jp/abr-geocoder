@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { PrefLgCode } from '@domain/types/pref-lg-code';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
@@ -29,6 +29,7 @@ import { Transform, TransformCallback } from 'node:stream';
 import { KyotoStreetTrieFinder } from '../models/kyoto-street-trie-finder';
 import { QuerySet } from '../models/query-set';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class KyotoStreetTransform extends Transform {
 
@@ -73,7 +74,11 @@ export class KyotoStreetTransform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      const target = trimDashAndSpace(query.tempAddress);
+      
+      
+      const target = trimDashAndSpace(query.tempAddress)?.
+        // 「1丁目下る」の「丁目」を省略して書く事がある
+        replaceAll(RegExpEx.create(`([0-9]+)(?:丁目|${DASH})(上る|下る)`, 'g'), `$1$2`);
       if (!target) {
         results.add(query);
         continue;

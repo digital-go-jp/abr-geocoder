@@ -204,38 +204,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return Promise.resolve(results);
   }
 
-  async getWardRows(where: Required<GetWardRowsOptions>): Promise<WardMatchingInfo[]> {
-    return new Promise((resolve: (rows: WardMatchingInfo[]) => void) => {
-      const rows = this.prepare<GetWardRowsOptions, WardMatchingInfo>(`
-        SELECT
-          p.pref_key,
-          c.city_key,
-          (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000') AS machiaza_id,
-          p.${DataField.PREF.dbColumn} AS pref,
-          c.${DataField.CITY.dbColumn} AS city,
-          c.${DataField.COUNTY.dbColumn} AS county,
-          c.${DataField.WARD.dbColumn} AS ward,
-          c.${DataField.LG_CODE.dbColumn} AS lg_code,
-          t.${DataField.OAZA_CHO.dbColumn} AS oaza_cho,
-          t.${DataField.RSDT_ADDR_FLG.dbColumn} AS rsdt_addr_flg,
-          c.${DataField.REP_LAT.dbColumn} as rep_lat,
-          c.${DataField.REP_LON.dbColumn} as rep_lon,
-          (c.${DataField.CITY.dbColumn} || c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn}) AS key
-        FROM
-          ${DbTableName.PREF} p
-          JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
-          JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
-        WHERE
-          c.city_key = @city_key AND 
-          t.${DataField.OAZA_CHO.dbColumn} != '' AND
-          (c.${DataField.WARD.dbColumn} = @ward OR c.${DataField.CITY.dbColumn} = @ward)
-        GROUP BY key
-      `).all(where);
-
-      resolve(rows);
-    });
-  }
-
   async getPrefMap(): Promise<Map<number, PrefInfo>> {
     // if (this.resultCache.has('pref_map')) {
     //   return this.resultCache.get('pref_map') as Map<number, PrefInfo>;
@@ -986,26 +954,102 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
 
   async getWards(): Promise<WardMatchingInfo[]> {
-    const cityMap = await this.getCityMap();
+    type WardRow = Omit<WardMatchingInfo, 'coordinate_level' | 'rep_lat' | 'rep_lon'> & {
+      coordinate_level: number;
+      rep_lat: string;
+      rep_lon: string;
+    };
     
-    const results: WardMatchingInfo[] = [];
-    for (const city_key of cityMap.keys()) {
-      const city = cityMap.get(city_key)!;
-      if (city.ward === '' || !city.ward || !city.ward.endsWith('区')) {
-        continue;
+    const results = this.prepare<unknown[], WardRow>(`
+      SELECT
+        p.pref_key,
+        c.city_key,
+        p.${DataField.PREF.dbColumn} as pref,
+        c.${DataField.CITY.dbColumn} as city,
+        c.${DataField.COUNTY.dbColumn} as county,
+        c.${DataField.WARD.dbColumn} as ward,
+        c.${DataField.LG_CODE.dbColumn} as lg_code,
+        t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+        t.${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
+        t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+        (c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn}) as key,
+
+        cast(
+          IIF(
+            t.${DataField.REP_LAT.dbColumn} IS NULL,
+            c.${DataField.REP_LAT.dbColumn},
+            t.${DataField.REP_LAT.dbColumn}
+          ) as text
+        ) as rep_lat,
+
+        cast(
+          IIF(
+            t.${DataField.REP_LON.dbColumn} IS NULL,
+            c.${DataField.REP_LON.dbColumn},
+            t.${DataField.REP_LON.dbColumn}
+          ) as text
+        ) as rep_lon,
+
+        IIF(
+          t.${DataField.REP_LAT.dbColumn} IS NULL,
+          ${MatchLevel.CITY.num},
+          ${MatchLevel.MACHIAZA.num}
+        ) as coordinate_level
+      FROM
+        ${DbTableName.PREF} as p
+        JOIN ${DbTableName.CITY} as c ON p.pref_key = c.pref_key
+        JOIN ${DbTableName.TOWN} as t ON c.city_key = t.city_key
+      WHERE
+        (c.${DataField.WARD.dbColumn} != '' AND c.${DataField.WARD.dbColumn} IS NOT NULL) AND
+        (t.${DataField.OAZA_CHO.dbColumn} != '' AND t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL) AND
+        (t.${DataField.CHOME.dbColumn} = '' OR t.${DataField.CHOME.dbColumn} IS NULL) AND
+        (t.${DataField.KOAZA.dbColumn} = '' OR t.${DataField.KOAZA.dbColumn} IS NULL) AND
+        t.${DataField.KOAZA_AKA_CODE.dbColumn} = 0
+    
+      UNION
+
+      SELECT
+        p.pref_key,
+        c.city_key,
+        p.${DataField.PREF.dbColumn} AS pref,
+        c.${DataField.CITY.dbColumn} AS city,
+        c.${DataField.COUNTY.dbColumn} AS county,
+        c.${DataField.WARD.dbColumn} AS ward,
+        c.${DataField.LG_CODE.dbColumn} AS lg_code,
+        t.${DataField.OAZA_CHO.dbColumn} AS oaza_cho,
+        t.${DataField.RSDT_ADDR_FLG.dbColumn} AS rsdt_addr_flg,
+        (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000') AS machiaza_id,
+        (c.${DataField.CITY.dbColumn} || c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn}) AS key,
+
+        cast(c.${DataField.REP_LAT.dbColumn} as text) as rep_lat,
+        cast(c.${DataField.REP_LON.dbColumn} as text) as rep_lon,
+
+        ${MatchLevel.CITY.num} as coordinate_level
+      FROM
+        ${DbTableName.PREF} p
+        JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
+        JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
+      WHERE
+        (c.${DataField.WARD.dbColumn} != '' AND c.${DataField.WARD.dbColumn} IS NOT NULL) AND
+        (t.${DataField.OAZA_CHO.dbColumn} != '' AND t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL) AND
+        (
+          t.${DataField.CHOME.dbColumn} != '' OR
+          t.${DataField.KOAZA.dbColumn} != ''
+        ) AND
+        t.${DataField.KOAZA_AKA_CODE.dbColumn} = 0
+      GROUP BY key
+
+    `).all();
+    
+
+    return results.map(row => {
+      return {
+        ...row,
+        rep_lat: parseFloat(row.rep_lat),
+        rep_lon: parseFloat(row.rep_lon),
+        coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA
       }
-      results.push({
-        key: [(city.city || ''), city.ward].join(''),
-        ...city,
-        oaza_cho: "",
-      });
-      results.push({
-        key: city.ward,
-        ...city,
-        oaza_cho: "",
-      });
-    }
-    return results;
+    });
   }
 
   async getTokyo23Wards(): Promise<CityMatchingInfo[]> {

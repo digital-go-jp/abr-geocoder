@@ -106,25 +106,66 @@ const jsonTestRunner = async (testCaseName: string) => {
 
 describe('debug', () => {
 
-  test('京都市上京区下立売通新町西入薮ノ内町', async () => {
-    const input = '京都市上京区下立売通新町西入薮ノ内町';
+  test('東山区大和大路通七条下る5丁目下池田町527-3', async () => {
+    const input = '東山区大和大路通七条下る5丁目下池田町527';
     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
       input,
     });
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "京都市上京区下立売通新町西入薮ノ内町"
+        "input": "東山区大和大路通七条下る5丁目下池田町527"
       },
       "result": {
-        "output": "京都府京都市上京区下立売通新町西入藪之内町",
-        "other": null,
-        "score": 0.77,
+        "output": "京都府京都市東山区大和大路通七条下る5下池田町527",
+        "other": "527",
+        "score": 0.7,
+        "match_level": "machiaza",
+        "coordinate_level": "city",
+        "lat": 34.997082,
+        "lon": 135.776282,
+        "lg_code": "261050",
+        "machiaza_id": "0202000",
+        "rsdt_addr_flg": -1,
+        "blk_id": null,
+        "rsdt_id": null,
+        "rsdt2_id": null,
+        "prc_id": null,
+        "pref": "京都府",
+        "county": null,
+        "city": "京都市",
+        "ward": "東山区",
+        "oaza_cho": "大和大路",
+        "chome": null,
+        "koaza": null,
+        "blk_num": null,
+        "rsdt_num": null,
+        "rsdt_num2": null,
+        "prc_num1": null,
+        "prc_num2": null,
+        "prc_num3": null
+      }
+    });
+  });
+
+  test('右京区京北周山町中山51', async () => {
+    const input = '右京区京北周山町中山51';
+    const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
+      input,
+    });
+    expect(JSON.parse(stdout)).toMatchObject({
+      "query": {
+        "input": "右京区京北周山町中山51"
+      },
+      "result": {
+        "output": "京都府京都市右京区中山51",
+        "other": "51",
+        "score": 0.39,
         "match_level": "machiaza_detail",
         "coordinate_level": "machiaza_detail",
-        "lat": 35.02141,
-        "lon": 135.755632,
-        "lg_code": "261025",
-        "machiaza_id": "0562102",
+        "lat": 35.124269,
+        "lon": 135.640117,
+        "lg_code": "261084",
+        "machiaza_id": "0000118",
         "rsdt_addr_flg": 0,
         "blk_id": null,
         "rsdt_id": null,
@@ -133,10 +174,10 @@ describe('debug', () => {
         "pref": "京都府",
         "county": null,
         "city": "京都市",
-        "ward": "上京区",
-        "oaza_cho": "藪之内町",
+        "ward": "右京区",
+        "oaza_cho": null,
         "chome": null,
-        "koaza": "下立売通新町西入",
+        "koaza": "中山",
         "blk_num": null,
         "rsdt_num": null,
         "rsdt_num2": null,
@@ -157,10 +198,13 @@ describe('General cases', () => {
     await jsonTestRunner('general-test-cases');
   });
   
-  test('京都通り名のテスト', async () => {
+  test('京都通り名のテスト(1)', async () => {
     await jsonTestRunner('kyoto-street-name-cases');
   });
 
+  test('京都通り名のテスト(2)', async () => {
+    await jsonTestRunner('kyoto-schools');
+  });
   test('標準入力からのテスト', async () => {
     const input = '東京都千代田区紀尾井町1-3　デジタル庁';
     const { stdout } = await runGeocoder(OutputFormat.JSON, {

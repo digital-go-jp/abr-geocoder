@@ -38,6 +38,9 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
     
     address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}$2`);
 
+    // 「1丁目下る」の「丁目」を省略して書く事がある
+    address = address?.replaceAll(RegExpEx.create(`([0-9]+)(?:丁目|${DASH})(上る|下る)`, 'g'), `$1$2`);
+
     address = address?.
       replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
       replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
