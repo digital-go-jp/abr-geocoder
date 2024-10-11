@@ -40,10 +40,6 @@ import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
-type GetWardRowsOptions = {
-  ward: string;
-  city_key: number;
-};
 // type GetOazaChoPatternsOptions = {
 //   pref_key: number;
 //   city_key: number;
@@ -628,7 +624,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         rep_lat: string;
         rep_lon: string;
         coordinate_level: number;
-      }
+      };
       const otherRows = this.prepare<unknown[], OtherRow>(`
         SELECT
             (city_key || ${DataField.OAZA_CHO.dbColumn}) as pkey,
@@ -682,7 +678,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           }
         }
         return row;
-      })
+      });
 
 
       this.exec('DROP TABLE resultTable');
@@ -1047,8 +1043,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         ...row,
         rep_lat: parseFloat(row.rep_lat),
         rep_lon: parseFloat(row.rep_lon),
-        coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA
-      }
+        coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA,
+      };
     });
   }
 

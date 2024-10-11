@@ -41,6 +41,9 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
     // 「1丁目下る」の「丁目」を省略して書く事がある
     address = address?.replaceAll(RegExpEx.create(`([0-9]+)(?:丁目|${DASH})(上る|下る)`, 'g'), `$1$2`);
 
+    // 「丁目」を DASHにする
+    address = address?.replaceAll(RegExpEx.create('丁目', 'g'), DASH);
+
     address = address?.
       replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
       replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
@@ -73,8 +76,16 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
       row.oaza_cho = toHankakuAlphaNum(row.oaza_cho);
       row.chome = toHankakuAlphaNum(row.chome);
       row.koaza = toHankakuAlphaNum(row.koaza);
+
+      // (通り名)+(大字)
       tree.append({
         key: KyotoStreetTrieFinder.normalizeStr(row.key),
+        value: row,
+      });
+
+      // 通り名が間違えている（もしくはDBに該当がない）場合に備えて、大字だけでもヒットさせる
+      tree.append({
+        key: KyotoStreetTrieFinder.normalizeStr(row.oaza_cho),
         value: row,
       });
     }
@@ -84,5 +95,5 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;
-  }
+  };
 }

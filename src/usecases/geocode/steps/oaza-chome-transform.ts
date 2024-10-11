@@ -80,7 +80,7 @@ export class OazaChomeTransform extends Transform {
     // ------------------------
     const results = new QuerySet();
     for await (const query of queries.values()) {
-      if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
+      if (query.match_level.num >= MatchLevel.MACHIAZA.num) {
         // 大字が既に判明している場合はスキップ
         results.add(query);
         continue;

@@ -62,5 +62,5 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder<CityMatchingInfo>
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;
-  }
+  };
 }

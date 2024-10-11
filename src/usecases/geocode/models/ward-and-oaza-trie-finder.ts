@@ -61,5 +61,5 @@ export class WardAndOazaTrieFinder extends TrieAddressFinder<OazaChoMachingInfo>
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;
-  }
+  };
 }

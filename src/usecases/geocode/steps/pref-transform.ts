@@ -36,9 +36,6 @@ export class PrefTransform extends Transform {
     super({
       objectMode: true,
     });
-
-    // 都道府県のトライ木
-    this.prefTrie = this.prefTrie;
   }
 
   async _transform(

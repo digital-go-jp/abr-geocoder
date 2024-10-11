@@ -116,5 +116,5 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;
-  }
+  };
 }

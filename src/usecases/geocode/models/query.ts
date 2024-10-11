@@ -322,11 +322,14 @@ export class Query implements IQuery {
     ]).join('');
     formatted_address.push(addressComponents);
 
+    const KOAZA_MARK_START = '<KS>';
+    const KOAZA_MARK_END = '<KE>';
     if (this.koaza_aka_code === 2) {
       // 京都の通り名の場合、(小字 = 通り名)(大字) になっている
+      // スコア計算のときには通り名を含みたいが、最終結果には含みたくないので `<K>` で挟む
       formatted_address.push(
         this.eliminateEmptyElement([
-          this.koaza?.trim(),
+          `${KOAZA_MARK_START}${this.koaza?.trim()}${KOAZA_MARK_END}`,
           this.oaza_cho?.trim(),
         ]).join(''),
       );
@@ -402,12 +405,17 @@ export class Query implements IQuery {
     // 最終的な文字列と一番最初のクエリ文字列の類似度を計算する
     const originalInput = this.input.data.address.replaceAll(RegExpEx.create('[ 　]+', 'g'), ' ');
     const score = getLevenshteinDistanceRatio(
-      toHankakuAlphaNum(result),
+      toHankakuAlphaNum(result.replace(KOAZA_MARK_START, '').replace(KOAZA_MARK_END, '')),
       toHankakuAlphaNum(originalInput),
     );
 
+
+
+    // 京都の通り名の場合、(小字 = 通り名)が”表記の揺れ" なので、省く
+    
+
     return {
-      address: result,
+      address: result.replace(RegExpEx.create(`${KOAZA_MARK_START}.*?${KOAZA_MARK_END}`), ''),
       score,
     };
   }

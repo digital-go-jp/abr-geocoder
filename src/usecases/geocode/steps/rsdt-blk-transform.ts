@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';

@@ -29,7 +29,6 @@ import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
 import { AbrGeocoderInput } from "./models/abrg-input-data";
 import { Query, QueryJson } from "./models/query";
 import { GeocodeTransform, GeocodeWorkerInitData } from "./worker/geocode-worker";
-import { EnvProvider } from "@domain/models/env-provider";
 
 class AbrGeocoderTaskInfo extends AsyncResource {
   next: AbrGeocoderTaskInfo | undefined;

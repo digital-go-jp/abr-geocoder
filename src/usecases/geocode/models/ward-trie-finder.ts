@@ -26,7 +26,7 @@ export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
     // カタカナは全てひらがなにする（南アルプス市）
     address = toHiragana(address);
     return address;
-  }
+  };
 
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
     const { version } = getPackageInfo();
@@ -66,5 +66,5 @@ export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;
-  }
+  };
 }

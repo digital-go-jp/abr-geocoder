@@ -21,14 +21,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { MatchLevel } from '@domain/types/geocode/match-level';
-import { OazaChoMachingInfo } from '@domain/types/geocode/oaza-cho-info';
-import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
-import { trimDashAndSpace } from '../services/trim-dash-and-space';
 import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class WardAndOazaTransform extends Transform {
 

@@ -117,10 +117,7 @@ export class GeocodeTransform extends Duplex {
     const tokyo23WardTransform = new Tokyo23WardTranform(params.tokyo23WardTrie);
 
     // 〇〇区で始まるパターン(東京23区以外)
-    const wardTransform = new WardTransform({
-      db: params.commonDb,
-      wardTrie: params.wardTrie,
-    });
+    const wardTransform = new WardTransform(params.wardTrie);
 
     // 住所の正規化処理
     //
@@ -171,8 +168,8 @@ export class GeocodeTransform extends Duplex {
       .pipe(wardTransform)
       .pipe(tokyo23TownTransform)
       .pipe(tokyo23WardTransform)
-      .pipe(kyotoStreetTransform)
       .pipe(oazaChomeTransform)
+      .pipe(kyotoStreetTransform)
       .pipe(chomeTransform)
       .pipe(koazaTransform)
       .pipe(rsdtBlkTransform)

@@ -484,7 +484,7 @@ export const jisKanjiForCharNode = (target: CharNode | undefined): CharNode | un
       continue;
     }
 
-    let cnt = matches[0].depth;
+    const cnt = matches[0].depth;
     let i = 0;
     while (head && i < cnt) {
       if (head.ignore) {

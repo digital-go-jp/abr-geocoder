@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { RsdtDspInfo } from '@domain/types/geocode/rsdt-dsp-info';

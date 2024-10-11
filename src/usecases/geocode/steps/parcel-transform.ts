@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR, KANJI_NUMS, SPACE } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { TableKeyProvider } from '@domain/services/table-key-provider';
 import { MatchLevel } from '@domain/types/geocode/match-level';
@@ -110,6 +109,17 @@ export class ParcelTransform extends Transform {
       let anyHit = false;
       const searchInfo = this.getPrcId(query);
       if (searchInfo) {
+
+        const machiaza_id = (() => {
+          if (query.koaza_aka_code !== 2) {
+            return query.machiaza_id;
+          }
+
+          // 京都の通り名の場合、大字のmachiaza_idを使用する
+          // (通り名にも machiaza_idが割り当てられているが、parcelテーブルにはない)
+          return query.machiaza_id?.substring(0, 4) + `000`;
+        })();
+        
         // city_key, town_key で指定した地番情報を取得
         const findResults = await db.getParcelRows({
           prc_id: searchInfo.parcel_key,
@@ -117,7 +127,7 @@ export class ParcelTransform extends Transform {
             lg_code: query.lg_code,
           }),
           town_key: TableKeyProvider.getTownKey({
-            machiaza_id: query.machiaza_id,
+            machiaza_id,
             lg_code: query.lg_code,
           }),
         });
@@ -156,6 +166,16 @@ export class ParcelTransform extends Transform {
       // 枝番1だけで探索する
       const searchInfo2 = this.getPrcIdWithNum1(query);
       if (searchInfo2) {
+        const machiaza_id = (() => {
+          if (query.koaza_aka_code !== 2) {
+            return query.machiaza_id;
+          }
+
+          // 京都の通り名の場合、大字のmachiaza_idを使用する
+          // (通り名にも machiaza_idが割り当てられているが、parcelテーブルにはない)
+          return query.machiaza_id?.substring(0, 4) + `000`;
+        })();
+
         // city_key, town_key で指定した地番情報を取得
         const findResults = await db.getParcelRows({
           prc_id: searchInfo2.parcel_key,
@@ -163,7 +183,7 @@ export class ParcelTransform extends Transform {
             lg_code: query.lg_code,
           }),
           town_key: TableKeyProvider.getTownKey({
-            machiaza_id: query.machiaza_id,
+            machiaza_id,
             lg_code: query.lg_code,
           }),
         });

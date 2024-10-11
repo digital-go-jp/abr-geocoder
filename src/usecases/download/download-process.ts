@@ -30,7 +30,6 @@ import { FileGroupKey } from '@domain/types/download/file-group';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { PrefLgCode, isPrefLgCode } from '@domain/types/pref-lg-code';
-import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
 import { loadGeocoderTrees, removeGeocoderCaches } from '@usecases/geocode/services/load-geoder-trees';
 import { StatusCodes } from 'http-status-codes';

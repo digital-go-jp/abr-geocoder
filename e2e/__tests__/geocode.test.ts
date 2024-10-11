@@ -106,82 +106,40 @@ const jsonTestRunner = async (testCaseName: string) => {
 
 describe('debug', () => {
 
-  test('東山区大和大路通七条下る5丁目下池田町527-3', async () => {
-    const input = '東山区大和大路通七条下る5丁目下池田町527';
+  test('伏見区下板橋町610', async () => {
+    const input = '伏見区下板橋町610';
     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
       input,
     });
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "東山区大和大路通七条下る5丁目下池田町527"
+        "input": "伏見区下板橋町610"
       },
       "result": {
-        "output": "京都府京都市東山区大和大路通七条下る5下池田町527",
-        "other": "527",
-        "score": 0.7,
-        "match_level": "machiaza",
-        "coordinate_level": "city",
-        "lat": 34.997082,
-        "lon": 135.776282,
-        "lg_code": "261050",
-        "machiaza_id": "0202000",
-        "rsdt_addr_flg": -1,
+        "output": "京都府京都市伏見区下板橋町610",
+        "other": null,
+        "match_level": "parcel",
+        "coordinate_level": "machiaza_detail",
+        "lat": 35.014288,
+        "lon": 135.763985,
+        "lg_code": "261092",
+        "machiaza_id": "9009107",
+        "rsdt_addr_flg": 0,
         "blk_id": null,
         "rsdt_id": null,
         "rsdt2_id": null,
-        "prc_id": null,
+        "prc_id": "006100000000000",
         "pref": "京都府",
         "county": null,
         "city": "京都市",
-        "ward": "東山区",
-        "oaza_cho": "大和大路",
+        "ward": "伏見区",
+        "oaza_cho": "下板橋町",
         "chome": null,
         "koaza": null,
         "blk_num": null,
         "rsdt_num": null,
         "rsdt_num2": null,
-        "prc_num1": null,
-        "prc_num2": null,
-        "prc_num3": null
-      }
-    });
-  });
-
-  test('右京区京北周山町中山51', async () => {
-    const input = '右京区京北周山町中山51';
-    const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
-      input,
-    });
-    expect(JSON.parse(stdout)).toMatchObject({
-      "query": {
-        "input": "右京区京北周山町中山51"
-      },
-      "result": {
-        "output": "京都府京都市右京区中山51",
-        "other": "51",
-        "score": 0.39,
-        "match_level": "machiaza_detail",
-        "coordinate_level": "machiaza_detail",
-        "lat": 35.124269,
-        "lon": 135.640117,
-        "lg_code": "261084",
-        "machiaza_id": "0000118",
-        "rsdt_addr_flg": 0,
-        "blk_id": null,
-        "rsdt_id": null,
-        "rsdt2_id": null,
-        "prc_id": null,
-        "pref": "京都府",
-        "county": null,
-        "city": "京都市",
-        "ward": "右京区",
-        "oaza_cho": null,
-        "chome": null,
-        "koaza": "中山",
-        "blk_num": null,
-        "rsdt_num": null,
-        "rsdt_num2": null,
-        "prc_num1": null,
+        "prc_num1": "610",
         "prc_num2": null,
         "prc_num3": null
       }

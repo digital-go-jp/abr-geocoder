@@ -67,5 +67,5 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder<TownMatchingInfo> {
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;
-  }
+  };
 }

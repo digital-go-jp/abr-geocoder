@@ -74,54 +74,88 @@ export class KyotoStreetTransform extends Transform {
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      
-      
-      const target = trimDashAndSpace(query.tempAddress)?.
-        // 「1丁目下る」の「丁目」を省略して書く事がある
-        replaceAll(RegExpEx.create(`([0-9]+)(?:丁目|${DASH})(上る|下る)`, 'g'), `$1$2`);
+      let maybeIncorrect = false;
+      let target = (() => {
+        const addr = trimDashAndSpace(query.tempAddress)?.
+          // 「1丁目下る」の「丁目」を省略して書く事がある
+          replaceAll(RegExpEx.create(`([0-9]+)(?:丁目|${DASH})(上る|下る)`, 'g'), `$1$2`);
+
+        if (!query.oaza_cho) {
+          return addr;
+        }
+        // 既に大字が判明している場合、大字を付加する。
+        // trie tree には「（大字)(通り名)」で格納しているため
+        // 大字を付けないとヒットしない
+        maybeIncorrect = true;
+        return CharNode.create(query.oaza_cho!)?.concat(addr);
+      })();
+        
       if (!target) {
         results.add(query);
         continue;
       }
       
+      // 京都の通り名の場合、(通り名)+(大字)の構成になっている。
+      // 重要なのは(大字)だけ。
+      // 通り名が間違えていると大字に当たらないので、1文字ずつ場所を変えながら探す
+
       let anyHit = false;
-      const findResults = this.trie.find({
-        target,
-        fuzzy: DEFAULT_FUZZY_CHAR,
-      });
+      const unmatched: string[] = [];
 
-      // 複数にヒットする可能性がある
-      findResults?.forEach(findResult => {
-        if (!findResult.info) {
-          throw new Error('findResult.info is empty');
+      while (!anyHit && target) {
+        const findResults = this.trie.find({
+          target,
+          fuzzy: DEFAULT_FUZZY_CHAR,
+        });
+        if (!findResults || findResults.length === 0) {
+          // 1文字右に移動して、再度検索する
+          unmatched.push(target.originalChar!);
+          target = target.next;
+          continue;
         }
 
-        // 小字(通り名)がヒットした
-        const params: Record<string, CharNode | number | string | MatchLevel> = {
-          tempAddress: findResult.unmatched,
-          match_level: MatchLevel.MACHIAZA_DETAIL,
-          town_key: findResult.info.town_key,
-          city_key: findResult.info.city_key,
-          rsdt_addr_flg: findResult.info.rsdt_addr_flg,
-          oaza_cho: findResult.info.oaza_cho,
-          chome: findResult.info.chome,
-          koaza: findResult.info.koaza,
-          koaza_aka_code: 2,
-          machiaza_id: findResult.info.machiaza_id,
-          matchedCnt: query.matchedCnt + findResult.depth, 
-        };
-        if (findResult.info.rep_lat && findResult.info.rep_lon) {
-          params.coordinate_level = MatchLevel.MACHIAZA_DETAIL;
-          params.rep_lat = findResult.info.rep_lat;
-          params.rep_lon = findResult.info.rep_lon;
-        }
-        const copied = query.copy(params);
-        results.add(copied);
+        // 複数にヒットする可能性がある
+        findResults.forEach(findResult => {
+          if (!findResult.info) {
+            throw new Error('findResult.info is empty');
+          }
 
-        anyHit = true;
-      });
+          const koaza = (() => {
+            // 当たらなかった部分はおそらく通り名
+            if (unmatched.length > 0) {
+              return unmatched.join('');
+            }
+            return findResult.info.koaza;
+          })();
 
-      if (!anyHit) {
+          // 小字(通り名)がヒットした
+          const params: Record<string, CharNode | number | string | MatchLevel> = {
+            tempAddress: findResult.unmatched,
+            match_level: MatchLevel.MACHIAZA_DETAIL,
+            town_key: findResult.info.town_key,
+            city_key: findResult.info.city_key,
+            rsdt_addr_flg: findResult.info.rsdt_addr_flg,
+            oaza_cho: findResult.info.oaza_cho,
+            chome: findResult.info.chome,
+            koaza,
+            koaza_aka_code: 2,
+            machiaza_id: findResult.info.machiaza_id,
+            matchedCnt: query.matchedCnt + findResult.depth,
+            ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0) + (maybeIncorrect ? 1 : 0),
+          };
+          if (findResult.info.rep_lat && findResult.info.rep_lon) {
+            params.coordinate_level = MatchLevel.MACHIAZA_DETAIL;
+            params.rep_lat = findResult.info.rep_lat;
+            params.rep_lon = findResult.info.rep_lon;
+          }
+          const copied = query.copy(params);
+          results.add(copied);
+
+          anyHit = true;
+        });
+      }
+
+      if (!anyHit || maybeIncorrect) {
         results.add(query);
       }
     }

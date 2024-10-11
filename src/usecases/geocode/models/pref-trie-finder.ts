@@ -59,5 +59,5 @@ export class PrefTrieFinder extends TrieAddressFinder<PrefInfo> {
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;
-  }
+  };
 }

@@ -22,21 +22,20 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { ChomeMachingInfo } from '@domain/types/geocode/chome-info';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { ICommonDbGeocode } from '@interface/database/common-db';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
 import { kan2num, kan2numForCharNode } from '../services/kan2num';
-import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
-import { CharNode } from "@usecases/geocode/models/trie/char-node";
-import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
-import { trimDashAndSpace } from '../services/trim-dash-and-space';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
+import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class ChomeTranform extends Transform {
 

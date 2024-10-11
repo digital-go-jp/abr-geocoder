@@ -21,32 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { MatchLevel } from '@domain/types/geocode/match-level';
-import { WardMatchingInfo } from '@domain/types/geocode/ward-info';
-import { ICommonDbGeocode } from '@interface/database/common-db';
-import { CharNode } from "@usecases/geocode/models/trie/char-node";
-import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { WardTrieFinder } from '../models/ward-trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class WardTransform extends Transform {
 
-  private readonly wardTrie: WardTrieFinder;
-  private readonly db: ICommonDbGeocode;
-
-  constructor(params: Required<{
-    wardTrie: WardTrieFinder;
-    db: ICommonDbGeocode;
-  }>) {
+  constructor(
+    private readonly wardTrie: WardTrieFinder,
+  ) {
     super({
       objectMode: true,
     });
-    this.wardTrie = params.wardTrie;
-    this.db = params.db;
   }
 
   async _transform(
