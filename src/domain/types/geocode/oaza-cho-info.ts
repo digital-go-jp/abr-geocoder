@@ -38,8 +38,8 @@ export type OazaChoMachingInfo = {
   pref_key: number;
   city_key: number;
   town_key: number | null;
-  rep_lat: number | null;
-  rep_lon: number | null;
+  rep_lat?: string;
+  rep_lon?: string;
   rsdt_addr_flg: number;
   match_level: MatchLevel;
   coordinate_level: MatchLevel;

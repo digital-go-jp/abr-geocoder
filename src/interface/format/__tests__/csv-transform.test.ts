@@ -22,8 +22,8 @@ class MockQuery {
   formatted?: FormattedAddres;
   match_level?: MatchLevel;
   coordinate_level?: MatchLevel;
-  rep_lat?: number;
-  rep_lon?: number;
+  rep_lat?: string;
+  rep_lon?: string;
   lg_code?: string;
   pref?: string;
   city?: string;
@@ -50,8 +50,8 @@ class MockQuery {
     };
     this.match_level = MatchLevel.CITY;
     this.coordinate_level = MatchLevel.CITY;
-    this.rep_lat = 35.6895;
-    this.rep_lon = 139.6917;
+    this.rep_lat = "35.6895";
+    this.rep_lon = "139.6917";
     this.lg_code = '13101';
     this.pref = '東京都';
     this.city = '千代田区';

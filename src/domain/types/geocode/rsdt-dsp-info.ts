@@ -28,6 +28,6 @@ export type RsdtDspInfo = {
   rsdt2_id: string;
   rsdt_num: number;
   rsdt_num2: number;
-  rep_lat: number;
-  rep_lon: number;
+  rep_lat: string;
+  rep_lon: string;
 };

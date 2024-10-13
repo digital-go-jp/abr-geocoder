@@ -22,18 +22,24 @@
  * SOFTWARE.
  */
 
-export type ChomeMachingInfo = {
+import { MatchLevel } from "./match-level";
+
+export type WardAndOazaInfo = {
   pref_key: number;
-  city_key: number;
-  town_key: number;
-  machiaza_id: string;
-  rsdt_addr_flg: number;
-  chome: string;
   pref: string;
   city: string;
   county: string;
   ward: string;
-  koaza: string;
+  oaza_cho: string;
+  rsdt_addr_flg: number;
+  machiaza_id?: string;
+  lg_code: string;
+  city_key: number;
   rep_lat: string;
   rep_lon: string;
+  match_level: MatchLevel;
+  coordinate_level: MatchLevel;
 };
+export type WardAndOazaMatchingInfo = {
+  key: string;
+} & WardAndOazaInfo;

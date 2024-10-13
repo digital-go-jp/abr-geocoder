@@ -90,7 +90,19 @@ export class OazaChomeTransform extends Transform {
         results.add(query);
         continue;
       }
+      if (query.koaza_aka_code === 2) {
+        // 通り名が当たっている場合はスキップ
+        results.add(query);
+        continue;
+      }
       
+      const bearingWord = query.tempAddress.match(RegExpEx.create('(上る|下る|東入|西入)'));
+      if (bearingWord) {
+        // 京都通り名の特徴がある場合はスキップ
+        results.add(query);
+        continue;
+      }
+
       // ------------------------------------
       // Queryの情報を使って、条件式を作成
       // ------------------------------------
@@ -148,7 +160,7 @@ export class OazaChomeTransform extends Transform {
       let anyHit = false;
       let anyAmbiguous = false;
       filteredResult?.forEach(findResult => {
-        // step2, step3で city_key が判別している場合で
+        // city_key が判別している場合で
         // city_key が異なる場合はスキップ
         if ((copiedQuery.city_key !== undefined) &&
           (copiedQuery.city_key !== findResult.info?.city_key)) {

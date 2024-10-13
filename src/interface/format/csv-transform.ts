@@ -98,10 +98,10 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.match_level.str;
 
           case 'lat':
-            return result.rep_lat?.toString() || '';
+            return result.rep_lat || '';
 
           case 'lon':
-            return result.rep_lon?.toString() || '';
+            return result.rep_lon || '';
 
           case 'pref':
             return result.pref || '';

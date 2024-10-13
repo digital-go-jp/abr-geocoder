@@ -92,6 +92,12 @@ export class ChomeTranform extends Transform {
     const results = new QuerySet();
     for await (const query of queries.values()) {
 
+      if (query.koaza_aka_code === 2) {
+        // 通り名が当たっている場合はスキップ
+        results.add(query);
+        continue;
+      }
+      
       // 丁目を探索するためには、最低限でも city_key が分かっている必要がある。)
       // match_level = unknow, prefecture はスキップする
       if (query.match_level.num < MatchLevel.CITY.num) {

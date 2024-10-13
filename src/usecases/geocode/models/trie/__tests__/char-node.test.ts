@@ -1,11 +1,7 @@
 import { describe, expect, it, jest, test } from '@jest/globals';
 import { CharNode } from '../char-node';
 import { DASH, SPACE } from '@config/constant-values';
-
-// 単体テストなので`toHankakuAlphaNum`はmockする。
-jest.mock("../../to-hankaku-alpha-num", () => ({
-  toHankakuAlphaNum: jest.fn((str: string) => str),
-}));
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 describe("CharNode", () => {
   describe("constructor", () => {
@@ -106,6 +102,116 @@ describe("CharNode", () => {
     });
   });
 
+  describe("headOf", () => {
+    it("should return the head node of the search word.", () => {
+      
+      const node = CharNode.create(`下京区下珠数屋町東洞院東入ル飴屋町`);
+      const result = node?.headOf('東入');
+      expect(result?.toProcessedString()).toBe(`東入ル飴屋町`);
+      expect(result?.toOriginalString()).toBe(`東入ル飴屋町`);
+    });
+
+    it("should return undefined if not found.", () => {
+      
+      const node = CharNode.create(`下京区下珠数屋町東洞院東入ル飴屋町`);
+      const result = node?.headOf('西入')
+      expect(result).toBeUndefined();
+    });
+
+    it("should return undefined if the search word length is too long.", () => {
+      
+      const node = CharNode.create(`あいうえお`);
+      const result = node?.headOf('あいうえおかきく')
+      expect(result).toBeUndefined();
+    });
+    it("should return the head node if the search word is an empty string.", () => {
+      
+      const node = CharNode.create(`あいうえお`);
+      const result = node?.headOf('');
+      expect(result?.toProcessedString()).toBe(`あいうえお`);
+      expect(result?.toOriginalString()).toBe(`あいうえお`);
+    });
+  });
+
+  describe("substring", () => {
+    it("should return the substring with specified range.", () => {
+      
+      const node = CharNode.create(`下京区下珠数屋町東洞院東入ル飴屋町`);
+      const result = node!.substring(3, 6);
+      expect(result?.toProcessedString()).toBe(`下珠数`);
+    });
+    it("should return the substring until the end if indexEnd is omitted.", () => {
+      
+      const node = CharNode.create(`下京区下珠数屋町東洞院東入ル飴屋町`);
+      const result = node!.substring(3);
+      expect(result?.toProcessedString()).toBe(`下珠数屋町東洞院東入ル飴屋町`);
+    });
+    it("should return the substrings as expected.", () => {
+      
+      const node = CharNode.create(`下京区下珠数屋町東洞院東入ル飴屋町`);
+      const koaza = node!.substring(0, 11);
+      expect(koaza?.toProcessedString()).toBe(`下京区下珠数屋町東洞院`);
+      const bearing = node!.substring(11, 14);
+      expect(bearing?.toProcessedString()).toBe(`東入ル`);
+      const oazaCho = node!.substring(14);
+      expect(oazaCho?.toProcessedString()).toBe(`飴屋町`);
+    });
+  });
+
+  describe("match", () => {
+    it("should return the head node of the search word.", () => {
+      
+      const node = CharNode.create(`下京区下珠数屋町東洞院東入ル飴屋町`);
+      const result = node!.match(/[東西]入/g);
+      expect(result?.node.toProcessedString()).toBe(`東入ル飴屋町`);
+      expect(result?.index).toBe(11);
+      expect(result?.lastIndex).toBe(13);
+    });
+
+    it("should return the first matched positions only.", () => {
+      
+      const node = CharNode.create(`table football, foosball`);
+      const result = node!.match(/fo*/g);
+      expect(result?.node.toProcessedString()).toBe(`football, foosball`);
+      expect(result?.index).toBe(6);
+      expect(result?.lastIndex).toBe(9);
+    });
+    it("should return the head node of the search word for non-global regexp.", () => {
+      
+      const node = CharNode.create(`寺町通石薬師下る西側染殿町658`);
+      const result = node!.match(RegExpEx.create('(?:上|下|東入|西入)る?'));
+      expect(result?.node.toProcessedString()).toBe(`下る西側染殿町658`);
+      expect(result?.index).toBe(6);
+      expect(result?.lastIndex).toBe(8);
+    });
+
+  });
+
+  describe("matchAll", () => {
+    it("should return the head node of the search word.", () => {
+      
+      const node = CharNode.create(`下京区下珠数屋町東洞院東入ル飴屋町`);
+      const results = node!.matchAll(/[東西]入/g);
+      expect(results.length).toBe(1);
+      expect(results[0].node.toProcessedString()).toBe(`東入ル飴屋町`);
+      expect(results[0].index).toBe(11);
+      expect(results[0].lastIndex).toBe(13);
+    });
+
+    it("should return the all matched positions.", () => {
+      
+      const node = CharNode.create(`table football, foosball`);
+      const results = node!.matchAll(/fo*/g);
+      expect(results.length).toBe(2);
+      expect(results[0].node.toProcessedString()).toBe(`football, foosball`);
+      expect(results[0].index).toBe(6);
+      expect(results[0].lastIndex).toBe(9);
+      expect(results[1].node.toProcessedString()).toBe(`foosball`);
+      expect(results[1].index).toBe(16);
+      expect(results[1].lastIndex).toBe(19);
+    });
+  });
+
   describe("trimWith", () => {
     it("should return remove the SPACEs at prefix and suffix.", () => {
       
@@ -156,6 +262,17 @@ describe("CharNode", () => {
       expect(clone.next?.originalChar).toBe("cd");
       expect(clone.next?.char).toBe("ef");
       expect(clone.next?.ignore).toBeTruthy();
+    });
+  });
+
+  describe("joinWith", () => {
+    it("should create a connected string", () => {
+      const str1 = CharNode.create("str1");
+      const str2 = CharNode.create("str2");
+      const connector = CharNode.create('<connect>')!;
+      const result = CharNode.joinWith(connector, str1, str2);
+
+      expect(result?.toProcessedString()).toBe("str1<connect>str2");
     });
   });
 

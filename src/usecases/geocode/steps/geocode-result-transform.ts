@@ -125,14 +125,44 @@ export class GeocodeResultTransform extends Transform {
       }
 
       // 残り文字数が少ないほうに+1
-      const restA = a.tempAddress?.toString().length || 0;
-      const restB = b.tempAddress?.toString().length || 0;
+      const restA = a.tempAddress?.toProcessedString().length || 0;
+      const restB = b.tempAddress?.toProcessedString().length || 0;
       if (restA < restB) {
         totalScoreA += 1;
       } else if (restA > restB) {
         totalScoreB += 1;
       }
       
+      // 緯度経度の精度が高い方に+1
+      // switch (true) {
+      //   case a.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num &&
+      //     b.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num: {
+          
+      //     if (a.coordinate_level.num < b.coordinate_level.num) {
+      //       totalScoreA += 1;
+      //     } else if (a.coordinate_level.num > b.coordinate_level.num) {
+      //       totalScoreB += 1;
+      //     }
+      //     break;
+      //   }
+
+      //   case a.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num &&
+      //     b.coordinate_level.num > MatchLevel.MACHIAZA_DETAIL.num: {
+      //       totalScoreB += 1;
+      //     break;
+      //   }
+
+      //   case a.coordinate_level.num > MatchLevel.MACHIAZA_DETAIL.num &&
+      //     b.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num: {
+      //       totalScoreA += 1;
+      //     break;
+      //   }
+
+      //   default:
+      //     // Do nothing here
+      //     break;
+      // }
+
       // マッチレベルが高いほうが優先
       if (totalScoreB - totalScoreA !== 0) {
         return totalScoreB - totalScoreA;

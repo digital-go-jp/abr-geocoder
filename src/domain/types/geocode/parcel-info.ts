@@ -28,6 +28,6 @@ export type ParcelInfo = {
   prc_num1: string;
   prc_num2: string;
   prc_num3: string;
-  rep_lat: number;
-  rep_lon: number;
+  rep_lat: string;
+  rep_lon: string;
 };

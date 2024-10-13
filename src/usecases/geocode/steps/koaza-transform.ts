@@ -82,16 +82,22 @@ export class KoazaTransform extends Transform {
     const results = new QuerySet();
     for await (const query of queries.values()) {
 
+      if (query.koaza_aka_code === 2) {
+        // 通り名が当たっている場合はスキップ
+        results.add(query);
+        continue;
+      }
+      
       // 最低限、市区町村レベルまでは分かっている必要がある
       if (query.match_level.num < MatchLevel.CITY.num) {
         results.add(query);
         continue;
       }
       // 既に判明している場合はスキップ
-      // if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
-      //   results.push(query);
-      //   continue;
-      // }
+      if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
+        results.add(query);
+        continue;
+      }
 
       // 小字が判明している場合はスキップ
       if (query.town_key && query.koaza) {

@@ -32,6 +32,7 @@ import { RsdtBlkInfo } from "@domain/types/geocode/rsdt-blk-info";
 import { RsdtDspInfo } from "@domain/types/geocode/rsdt-dsp-info";
 import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
+import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
 
 export interface ICommonDbUpdateCheck {
   getLgCodes(): Promise<string[]>;
@@ -81,7 +82,7 @@ export interface ICommonDbGeocode {
   //   city_key: number;
   //   town_key: number;
   // }>): Promise<OazaChoMachingInfo[]>;
-  getWardAndOazaChoList(): Promise<OazaChoMachingInfo[]>;
+  getWardAndOazaChoList(): Promise<WardAndOazaMatchingInfo[]>;
 
   getChomeRows(where: Partial<{
     pref_key: number;

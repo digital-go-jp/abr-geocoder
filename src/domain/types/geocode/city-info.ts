@@ -30,8 +30,8 @@ export type CityInfo = {
   city: string;
   ward: string;
   lg_code: string;
-  rep_lat: number;
-  rep_lon: number;
+  rep_lat: string;
+  rep_lon: string;
 };
 export type CityMatchingInfo = {
   key: string;

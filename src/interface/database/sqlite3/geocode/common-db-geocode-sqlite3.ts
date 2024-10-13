@@ -39,6 +39,7 @@ import { ICommonDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
 
 // type GetOazaChoPatternsOptions = {
 //   pref_key: number;
@@ -238,10 +239,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
 
   async getCityList(): Promise<CityInfo[]> {
-    type CityRow = Omit<CityInfo, 'pref' | 'rep_lat' | 'rep_lon'> & {
-      rep_lat: string;
-      rep_lon: string;
-    };
+    type CityRow = Omit<CityInfo, 'pref'>;
 
     const [
       prefMap,
@@ -257,23 +255,13 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
             ${DataField.COUNTY.dbColumn} as county,
             ${DataField.CITY.dbColumn} as city,
             ${DataField.WARD.dbColumn} as ward,
-            cast(${DataField.REP_LAT.dbColumn} as text) as rep_lat,
-            cast(${DataField.REP_LON.dbColumn} as text) as rep_lon
+            ${DataField.REP_LAT.dbColumn} as rep_lat,
+            ${DataField.REP_LON.dbColumn} as rep_lon
           FROM
             ${DbTableName.CITY}
         `).all();
 
-        // SQLiteが浮動小数点数誤差を挿入してくるのを防ぐために、Text型で取る
-        // コード側でparseする
-        const results = townRows.map(row => {
-          return {
-            ...row,
-            rep_lat: parseFloat(row.rep_lat),
-            rep_lon: parseFloat(row.rep_lon),
-          };
-        });
-
-        resolve(results);
+        resolve(townRows);
       }),
     ]);
 
@@ -326,8 +314,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       koaza: string;
       rsdt_addr_flg: number;
       coordinate_level: number;
-      rep_lat: string | null;  // SQLiteによる小数点誤差導入を防ぐためにTEXT型
-      rep_lon: string | null;
+      rep_lat?: string;
+      rep_lon?: string;
     };
 
     const [
@@ -352,8 +340,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           chome TEXT,
           koaza TEXT,
           rsdt_addr_flg INTEGER,
-          rep_lat TEXT DEFAULT null,
-          rep_lon TEXT DEFAULT null,
+          rep_lat TEXT,
+          rep_lon TEXT,
           match_level INTEGER,
           coordinate_level INTEGER
         );
@@ -380,11 +368,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           ${DataField.CHOME.dbColumn} as chome,
           '' as koaza,
           ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-          cast(${DataField.REP_LAT.dbColumn} as text) as rep_lat,
-          cast(${DataField.REP_LON.dbColumn} as text) as rep_lon,
+          ${DataField.REP_LAT.dbColumn} as rep_lat,
+          ${DataField.REP_LON.dbColumn} as rep_lon,
           ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
           IIF(
-            ${DataField.REP_LAT.dbColumn} IS NULL,
+            ${DataField.REP_LAT.dbColumn} = '' OR ${DataField.REP_LAT.dbColumn} IS NULL,
             ${MatchLevel.UNKNOWN.num},
             ${MatchLevel.MACHIAZA_DETAIL.num}
           ) as coordinate_level
@@ -407,7 +395,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * パターン： 〇〇(大字)〇〇丁目
         *
         * 〇〇丁目の場合、全体を包括する緯度経度やmachiaza_id がないので
-        * machiaza_idの上4桁だけを採用し、rep_lat, rep_lonは null にする
+        * machiaza_idの上4桁だけを採用し、rep_lat, rep_lonは NULL にする
         *
         * 霞が関一丁目 -> 35.673944,139.752558
         * 霞が関二丁目 -> 35.675551,139.750413
@@ -468,11 +456,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           '' as chome,
           ${DataField.KOAZA.dbColumn} as koaza,
           ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-          cast(${DataField.REP_LAT.dbColumn} as text) as rep_lat,
-          cast(${DataField.REP_LON.dbColumn} as text) as rep_lon,
+          ${DataField.REP_LAT.dbColumn} as rep_lat,
+          ${DataField.REP_LON.dbColumn} as rep_lon,
           ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
           IIF(
-            ${DataField.REP_LAT.dbColumn} IS NULL,
+            ${DataField.REP_LAT.dbColumn} = '' OR ${DataField.REP_LAT.dbColumn} IS NULL,
             ${MatchLevel.UNKNOWN.num},
             ${MatchLevel.MACHIAZA_DETAIL.num}
           ) as coordinate_level
@@ -505,11 +493,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           '' as chome,
           ${DataField.KOAZA.dbColumn} as koaza,
           ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-          cast(${DataField.REP_LAT.dbColumn} as text) as rep_lat,
-          cast(${DataField.REP_LON.dbColumn} as text) as rep_lon,
+          ${DataField.REP_LAT.dbColumn} as rep_lat,
+          ${DataField.REP_LON.dbColumn} as rep_lon,
           ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
           IIF(
-            ${DataField.REP_LAT.dbColumn} IS NULL,
+            ${DataField.REP_LAT.dbColumn} = '' OR ${DataField.REP_LAT.dbColumn} IS NULL,
             ${MatchLevel.UNKNOWN.num},
             ${MatchLevel.MACHIAZA_DETAIL.num}
           ) as coordinate_level
@@ -551,11 +539,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
             ${DataField.CHOME.dbColumn} as chome,
             '' as koaza,
             ${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-            cast(${DataField.REP_LAT.dbColumn} as text) as rep_lat,
-            cast(${DataField.REP_LON.dbColumn} as text) as rep_lon,
+            ${DataField.REP_LAT.dbColumn} as rep_lat,
+            ${DataField.REP_LON.dbColumn} as rep_lon,
             ${MatchLevel.MACHIAZA.num} as match_level,
             IIF(
-              ${DataField.REP_LAT.dbColumn} IS NULL,
+              ${DataField.REP_LAT.dbColumn} = '' OR ${DataField.REP_LAT.dbColumn} IS NULL,
               ${MatchLevel.UNKNOWN.num},
               ${MatchLevel.MACHIAZA.num}
             ) as coordinate_level
@@ -628,10 +616,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       const otherRows = this.prepare<unknown[], OtherRow>(`
         SELECT
             (city_key || ${DataField.OAZA_CHO.dbColumn}) as pkey,
-            cast(${DataField.REP_LAT.dbColumn} as text) as rep_lat,
-            cast(${DataField.REP_LON.dbColumn} as text) as rep_lon,
+            ${DataField.REP_LAT.dbColumn} as rep_lat,
+            ${DataField.REP_LON.dbColumn} as rep_lon,
             IIF(
-              ${DataField.REP_LAT.dbColumn} IS NULL,
+              ${DataField.REP_LAT.dbColumn} = '' OR ${DataField.REP_LAT.dbColumn} IS NULL,
               ${MatchLevel.UNKNOWN.num},
               ${MatchLevel.MACHIAZA.num}
             ) as coordinate_level
@@ -696,12 +684,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       const city = cityMap.get(townRow.city_key)!;
       const pref = prefMap.get(city.pref_key)!;
 
-      let rep_lat = townRow.rep_lat && parseFloat(townRow.rep_lat) || null;
-      let rep_lon = townRow.rep_lon && parseFloat(townRow.rep_lon) || null;
       let coordinate_level = MatchLevel.from(townRow.coordinate_level);
       if (coordinate_level.num === MatchLevel.UNKNOWN.num) {
-        rep_lat = city.rep_lat;
-        rep_lon = city.rep_lon;
+        townRow.rep_lat = city.rep_lat;
+        townRow.rep_lon = city.rep_lon;
         coordinate_level = MatchLevel.CITY;
       }
 
@@ -721,8 +707,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         town_key: townRow.town_key,
         rsdt_addr_flg: townRow.rsdt_addr_flg,
         match_level: MatchLevel.from(townRow.match_level),
-        rep_lat,
-        rep_lon,
+        rep_lat: townRow.rep_lat,
+        rep_lon: townRow.rep_lon,
         coordinate_level,
       };
     });
@@ -752,12 +738,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         }),
       };
 
-      type Row = Omit<TownMatchingInfo, 'rep_lat' | 'rep_lon'> & {
-        rep_lat: string | null;
-        rep_lon: string | null;
-      };
-
-      const results = this.prepare<SQLParams, Row>(`
+      const results = this.prepare<SQLParams, TownMatchingInfo>(`
         SELECT
           c.pref_key,
           c.city_key,
@@ -779,8 +760,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           t.${DataField.CHOME.dbColumn} as chome,
           t.${DataField.KOAZA.dbColumn} as koaza,
           t.${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-          cast(t.${DataField.REP_LAT.dbColumn} as text) as rep_lat,
-          cast(t.${DataField.REP_LON.dbColumn} as text) as rep_lon
+          t.${DataField.REP_LAT.dbColumn} as rep_lat,
+          t.${DataField.REP_LON.dbColumn} as rep_lon
         from 
           ${DbTableName.PREF} p
           JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
@@ -790,13 +771,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           t.${DataField.KOAZA_AKA_CODE.dbColumn} != 2 AND
           c.pref_key = @tokyo_pref_key
       `).all(params);
-      resolve(results.map(row => {
-        return {
-          ...row,
-          rep_lat: row.rep_lat && parseFloat(row.rep_lat) || null,
-          rep_lon: row.rep_lon && parseFloat(row.rep_lon) || null,
-        } as TownMatchingInfo;
-      }));
+      resolve(results);
     });
   };
 
@@ -825,12 +800,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   // -----------------------------------------
   // 〇〇区△△ のHashMapを返す（△△は大字）
   // -----------------------------------------
-  getWardAndOazaChoList(): Promise<OazaChoMachingInfo[]> {
+  getWardAndOazaChoList(): Promise<WardAndOazaMatchingInfo[]> {
     type WardAndOazaRow = {
       key: string;
       match_level: number;
       coordinate_level: number;
-      town_key: number;
       city_key: number;
       pref_key: number;
       machiaza_id: string;
@@ -840,94 +814,148 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       pref: string;
       city: string;
       lg_code: string;
-      koaza: string;
       rsdt_addr_flg: number;
-      rep_lat: string | null;
-      rep_lon: string | null;
+      rep_lat: string;
+      rep_lon: string;
     };
 
-    const rows = this.prepare<unknown[], WardAndOazaRow>(`
-      SELECT
-        c.city_key,
-        c.pref_key,
-        p.${DataField.PREF.dbColumn} as pref,
-        c.${DataField.LG_CODE.dbColumn} as lg_code,
-        c.${DataField.COUNTY.dbColumn} as county,
-        c.${DataField.CITY.dbColumn} as city,
-        c.${DataField.WARD.dbColumn} as ward,
-        t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-        (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000') AS machiaza_id,
-        
-        IIF(
-          (t.${DataField.KOAZA.dbColumn} IS NULL OR t.${DataField.KOAZA.dbColumn} = '') AND 
-          (t.${DataField.CHOME.dbColumn} IS NULL OR t.${DataField.CHOME.dbColumn} = ''),
-          -- chome,koaza がない場合は、大字で確定
-          t.${DataField.RSDT_ADDR_FLG.dbColumn},
+    return new Promise((resolve: (rows: WardAndOazaRow[]) => void) => {
 
-          -- 大字・小字に rsdt_addr_flg で 0,1 が混在する可能性があるので
-          -- AMBIGUOUS_RSDT_ADDR_FLG(-1)
-          ${AMBIGUOUS_RSDT_ADDR_FLG}
-        ) as rsdt_addr_flg,
+      this.exec('BEGIN TRANSACTION');
 
-        IIF(
-          (t.${DataField.KOAZA.dbColumn} IS NULL OR t.${DataField.KOAZA.dbColumn} = '') AND 
-          (t.${DataField.CHOME.dbColumn} IS NULL OR t.${DataField.CHOME.dbColumn} = ''),
-          t.${DataField.REP_LAT.dbColumn},
-          c.${DataField.REP_LAT.dbColumn}
-        ) as rep_lat,
-         
-        IIF(
-          (t.${DataField.KOAZA.dbColumn} IS NULL OR t.${DataField.KOAZA.dbColumn} = '') AND 
-          (t.${DataField.CHOME.dbColumn} IS NULL OR t.${DataField.CHOME.dbColumn} = ''),
-          t.${DataField.REP_LON.dbColumn},
-          c.${DataField.REP_LON.dbColumn}
-        ) as rep_lon,
-         
-        IIF(
-          (t.${DataField.KOAZA.dbColumn} IS NULL OR t.${DataField.KOAZA.dbColumn} = '') AND 
-          (t.${DataField.CHOME.dbColumn} IS NULL OR t.${DataField.CHOME.dbColumn} = ''),
-          ${MatchLevel.MACHIAZA.num},
-          ${MatchLevel.CITY.num}
-        ) as coordinate_level,
-         
-        (c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn}) as key
-      FROM
-        ${DbTableName.PREF} p
-        JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
-        JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
-      WHERE
-        c.${DataField.CITY.dbColumn} != '' AND
-        c.${DataField.WARD.dbColumn} != '' AND
-        t.${DataField.OAZA_CHO.dbColumn} != '' AND
-        t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
-      GROUP BY
-        (c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn})
-    `).all();
+      this.exec(`
+        CREATE TEMP TABLE WardAndOazaChoTmpTable (
+          pkey TEXT PRIMARY KEY,
+          key TEXT,
+          pref_key INTEGER,
+          city_key INTEGER,
+          pref TEXT,
+          county TEXT,
+          city TEXT,
+          ward TEXT,
+          lg_code TEXT,
+          oaza_cho TEXT,
+          machiaza_id TEXT,
+          rsdt_addr_flg INTEGER,
+          rep_lat TEXT,
+          rep_lon TEXT,
+          coordinate_level INTEGER
+        );
+      `);
 
-    const results: OazaChoMachingInfo[] = rows.map(row => {
-      const coordinate_level = row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA;
-      return {
-        key: row.key,
-        pref: row.pref,
-        pref_key: row.pref_key,
-        city_key: row.city_key,
-        city: row.city,
-        town_key: null,
-        koaza: '',
-        chome: '',
-        match_level: MatchLevel.MACHIAZA,
-        coordinate_level,
-        county: row.county,
-        ward: row.ward,
-        lg_code: row.lg_code,
-        oaza_cho: row.oaza_cho,
-        machiaza_id: row.machiaza_id,
-        rep_lat: row.rep_lat && parseFloat(row.rep_lat) || null,
-        rep_lon: row.rep_lon && parseFloat(row.rep_lon) || null,
-        rsdt_addr_flg: row.rsdt_addr_flg,
-      };
+      this.exec(`
+        INSERT INTO WardAndOazaChoTmpTable
+        SELECT
+          (
+            c.city_key ||
+            (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000')
+          ) as pkey,
+          (
+            c.${DataField.WARD.dbColumn} ||
+            t.${DataField.OAZA_CHO.dbColumn}
+          ) as key,
+          p.pref_key,
+          c.city_key,
+          p.${DataField.PREF.dbColumn} as pref,
+          c.${DataField.COUNTY.dbColumn} as county,
+          c.${DataField.CITY.dbColumn} as city,
+          c.${DataField.WARD.dbColumn} as ward,
+          c.${DataField.LG_CODE.dbColumn} as lg_code,
+          t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+          (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000') AS machiaza_id,
+          -1 as rsdt_addr_flg,
+          c.${DataField.REP_LAT.dbColumn} as rep_lat,
+          c.${DataField.REP_LON.dbColumn} as rep_lon,
+          ${MatchLevel.CITY.num} as coordinate_level
+        FROM
+          ${DbTableName.PREF} as p
+          JOIN ${DbTableName.CITY} as c ON p.pref_key = c.pref_key
+          JOIN ${DbTableName.TOWN} as t ON c.city_key = t.city_key
+        WHERE
+          c.${DataField.CITY.dbColumn} != '' AND
+          c.${DataField.WARD.dbColumn} != '' AND
+          t.${DataField.OAZA_CHO.dbColumn} != '' AND
+          t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL AND
+          (
+            (
+              t.${DataField.CHOME.dbColumn} != '' AND
+              t.${DataField.CHOME.dbColumn} IS NOT NULL
+            ) OR (
+              t.${DataField.KOAZA.dbColumn} != '' AND
+              t.${DataField.KOAZA.dbColumn} IS NOT NULL
+            )
+          )
+        GROUP BY
+          pkey
+      `);
+      
+      this.exec(`
+        REPLACE INTO WardAndOazaChoTmpTable
+        SELECT
+          (
+            c.city_key ||
+            t.${DataField.MACHIAZA_ID.dbColumn}
+          ) as pkey,
+          (
+            c.${DataField.WARD.dbColumn} ||
+            t.${DataField.OAZA_CHO.dbColumn}
+          ) as key,
+          p.pref_key,
+          c.city_key,
+          p.${DataField.PREF.dbColumn} as pref,
+          c.${DataField.COUNTY.dbColumn} as county,
+          c.${DataField.CITY.dbColumn} as city,
+          c.${DataField.WARD.dbColumn} as ward,
+          c.${DataField.LG_CODE.dbColumn} as lg_code,
+          t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+          t.${DataField.MACHIAZA_ID.dbColumn} AS machiaza_id,
+          t.${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
+
+          IIF(
+            t.${DataField.REP_LAT.dbColumn} = '' OR t.${DataField.REP_LAT.dbColumn} IS NULL,
+            c.${DataField.REP_LAT.dbColumn},
+            t.${DataField.REP_LAT.dbColumn}
+          ) as rep_lat,
+
+          IIF(
+            t.${DataField.REP_LAT.dbColumn} = '' OR t.${DataField.REP_LAT.dbColumn} IS NULL,
+            c.${DataField.REP_LON.dbColumn},
+            t.${DataField.REP_LON.dbColumn}
+          ) as rep_lon,
+
+          IIF(
+            t.${DataField.REP_LAT.dbColumn} = '' OR t.${DataField.REP_LAT.dbColumn} IS NULL,
+            ${MatchLevel.CITY.num},
+            ${MatchLevel.MACHIAZA.num}
+          ) as coordinate_level
+        FROM
+          ${DbTableName.PREF} as p
+          JOIN ${DbTableName.CITY} as c ON p.pref_key = c.pref_key
+          JOIN ${DbTableName.TOWN} as t ON c.city_key = t.city_key
+        WHERE
+          c.${DataField.CITY.dbColumn} != '' AND
+          c.${DataField.WARD.dbColumn} != '' AND
+          substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) = '000'
+      `);
+      const rows = this.prepare<unknown[], WardAndOazaRow>(`
+        SELECT * FROM WardAndOazaChoTmpTable
+      `).all();
+      
+      this.exec('DROP TABLE WardAndOazaChoTmpTable');
+      
+      resolve(rows);
+    })
+    .then((rows: WardAndOazaRow[]) => {
+      const results: WardAndOazaMatchingInfo[] = rows.map(row => {
+        return {
+          ...row,
+          match_level: MatchLevel.MACHIAZA,
+          coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA,
+        };
+      });
+
+      return Promise.resolve(results);
     });
-    return Promise.resolve(results);
   }
   // -----------------------------------------
   // 〇〇市〇〇区 のHashMapを返す
@@ -950,11 +978,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
 
   async getWards(): Promise<WardMatchingInfo[]> {
-    type WardRow = Omit<WardMatchingInfo, 'coordinate_level' | 'rep_lat' | 'rep_lon'> & {
-      coordinate_level: number;
-      rep_lat: string;
-      rep_lon: string;
-    };
+    type WardRow = Omit<WardMatchingInfo, 'coordinate_level'>;
     
     const results = this.prepare<unknown[], WardRow>(`
       SELECT
@@ -965,85 +989,23 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         c.${DataField.COUNTY.dbColumn} as county,
         c.${DataField.WARD.dbColumn} as ward,
         c.${DataField.LG_CODE.dbColumn} as lg_code,
-        t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-        t.${DataField.RSDT_ADDR_FLG.dbColumn} as rsdt_addr_flg,
-        t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
-        (c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn}) as key,
+        c.${DataField.WARD.dbColumn} as key,
 
-        cast(
-          IIF(
-            t.${DataField.REP_LAT.dbColumn} IS NULL,
-            c.${DataField.REP_LAT.dbColumn},
-            t.${DataField.REP_LAT.dbColumn}
-          ) as text
-        ) as rep_lat,
-
-        cast(
-          IIF(
-            t.${DataField.REP_LON.dbColumn} IS NULL,
-            c.${DataField.REP_LON.dbColumn},
-            t.${DataField.REP_LON.dbColumn}
-          ) as text
-        ) as rep_lon,
-
-        IIF(
-          t.${DataField.REP_LAT.dbColumn} IS NULL,
-          ${MatchLevel.CITY.num},
-          ${MatchLevel.MACHIAZA.num}
-        ) as coordinate_level
+        c.${DataField.REP_LAT.dbColumn} as rep_lat,
+        c.${DataField.REP_LON.dbColumn} as rep_lon
       FROM
         ${DbTableName.PREF} as p
         JOIN ${DbTableName.CITY} as c ON p.pref_key = c.pref_key
-        JOIN ${DbTableName.TOWN} as t ON c.city_key = t.city_key
       WHERE
-        (c.${DataField.WARD.dbColumn} != '' AND c.${DataField.WARD.dbColumn} IS NOT NULL) AND
-        (t.${DataField.OAZA_CHO.dbColumn} != '' AND t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL) AND
-        (t.${DataField.CHOME.dbColumn} = '' OR t.${DataField.CHOME.dbColumn} IS NULL) AND
-        (t.${DataField.KOAZA.dbColumn} = '' OR t.${DataField.KOAZA.dbColumn} IS NULL) AND
-        t.${DataField.KOAZA_AKA_CODE.dbColumn} = 0
-    
-      UNION
-
-      SELECT
-        p.pref_key,
-        c.city_key,
-        p.${DataField.PREF.dbColumn} AS pref,
-        c.${DataField.CITY.dbColumn} AS city,
-        c.${DataField.COUNTY.dbColumn} AS county,
-        c.${DataField.WARD.dbColumn} AS ward,
-        c.${DataField.LG_CODE.dbColumn} AS lg_code,
-        t.${DataField.OAZA_CHO.dbColumn} AS oaza_cho,
-        t.${DataField.RSDT_ADDR_FLG.dbColumn} AS rsdt_addr_flg,
-        (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000') AS machiaza_id,
-        (c.${DataField.CITY.dbColumn} || c.${DataField.WARD.dbColumn} || t.${DataField.OAZA_CHO.dbColumn}) AS key,
-
-        cast(c.${DataField.REP_LAT.dbColumn} as text) as rep_lat,
-        cast(c.${DataField.REP_LON.dbColumn} as text) as rep_lon,
-
-        ${MatchLevel.CITY.num} as coordinate_level
-      FROM
-        ${DbTableName.PREF} p
-        JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
-        JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
-      WHERE
-        (c.${DataField.WARD.dbColumn} != '' AND c.${DataField.WARD.dbColumn} IS NOT NULL) AND
-        (t.${DataField.OAZA_CHO.dbColumn} != '' AND t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL) AND
-        (
-          t.${DataField.CHOME.dbColumn} != '' OR
-          t.${DataField.KOAZA.dbColumn} != ''
-        ) AND
-        t.${DataField.KOAZA_AKA_CODE.dbColumn} = 0
-      GROUP BY key
+        c.${DataField.WARD.dbColumn} != '' AND c.${DataField.WARD.dbColumn} IS NOT NULL
 
     `).all();
     
-
     return results.map(row => {
       return {
         ...row,
-        rep_lat: parseFloat(row.rep_lat),
-        rep_lon: parseFloat(row.rep_lon),
-        coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA,
+        match_level: MatchLevel.CITY,
+        coordinate_level: MatchLevel.CITY,
       };
     });
   }

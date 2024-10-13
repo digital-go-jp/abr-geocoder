@@ -27,6 +27,7 @@ import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
 import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class WardAndOazaTransform extends Transform {
 
@@ -51,11 +52,18 @@ export class WardAndOazaTransform extends Transform {
         continue;
       }
       // 既に判明している場合はスキップ
-      if (query.match_level.num >= MatchLevel.CITY.num) {
+      if (query.ward || query.oaza_cho) {
         results.add(query);
         continue;
       }
 
+      // 京都通り名の特徴がある場合はスキップ
+      const bearingWord = query.tempAddress.match(RegExpEx.create('(上る|下る|東入|西入)'));
+      if (bearingWord) {
+        results.add(query);
+        continue;
+      }
+      
       // -------------------------
       // 〇〇市町村を探索する
       // -------------------------

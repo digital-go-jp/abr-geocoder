@@ -63,8 +63,8 @@ export interface IQuery {
   koaza?: string;
 
   lg_code?: string;
-  rep_lat: number | null;
-  rep_lon: number | null;
+  rep_lat?: string;
+  rep_lon?: string;
 
   block?: string;
   block_id?: string;
@@ -120,8 +120,8 @@ export class Query implements IQuery {
   public readonly rsdtdsp_key?: number;
   public readonly parcel_key?: number;
   public readonly lg_code?: string;
-  public readonly rep_lat: number | null;
-  public readonly rep_lon: number | null;
+  public readonly rep_lat?: string;
+  public readonly rep_lon?: string;
   public readonly block?: string;
   public readonly block_id?: string;
   public readonly machiaza_id?: string;
@@ -219,8 +219,8 @@ export class Query implements IQuery {
       chome: this.chome,
       koaza: this.koaza,
       lg_code: this.lg_code as string || undefined,
-      rep_lat: this.rep_lat as number || null,
-      rep_lon: this.rep_lon as number || null,
+      rep_lat: this.rep_lat,
+      rep_lon: this.rep_lon,
       rsdt_addr_flg: this.rsdt_addr_flg,
       koaza_aka_code: this.koaza_aka_code,
       machiaza_id: this.machiaza_id as string,
@@ -322,14 +322,11 @@ export class Query implements IQuery {
     ]).join('');
     formatted_address.push(addressComponents);
 
-    const KOAZA_MARK_START = '<KS>';
-    const KOAZA_MARK_END = '<KE>';
     if (this.koaza_aka_code === 2) {
       // 京都の通り名の場合、(小字 = 通り名)(大字) になっている
-      // スコア計算のときには通り名を含みたいが、最終結果には含みたくないので `<K>` で挟む
       formatted_address.push(
         this.eliminateEmptyElement([
-          `${KOAZA_MARK_START}${this.koaza?.trim()}${KOAZA_MARK_END}`,
+          this.koaza?.trim(),
           this.oaza_cho?.trim(),
         ]).join(''),
       );
@@ -405,17 +402,12 @@ export class Query implements IQuery {
     // 最終的な文字列と一番最初のクエリ文字列の類似度を計算する
     const originalInput = this.input.data.address.replaceAll(RegExpEx.create('[ 　]+', 'g'), ' ');
     const score = getLevenshteinDistanceRatio(
-      toHankakuAlphaNum(result.replace(KOAZA_MARK_START, '').replace(KOAZA_MARK_END, '')),
+      toHankakuAlphaNum(result),
       toHankakuAlphaNum(originalInput),
     );
 
-
-
-    // 京都の通り名の場合、(小字 = 通り名)が”表記の揺れ" なので、省く
-    
-
     return {
-      address: result.replace(RegExpEx.create(`${KOAZA_MARK_START}.*?${KOAZA_MARK_END}`), ''),
+      address: result,
       score,
     };
   }
@@ -447,8 +439,6 @@ export class Query implements IQuery {
     return new Query({
       input,
       tempAddress,
-      rep_lat: null,
-      rep_lon: null,
       matchedCnt: 0,
       match_level: MatchLevel.UNKNOWN,
       coordinate_level: MatchLevel.UNKNOWN,

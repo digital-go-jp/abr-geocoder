@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS "pref" (
   "pref" TEXT,
 
   -- mt_pref_pos_all から結合
-  "rep_lat" REAL DEFAULT null,
-  "rep_lon" REAL DEFAULT null
+  "rep_lat" TEXT,
+  "rep_lon" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS "city" (
@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS "city" (
   "ward" TEXT,
 
   -- mt_city_pos_all から結合
-  "rep_lat" REAL DEFAULT null,
-  "rep_lon" REAL DEFAULT null
+  "rep_lat" TEXT,
+  "rep_lon" TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_city_pref_key ON city(pref_key);
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS "town" (
   "koaza_aka_code" INTEGER,
 
   -- mt_town_pos_prefXX から結合
-  "rep_lat" REAL DEFAULT null,
-  "rep_lon" REAL DEFAULT null
+  "rep_lat" TEXT,
+  "rep_lon" TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_town_city_key ON town(city_key);

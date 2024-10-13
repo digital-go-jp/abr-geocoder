@@ -49,6 +49,18 @@ export class CharNode {
     }
   }
 
+  at(position: number): CharNode | undefined {
+    position = Math.max(position, 0);
+
+    let head: CharNode | undefined = this.clone();
+    let i = 0;
+    while (head && i < position) {
+      i++;
+      head = head.next?.moveToNext();
+    }
+    return head;
+  }
+
   concat(...another: (CharNode | undefined)[]): CharNode | undefined {
     if (!another) {
       return this.clone();
@@ -71,6 +83,46 @@ export class CharNode {
       }
     }
     return head;
+  }
+
+  headOf(search: string): CharNode | undefined {
+    if (search === '') {
+      return this;
+    }
+
+    const toString = (charNodeList: (CharNode | undefined)[]): string => {
+      const buffer: string[] = [];
+      for (const charNode of charNodeList) {
+        if (!charNode) {
+          break;
+        }
+        buffer.push(charNode.char!);
+      }
+      return buffer.join('');
+    };
+
+    const searchLen = search.length;
+    const buffer = new Array<CharNode | undefined>(search.length);
+    let i = 0;
+    let head: CharNode | undefined = this;
+    while (head && i < searchLen) {
+      buffer[i++] = head;
+      head = head.next?.moveToNext();
+    }
+    if (i < searchLen) {
+      return undefined;
+    }
+
+    while (head) {
+      if (toString(buffer) === search) {
+        return buffer[0];
+      }
+
+      head = head.next?.moveToNext();
+      buffer.shift();
+      buffer.push(head);
+    }
+    return undefined;
   }
 
   replaceAll(
@@ -274,6 +326,114 @@ export class CharNode {
     return headAnchor.next;
   }
 
+  substring(indexStart: number, indexEnd?: number): CharNode | undefined {
+    indexStart = Math.max(indexStart, 0);
+    
+    let i = 0;
+    let root: CharNode | undefined = this.clone();
+    while (i < indexStart && root) {
+      root = root.next?.moveToNext();
+      i++;
+    }
+    if (!root) {
+      return;
+    }
+
+    const resultHead = root;
+    let tail = root;
+
+    while ((indexEnd === undefined || i < indexEnd) && root) {
+      const rootNext: CharNode | undefined = root.next;
+      tail.next = root;
+      tail = tail.next;
+      tail.next = undefined;
+      
+      root = rootNext?.moveToNext();
+      i++;
+    }
+    if (root) {
+      root.next = undefined;
+    }
+    return resultHead;
+  }
+
+  match(search: RegExp): {node: CharNode; index: number; lastIndex: number} | undefined {
+    
+    if (!search.global) {
+      search = new RegExp(search, 'g');
+    }
+    const txt = this.toProcessedString();
+    let root: CharNode | undefined = this;
+    let i = 0;
+    let match: RegExpExecArray | null = search.exec(txt);
+    if (!match) {
+      return;
+    }
+    while (i < match.index && root) {
+      root = root.next?.moveToNext();
+      i++;
+    }
+
+    // 開始位置
+    const startNode = root;
+    const startIndex = i;
+
+    while (i < search.lastIndex && root) {
+      root = root.next?.moveToNext();
+      i++;
+    }
+    
+    // 終了位置
+    return {
+      node: startNode!,
+      index: startIndex,
+      lastIndex: i,
+    };
+  }
+  matchAll(search: RegExp): {node: CharNode; index: number; lastIndex: number}[] {
+    
+    if (!search.global) {
+      search = new RegExp(search, 'g');
+    }
+    
+    const results: {node: CharNode; index: number; lastIndex: number}[] = [];
+    
+    let match: RegExpExecArray | null;
+    const txt = this.toProcessedString();
+    let root: CharNode | undefined = this;
+    let i = 0;
+    while ((match = search.exec(txt)) !== null) {
+      let startIndex = i;
+      let lastIndex = i;
+      let startNode: CharNode = root!;
+      while (i < match.index && root) {
+        root = root.next?.moveToNext();
+        i++;
+      }
+      if (!root) {
+        break;
+      }
+
+      // 開始位置
+      startNode = root;
+      startIndex = i;
+
+      while (i < search.lastIndex && root) {
+        root = root.next?.moveToNext();
+        i++;
+      }
+      lastIndex = i;
+      
+      // 終了位置
+      results.push({
+        node: startNode!,
+        index: startIndex,
+        lastIndex,
+      });
+    }
+    
+    return results;
+  }
   split(search: string | RegExp, limit?: number): CharNode[] {
     if (limit) {
       if (limit === 0) {
@@ -304,7 +464,7 @@ export class CharNode {
       if (typeof search === 'string') {
         return RegExpEx.create(search, 'g');
       } else if (!search.global) {
-        throw new TypeError('The regexp for split() must have a global flag');
+        return new RegExp(search, 'g');
       }
       return search;
     })();
@@ -486,7 +646,7 @@ export class CharNode {
     }
   };
 
-  static joinWith(separator: CharNode, ...targets: (CharNode | undefined)[]): CharNode | undefined {
+  static joinWith(connector: CharNode, ...targets: (CharNode | undefined)[]): CharNode | undefined {
     targets = targets.filter(x => x !== undefined);
     if (targets.length === 0) {
       return undefined;
@@ -501,7 +661,7 @@ export class CharNode {
     }
 
     while (p && targets.length > 0) {
-      p.next = separator.clone();
+      p.next = connector.clone();
       while (p.next) {
         p = p.next;
       }

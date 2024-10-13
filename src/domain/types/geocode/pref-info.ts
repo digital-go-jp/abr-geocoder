@@ -30,7 +30,7 @@ export type PrefMatchinInfo = {
 export type PrefInfo = {
   pref: string;
   pref_key: number;
-  rep_lat: number;
-  rep_lon: number;
+  rep_lat: string;
+  rep_lon: string;
   lg_code: string;
 };

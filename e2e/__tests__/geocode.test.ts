@@ -106,41 +106,41 @@ const jsonTestRunner = async (testCaseName: string) => {
 
 describe('debug', () => {
 
-  test('伏見区下板橋町610', async () => {
-    const input = '伏見区下板橋町610';
+  test('中京区東堀川通錦小路上る四坊堀川町622-2', async () => {
+    const input = '中京区東堀川通錦小路上る四坊堀川町622-2';
     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
       input,
     });
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "伏見区下板橋町610"
+        "input": "中京区東堀川通錦小路上る四坊堀川町622-2"
       },
       "result": {
-        "output": "京都府京都市伏見区下板橋町610",
+        "output": "京都府京都市中京区東堀川通錦小路上る四坊堀川町622-2",
         "other": null,
         "match_level": "parcel",
         "coordinate_level": "machiaza_detail",
-        "lat": 35.014288,
-        "lon": 135.763985,
-        "lg_code": "261092",
-        "machiaza_id": "9009107",
+        "lat": 35.00542,
+        "lon": 135.752357,
+        "lg_code": "261041",
+        "machiaza_id": "0175102",
         "rsdt_addr_flg": 0,
         "blk_id": null,
         "rsdt_id": null,
         "rsdt2_id": null,
-        "prc_id": "006100000000000",
+        "prc_id": "006220000200000",
         "pref": "京都府",
         "county": null,
         "city": "京都市",
-        "ward": "伏見区",
-        "oaza_cho": "下板橋町",
+        "ward": "中京区",
+        "oaza_cho": "四坊堀川町",
         "chome": null,
-        "koaza": null,
+        "koaza": "東堀川通錦小路上る",
         "blk_num": null,
         "rsdt_num": null,
         "rsdt_num2": null,
-        "prc_num1": "610",
-        "prc_num2": null,
+        "prc_num1": "622",
+        "prc_num2": "2",
         "prc_num3": null
       }
     });

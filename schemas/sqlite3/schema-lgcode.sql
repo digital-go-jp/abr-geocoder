@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS "rsdt_blk" (
   "blk_num" TEXT,
 
   -- mt_rsdtdsp_blk_pos_prefXX から結合
-  "rep_lat" REAL DEFAULT null,
-  "rep_lon" REAL DEFAULT null
+  "rep_lat" TEXT,
+  "rep_lon" TEXT
 );
 CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key" ON "rsdt_blk" (
   "town_key"
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS "rsdt_dsp" (
   "rsdt_addr_flg" INTEGER,
 
   -- mt_rsdtdsp_rsdt_pos_prefXX から結合
-  "rep_lat" REAL DEFAULT null,
-  "rep_lon" REAL DEFAULT null
+  "rep_lat" TEXT,
+  "rep_lon" TEXT
 );
 
 CREATE INDEX IF NOT EXISTS "idx_rsdt_dsp_rsdtblk_key" ON rsdt_dsp(
@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS "parcel" (
   "prc_num3" INTEGER,
 
   -- mt_parcel_pos_cityXXXXXX から結合
-  "rep_lat" REAL DEFAULT null,
-  "rep_lon" REAL DEFAULT null
+  "rep_lat" TEXT,
+  "rep_lon" TEXT
 );
 -- CREATE INDEX IF NOT EXISTS idx_parcel_city_key ON parcel(city_key);
 CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON parcel(town_key, prc_id);

@@ -15,15 +15,15 @@ const prefList: PrefInfo[] = [
     pref: '長野県',
     pref_key: 1,
     lg_code: PrefLgCode.NAGANO,
-    rep_lat: 36.65131,
-    rep_lon: 138.180991,
+    rep_lat: '36.65131',
+    rep_lon: '138.180991',
   },
   {
     pref: '長崎県',
     pref_key: 2,
     lg_code: PrefLgCode.NAGASAKI,
-    rep_lat: 32.749601,
-    rep_lon: 129.867969,
+    rep_lat: '32.749601',
+    rep_lon: '129.867969',
   },
 ];
 
@@ -80,8 +80,8 @@ describe('PrefTransform', () => {
       pref: '長野県',
       match_level: MatchLevel.PREFECTURE,
       coordinate_level: MatchLevel.PREFECTURE,
-      rep_lat: 36.65131,
-      rep_lon: 138.180991,
+      rep_lat: '36.65131',
+      rep_lon: '138.180991',
       lg_code: PrefLgCode.NAGANO,
     });
   });

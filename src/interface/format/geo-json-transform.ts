@@ -31,7 +31,7 @@ export type GeoJsonOutput = {
   type: 'Feature',
   geometry: {
     type: 'Point',
-    coordinates: [number | null, number | null],
+    coordinates: (number | null)[],
   },
   properties: {
     input: string;
@@ -104,11 +104,23 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
       this.buffer = '{"type":"FeatureCollection", "features":[';
     }
     this.lineNum++;
+    const coordinates = (() => {
+      if (!result.rep_lat || !result.rep_lon) {
+        return {
+          lon: null,
+          lat: null
+        };
+      }
+      return {
+        lon: parseFloat(result.rep_lon),
+        lat: parseFloat(result.rep_lat),
+      };
+    })();
     const output: GeoJsonOutput = {
       type: 'Feature',
       geometry: {
         type: 'Point',
-        coordinates: [result.rep_lon, result.rep_lat],
+        coordinates: [coordinates.lon, coordinates.lat],
       },
       properties: {
         input: result.input.data.address,
@@ -117,8 +129,8 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
         score: result.formatted.score,
         match_level: result.match_level.str,
         coordinate_level: result.coordinate_level.str,
-        lat: result.rep_lat,
-        lon: result.rep_lon,
+        lat: coordinates.lat,
+        lon: coordinates.lon,
         lg_code: result.lg_code ? result.lg_code : BLANK_CHAR,
         machiaza_id: result.machiaza_id || BLANK_CHAR,
         rsdt_addr_flg: result.rsdt_addr_flg,

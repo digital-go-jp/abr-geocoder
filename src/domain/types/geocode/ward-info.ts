@@ -30,13 +30,11 @@ export type WardInfo = {
   city: string;
   county: string;
   ward: string;
-  oaza_cho: string;
-  rsdt_addr_flg: number;
-  machiaza_id?: string;
   lg_code: string;
   city_key: number;
-  rep_lat: number;
-  rep_lon: number;
+  rep_lat: string;
+  rep_lon: string;
+  match_level: MatchLevel;
   coordinate_level: MatchLevel;
 };
 export type WardMatchingInfo = {

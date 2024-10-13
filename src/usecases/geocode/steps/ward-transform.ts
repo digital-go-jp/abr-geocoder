@@ -77,20 +77,6 @@ export class WardTransform extends Transform {
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;
         anyHit = true;
 
-        // ここで大字を確定させると、rsdt_blk に入らなくなってしまうので、
-        // あくまでも 〇〇区までに留める
-        // const oazaTmpAddress = (() => {
-        //   if (!mResult.info!.oaza_cho) {
-        //     return;
-        //   }
-        //   if (mResult.unmatched) {
-        //     return mResult.unmatched.splice(0, 0, mResult.info!.oaza_cho);
-        //   } else {
-        //     return new CharNode({
-        //       char: mResult.info!.oaza_cho,
-        //     });
-        //   }
-        // })();
         results.add(query.copy({
           pref_key: mResult.info!.pref_key,
           city_key: mResult.info!.city_key,
@@ -100,13 +86,11 @@ export class WardTransform extends Transform {
           county: mResult.info!.county,
           ward: mResult.info!.ward,
           tempAddress: mResult.unmatched,
-          match_level: MatchLevel.MACHIAZA,
-          rsdt_addr_flg: mResult.info!.rsdt_addr_flg,
+          match_level: MatchLevel.CITY,
           matchedCnt: query.matchedCnt + mResult.depth,
-          // matchedCnt: query.matchedCnt + mResult.depth - mResult.info!.oaza_cho.length,
           rep_lat: mResult.info!.rep_lat,
           rep_lon: mResult.info!.rep_lon,
-          coordinate_level: mResult.info!.coordinate_level,
+          coordinate_level: MatchLevel.CITY,
           ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
         }));
       }

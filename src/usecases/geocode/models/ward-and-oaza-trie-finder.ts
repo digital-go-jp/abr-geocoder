@@ -1,6 +1,6 @@
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { getPackageInfo } from "@domain/services/package/get-package-info";
-import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
+import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
 import fs from 'node:fs';
 import path from 'node:path';
 import { deserialize, serialize } from "node:v8";
@@ -10,7 +10,7 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder } from "./trie/trie-finder";
 
-export class WardAndOazaTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
+export class WardAndOazaTrieFinder extends TrieAddressFinder<WardAndOazaMatchingInfo> {
 
   private constructor() {
     super();
