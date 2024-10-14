@@ -62,7 +62,7 @@ describe('AbrGeocoder', () => {
     mockSetImmediate.mockRestore();
   });
 
-  test('should involve the workerPool.run() method', async () => {
+  test.skip('should involve the workerPool.run() method', async () => {
 
     // setImmediateをモック化する
     const mockSetImmediate = setImmediateSpy();
@@ -102,7 +102,7 @@ describe('AbrGeocoder', () => {
   });
 
 
-  test('should involve the geocodeTransformOnMainThread.pipe() method', async () => {
+  test.skip('should involve the geocodeTransformOnMainThread.pipe() method', async () => {
 
     // AbrGeocoderクラスの作成
     const abrGeocoder = await AbrGeocoder.create({

@@ -5,7 +5,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -38,7 +38,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
-      "other": "東京ガーデンテラス紀尾井町 19階、20階",
+      "others": ["東京ガーデンテラス紀尾井町 19階、20階"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -71,7 +71,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 DIGITALビル",
-      "other": "DIGITALビル",
+      "others": ["DIGITALビル"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -104,7 +104,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -137,7 +137,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -170,7 +170,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -203,7 +203,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -236,7 +236,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -269,7 +269,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -302,7 +302,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -335,7 +335,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -368,7 +368,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -401,7 +401,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -434,7 +434,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -467,7 +467,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 デジタルビル999",
-      "other": "デジタルビル999",
+      "others": ["デジタルビル999"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -500,7 +500,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
-      "other": "東京ガーデンテラス紀尾井町 19階、20階",
+      "others": ["東京ガーデンテラス紀尾井町 19階、20階"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -533,7 +533,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階",
-      "other": "東京ガーデンテラス紀尾井町 19階、20階",
+      "others": ["東京ガーデンテラス紀尾井町 19階、20階"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -566,7 +566,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-999 ガーデンテラス",
-      "other": "-999 ガーデンテラス",
+      "others": ["-999 ガーデンテラス"],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 35.679921,
@@ -599,7 +599,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1 ガーデンテラス3-2",
-      "other": "ガーデンテラス3-2",
+      "others": ["ガーデンテラス3-2"],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 35.679921,
@@ -632,7 +632,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3-2",
-      "other": "-2",
+      "others": ["-2"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -665,7 +665,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 三田マンション999",
-      "other": "三田マンション999",
+      "others": ["三田マンション999"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -698,7 +698,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3",
-      "other": null,
+      "others": [],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -731,7 +731,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町",
-      "other": null,
+      "others": [],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.681411,
@@ -764,7 +764,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町",
-      "other": null,
+      "others": [],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.681411,
@@ -797,7 +797,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町",
-      "other": null,
+      "others": [],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.681411,
@@ -830,7 +830,7 @@
     },
     "result": {
       "output": "東京都千代田区霞が関",
-      "other": null,
+      "others": [],
       "match_level": "machiaza",
       "coordinate_level": "city",
       "lat": 35.694003,
@@ -863,7 +863,7 @@
     },
     "result": {
       "output": "東京都千代田区",
-      "other": null,
+      "others": [],
       "match_level": "city",
       "coordinate_level": "city",
       "lat": 35.694003,

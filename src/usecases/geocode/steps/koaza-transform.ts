@@ -152,7 +152,7 @@ export class KoazaTransform extends Transform {
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         // 小字がヒットした
-        const params: Record<string, CharNode | number | string | MatchLevel> = {
+        const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.MACHIAZA_DETAIL,
           town_key: findResult.info.town_key,

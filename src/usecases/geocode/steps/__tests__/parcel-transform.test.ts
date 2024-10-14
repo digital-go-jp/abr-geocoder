@@ -7,7 +7,7 @@ import { IParcelDbGeocode } from "@interface/database/common-db";
 import { describe, expect, jest, test } from '@jest/globals';
 import { Query } from "@usecases/geocode/models/query";
 import { QuerySet } from "@usecases/geocode/models/query-set";
-import { CharNode } from "@usecases/geocode/services/trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Readable, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { ParcelTransform } from "../parcel-transform";
@@ -55,10 +55,7 @@ const doStreamTest = async (querySet: QuerySet): Promise<QuerySet> => {
     objectMode: true,
   });
 
-  const parcelTransform = new ParcelTransform({
-    dbCtrl,
-    logger: undefined,
-  });
+  const parcelTransform = new ParcelTransform(dbCtrl);
 
   const results: QuerySet[] = [];
   await pipeline(

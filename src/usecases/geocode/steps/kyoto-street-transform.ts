@@ -49,6 +49,7 @@ export class KyotoStreetTransform extends Transform {
     // 通り名・大字で当たるものがあるか
     // ------------------------
     const results = new QuerySet();
+    const buffer = [];
     const KYOTO_PREF_LG_CODE = PrefLgCode.KYOTO.substring(0, 2);
     for await (const query of queries.values()) {
       if (query.match_level.num > MatchLevel.MACHIAZA.num) {
@@ -116,7 +117,7 @@ export class KyotoStreetTransform extends Transform {
           // 大字だけで探す
           targets.push({
             target: rest,
-            ambiguous: marker.lastIndex - marker.index,
+            ambiguous: marker.lastIndex,
             unused: [
               koaza!.toOriginalString(),
               bearingWord!.toOriginalString(),
@@ -162,13 +163,12 @@ export class KyotoStreetTransform extends Transform {
         });
 
         // console.log(search.target?.toProcessedString(), '->', findResults?.length);
-        if (!findResults || findResults.length === 0) {
+        if (!filteredResult || filteredResult.length === 0) {
           continue;
         }
 
         if (filteredResult &&  filteredResult.length > 0) {
           for (const result of filteredResult) {
-
             // 小字(通り名)がヒットした
             const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
               tempAddress: result.unmatched,
@@ -183,7 +183,7 @@ export class KyotoStreetTransform extends Transform {
               chome: result.info!.chome,
               ward: result.info!.ward,
               lg_code: result.info!.lg_code,
-              koaza: search.useKoaza ? result.info!.koaza : undefined,
+              koaza: result.info!.koaza,
               koaza_aka_code: 2,
               machiaza_id: result.info!.machiaza_id,
               matchedCnt: query.matchedCnt + result.depth,
@@ -194,28 +194,33 @@ export class KyotoStreetTransform extends Transform {
               params.rep_lat = result.info!.rep_lat;
               params.rep_lon = result.info!.rep_lon;
             }
+            if (!search.useKoaza) {
+              params.match_level = MatchLevel.MACHIAZA;
+              params.machiaza_id = result.info!.machiaza_id.substring(0, 4) + '000';
+              params.koaza = undefined;
+            }
 
             const copied = query.copy(params);
-            results.add(copied);
+            buffer.push(copied);
             if (search.unused.length > 0) {
               copied.unmatched?.push(...search.unused);
             }
             anyHit = true;
-            break;
           }
-          if (anyHit) {
-            break;
-          }
-        }
-
-        if (anyHit) {
-          break;
         }
       }
 
       if (!anyHit) {
         results.add(query);
       }
+    }
+
+    // 最もスコアが高い結果を採用する(入力文字列と整形された文字列が似ている結果を採用する)
+    buffer.sort((a, b) => b.formatted.score - a.formatted.score);
+    let i = 0;
+    while (i < buffer.length && buffer[0].formatted.score === buffer[i].formatted.score) {
+      results.add(buffer[i]);
+      i++;
     }
 
     callback(null, results);

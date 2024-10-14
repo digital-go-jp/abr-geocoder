@@ -4,8 +4,10 @@ import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { PrefLgCode } from "@domain/types/pref-lg-code";
 import { SearchTarget } from "@domain/types/search-target";
 import { describe, expect, test } from "@jest/globals";
+import { PrefTrieFinder } from "@usecases/geocode/models/pref-trie-finder";
 import { Query } from "@usecases/geocode/models/query";
 import { QuerySet } from "@usecases/geocode/models/query-set";
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Readable, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { PrefTransform } from "../pref-transform";
@@ -27,15 +29,20 @@ const prefList: PrefInfo[] = [
   },
 ];
 
+const tree = new TrieAddressFinder();
+prefList.forEach(info => {
+  tree.append({
+    key: info.pref,
+    value: info,
+  });
+});
+
 // querySet をテストする
 const doStreamTest = async (querySet: QuerySet): Promise<QuerySet> => {
   const reader = Readable.from([querySet], {
     objectMode: true,
   });
-  const prefTransform = new PrefTransform({
-    prefList,
-    logger: undefined,
-  });
+  const prefTransform = new PrefTransform(tree as PrefTrieFinder);
 
   const results: QuerySet[] = [];
   await pipeline(

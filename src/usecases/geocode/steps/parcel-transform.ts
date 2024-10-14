@@ -53,12 +53,7 @@ export class ParcelTransform extends Transform {
 
     // ------------------------
     // 地番で当たるものがあるか
-    //
-    // 地域によっては、town.rsdt_addr_flg = 1 でも
-    // parcelテーブルにデータが含まれている場合もある。
-    // なので、parcelテーブルを探して、完全一致しない場合は、rsdt_blk,rsdtdsp_rsdtテーブルを探す
     // ------------------------
-
 
     const results = new QuerySet();
     for await (const query of queries.values()) {

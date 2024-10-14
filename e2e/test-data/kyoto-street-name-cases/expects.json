@@ -5,7 +5,7 @@
     },
     "result": {
       "output": "京都府京都市中京区蛸薬師通高倉西入泉正寺町323 松本ビル1F",
-      "other": "松本ビル1F",
+      "others": ["松本ビル1F"],
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.005959,
@@ -38,7 +38,7 @@
     },
     "result": {
       "output": "京都府京都市中京区油小路通六角下る六角油小路町338",
-      "other": null,
+      "others": [],
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.006744,
@@ -71,8 +71,7 @@
     },
     "result": {
       "output": "京都府京都市上京区下立売通新町西入藪之内町",
-      "other": null,
-      "score": 0.96,
+      "others": [],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 35.02141,
@@ -105,8 +104,7 @@
     },
     "result": {
       "output": "京都府京都市上京区下立売通新町西入藪之内町",
-      "other": null,
-      "score": 0.77,
+      "others": [],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 35.02141,
@@ -138,7 +136,7 @@
     },
     "result": {
       "output": "京都府京都市下京区烏丸通塩小路下る東塩小路町901",
-      "other": null,
+      "others": [],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 34.986203437,

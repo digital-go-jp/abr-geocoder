@@ -78,7 +78,7 @@ export class Tokyo23TownTranform extends Transform {
         anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
         anyHit = true;
 
-        const params: Record<string, CharNode | number | string | MatchLevel | null> = {
+        const params: Record<string, CharNode | number | string | MatchLevel | undefined | null> = {
           pref_key: searchResult.info.pref_key,
           city_key: searchResult.info.city_key,
           town_key: searchResult.info.town_key,

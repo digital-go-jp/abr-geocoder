@@ -34,6 +34,7 @@ class MockQuery {
   parcel_key?: number;
   rsdtblk_key?: number;
   rsdtdsp_key?: number;
+  unmatched: string[];
 
   constructor(data: Partial<MockQuery> = {}) {
     // デフォルトのダミー値
@@ -56,6 +57,7 @@ class MockQuery {
     this.pref = '東京都';
     this.city = '千代田区';
     this.startTime = Date.now();
+    this.unmatched = [];
 
     if (Object.hasOwn(data, 'input')) {
       this.input = data.input;

@@ -5,7 +5,7 @@
     },
     "result": {
       "output": "北海道札幌市中央区北二条西十一丁目",
-      "other": null,
+      "others": [],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 43.062179,

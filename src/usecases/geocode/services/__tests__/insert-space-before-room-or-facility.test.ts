@@ -1,7 +1,7 @@
-import { describe, expect, it } from "@jest/globals";
-import { insertSpaceBeforeRoomOrFacility } from "../insert-space-before-room-or-facility";
-import { CharNode } from "../trie/char-node";
 import { DASH, SPACE } from "@config/constant-values";
+import { describe, expect, it } from "@jest/globals";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { insertSpaceBeforeRoomOrFacility } from "../insert-space-before-room-or-facility";
 
 describe("insertSpaceBeforeRoomOrFacility", () => {
   it("should replace the dash at the room number with a space", () => {

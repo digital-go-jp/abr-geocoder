@@ -169,7 +169,7 @@ export class ChomeTranform extends Transform {
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
         // 丁目がヒットした
-        const params: Record<string, CharNode | number | string | MatchLevel> = {
+        const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
           chome: findResult.info.chome,
           tempAddress: findResult.unmatched,
           town_key: findResult.info.town_key,

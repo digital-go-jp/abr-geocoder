@@ -5,7 +5,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 半角ハイフン",
-      "other": "半角ハイフン",
+      "others": ["半角ハイフン"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -38,7 +38,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 全角ハイフンマイナス",
-      "other": "全角ハイフンマイナス",
+      "others": ["全角ハイフンマイナス"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -71,7 +71,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 半角ハイフンマイナス",
-      "other": "半角ハイフンマイナス",
+      "others": ["半角ハイフンマイナス"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -104,7 +104,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 全角マイナス",
-      "other": "全角マイナス",
+      "others": ["全角マイナス"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -137,7 +137,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 フィギュアーダッシュ",
-      "other": "フィギュアーダッシュ",
+      "others": ["フィギュアーダッシュ"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -170,7 +170,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 二分ダッシュ",
-      "other": "二分ダッシュ",
+      "others": ["二分ダッシュ"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -203,7 +203,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 全角ダッシュ",
-      "other": "全角ダッシュ",
+      "others": ["全角ダッシュ"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -236,7 +236,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 罫線",
-      "other": "罫線",
+      "others": ["罫線"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -269,7 +269,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 罫線(太)",
-      "other": "罫線(太)",
+      "others": ["罫線(太)"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -302,7 +302,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 漢数字いち",
-      "other": "漢数字いち",
+      "others": ["漢数字いち"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -335,7 +335,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 一番館",
-      "other": "一番館",
+      "others": ["一番館"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -368,7 +368,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 ホリゾンタルバー",
-      "other": "ホリゾンタルバー",
+      "others": ["ホリゾンタルバー"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -401,7 +401,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 全角長音",
-      "other": "全角長音",
+      "others": ["全角長音"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,
@@ -434,7 +434,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 半角長音",
-      "other": "半角長音",
+      "others": ["半角長音"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,

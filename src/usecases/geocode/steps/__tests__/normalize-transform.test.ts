@@ -12,9 +12,7 @@ const doStreamTest = async (queryInput: QueryInput): Promise<QuerySet> => {
   const reader = Readable.from([queryInput], {
     objectMode: true,
   });
-  const normalizeTransform = new NormalizeTransform({
-    logger: undefined,
-  });
+  const normalizeTransform = new NormalizeTransform();
 
   const results: QuerySet[] = [];
   await pipeline(

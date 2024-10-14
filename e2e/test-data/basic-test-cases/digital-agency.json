@@ -5,8 +5,7 @@
     },
     "result": {
       "output": "東京都千代田区紀尾井町1-3 デジタル庁",
-      "other": "デジタル庁",
-      "score": 1,
+      "others": ["デジタル庁"],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.679107172,

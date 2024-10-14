@@ -75,7 +75,8 @@ export class RsdtBlkTransform extends Transform {
         continue;
       }
 
-      // rest_abr_flg = 0のものは地番を検索する
+      // rsdt_addr_flg = 0のものは地番を検索する
+      // (データが間違えていることが判明したので、rsdt_addr_flg を参照しない)
       // if (query.rsdt_addr_flg === 0) {
       //   results.push(query);
       //   continue;
@@ -111,10 +112,13 @@ export class RsdtBlkTransform extends Transform {
       });
 
       // 番地が見つからなかった
-      if (findResults.length === 0) {
-        results.add(query);
-        continue;
-      }
+      // if (findResults.length === 0) {
+      //   results.add(query);
+      //   continue;
+      // }
+
+      // 住居表示が間違えている可能性があるので、地番のために残しておく
+      results.add(query);
       
       findResults.forEach(result => {
         const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {

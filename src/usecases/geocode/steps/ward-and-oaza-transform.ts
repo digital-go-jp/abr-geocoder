@@ -58,7 +58,7 @@ export class WardAndOazaTransform extends Transform {
       }
 
       // 京都通り名の特徴がある場合はスキップ
-      const bearingWord = query.tempAddress.match(RegExpEx.create('((?:[東西南北]側)|(?:角[東西南北]))'));
+      const bearingWord = query.tempAddress.match(RegExpEx.create('(?:(?:上る|下る|東入る?|西入る?)|(?:角[東西南北])|(?:[東西南北]側))'));
       if (bearingWord) {
         results.add(query);
         continue;

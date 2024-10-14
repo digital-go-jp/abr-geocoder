@@ -96,7 +96,7 @@ export class OazaChomeTransform extends Transform {
         continue;
       }
       
-      const bearingWord = query.tempAddress.match(RegExpEx.create('((?:[東西南北]側)|(?:角[東西南北]))'));
+      const bearingWord = query.tempAddress.match(RegExpEx.create('(?:(?:上る|下る|東入る?|西入る?)|(?:角[東西南北])|(?:[東西南北]側))'));
       if (bearingWord) {
         // 京都通り名の特徴がある場合はスキップ
         results.add(query);
@@ -170,7 +170,7 @@ export class OazaChomeTransform extends Transform {
 
         const info = findResult.info!;
         anyHit = true;
-        const params: Record<string, CharNode | number | string | MatchLevel | null> = {
+        const params: Record<string, CharNode | number | string | MatchLevel | null | undefined> = {
           pref_key: info.pref_key,
           city_key: info.city_key,
           town_key: info.town_key,

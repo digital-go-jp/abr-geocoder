@@ -5,7 +5,7 @@
     },
     "result": {
       "output": "岩手県八幡平市大更第35地割",
-      "other": null,
+      "others": [],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza",
       "lat": 39.911413,
@@ -38,7 +38,7 @@
     },
     "result": {
       "output": "福井県大野市上麻生島下麻生島上野田野土打川島下唯野1字",
-      "other": null,
+      "others": [],
       "match_level": "machiaza",
       "coordinate_level": "city",
       "lat": 35.980564,
@@ -71,7 +71,7 @@
     },
     "result": {
       "output": "福井県永平寺町志比49字熊ケ谷その二",
-      "other": null,
+      "others": [],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza",
       "lat": 36.055314,

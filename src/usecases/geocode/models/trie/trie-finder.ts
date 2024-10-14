@@ -26,13 +26,13 @@ import { CharNode } from "./char-node";
 
 export class TrieFinderResult<T> {
   public readonly info: T | undefined;
-  public readonly unmatched: CharNode;
+  public readonly unmatched: CharNode | undefined;
   public readonly depth: number;
   public readonly ambiguous: boolean;
 
   constructor(params: {
     info: T | undefined;
-    unmatched: CharNode;
+    unmatched: CharNode | undefined;
     depth: number;
     ambiguous: boolean;
   }) {
@@ -46,7 +46,7 @@ export class TrieFinderResult<T> {
 
 type InternalResult<T> = {
   info: T | undefined;
-  unmatched: CharNode;
+  unmatched: CharNode | undefined;
   depth: number;
   
   // fuzzy や extraChallenges を使った場合
@@ -184,50 +184,10 @@ export class TrieAddressFinder<T> {
     if (!parent) {
       return [];
     }
-    // これ以上、探索する文字がない場合は、現時点の情報を返す
-    if (!node || !node.char) {
-
-      // extraChallenges が指定されている場合、もう１文字を試してみる
-      const results: InternalResult<T>[] = [];
-      if (depth > 0 && extraChallenges && extraChallenges.length > 0) {
-        for (const extraChar of extraChallenges) {
-          const newNode = CharNode.create(extraChar)?.concat(node);
-          const others = this.traverse({
-            fuzzy,
-            parent,
-            node: newNode,
-            partialMatches,
-            extraChallenges: [], // 2回 extraChallenge は行わない
-            depth: depth + 1,
-          });
-          if (!others) {
-            continue;
-          }
-          others.forEach(other => {
-            other.ambiguous = true;
-            results.push(other);
-          });
-        }
-      }
-
-      if (!partialMatches && results.length > 0) {
-        return results;
-      }
-
-      parent?.info?.forEach(info => {
-        results.push({
-          info,
-          unmatched: node,
-          depth,
-        } as InternalResult<T>);
-      });
-
-      return results;
-    }
 
     // searchChar が parent.children にある場合は、
     // そのまま探索する
-    if (parent.children.has(node.char)) {
+    if (node?.char && parent.children.has(node.char)) {
       const parent2 = parent.children.get(node.char);
       const others = this.traverse({
         fuzzy,
@@ -261,7 +221,7 @@ export class TrieAddressFinder<T> {
     }
 
     // fuzzyが来た場合、全ての可能性を探索する
-    if (node.char === fuzzy) {
+    if (node && node.char === fuzzy) {
       const results: InternalResult<T>[] = [];
       for (const child of parent.children.values()) {
         const others = this.traverse({
@@ -275,7 +235,7 @@ export class TrieAddressFinder<T> {
         others?.forEach(other => {
           // extraChallengeをした結果
           // fuzzy が unmatched の最初に来るときは、fuzzy を取り除く
-          if (other.unmatched?.char === fuzzy) {
+          if (other.unmatched && other.unmatched.char === fuzzy) {
             other.unmatched = other.unmatched.next!;
           }
           other.ambiguous = true;
@@ -283,8 +243,27 @@ export class TrieAddressFinder<T> {
         });
       }
     
-      // 現時点の情報を追加する
-      parent.info?.forEach(info => {
+      // 現在のノードに情報がある場合は extraChallenge をしない
+      if (parent.info) {
+        parent.info.forEach(info => {
+          results.push({
+            info,
+            unmatched: node,
+            depth,
+            ambiguous: false,
+          });
+        });
+      }
+      return results;
+    }
+
+
+    // これ以上、探索する文字がない場合は、現時点の情報を返す
+    const results: InternalResult<T>[] = [];
+
+    // 現在のノードに情報がある場合は extraChallenge をしない
+    if (parent.info) {
+      parent.info.forEach(info => {
         results.push({
           info,
           unmatched: node,
@@ -295,44 +274,33 @@ export class TrieAddressFinder<T> {
       return results;
     }
 
-    // 見つからなかったら、現在位置までの情報を返す
-    const results: InternalResult<T>[] = [];
-    parent?.info?.forEach(info => {
-      results.push({
-        info,
-        unmatched: node,
-        depth,
-        ambiguous: false,
-      });
-    });
-
     // extraChallenges が指定されている場合、もう１文字を試してみる
     if (depth > 0 && extraChallenges && extraChallenges.length > 0) {
-      for (const extraChar of extraChallenges) {
-        const newNode = CharNode.create(extraChar)?.concat(node);
-        const others = this.traverse({
-          fuzzy,
-          parent,
-          node: newNode,
-          partialMatches,
-          extraChallenges: [], // 2回 extraChallenge は行わない
-          depth: depth + 1,
-        });
-        if (!others) {
+      for (const extraWord of extraChallenges) {
+        if (!parent.children.has(extraWord.at(0) || '')) {
           continue;
         }
-        others.forEach(other => {
-          // extraChallengeをした結果
-          // fuzzy が unmatched の最初に来るときは、fuzzy を取り除く
-          if (other.unmatched?.char === fuzzy) {
-            other.unmatched = other.unmatched.next!;
-          }
+
+        const newChallenges: string[] = [];
+        if (extraWord.length > 1) {
+          newChallenges.push(extraWord.substring(1));
+        }
+
+        const others = this.traverse({
+          fuzzy,
+          parent: parent.children.get(extraWord.at(0) || ''),
+          node,
+          partialMatches,
+          extraChallenges: newChallenges.length > 0 ? newChallenges : undefined,
+          depth: depth + 1,
+        });
+
+        others?.forEach(other => {
           other.ambiguous = true;
           results.push(other);
         });
       }
     }
-    
     return results;
   }
 }
