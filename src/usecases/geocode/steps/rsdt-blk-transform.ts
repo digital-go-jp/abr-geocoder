@@ -55,6 +55,12 @@ export class RsdtBlkTransform extends Transform {
         results.add(query);
         continue;
       }
+      if (query.koaza_aka_code === 2) {
+        // 京都通り名がマッチしている場合、スキップする
+        // (京都市は住居表示を行っていない)
+        results.add(query);
+        continue;
+      }
 
       // town_key が必要なので、TOWN_LOCAL未満はスキップ
       // もしくは 既に地番データが判明している場合もスキップ

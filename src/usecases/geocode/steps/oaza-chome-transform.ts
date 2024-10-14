@@ -96,7 +96,7 @@ export class OazaChomeTransform extends Transform {
         continue;
       }
       
-      const bearingWord = query.tempAddress.match(RegExpEx.create('(上る|下る|東入|西入)'));
+      const bearingWord = query.tempAddress.match(RegExpEx.create('((?:[東西南北]側)|(?:角[東西南北]))'));
       if (bearingWord) {
         // 京都通り名の特徴がある場合はスキップ
         results.add(query);

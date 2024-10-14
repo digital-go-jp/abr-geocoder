@@ -21,9 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { RegExpEx } from "@domain/services/reg-exp-ex";
-import { toHankakuAlphaNum } from "../../services/to-hankaku-alpha-num";
 import { SPACE } from "@config/constant-values";
+import { toHankakuAlphaNum } from "../../services/to-hankaku-alpha-num";
 
 export class CharNode {
   next?: CharNode;
@@ -59,6 +58,13 @@ export class CharNode {
       head = head.next?.moveToNext();
     }
     return head;
+  }
+
+  includes(search: string | RegExp): boolean {
+    if (typeof search === 'string') {
+      search = new RegExp(search);
+    }
+    return this.match(search) !== null;
   }
 
   concat(...another: (CharNode | undefined)[]): CharNode | undefined {
@@ -365,7 +371,7 @@ export class CharNode {
     const txt = this.toProcessedString();
     let root: CharNode | undefined = this;
     let i = 0;
-    let match: RegExpExecArray | null = search.exec(txt);
+    const match: RegExpExecArray | null = search.exec(txt);
     if (!match) {
       return;
     }
@@ -462,7 +468,7 @@ export class CharNode {
     // オリジナルの文字は残す
     const regexp: RegExp = (() => {
       if (typeof search === 'string') {
-        return RegExpEx.create(search, 'g');
+        return new RegExp(search, 'g');
       } else if (!search.global) {
         return new RegExp(search, 'g');
       }

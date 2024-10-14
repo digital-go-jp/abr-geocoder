@@ -22,15 +22,13 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { PrefLgCode } from '@domain/types/pref-lg-code';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { KyotoStreetTrieFinder } from '../models/kyoto-street-trie-finder';
 import { QuerySet } from '../models/query-set';
-import { trimDashAndSpace } from '../services/trim-dash-and-space';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
-import { Query } from '../models/query';
 
 export class KyotoStreetTransform extends Transform {
 
@@ -59,8 +57,7 @@ export class KyotoStreetTransform extends Transform {
         continue;
       }
 
-      if (query.match_level.num === MatchLevel.CITY.num &&
-          query.lg_code?.substring(0, 2) !== KYOTO_PREF_LG_CODE) {
+      if (query.lg_code?.substring(0, 2) !== KYOTO_PREF_LG_CODE) {
         // 京都府以外の場合はスキップ
         results.add(query);
         continue;
@@ -72,71 +69,73 @@ export class KyotoStreetTransform extends Transform {
         continue;
       }
 
+      const target = query.tempAddress;
       const targets: {
         target: CharNode | undefined,
         ambiguous: number;
+        unused: string[];
+        useKoaza: boolean;
       }[] = [
         // 全体で探す
         {
-          target: query.tempAddress,
+          target: target,
           ambiguous: 0,
+          unused: [],
+          useKoaza: true,
         },
       ];
 
-
-      const marker = query.tempAddress.match(RegExpEx.create('(?:上|下|東入|西入)る?'));
-      if (marker) {
-        const koaza = query.tempAddress.substring(0, marker.index);
-        const bearingWord = query.tempAddress.substring(marker.index, marker.lastIndex);
-        const rest = query.tempAddress.substring(marker.lastIndex);
-
-        // 上る|下る|西入|東入を省略して探す (DB内に含まれていない可能性)
-        targets.push({
-          target: koaza!.concat(rest),
-          ambiguous: marker.lastIndex - marker.index,
+      const markers = query.tempAddress?.
+        matchAll(RegExpEx.create('(?:(?:上る|下る|東入る?|西入る?)|(?:角[東西南北])|(?:[東西南北]側))', 'g'));
+      if (markers) {
+        markers.forEach(marker => {
+          const koaza = query.tempAddress!.substring(0, marker.index);
+          const bearingWord = query.tempAddress!.substring(marker.index, marker.lastIndex);
+          const rest = query.tempAddress!.substring(marker.lastIndex);
+  
+          // 方角を省略して探す (DB内に含まれていない可能性)
+          targets.push({
+            target: koaza!.concat(rest),
+            ambiguous: marker.lastIndex - marker.index,
+            unused: [bearingWord!.toOriginalString()],
+            useKoaza: true,
+          });
+  
+          // 通り名 + 方角
+          // targets.push({
+          //   target: koaza?.concat(bearingWord),
+          //   ambiguous: marker.lastIndex
+          // });
+  
+          // 大字 + 方角で探す
+          // targets.push({
+          //   target: bearingWord?.concat(rest),
+          //   ambiguous: marker.lastIndex
+          // });
+  
+          // 大字だけで探す
+          targets.push({
+            target: rest,
+            ambiguous: marker.lastIndex - marker.index,
+            unused: [
+              koaza!.toOriginalString(),
+              bearingWord!.toOriginalString(),
+            ],
+            useKoaza: false,
+          });
         });
-
-        // // 大字だけで探す
-        // targets.push({
-        //   target: rest,
-        //   ambiguous: marker.lastIndex
-        // });
-
-        // // 大字 + 方角で探す
-        // targets.push({
-        //   target: bearingWord?.concat(rest),
-        //   ambiguous: marker.lastIndex
-        // });
-
-        // restに方角が含まれていたら削除
-        targets.push({
-          target: koaza!.concat(bearingWord, rest?.replace(RegExpEx.create('^[東西南北]側'), '')),
-          ambiguous: marker.lastIndex - marker.index,
-        });
-
-        // 上る|下る|西入|東入を省略 & restに方角が含まれていたら削除
-        targets.push({
-          target: koaza!.concat(rest?.replace(RegExpEx.create('^[東西南北]側'), '')),
-          ambiguous: marker.lastIndex - marker.index,
-        });
-
-        // // 大字だけで探す & restに方角が含まれていたら削除
-        // targets.push({
-        //   target: bearingWord?.concat(rest?.replace(RegExpEx.create('^[東西南北]側'), '')),
-        //   ambiguous: marker.lastIndex
-        // });
       }
  
-
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
-      
       let anyHit = false;
       for (const search of targets) {
         const findResults = this.trie.find({
           target: search.target!,
           fuzzy: DEFAULT_FUZZY_CHAR,
+          partialMatches: true,
+          extraChallenges: ['通', '角', '東入', '西入', '上る', '下る', '角西', '角東', '北側', '南側', '東側', '西側'],
         });
 
         const filteredResult = findResults?.filter(result => {
@@ -162,41 +161,56 @@ export class KyotoStreetTransform extends Transform {
           return matched;
         });
 
+        // console.log(search.target?.toProcessedString(), '->', findResults?.length);
         if (!findResults || findResults.length === 0) {
           continue;
         }
-        filteredResult?.forEach(result => {
 
-          // 小字(通り名)がヒットした
-          const params: Record<string, CharNode | number | string | MatchLevel> = {
-            tempAddress: result.unmatched,
-            match_level: MatchLevel.MACHIAZA_DETAIL,
-            town_key: result.info!.town_key,
-            city: result.info!.city,
-            pref: result.info!.pref,
-            city_key: result.info!.city_key,
-            pref_key: result.info!.pref_key,
-            rsdt_addr_flg: result.info!.rsdt_addr_flg,
-            oaza_cho: result.info!.oaza_cho,
-            chome: result.info!.chome,
-            ward: result.info!.ward,
-            lg_code: result.info!.lg_code,
-            koaza: result.info!.koaza,
-            koaza_aka_code: 2,
-            machiaza_id: result.info!.machiaza_id,
-            matchedCnt: query.matchedCnt + result.depth,
-            ambiguousCnt: query.ambiguousCnt + (result.ambiguous ? 1 : 0) + search.ambiguous,
-          };
-          if (result.info!.rep_lat && result.info!.rep_lon) {
-            params.coordinate_level = MatchLevel.MACHIAZA_DETAIL;
-            params.rep_lat = result.info!.rep_lat;
-            params.rep_lon = result.info!.rep_lon;
+        if (filteredResult &&  filteredResult.length > 0) {
+          for (const result of filteredResult) {
+
+            // 小字(通り名)がヒットした
+            const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
+              tempAddress: result.unmatched,
+              match_level: MatchLevel.MACHIAZA_DETAIL,
+              town_key: result.info!.town_key,
+              city: result.info!.city,
+              pref: result.info!.pref,
+              city_key: result.info!.city_key,
+              pref_key: result.info!.pref_key,
+              rsdt_addr_flg: result.info!.rsdt_addr_flg,
+              oaza_cho: result.info!.oaza_cho,
+              chome: result.info!.chome,
+              ward: result.info!.ward,
+              lg_code: result.info!.lg_code,
+              koaza: search.useKoaza ? result.info!.koaza : undefined,
+              koaza_aka_code: 2,
+              machiaza_id: result.info!.machiaza_id,
+              matchedCnt: query.matchedCnt + result.depth,
+              ambiguousCnt: query.ambiguousCnt + (result.ambiguous ? 1 : 0) + search.ambiguous,
+            };
+            if (result.info!.rep_lat && result.info!.rep_lon) {
+              params.coordinate_level = MatchLevel.MACHIAZA_DETAIL;
+              params.rep_lat = result.info!.rep_lat;
+              params.rep_lon = result.info!.rep_lon;
+            }
+
+            const copied = query.copy(params);
+            results.add(copied);
+            if (search.unused.length > 0) {
+              copied.unmatched?.push(...search.unused);
+            }
+            anyHit = true;
+            break;
           }
+          if (anyHit) {
+            break;
+          }
+        }
 
-          const copied = query.copy(params);
-          results.add(copied);
-          anyHit = true;
-        });
+        if (anyHit) {
+          break;
+        }
       }
 
       if (!anyHit) {

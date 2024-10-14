@@ -81,6 +81,13 @@ export class RsdtDspTransform extends Transform {
     const results = new QuerySet();
     for await (const query of queries.values()) {
 
+      if (query.koaza_aka_code === 2) {
+        // 京都通り名がマッチしている場合、スキップする
+        // (京都市は住居表示を行っていない)
+        results.add(query);
+        continue;
+      }
+      
       if (query.searchTarget === SearchTarget.PARCEL) {
         // 地番検索が指定されている場合、このステップはスキップする
         results.add(query);

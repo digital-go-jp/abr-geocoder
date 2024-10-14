@@ -181,21 +181,21 @@ export class TrieAddressFinder<T> {
       });
     }
 
+    if (!parent) {
+      return [];
+    }
     // これ以上、探索する文字がない場合は、現時点の情報を返す
-    if (!parent || !node || !node.char) {
+    if (!node || !node.char) {
 
       // extraChallenges が指定されている場合、もう１文字を試してみる
       const results: InternalResult<T>[] = [];
-      if (depth > 0 && parent && extraChallenges && extraChallenges.length > 0) {
+      if (depth > 0 && extraChallenges && extraChallenges.length > 0) {
         for (const extraChar of extraChallenges) {
-          if (!parent.children.has(extraChar)) {
-            continue;
-          }
-          const child = parent.children.get(extraChar)!;
+          const newNode = CharNode.create(extraChar)?.concat(node);
           const others = this.traverse({
             fuzzy,
-            parent: child,
-            node,
+            parent,
+            node: newNode,
             partialMatches,
             extraChallenges: [], // 2回 extraChallenge は行わない
             depth: depth + 1,
@@ -269,7 +269,7 @@ export class TrieAddressFinder<T> {
           parent: child,
           node: node.next,
           partialMatches,
-          extraChallenges: [], // fuzzy のときは extraChallengeをしない
+          extraChallenges,
           depth: depth + 1,
         });
         others?.forEach(other => {
@@ -307,19 +307,15 @@ export class TrieAddressFinder<T> {
     });
 
     // extraChallenges が指定されている場合、もう１文字を試してみる
-    if (depth > 0 && parent && extraChallenges && extraChallenges.length > 0) {
+    if (depth > 0 && extraChallenges && extraChallenges.length > 0) {
       for (const extraChar of extraChallenges) {
-        if (!parent.children.has(extraChar)) {
-          continue;
-        }
-
-        const child = parent.children.get(extraChar)!;
+        const newNode = CharNode.create(extraChar)?.concat(node);
         const others = this.traverse({
           fuzzy,
-          parent: child,
-          node,
+          parent,
+          node: newNode,
           partialMatches,
-          extraChallenges: [], // 2回目は行わない
+          extraChallenges: [], // 2回 extraChallenge は行わない
           depth: depth + 1,
         });
         if (!others) {

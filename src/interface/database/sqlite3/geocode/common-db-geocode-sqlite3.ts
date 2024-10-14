@@ -945,17 +945,17 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       
       resolve(rows);
     })
-    .then((rows: WardAndOazaRow[]) => {
-      const results: WardAndOazaMatchingInfo[] = rows.map(row => {
-        return {
-          ...row,
-          match_level: MatchLevel.MACHIAZA,
-          coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA,
-        };
-      });
+      .then((rows: WardAndOazaRow[]) => {
+        const results: WardAndOazaMatchingInfo[] = rows.map(row => {
+          return {
+            ...row,
+            match_level: MatchLevel.MACHIAZA,
+            coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA,
+          };
+        });
 
-      return Promise.resolve(results);
-    });
+        return Promise.resolve(results);
+      });
   }
   // -----------------------------------------
   // 〇〇市〇〇区 のHashMapを返す

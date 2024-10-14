@@ -36,7 +36,7 @@ export type NdGeoJsonOutput = {
   properties: {
     input: string;
     output: string;
-    other: string | null;
+    others: string[];
     score: number;
     match_level: string;
     coordinate_level: string;
@@ -95,11 +95,15 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
     callback: TransformCallback,
   ): void {
 
+    const unmatched: string[] = [...result.unmatched];
+    if (result.tempAddress) {
+      unmatched.push(result.tempAddress?.toOriginalString()?.trim());
+    }
     const coordinates = (() => {
       if (!result.rep_lat || !result.rep_lon) {
         return {
           lon: null,
-          lat: null
+          lat: null,
         };
       }
       return {
@@ -119,7 +123,7 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
       properties: {
         input: result.input.data.address,
         output: result.formatted.address,
-        other: result.tempAddress?.toOriginalString()?.trim() || BLANK_CHAR,
+        others: unmatched,
         score: result.formatted.score,
         match_level: result.match_level.str,
         coordinate_level: result.coordinate_level.str,

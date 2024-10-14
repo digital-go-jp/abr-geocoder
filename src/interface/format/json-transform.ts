@@ -32,7 +32,7 @@ export type JsonOutput = {
   },
   result: {
     output: string;
-    other: string | null;
+    others: string[];
     score: number;
     match_level: string;
     coordinate_level: string;
@@ -96,6 +96,11 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
   ): void {
     const out = this.buffer;
 
+    const unmatched: string[] = [...result.unmatched];
+    if (result.tempAddress) {
+      unmatched.push(result.tempAddress?.toOriginalString()?.trim());
+    }
+
     if (this.lineNum > 0) {
       this.buffer = ',';
     } else {
@@ -108,7 +113,7 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
       },
       result: {
         output: result.formatted.address,
-        other: result.tempAddress?.toOriginalString()?.trim() || BLANK_CHAR,
+        others: unmatched,
         score: result.formatted.score,
         match_level: result.match_level.str,
         coordinate_level: result.coordinate_level.str,

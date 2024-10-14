@@ -1,7 +1,7 @@
-import { describe, expect, it, jest, test } from '@jest/globals';
-import { CharNode } from '../char-node';
 import { DASH, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { describe, expect, it, test } from '@jest/globals';
+import { CharNode } from '../char-node';
 
 describe("CharNode", () => {
   describe("constructor", () => {
@@ -114,14 +114,14 @@ describe("CharNode", () => {
     it("should return undefined if not found.", () => {
       
       const node = CharNode.create(`下京区下珠数屋町東洞院東入ル飴屋町`);
-      const result = node?.headOf('西入')
+      const result = node?.headOf('西入');
       expect(result).toBeUndefined();
     });
 
     it("should return undefined if the search word length is too long.", () => {
       
       const node = CharNode.create(`あいうえお`);
-      const result = node?.headOf('あいうえおかきく')
+      const result = node?.headOf('あいうえおかきく');
       expect(result).toBeUndefined();
     });
     it("should return the head node if the search word is an empty string.", () => {

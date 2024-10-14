@@ -133,11 +133,14 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
           case 'rsdt_addr_flg':
             return result.rsdt_addr_flg;
 
-          case 'other':
-            if (!result.tempAddress) {
+          case 'others':
+            if (!result.tempAddress && result.unmatched.length === 0) {
               return '';
             }
-            return `"${result.tempAddress.toOriginalString().trim()}"`;
+            if (result.tempAddress) {
+              result.unmatched.push(result.tempAddress.toOriginalString().trim());
+            }
+            return `"${result.unmatched.join(',')}"`;
 
           case 'blk_num':
             return result.block?.toString() || '';
@@ -216,7 +219,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
     // 出力するCSVカラムの順番
     'input',
     'output',
-    'other',
+    'others',
     'score',
     'match_level',
     'coordinate_level',

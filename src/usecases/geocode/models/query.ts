@@ -43,6 +43,7 @@ export interface IQuery {
   startTime: number;
   fuzzy?: string;
   searchTarget: SearchTarget;
+  unmatched: string[];
 
   pref?: string;
   pref_key?: number;
@@ -105,7 +106,7 @@ export class Query implements IQuery {
   public readonly tempAddress?: CharNode;
   public readonly searchTarget: SearchTarget;
   public readonly fuzzy?: string;
-  public readonly other?: string;
+  public readonly unmatched: string[];
   public readonly pref?: string;
   public readonly pref_key?: number;
   public readonly county?: string;
@@ -159,6 +160,7 @@ export class Query implements IQuery {
     this.matchedCnt = params.matchedCnt;
     this.ambiguousCnt = params.ambiguousCnt;
     this.startTime = params.startTime;
+    this.unmatched = [...params.unmatched];
 
     this.input = params.input;
     this.tempAddress = params.tempAddress;
@@ -211,6 +213,7 @@ export class Query implements IQuery {
       startTime: this.startTime,
       input: this.input,
       tempAddress: this.tempAddress?.toString(),
+      unmatched: this.unmatched,
       pref: this.pref as string || undefined,
       county: this.county as string || undefined,
       city: this.city as string || undefined,
@@ -271,6 +274,7 @@ export class Query implements IQuery {
           startTime: this.startTime,
           matchedCnt: this.matchedCnt,
           tempAddress : this.tempAddress,
+          unmatched: this.unmatched,
           pref : this.pref,
           county : this.county,
           city : this.city,
@@ -446,6 +450,7 @@ export class Query implements IQuery {
       fuzzy: input.data.fuzzy,
       searchTarget: input.data.searchTarget,
       ambiguousCnt: 0,
+      unmatched: [],
     });
   };
 }
