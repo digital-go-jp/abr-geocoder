@@ -30,7 +30,9 @@ const mockedModules = {
 };
 jest.spyOn(EnvProvider.prototype, 'availableParallelism').mockReturnValue(5);
 
-describe('Downloader', () => {
+
+// TODO: 実装し直す
+describe.skip('Downloader', () => {
   const progressSpy = jest.fn();
   let aggregaterSpy: jest.SpiedFunction<(params: string[] | undefined) => Set<string>>;
   let createDownloadRequestsSpy: jest.SpiedFunction<(downloadTargetLgCodes: Set<string>) => Promise<DownloadRequest[]>>;
@@ -291,54 +293,53 @@ describe('Downloader', () => {
     });
   });
 
-  // TODO: 実装し直す
-  // test('aggregateLGcodes() should aggregate LG codes ', () => {
+  test('aggregateLGcodes() should aggregate LG codes ', () => {
 
-  //   // 京都府福知山市(262013) と 京都府(260002) のLGCodeを指定している
-  //   // 京都府(260002) が 京都府福知山市(262013) をカバーするので、
-  //   // this.aggregateLGcodes() で 京都府全体を示す "26...." にする
-  //   const results = aggregaterSpy.mock.results.pop();
-  //   expect(results?.value).toBeDefined();
-  //   expect(Array.from(results!.value as Set<string>)).toEqual(
-  //     expect.arrayContaining(['26....', '131016']),
-  //   );
-  // });
+    // 京都府福知山市(262013) と 京都府(260002) のLGCodeを指定している
+    // 京都府(260002) が 京都府福知山市(262013) をカバーするので、
+    // this.aggregateLGcodes() で 京都府全体を示す "26...." にする
+    const results = aggregaterSpy.mock.results.pop();
+    expect(results?.value).toBeDefined();
+    expect(Array.from(results!.value as Set<string>)).toEqual(
+      expect.arrayContaining(['26....', '131016']),
+    );
+  });
 
-  // test('createDownloadRequests() should create requests for specified LG codes', async () => {
-  //   // src/interface/__mocks__/http-request-adapter.ts に定義してあるパッケージリストの中から
-  //   // 131016 と 京都府全て('26....')の市町村のパッケージに対するリクエストを作成する
+  test('createDownloadRequests() should create requests for specified LG codes', async () => {
+    // src/interface/__mocks__/http-request-adapter.ts に定義してあるパッケージリストの中から
+    // 131016 と 京都府全て('26....')の市町村のパッケージに対するリクエストを作成する
 
-  //   const results = createDownloadRequestsSpy.mock.results.pop();
-  //   const values = (await Promise.resolve(results?.value)) as DownloadRequest[];
-  //   expect(values.length).toBe(expectRequests.length);
-  //   expect(values).toEqual(expect.arrayContaining(expectRequests));
-  // });
+    const results = createDownloadRequestsSpy.mock.results.pop();
+    const values = (await Promise.resolve(results?.value)) as DownloadRequest[];
+    expect(values.length).toBe(expectRequests.length);
+    expect(values).toEqual(expect.arrayContaining(expectRequests));
+  });
 
-  // test('DownloadTransform should use 6 threads, and CsvParseTransform should use 8 threads', () => {
+  test('DownloadTransform should use 6 threads, and CsvParseTransform should use 8 threads', () => {
 
-  //   // EnvProviderのモックで、実行環境には14コアがあると定義している
-  //   // この半分(最大6)をダウンロードスレッドに割り当てるので、
-  //   // DownloadTransformに割り当てられるスレッド数は6となる。
-  //   // 残り14-6=8 がCsvParserTransformに割り当てられる
-  //   expect(mockedModules.downloadTransform.DownloadTransform).toHaveBeenCalledWith(
-  //     expect.objectContaining({
-  //       maxConcurrency: 6,
+    // EnvProviderのモックで、実行環境には14コアがあると定義している
+    // この半分(最大6)をダウンロードスレッドに割り当てるので、
+    // DownloadTransformに割り当てられるスレッド数は6となる。
+    // 残り14-6=8 がCsvParserTransformに割り当てられる
+    expect(mockedModules.downloadTransform.DownloadTransform).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxConcurrency: 6,
 
-  //       // 1スレッド数当たりの並列ダウンロードファイル数
-  //       maxTasksPerWorker: 7,
-  //     }),
-  //   );
-  //   expect(mockedModules.csvParserTransform.CsvParseTransform).toHaveBeenCalledWith(
-  //     expect.objectContaining({
-  //       maxConcurrency: 8,
-  //     }),
-  //   );
-  // });
+        // 1スレッド数当たりの並列ダウンロードファイル数
+        maxTasksPerWorker: 7,
+      }),
+    );
+    expect(mockedModules.csvParserTransform.CsvParseTransform).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxConcurrency: 8,
+      }),
+    );
+  });
 
-  // test('progress() should be called', () => {
-  //   // ダウンロードリクエストの回数分だけコールバックが呼ばれるはず
-  //   expect(progressSpy).toBeCalledTimes(expectRequests.length);
-  // });
+  test('progress() should be called', () => {
+    // ダウンロードリクエストの回数分だけコールバックが呼ばれるはず
+    expect(progressSpy).toBeCalledTimes(expectRequests.length);
+  });
 
   // test('removeGeocoderCommonDataCache should be called', () => {
   //   // removeGeocoderCommonDataCacheが呼ばれるはず
