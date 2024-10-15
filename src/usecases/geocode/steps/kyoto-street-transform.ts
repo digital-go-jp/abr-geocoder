@@ -70,7 +70,8 @@ export class KyotoStreetTransform extends Transform {
         continue;
       }
 
-      const target = query.tempAddress;
+      const target = query.tempAddress.
+        replaceAll(RegExpEx.create('([東西]入)る', 'g'), '$1');
       const targets: {
         target: CharNode | undefined,
         ambiguous: number;
@@ -86,8 +87,8 @@ export class KyotoStreetTransform extends Transform {
         },
       ];
 
-      const markers = query.tempAddress?.
-        matchAll(RegExpEx.create('(?:(?:上る|下る|東入る?|西入る?)|(?:角[東西南北])|(?:[東西南北]側))', 'g'));
+      const markers = target?.
+        matchAll(RegExpEx.create('(?:(?:上る|下る|東入|西入)|(?:角[東西南北])|(?:[東西南北]側))', 'g'));
       if (markers) {
         markers.forEach(marker => {
           const koaza = query.tempAddress!.substring(0, marker.index);
@@ -132,8 +133,11 @@ export class KyotoStreetTransform extends Transform {
       // ------------------------------------
       let anyHit = false;
       for (const search of targets) {
+        if (!search.target) {
+          continue;
+        }
         const findResults = this.trie.find({
-          target: search.target!,
+          target: search.target,
           fuzzy: DEFAULT_FUZZY_CHAR,
           partialMatches: true,
           extraChallenges: ['通', '角', '東入', '西入', '上る', '下る', '角西', '角東', '北側', '南側', '東側', '西側'],

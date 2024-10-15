@@ -104,49 +104,48 @@ const jsonTestRunner = async (testCaseName: string) => {
   expect(JSON.parse(stdout)).toMatchObject(expectedOutput);
 }
 
-// describe('debug', () => {
+describe('debug', () => {
 
-//   test('中京区四条通室町西入ル鶏鉾町474', async () => {
-//     const input = '中京区四条通室町西入ル鶏鉾町474';
-//     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
-//       input,
-//     });
-//     expect(JSON.parse(stdout)).toMatchObject({
-//       "query": {
-//         "input": "中京区四条通室町西入ル鶏鉾町474"
-//       },
-//       "result": {
-//         "output": "京都府京都市中京区四条通室町西入ル鶏鉾町474",
-//         "others": [
-//           "四条通室町西入ル鶏鉾町474"
-//         ],
-//         "match_level": "machiaza_detail",
-//         "coordinate_level": "machiaza_detail",
-//         "lat": 35.016866,
-//         "lon": 135.764047,
-//         "lg_code": "261041",
-//         "machiaza_id": "9007108",
-//         "blk_id": null,
-//         "rsdt_id": null,
-//         "rsdt2_id": null,
-//         "prc_id": null,
-//         "pref": "京都府",
-//         "county": null,
-//         "city": "京都市",
-//         "ward": "中京区",
-//         "oaza_cho": "四丁目",
-//         "chome": null,
-//         "koaza": "柳馬場通丸太町",
-//         "blk_num": null,
-//         "rsdt_num": null,
-//         "rsdt_num2": null,
-//         "prc_num1": null,
-//         "prc_num2": null,
-//         "prc_num3": null
-//       }
-//     });
-//   });
-// });
+  test('下京区四条通堺町東入ル立売中之町101-2', async () => {
+    const input = '下京区四条通堺町東入ル立売中之町101-2';
+    const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
+      input,
+    });
+    expect(JSON.parse(stdout)).toMatchObject({
+      "query": {
+        "input": "下京区四条通堺町東入ル立売中之町101-2"
+      },
+      "result": {
+        "output": "京都府京都市下京区四条通堺町東入立売中之町101-2",
+        "others": [],
+        "match_level": "parcel",
+        "coordinate_level": "machiaza_detail",
+        "lat": 35.003524,
+        "lon": 135.763289,
+        "lg_code": "261068",
+        "machiaza_id": "0259105",
+        "rsdt_addr_flg": 0,
+        "blk_id": null,
+        "rsdt_id": null,
+        "rsdt2_id": null,
+        "prc_id": "001010000200000",
+        "pref": "京都府",
+        "county": null,
+        "city": "京都市",
+        "ward": "下京区",
+        "oaza_cho": "立売中之町",
+        "chome": null,
+        "koaza": "四条通堺町東入",
+        "blk_num": null,
+        "rsdt_num": null,
+        "rsdt_num2": null,
+        "prc_num1": "101",
+        "prc_num2": "2",
+        "prc_num3": null
+      }
+    });
+  });
+});
 
 describe('General cases', () => {
   test('基本的なケースのテスト', async () => {
@@ -158,7 +157,7 @@ describe('General cases', () => {
   });
   
   test('京都通り名のテスト(1)', async () => {
-    await jsonTestRunner('kyoto-street-name-cases');
+    await jsonTestRunner('kyoto-fire-departments');
   });
 
   test('京都通り名のテスト(2)', async () => {
