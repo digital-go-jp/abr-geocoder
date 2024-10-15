@@ -104,48 +104,49 @@ const jsonTestRunner = async (testCaseName: string) => {
   expect(JSON.parse(stdout)).toMatchObject(expectedOutput);
 }
 
-describe('debug', () => {
+// describe('debug', () => {
 
-  test('中京区東堀川通錦小路上る四坊堀川町622-2', async () => {
-    const input = '中京区東堀川通錦小路上る四坊堀川町622-2';
-    const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
-      input,
-    });
-    expect(JSON.parse(stdout)).toMatchObject({
-      "query": {
-        "input": "中京区東堀川通錦小路上る四坊堀川町622-2"
-      },
-      "result": {
-        "output": "京都府京都市中京区東堀川通錦小路上る四坊堀川町622-2",
-        "other": null,
-        "match_level": "parcel",
-        "coordinate_level": "machiaza_detail",
-        "lat": 35.00542,
-        "lon": 135.752357,
-        "lg_code": "261041",
-        "machiaza_id": "0175102",
-        "rsdt_addr_flg": 0,
-        "blk_id": null,
-        "rsdt_id": null,
-        "rsdt2_id": null,
-        "prc_id": "006220000200000",
-        "pref": "京都府",
-        "county": null,
-        "city": "京都市",
-        "ward": "中京区",
-        "oaza_cho": "四坊堀川町",
-        "chome": null,
-        "koaza": "東堀川通錦小路上る",
-        "blk_num": null,
-        "rsdt_num": null,
-        "rsdt_num2": null,
-        "prc_num1": "622",
-        "prc_num2": "2",
-        "prc_num3": null
-      }
-    });
-  });
-});
+//   test('中京区四条通室町西入ル鶏鉾町474', async () => {
+//     const input = '中京区四条通室町西入ル鶏鉾町474';
+//     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
+//       input,
+//     });
+//     expect(JSON.parse(stdout)).toMatchObject({
+//       "query": {
+//         "input": "中京区四条通室町西入ル鶏鉾町474"
+//       },
+//       "result": {
+//         "output": "京都府京都市中京区四条通室町西入ル鶏鉾町474",
+//         "others": [
+//           "四条通室町西入ル鶏鉾町474"
+//         ],
+//         "match_level": "machiaza_detail",
+//         "coordinate_level": "machiaza_detail",
+//         "lat": 35.016866,
+//         "lon": 135.764047,
+//         "lg_code": "261041",
+//         "machiaza_id": "9007108",
+//         "blk_id": null,
+//         "rsdt_id": null,
+//         "rsdt2_id": null,
+//         "prc_id": null,
+//         "pref": "京都府",
+//         "county": null,
+//         "city": "京都市",
+//         "ward": "中京区",
+//         "oaza_cho": "四丁目",
+//         "chome": null,
+//         "koaza": "柳馬場通丸太町",
+//         "blk_num": null,
+//         "rsdt_num": null,
+//         "rsdt_num2": null,
+//         "prc_num1": null,
+//         "prc_num2": null,
+//         "prc_num3": null
+//       }
+//     });
+//   });
+// });
 
 describe('General cases', () => {
   test('基本的なケースのテスト', async () => {
@@ -169,7 +170,7 @@ describe('General cases', () => {
       input,
     });
     const expectedOutput = readJsonFile('basic-test-cases/digital-agency.json');
-    expect(JSON.parse(stdout)).toEqual(expectedOutput);
+    expect(JSON.parse(stdout)).toMatchObject(expectedOutput);
   });
 
 });

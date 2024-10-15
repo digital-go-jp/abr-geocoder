@@ -58,7 +58,7 @@ export class KyotoStreetTransform extends Transform {
         continue;
       }
 
-      if (query.lg_code?.substring(0, 2) !== KYOTO_PREF_LG_CODE) {
+      if (query.lg_code && query.lg_code.substring(0, 2) !== KYOTO_PREF_LG_CODE) {
         // 京都府以外の場合はスキップ
         results.add(query);
         continue;
