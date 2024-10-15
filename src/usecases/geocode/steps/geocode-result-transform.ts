@@ -96,7 +96,7 @@ export class GeocodeResultTransform extends Transform {
       //   }
       // }
       return query;
-    })
+    });
 
     const searchTarget = queryList[0].searchTarget;
     queryList.sort((a, b) => {
