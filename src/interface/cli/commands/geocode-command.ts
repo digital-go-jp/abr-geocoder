@@ -24,6 +24,7 @@
 import { DEFAULT_FUZZY_CHAR, STDIN_FILEPATH } from '@config/constant-values';
 import { EnvProvider } from '@domain/models/env-provider';
 import { countRequests } from '@domain/services/count-requests';
+import { getPackageInfo } from '@domain/services/package/get-package-info';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
 import { resolveHome } from '@domain/services/resolve-home';
 import { upwardFileSearch } from '@domain/services/upward-file-search';
@@ -220,6 +221,8 @@ const geocodeCommand: CommandModule = {
       });
     }
 
+    const { version } = getPackageInfo();
+    
     // ジオコーダーの作成と、ファイルからリクエスト数のカウントを並行して行う
     const tasks: [
       Promise<AbrGeocodeStream>,
@@ -229,7 +232,7 @@ const geocodeCommand: CommandModule = {
       AbrGeocodeStream.create({
         fuzzy: argv.fuzzy || DEFAULT_FUZZY_CHAR,
         searchTarget: argv.target || SearchTarget.ALL,
-        cacheDir: path.join(abrgDir, 'cache'),
+        cacheDir: path.join(abrgDir, 'cache', version),
         database: {
           type: 'sqlite3',
           dataDir: path.join(abrgDir, 'database'),

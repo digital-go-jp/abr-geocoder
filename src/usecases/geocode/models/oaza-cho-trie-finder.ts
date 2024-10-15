@@ -1,6 +1,5 @@
 import { BANGAICHI, DASH, MUBANCHI, OAZA_BANCHO } from "@config/constant-values";
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
-import { getPackageInfo } from "@domain/services/package/get-package-info";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import fs from 'node:fs';
@@ -81,12 +80,10 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
   }
 
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
-    const { version } = getPackageInfo();
-    const cacheDir = path.join(diContainer.cacheDir, version);
-    makeDirIfNotExists(cacheDir);
+    makeDirIfNotExists(diContainer.cacheDir);
 
     const tree = new OazaChoTrieFinder();
-    const cacheFilePath = path.join(cacheDir, 'oaza-cho.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, 'oaza-cho.v8');
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む

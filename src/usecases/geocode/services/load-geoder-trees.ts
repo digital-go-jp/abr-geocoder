@@ -21,7 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { getPackageInfo } from '@domain/services/package/get-package-info';
 import fs from 'node:fs';
 import path from 'node:path';
 import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from "../models/abr-geocoder-di-container";
@@ -39,17 +38,15 @@ import { WardTrieFinder } from "../models/ward-trie-finder";
 export const removeGeocoderCaches = async (params: {
   cacheDir: string;
 }) => {
-  const { version } = getPackageInfo();
-  const cacheDir = path.join(params.cacheDir, version);
-  const isExist = fs.existsSync(cacheDir);
+  const isExist = fs.existsSync(params.cacheDir);
   if (!isExist) {
     return;
   }
-  for await (const dirent of await fs.promises.opendir(cacheDir)) {
+  for await (const dirent of await fs.promises.opendir(params.cacheDir)) {
     if (!dirent.isFile) {
       continue;
     }
-    fs.unlinkSync(path.join(cacheDir, dirent.name));
+    fs.unlinkSync(path.join(params.cacheDir, dirent.name));
   }
 };
 

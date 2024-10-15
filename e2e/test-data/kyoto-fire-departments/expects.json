@@ -6,7 +6,6 @@
     "result": {
       "output": "京都府京都市北区大宮西脇台町17-2",
       "others": [],
-      "score": 0.67,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.053552,
@@ -40,7 +39,6 @@
     "result": {
       "output": "京都府京都市北区紫野大徳寺町88",
       "others": [],
-      "score": 0.5,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.043187,
@@ -74,7 +72,6 @@
     "result": {
       "output": "京都府京都市北区小山南上総町1-1",
       "others": [],
-      "score": 0.48,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.040588,
@@ -108,7 +105,6 @@
     "result": {
       "output": "京都府京都市北区中川北山町48-2",
       "others": [],
-      "score": 0.48,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.087988,
@@ -142,7 +138,6 @@
     "result": {
       "output": "京都府京都市上京区釜座通下立売下る東裏辻町398",
       "others": [],
-      "score": 0.67,
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.019039,
@@ -176,7 +171,6 @@
     "result": {
       "output": "京都府京都市上京区今小路通御前通西入紙屋川町870",
       "others": [],
-      "score": 0.64,
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.028417,
@@ -210,7 +204,6 @@
     "result": {
       "output": "京都府京都市左京区田中西大久保町36",
       "others": [],
-      "score": 0.56,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.03661,
@@ -244,7 +237,6 @@
     "result": {
       "output": "京都府京都市左京区岡崎円勝寺町23-1",
       "others": [],
-      "score": 0.53,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.011394,
@@ -278,7 +270,6 @@
     "result": {
       "output": "京都府京都市左京区鹿ケ谷上宮ノ前町37",
       "others": [],
-      "score": 0.58,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.019147,
@@ -312,7 +303,6 @@
     "result": {
       "output": "京都府京都市左京区岩倉幡枝町1204",
       "others": [],
-      "score": 0.56,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.066052,
@@ -346,7 +336,6 @@
     "result": {
       "output": "京都府京都市左京区修学院大林町13-8",
       "others": [],
-      "score": 0.53,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.048672,
@@ -380,7 +369,6 @@
     "result": {
       "output": "京都府京都市左京区大原上野町564-3",
       "others": [],
-      "score": 0.53,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.106832,
@@ -414,7 +402,6 @@
     "result": {
       "output": "京都府京都市左京区鞍馬貴船町5-2",
       "others": [],
-      "score": 0.48,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.122061,
@@ -448,7 +435,6 @@
     "result": {
       "output": "京都府京都市左京区花脊八桝町1-1",
       "others": [],
-      "score": 0.48,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.222846,
@@ -482,7 +468,6 @@
     "result": {
       "output": "京都府京都市中京区西堀川通御池下る西三坊堀川町521",
       "others": [],
-      "score": 0.7,
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.010363,
@@ -519,7 +504,6 @@
         "押小路通河原町",
         "西入"
       ],
-      "score": 0.37,
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.01283,
@@ -553,7 +537,6 @@
     "result": {
       "output": "京都府京都市中京区壬生東高田町1-2",
       "others": [],
-      "score": 0.62,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.997864,
@@ -587,7 +570,6 @@
     "result": {
       "output": "京都府京都市中京区西ノ京東中合町45",
       "others": [],
-      "score": 0.56,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.011818,
@@ -621,7 +603,6 @@
     "result": {
       "output": "京都府京都市東山区清水五丁目130-8",
       "others": [],
-      "score": 0.53,
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 34.996669519,
@@ -655,7 +636,6 @@
     "result": {
       "output": "京都府京都市東山区泉涌寺五葉ノ辻町13-2",
       "others": [],
-      "score": 0.58,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.982254,
@@ -689,7 +669,6 @@
     "result": {
       "output": "京都府京都市山科区西野今屋敷町2-10",
       "others": [],
-      "score": 0.53,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.986025,
@@ -723,7 +702,6 @@
     "result": {
       "output": "京都府京都市伏見区深草神明講谷町2-1",
       "others": [],
-      "score": 0.53,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.957818,
@@ -759,7 +737,6 @@
       "others": [
         "23-1"
       ],
-      "score": 0.5,
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 34.981437,
@@ -793,7 +770,6 @@
     "result": {
       "output": "京都府京都市下京区五条通高倉西入堺町27",
       "others": [],
-      "score": 0.6,
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 34.995462,
@@ -827,7 +803,6 @@
     "result": {
       "output": "京都府京都市下京区上之町13",
       "others": [],
-      "score": 0.43,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.988246,
@@ -861,7 +836,6 @@
     "result": {
       "output": "京都府京都市下京区中堂寺北町71",
       "others": [],
-      "score": 0.63,
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 34.996502456,
@@ -895,7 +869,6 @@
     "result": {
       "output": "京都府京都市南区西九条菅田町4-1",
       "others": [],
-      "score": 0.48,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.974718,
@@ -929,7 +902,6 @@
     "result": {
       "output": "京都府京都市南区西九条戒光寺町2",
       "others": [],
-      "score": 0.5,
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 34.984559532,
@@ -963,7 +935,6 @@
     "result": {
       "output": "京都府京都市南区吉祥院西ノ庄淵ノ西町42",
       "others": [],
-      "score": 0.6,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.98301,
@@ -997,7 +968,6 @@
     "result": {
       "output": "京都府京都市南区久世中久世町二丁目129-2",
       "others": [],
-      "score": 0.6,
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 34.961156,
@@ -1031,7 +1001,6 @@
     "result": {
       "output": "京都府京都市南区上鳥羽塔ノ森下開ノ内94-4",
       "others": [],
-      "score": 0.6,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.955974,
@@ -1067,7 +1036,6 @@
       "others": [
         "36"
       ],
-      "score": 0.5,
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.016111,
@@ -1101,7 +1069,6 @@
     "result": {
       "output": "京都府京都市右京区嵯峨天龍寺今堀町1",
       "others": [],
-      "score": 0.56,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.016706,
@@ -1135,7 +1102,6 @@
     "result": {
       "output": "京都府京都市右京区梅津高畝町46",
       "others": [],
-      "score": 0.5,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.00264,
@@ -1169,7 +1135,6 @@
     "result": {
       "output": "京都府京都市右京区御室大内35",
       "others": [],
-      "score": 0.47,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.03354,
@@ -1203,7 +1168,6 @@
     "result": {
       "output": "京都府京都市右京区京北下中町勝山田8",
       "others": [],
-      "score": 0.56,
       "match_level": "parcel",
       "coordinate_level": "city",
       "lat": 35.010116,
@@ -1237,7 +1201,6 @@
     "result": {
       "output": "京都府京都市西京区樫原佃19",
       "others": [],
-      "score": 0.43,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.975791,
@@ -1271,7 +1234,6 @@
     "result": {
       "output": "京都府京都市西京区桂市ノ前町12",
       "others": [],
-      "score": 0.5,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.978574,
@@ -1305,7 +1267,6 @@
     "result": {
       "output": "京都府京都市西京区松尾木ノ曽町59-6",
       "others": [],
-      "score": 0.53,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.991825,
@@ -1339,7 +1300,6 @@
     "result": {
       "output": "京都府京都市西京区大枝東新林町二丁目4",
       "others": [],
-      "score": 0.58,
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 34.969448838,
@@ -1373,7 +1333,6 @@
     "result": {
       "output": "京都府京都市伏見区竹田七瀬川町9-1",
       "others": [],
-      "score": 0.5,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.953248,
@@ -1407,7 +1366,6 @@
     "result": {
       "output": "京都府京都市伏見区醍醐大構町28",
       "others": [],
-      "score": 0.5,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.948236,
@@ -1441,7 +1399,6 @@
     "result": {
       "output": "京都府京都市伏見区南浜町273-2",
       "others": [],
-      "score": 0.48,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.930319,
@@ -1477,7 +1434,6 @@
       "others": [
         "197"
       ],
-      "score": 0.5,
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 34.903647,
@@ -1513,7 +1469,6 @@
       "others": [
         "14-27"
       ],
-      "score": 0.55,
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 34.937412,
@@ -1547,7 +1502,6 @@
     "result": {
       "output": "京都府京都市伏見区向島四ツ谷池7-10",
       "others": [],
-      "score": 0.53,
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 34.92045925,
@@ -1581,7 +1535,6 @@
     "result": {
       "output": "京都府京都市伏見区桃山町山ノ下44-5",
       "others": [],
-      "score": 0.64,
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 34.9385,

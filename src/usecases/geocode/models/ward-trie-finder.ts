@@ -1,5 +1,4 @@
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
-import { getPackageInfo } from "@domain/services/package/get-package-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,12 +28,10 @@ export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
   };
 
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
-    const { version } = getPackageInfo();
-    const cacheDir = path.join(diContainer.cacheDir, version);
-    makeDirIfNotExists(cacheDir);
+    makeDirIfNotExists(diContainer.cacheDir);
 
     const tree = new WardTrieFinder();
-    const cacheFilePath = path.join(cacheDir, 'ward.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, 'ward.v8');
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む

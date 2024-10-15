@@ -32,6 +32,7 @@ import path from 'node:path';
 import readline from 'node:readline/promises';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 import downloadCommand from './download-command';
+import { getPackageInfo } from '@domain/services/package/get-package-info';
 
 export type UpdateCheckCommandArgv = {
   abrgDir?: string;
@@ -100,10 +101,11 @@ const updateCheckCommand: CommandModule = {
     }
 
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
+    const { version } = getPackageInfo();
 
     // 環境設定
     const updateChecker = new UpdateChecker({
-      cacheDir: path.join(abrgDir, 'download'),
+      cacheDir: path.join(abrgDir, 'download', version),
       downloadDir: path.join(abrgDir, 'download'),
       database: {
         type: 'sqlite3',

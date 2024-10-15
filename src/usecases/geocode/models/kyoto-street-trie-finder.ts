@@ -1,6 +1,5 @@
 import { DASH, SPACE } from "@config/constant-values";
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
-import { getPackageInfo } from "@domain/services/package/get-package-info";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
 import fs from 'node:fs';
@@ -52,12 +51,10 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
   }
 
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
-    const { version } = getPackageInfo();
-    const cacheDir = path.join(diContainer.cacheDir, version);
-    makeDirIfNotExists(cacheDir);
+    makeDirIfNotExists(diContainer.cacheDir);
 
     const tree = new KyotoStreetTrieFinder();
-    const cacheFilePath = path.join(cacheDir, 'kyoto-street.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, 'kyoto-street.v8');
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む

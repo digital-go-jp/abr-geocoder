@@ -1,5 +1,4 @@
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
-import { getPackageInfo } from "@domain/services/package/get-package-info";
 import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,12 +28,10 @@ export class WardAndOazaTrieFinder extends TrieAddressFinder<WardAndOazaMatching
   }
 
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
-    const { version } = getPackageInfo();
-    const cacheDir = path.join(diContainer.cacheDir, version);
-    makeDirIfNotExists(cacheDir);
+    makeDirIfNotExists(diContainer.cacheDir);
 
     const tree = new WardAndOazaTrieFinder();
-    const cacheFilePath = path.join(cacheDir, 'ward-and-oaza.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, 'ward-and-oaza.v8');
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む

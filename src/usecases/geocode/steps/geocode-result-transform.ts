@@ -65,6 +65,39 @@ export class GeocodeResultTransform extends Transform {
         query.match_level.num >= MatchLevel.CITY.num);
     });
 
+    queryList = queryList.map(query => {
+      if (query.city === '京都市') {
+        if (query.rsdt_addr_flg !== 0) {
+          query = query.copy({
+            rsdt_addr_flg: 0,
+          });
+        }
+        return query;
+      }
+      // if (query.chome?.includes('丁目')) {
+      //   switch (true) {
+      //     case !query.parcel_key && query.rsdt_addr_flg !== 0: {
+      //       query = query.copy({
+      //         rsdt_addr_flg: 0,
+      //       });
+      //       break;
+      //     }
+
+      //     case query.rsdtblk_key && query.rsdt_addr_flg !== 1: {
+      //       query = query.copy({
+      //         rsdt_addr_flg: 1,
+      //       });
+      //       break;
+      //     }
+
+      //     default:
+      //       // Nothing to do here
+      //       break;
+      //   }
+      // }
+      return query;
+    })
+
     const searchTarget = queryList[0].searchTarget;
     queryList.sort((a, b) => {
       // いくつかの項目を比較して、合計値の高い方を優先する
@@ -77,26 +110,72 @@ export class GeocodeResultTransform extends Transform {
       const isBrsdt = bLv === MatchLevel.RESIDENTIAL_BLOCK.num || bLv === MatchLevel.RESIDENTIAL_DETAIL.num;
       const isAprcl = aLv === MatchLevel.PARCEL.num;
       const isBprcl = bLv === MatchLevel.PARCEL.num;
+      const hasAchome = a.chome?.includes('丁目');
+      const hasBchome = b.chome?.includes('丁目');
 
       switch (true) {
-        // SearchTarget.ALL or SearchTarget.RESIDENTIAL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
-        case (searchTarget === SearchTarget.ALL || searchTarget === SearchTarget.RESIDENTIAL) && isArsdt && isBprcl:
-          totalScoreA += 1;
+        // SearchTarget.ALL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
+        case searchTarget === SearchTarget.ALL && isArsdt && isBprcl:
+          if (hasAchome) {
+            totalScoreA += 1;
+          }
+          // Bが地番なのに chome を持っていた場合、Bのスコアを下げる
+          if (hasBchome) {
+            totalScoreB -= 1;
+          }
           break;
 
-        // SearchTarget.ALL or SearchTarget.RESIDENTIAL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
-        case (searchTarget === SearchTarget.ALL || searchTarget === SearchTarget.RESIDENTIAL) && isAprcl && isBrsdt:
-          totalScoreB += 1;
+        // SearchTarget.RESIDENTIAL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
+        case searchTarget === SearchTarget.RESIDENTIAL && isArsdt && isBprcl:
+          if (hasAchome) {
+            totalScoreA += 2;
+          }
+          // Bが地番なのに chome を持っていた場合、Bのスコアを下げる
+          if (hasBchome) {
+            totalScoreB -= 1;
+          }
+          break;
+
+        // SearchTarget.ALL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
+        case searchTarget === SearchTarget.ALL && isAprcl && isBrsdt:
+          if (hasBchome) {
+            totalScoreB += 1;
+          }
+          // Aが地番なのに chome を持っていた場合、Aのスコアを下げる
+          if (hasAchome) {
+            totalScoreA -= 1;
+          }
+          break;
+
+        // SearchTarget.RESIDENTIAL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
+        case searchTarget === SearchTarget.RESIDENTIAL && isAprcl && isBrsdt:
+          if (hasBchome) {
+            totalScoreB += 2;
+          }
+          // Aが地番なのに chome を持っていた場合、Aのスコアを下げる
+          if (hasAchome) {
+            totalScoreA -= 1;
+          }
           break;
         
         // SearchTarget.PARCEL のとき、Aが地番、Bが住居表示の場合、地番を優先
         case (searchTarget === SearchTarget.PARCEL) && isAprcl && isBrsdt:
-          totalScoreA += 1;
+          // Aが地番なのに chome を持っていた場合、Aのスコアを下げる
+          if (hasAchome) {
+            totalScoreA -= 1;
+          } else {
+            totalScoreA += 2;
+          }
           break;
 
         // SearchTarget.PARCEL のとき、Aが住居表示、Bが地番の場合、地番を優先
         case (searchTarget === SearchTarget.PARCEL) && isArsdt && isBprcl:
-          totalScoreB += 1;
+          // Bが地番なのに chome を持っていた場合、Bのスコアを下げる
+          if (hasAchome) {
+            totalScoreB -= 1;
+          } else {
+            totalScoreB += 2;
+          }
           break;
 
         default:
@@ -130,6 +209,15 @@ export class GeocodeResultTransform extends Transform {
       if (restA < restB) {
         totalScoreA += 1;
       } else if (restA > restB) {
+        totalScoreB += 1;
+      }
+
+      // unmatchedが少ないほうに+1
+      const unmatchedA = a.unmatched.length;
+      const unmatchedB = b.unmatched.length;
+      if (unmatchedA < unmatchedB) {
+        totalScoreA += 1;
+      } else if (unmatchedA > unmatchedB) {
         totalScoreB += 1;
       }
       
@@ -174,6 +262,7 @@ export class GeocodeResultTransform extends Transform {
       } else if (a.ambiguousCnt > b.ambiguousCnt) {
         return 1;
       }
+ 
       return 0;
     });
     

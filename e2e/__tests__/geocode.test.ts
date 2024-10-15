@@ -106,41 +106,41 @@ const jsonTestRunner = async (testCaseName: string) => {
 
 describe('debug', () => {
 
-  test('下京区四条通堺町東入ル立売中之町101-2', async () => {
-    const input = '下京区四条通堺町東入ル立売中之町101-2';
+  test('茨城県龍ｹ崎市久保台2-3 久保台小学校', async () => {
+    const input = '茨城県龍ｹ崎市久保台2-3 久保台小学校';
     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
       input,
     });
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "下京区四条通堺町東入ル立売中之町101-2"
+        "input": "茨城県龍ｹ崎市久保台2-3 久保台小学校"
       },
       "result": {
-        "output": "京都府京都市下京区四条通堺町東入立売中之町101-2",
-        "others": [],
-        "match_level": "parcel",
-        "coordinate_level": "machiaza_detail",
-        "lat": 35.003524,
-        "lon": 135.763289,
-        "lg_code": "261068",
-        "machiaza_id": "0259105",
-        "rsdt_addr_flg": 0,
-        "blk_id": null,
+        "output": "茨城県龍ケ崎市久保台二丁目3 久保台小学校",
+        "others": ["久保台小学校"],
+        "match_level": "residential_block",
+        "coordinate_level": "residential_block",
+        "lat": 35.933121,
+        "lon": 140.177146,
+        "lg_code": "082082",
+        "machiaza_id": "0017002",
+        "rsdt_addr_flg": 1,
+        "blk_id": "003",
         "rsdt_id": null,
         "rsdt2_id": null,
-        "prc_id": "001010000200000",
-        "pref": "京都府",
+        "prc_id": null,
+        "pref": "茨城県",
         "county": null,
-        "city": "京都市",
-        "ward": "下京区",
-        "oaza_cho": "立売中之町",
-        "chome": null,
-        "koaza": "四条通堺町東入",
-        "blk_num": null,
+        "city": "龍ケ崎市",
+        "ward": null,
+        "oaza_cho": "久保台",
+        "chome": "二丁目",
+        "koaza": null,
+        "blk_num": "3",
         "rsdt_num": null,
         "rsdt_num2": null,
-        "prc_num1": "101",
-        "prc_num2": "2",
+        "prc_num1": null,
+        "prc_num2": null,
         "prc_num3": null
       }
     });

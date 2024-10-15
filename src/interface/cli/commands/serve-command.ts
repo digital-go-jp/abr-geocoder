@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 import { EnvProvider } from '@domain/models/env-provider';
+import { getPackageInfo } from '@domain/services/package/get-package-info';
 import { resolveHome } from '@domain/services/resolve-home';
 import { upwardFileSearch } from '@domain/services/upward-file-search';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
@@ -90,7 +91,9 @@ const serveCommand: CommandModule = {
         level: AbrgErrorLevel.ERROR,
       });
     }
-
+    
+    const { version } = getPackageInfo();
+    
     // ジオコーダ作成のためのパラメータ
     const container = new AbrGeocoderDiContainer({
       database: {
@@ -98,7 +101,7 @@ const serveCommand: CommandModule = {
         dataDir: path.join(abrgDir, 'database'),
         schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
-      cacheDir: path.join(abrgDir, 'cache'),
+      cacheDir: path.join(abrgDir, 'cache', version),
       debug: EnvProvider.isDebug,
     });
 
