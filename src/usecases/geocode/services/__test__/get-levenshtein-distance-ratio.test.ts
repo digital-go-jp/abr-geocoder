@@ -4,7 +4,7 @@ import { getLevenshteinDistanceRatio } from '../get-levenshtein-distance-ratio';
 
 const compareNums = (a: number, b: number): boolean => {
   return Math.round(a) - Math.round(b) < 0.001;
-}
+};
 describe('getLevenshteinDistanceRatio', () =>{
   // レーベンシュタイン距離計測のテスト
   // コメントでは1.0 に近いほど strA と strB は類似度が高いとあったが、

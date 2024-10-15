@@ -9,7 +9,7 @@ describe('toHiragana', () =>{
   });
 
   test('test2', () => {
-    // カとケ　は「け」に変換する (龍ヵ崎市 → 龍ケ崎市)
+    // カとケ は「け」に変換する (龍ヵ崎市 → 龍ケ崎市)
     const result = toHiragana('カキクケコ');
     expect(result).toBe('けきくけこ');
   });
