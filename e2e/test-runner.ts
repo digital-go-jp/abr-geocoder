@@ -68,6 +68,9 @@ $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`
     return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`
   })
   .then(() => {
+    return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`
+  })
+  .then(() => {
     return $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`
   })
   .then(() => {

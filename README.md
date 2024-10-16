@@ -26,14 +26,13 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 - Usable as a REST server.
 - Usable as a Node.js library:
   - Supports individual requests and streams.
+- Limited support for searches by Kyoto street names.
 
 ## Limitations
 
 - Cannot search by landmarks (e.g., famous facility names).
 - Cannot search by postal codes.
 - Cannot search by alphabet (English notation).
-- Limited support for searches by Kyoto street names.
-- Cannot search by incomplete address notation.
 
 ## Installation
 

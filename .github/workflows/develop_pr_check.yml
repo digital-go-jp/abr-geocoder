@@ -33,8 +33,7 @@ jobs:
         with:
           path: |
             node_modules/
-            db/database/
-            db/cache/
+            db/download/
           key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json', '**/test-runner.ts') }}
           restore-keys: |
             ${{ runner.os }}-npm-${{ hashFiles('**/package.json', '**/test-runner.ts') }}

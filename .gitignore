@@ -17,3 +17,5 @@ db/
 log.txt
 ./.vscode/*.csv
 ./.vscode/*.json
+.dockerignore
+Dockerfile
