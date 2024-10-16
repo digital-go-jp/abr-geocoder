@@ -110,7 +110,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.city || '';
 
           case 'lg_code':
-            return result.lg_code || '';
+            return `"${result.lg_code || ''}"`;
 
           case 'county':
             return result.county || '';
@@ -119,7 +119,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.ward || '';
 
           case 'machiaza_id':
-            return result.machiaza_id || '';
+            return `"${result.machiaza_id || ''}"`;
 
           case 'oaza_cho':
             return result.oaza_cho || '';
