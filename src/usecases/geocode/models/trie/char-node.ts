@@ -223,7 +223,7 @@ export class CharNode {
     const buffer = [];
     let head: CharNode | undefined = this;
     while (head) {
-      if (head.originalChar !== undefined && head.originalChar !== null && head.originalChar !== '') {  
+      if (head.originalChar !== undefined && head.originalChar !== null && head.originalChar !== '') {
         buffer.push(head.originalChar);
       }
       head = head.next;

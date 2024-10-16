@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, SPACE } from '@config/constant-values';
+import { DASH, DASH_SYMBOLS, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
@@ -375,7 +375,7 @@ export class Query implements IQuery {
         if (!RegExpEx.create(`[号番通条町街丁階線F${DASH}${SPACE}]`).test(formatted_address.at(-1) || '')) {
           const isTailDigit = RegExpEx.create('[0-9]').test(formatted_address.at(-1) || '');
           const isHeadDigit = RegExpEx.create('[0-9]').test(other[0]);
-          const isHeadDash = other[0] === '-';
+          const isHeadDash = RegExpEx.create(`[${DASH_SYMBOLS}]`).test(other[0]);
           if (
             // 末尾が数字 で otherの始まりも数字の場合、 1 234号室などなので、スペースを入れる
             (isTailDigit && isHeadDigit) ||

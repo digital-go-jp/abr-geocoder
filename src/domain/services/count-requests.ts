@@ -24,10 +24,10 @@
 import { LineStream } from 'byline';
 import fs from 'node:fs';
 import { Writable } from 'node:stream';
-import { CommentFilterTransform } from '../transformations/comment-filter-transform';
+import { TrimTransform } from '../transformations/trim-transform';
 export const countRequests = (filePath: string) => {
   const lineByLine = new LineStream();
-  const commentFilter = new CommentFilterTransform();
+  const commentFilter = new TrimTransform();
   return new Promise((
     resolve: (total: number) => void,
   ) => {

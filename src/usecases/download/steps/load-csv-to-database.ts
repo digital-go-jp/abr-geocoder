@@ -26,7 +26,7 @@ import { SemaphoreManager } from "@domain/services/thread/semaphore-manager";
 import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
 import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import { DownloadDbController } from "@interface/database/download-db-controller";
-import { ConsolidateTransform } from "@usecases/geocode/transformations/consolidate-trnasform";
+import { StreamLimiter } from "@domain/transformations/stream-limitter";
 import csvParser from "csv-parser";
 import fs from 'node:fs';
 import { Writable } from 'node:stream';
@@ -66,7 +66,7 @@ export const loadCsvToDatabase = async (params : Required<{
 
     // OutOfMemoryを避けつつ、パフォーマンスを確保するため、10000件ごとデータベースに登録していく
     // (10000件毎 and 最後に flushが実行される)
-    new ConsolidateTransform(10000),
+    new StreamLimiter(10000),
 
     new Writable({
       objectMode: true,

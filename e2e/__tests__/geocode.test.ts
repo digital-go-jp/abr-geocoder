@@ -104,48 +104,48 @@ const jsonTestRunner = async (testCaseName: string) => {
   expect(JSON.parse(stdout)).toMatchObject(expectedOutput);
 }
 
-describe('debug', () => {
+// describe('debug', () => {
 
-  test('茨城県龍ｹ崎市久保台2-3 久保台小学校', async () => {
-    const input = '茨城県龍ｹ崎市久保台2-3 久保台小学校';
-    const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
-      input,
-    });
-    expect(JSON.parse(stdout)).toMatchObject({
-      "query": {
-        "input": "茨城県龍ｹ崎市久保台2-3 久保台小学校"
-      },
-      "result": {
-        "output": "茨城県龍ケ崎市久保台二丁目3 久保台小学校",
-        "others": ["久保台小学校"],
-        "match_level": "residential_block",
-        "coordinate_level": "residential_block",
-        "lat": 35.933121,
-        "lon": 140.177146,
-        "lg_code": "082082",
-        "machiaza_id": "0017002",
-        "rsdt_addr_flg": 1,
-        "blk_id": "003",
-        "rsdt_id": null,
-        "rsdt2_id": null,
-        "prc_id": null,
-        "pref": "茨城県",
-        "county": null,
-        "city": "龍ケ崎市",
-        "ward": null,
-        "oaza_cho": "久保台",
-        "chome": "二丁目",
-        "koaza": null,
-        "blk_num": "3",
-        "rsdt_num": null,
-        "rsdt_num2": null,
-        "prc_num1": null,
-        "prc_num2": null,
-        "prc_num3": null
-      }
-    });
-  });
-});
+//   test('茨城県龍ｹ崎市久保台2-3 久保台小学校', async () => {
+//     const input = '茨城県龍ｹ崎市久保台2-3 久保台小学校';
+//     const { stdout } = await runGeocoder(OutputFormat.NDJSON, {
+//       input,
+//     });
+//     expect(JSON.parse(stdout)).toMatchObject({
+//       "query": {
+//         "input": "茨城県龍ｹ崎市久保台2-3 久保台小学校"
+//       },
+//       "result": {
+//         "output": "茨城県龍ケ崎市久保台二丁目3 久保台小学校",
+//         "others": ["久保台小学校"],
+//         "match_level": "residential_block",
+//         "coordinate_level": "residential_block",
+//         "lat": 35.933121,
+//         "lon": 140.177146,
+//         "lg_code": "082082",
+//         "machiaza_id": "0017002",
+//         "rsdt_addr_flg": 1,
+//         "blk_id": "003",
+//         "rsdt_id": null,
+//         "rsdt2_id": null,
+//         "prc_id": null,
+//         "pref": "茨城県",
+//         "county": null,
+//         "city": "龍ケ崎市",
+//         "ward": null,
+//         "oaza_cho": "久保台",
+//         "chome": "二丁目",
+//         "koaza": null,
+//         "blk_num": "3",
+//         "rsdt_num": null,
+//         "rsdt_num2": null,
+//         "prc_num1": null,
+//         "prc_num2": null,
+//         "prc_num3": null
+//       }
+//     });
+//   });
+// });
 
 describe('General cases', () => {
   test('基本的なケースのテスト', async () => {
@@ -162,6 +162,10 @@ describe('General cases', () => {
 
   test('京都通り名のテスト(2)', async () => {
     await jsonTestRunner('kyoto-schools');
+  });
+
+  test('北海道札幌市のテスト', async () => {
+    await jsonTestRunner('sapporo-schools');
   });
   test('標準入力からのテスト', async () => {
     const input = '東京都千代田区紀尾井町1-3　デジタル庁';

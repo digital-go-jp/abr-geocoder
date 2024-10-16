@@ -78,6 +78,7 @@ const kanjiNum = new Map<string, number>([
 
 const SENTINEL = '&';
 const targetPatterns = new Set<string>([
+  '軒', // 二十四軒二丁目 -> 24軒2丁目
   '通',
   '丁', // 東十二丁目 -> 東12丁目
   '町',

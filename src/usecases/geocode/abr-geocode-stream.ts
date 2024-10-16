@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { CommentFilterTransform } from '@domain/transformations/comment-filter-transform';
+import { TrimTransform } from '@domain/transformations/trim-transform';
 import { DatabaseParams } from '@domain/types/database-params';
 import { SearchTarget } from '@domain/types/search-target';
 import { Duplex, Readable, Writable } from 'node:stream';
@@ -45,7 +45,7 @@ export class AbrGeocodeStream extends Duplex {
   private reader = new Readable({
     read() {},
   });
-  private textReaderTransform: CommentFilterTransform;
+  private textReaderTransform: TrimTransform;
   private geocoderTransform: ThreadGeocodeTransform;
   private dstStream: Writable;
   private outCnt = 0;
@@ -80,7 +80,7 @@ export class AbrGeocodeStream extends Duplex {
     });
 
     // コメントを取り除く
-    this.textReaderTransform = new CommentFilterTransform();
+    this.textReaderTransform = new TrimTransform();
 
     // ジオコーディング処理
     this.geocoderTransform = new ThreadGeocodeTransform({

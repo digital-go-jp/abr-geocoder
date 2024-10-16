@@ -80,11 +80,11 @@ export class OazaChomeTransform extends Transform {
     // ------------------------
     const results = new QuerySet();
     for await (const query of queries.values()) {
-      if (query.match_level.num >= MatchLevel.MACHIAZA.num) {
-        // 大字が既に判明している場合はスキップ
-        results.add(query);
-        continue;
-      }
+      // if (query.match_level.num >= MatchLevel.MACHIAZA.num) {
+      //   // 大字が既に判明している場合はスキップ
+      //   results.add(query);
+      //   continue;
+      // }
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
         results.add(query);
@@ -103,10 +103,6 @@ export class OazaChomeTransform extends Transform {
         continue;
       }
 
-      // ------------------------------------
-      // Queryの情報を使って、条件式を作成
-      // ------------------------------------
-      const where = this.createWhereCondition(query);
       
       // ------------------------------------
       // トライ木を使って探索
@@ -116,85 +112,99 @@ export class OazaChomeTransform extends Transform {
         results.add(copiedQuery);
         continue;
       }
-      const target = trimDashAndSpace(query.tempAddress);
-      if (!target) {
+      const targets = [
+        trimDashAndSpace(query.tempAddress),
+      ];
+      if (!targets[0]) {
         results.add(copiedQuery);
         continue;
       }
-      // 小字に数字が含まれていて、それが番地にヒットする場合がある。
-      // この場合は、マッチしすぎているので、中間結果を返す必要がある。
-      // partialMatches = true にすると、中間結果を含めて返す。
-      //
-      // target = 末広町184
-      // expected = 末広町
-      // wrong_matched_result = 末広町18字
-      const findResults = this.trie.find({
-        target,
-        partialMatches: true,
 
-        // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
-        // 「〇〇町」の「町」が省略された入力の場合を想定
-        extraChallenges: ['町'],
-        fuzzy: DEFAULT_FUZZY_CHAR,
-      }) || [];
-      
-      const filteredResult = findResults?.filter(result => {
-        if (!where) {
-          return true;
-        }
+      // 大字が中途半端に当たっている場合がある。大字を含めて探索する
+      // input: "藤野一条", oaza_cho: "藤野"
+      if (query.oaza_cho) {
+        targets.push(CharNode.create(query.oaza_cho)?.concat(targets[0]));
+      }
 
-        let matched = true;
-        if (where.pref_key) {
-          matched = result.info?.pref_key === where.pref_key;
-        }
-        if (matched && where.city_key) {
-          matched = result.info?.city_key === where.city_key;
-        }
-        if (matched && where.town_key) {
-          matched = result.info?.town_key === where.town_key;
-        }
-        return matched;
-      });
-
-      // 複数都道府県にヒットする可能性があるので、全て試す
       let anyHit = false;
       let anyAmbiguous = false;
-      filteredResult?.forEach(findResult => {
-        // city_key が判別している場合で
-        // city_key が異なる場合はスキップ
-        if ((copiedQuery.city_key !== undefined) &&
-          (copiedQuery.city_key !== findResult.info?.city_key)) {
-          return;
+      for (const target of targets) {
+        if (!target) {
+          continue;
         }
-        anyAmbiguous = anyAmbiguous || findResult.ambiguous;
+        // 小字に数字が含まれていて、それが番地にヒットする場合がある。
+        // この場合は、マッチしすぎているので、中間結果を返す必要がある。
+        // partialMatches = true にすると、中間結果を含めて返す。
+        //
+        // target = 末広町184
+        // expected = 末広町
+        // wrong_matched_result = 末広町18字
+        const findResults = this.trie.find({
+          target,
+          partialMatches: true,
 
-        const info = findResult.info!;
-        anyHit = true;
-        const params: Record<string, CharNode | number | string | MatchLevel | null | undefined> = {
-          pref_key: info.pref_key,
-          city_key: info.city_key,
-          town_key: info.town_key,
-          lg_code: info.lg_code,
-          pref: info.pref,
-          city: info.city,
-          oaza_cho: info.oaza_cho,
-          chome: info.chome,
-          koaza: info.koaza,
-          machiaza_id: info.machiaza_id,
-          rsdt_addr_flg: info.rsdt_addr_flg,
-          tempAddress: findResult.unmatched,
-          match_level: info.match_level,
-          matchedCnt: copiedQuery.matchedCnt + findResult.depth,
-          ambiguousCnt: copiedQuery.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
-        };
-        if (info.rep_lat && info.rep_lon) {
-          params.rep_lat = info.rep_lat;
-          params.rep_lon = info.rep_lon;
-          params.coordinate_level = info.coordinate_level;
-        }
-        const copied = copiedQuery.copy(params);
-        results.add(copied);
-      });
+          // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
+          // 「〇〇町」の「町」が省略された入力の場合を想定
+          extraChallenges: ['町'],
+          fuzzy: DEFAULT_FUZZY_CHAR,
+        }) || [];
+        
+        // ------------------------------------
+        // Queryの情報を使って、条件式を作成
+        // ------------------------------------
+        const filteredResult = findResults?.filter(result => {
+          let matched = true;
+          if (query.pref_key) {
+            matched = result.info?.pref_key === query.pref_key;
+          }
+          if (matched && query.city_key) {
+            matched = result.info?.city_key === query.city_key;
+          }
+          // if (matched && query.town_key) {
+          //   matched = result.info?.town_key === query.town_key;
+          // }
+          return matched;
+        });
+
+        // 複数都道府県にヒットする可能性があるので、全て試す
+        filteredResult?.forEach(findResult => {
+          // city_key が判別している場合で
+          // city_key が異なる場合はスキップ
+          if ((copiedQuery.city_key !== undefined) &&
+            (copiedQuery.city_key !== findResult.info?.city_key)) {
+            return;
+          }
+          anyAmbiguous = anyAmbiguous || findResult.ambiguous;
+
+          const info = findResult.info!;
+          anyHit = true;
+          const params: Record<string, CharNode | number | string | MatchLevel | null | undefined> = {
+            pref_key: info.pref_key,
+            city_key: info.city_key,
+            town_key: info.town_key,
+            lg_code: info.lg_code,
+            pref: info.pref,
+            city: info.city,
+            oaza_cho: info.oaza_cho,
+            chome: info.chome,
+            koaza: info.koaza,
+            ward: info.ward,
+            machiaza_id: info.machiaza_id,
+            rsdt_addr_flg: info.rsdt_addr_flg,
+            tempAddress: findResult.unmatched,
+            match_level: info.match_level,
+            matchedCnt: copiedQuery.matchedCnt + findResult.depth,
+            ambiguousCnt: copiedQuery.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
+          };
+          if (info.rep_lat && info.rep_lon) {
+            params.rep_lat = info.rep_lat;
+            params.rep_lon = info.rep_lon;
+            params.coordinate_level = info.coordinate_level;
+          }
+          const copied = copiedQuery.copy(params);
+          results.add(copied);
+        });
+      }
 
       if (!anyHit || anyAmbiguous) {
         results.add(query);

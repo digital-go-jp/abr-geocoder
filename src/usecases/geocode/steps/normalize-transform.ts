@@ -198,15 +198,14 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
     const nextPointer = pointer.next?.moveToNext();
     switch (true) {
       case isDigitForCharNode(pointer): {
-      // 1番地999, 2番丁999, 3番街999, 4番町999, 5丁目999, 55線86番地, 66地割77
+      // 1番地999, 2番丁999, 3番街999, 4番町999, 5丁目999, 55線86番地, 66地割77, 24軒2条3丁目
         if (RegExpEx.create('([0-9]+)番[丁地街][の目]?([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)丁目?([0-9]+)$').test(tmp) ||
             // RegExpEx.create('([0-9]+)地割([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)番[丁地街]?([0-9]+)$').test(tmp) ||
-            RegExpEx.create('([0-9]+)[条通]([0-9]+)$').test(tmp) ||
+            RegExpEx.create('([0-9]+)[軒条通線]([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)の?通りの?([0-9]+)$').test(tmp) ||
-            RegExpEx.create('([0-9]+)の町([0-9]+)$').test(tmp) ||
-            RegExpEx.create('([0-9]+)線([0-9]+)$').test(tmp)) {
+            RegExpEx.create('([0-9]+)の町([0-9]+)$').test(tmp)) {
           
           const buffer: string[] = [];
           while (!isDigitForCharNode(stack.at(-1))) {
@@ -223,7 +222,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
         break;
       }
 
-      case RegExpEx.create('[0-9][条通線][東西南北]$').test(tmp): {
+      case RegExpEx.create('[0-9][条通線軒][東西南北]$').test(tmp): {
       // 「条」を取る
         const removed = stack.pop();
 
@@ -235,9 +234,20 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
         break;
       }
 
+      // (数字) + [東西南北] + (数字) の場合
+      // ex. "北16西2-1-1" => "北16-西2-1-1"
+      case RegExpEx.create('[0-9][東西南北]$').test(tmp) && nextPointer && isDigitForCharNode(nextPointer): {
+        // DASHを入れる
+        stack.push(new CharNode({
+          char: DASH,
+          originalChar: '番地',
+        }));
+        break;
+      }
+
       // 番地の + (数字) の場合
       case RegExpEx.create('番地[の目]$').test(tmp) && nextPointer && isDigitForCharNode(nextPointer): {
-      // 「番地」を取る
+        // 「番地」を取る
         stack.pop();
         stack.pop();
         // DASHを入れる

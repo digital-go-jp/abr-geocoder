@@ -18,7 +18,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     super();
   }
 
-  private static normalizeStr(address: string): string {
+  static normalizeStr(address: string): string {
     // 全角英数字は、半角英数字に変換
     address = toHankakuAlphaNum(address);
 
@@ -70,7 +70,6 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}`);
     address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}$2`);
     address = address?.replaceAll(RegExpEx.create('之', 'g'), DASH);
 

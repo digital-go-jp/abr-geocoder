@@ -23,7 +23,7 @@
  */
 import { Transform, TransformCallback } from "node:stream";
 
-export class ConsolidateTransform extends Transform {
+export class StreamLimiter extends Transform {
   private buffer: unknown[] = [];
   constructor(private readonly N: number) {
     super({

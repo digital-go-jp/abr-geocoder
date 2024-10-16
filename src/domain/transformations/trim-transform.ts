@@ -24,7 +24,7 @@
 import { Transform } from 'node:stream';
 import { TransformCallback } from 'stream';
 
-export class CommentFilterTransform extends Transform {
+export class TrimTransform extends Transform {
   // 現在のキャレットの位置が、コメントアウトされているかどうか
   private isCuretInComment: boolean = false;
   private _total = 0;
@@ -48,12 +48,20 @@ export class CommentFilterTransform extends Transform {
     callback: TransformCallback,
   ): void {
 
-    const input = line.toString().trim();
+    let input = line.toString().trim();
 
     // コメント行と空行は無視する
     if (input.startsWith('#') || input.startsWith('//') || input === '') {
       callback();
       return;
+    }
+
+    // 最初と最後にクォーテーションマークが付いている場合は取る
+    if (input.length > 1 && (
+      (input[0] === "'" && input[input.length - 1] === "'") ||
+        (input[0] === '"' && input[input.length - 1] === '"')
+    )) {
+      input = input.substring(1, input.length - 1);  
     }
 
     // /* ... */ の間をコメントとして無視する。複数行にも対応
@@ -104,7 +112,7 @@ export class CommentFilterTransform extends Transform {
       callback(null);
       return;
     }
-    const filteredInput = buffer.join('');
+    const filteredInput = buffer.join('').trim();
 
     callback(null, filteredInput);
   }

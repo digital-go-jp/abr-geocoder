@@ -360,7 +360,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       this.exec(`
         REPLACE INTO resultTable
         SELECT
-          (city_key || ${DataField.OAZA_CHO.dbColumn} || ${DataField.CHOME.dbColumn}) as pkey,
+          (city_key || ${DataField.OAZA_CHO.dbColumn} || ${DataField.OAZA_CHO.dbColumn} || ${DataField.CHOME.dbColumn}) as pkey,
           town_key,
           city_key,
           ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
@@ -432,7 +432,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
             ${DataField.KOAZA.dbColumn} IS NULL
           )
         GROUP BY
-          ${DataField.OAZA_CHO.dbColumn}
+          pkey
       `);
 
       /*
