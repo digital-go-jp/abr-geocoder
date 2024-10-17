@@ -44,9 +44,9 @@ export const DASH_SYMBOLS: string = [
 ].join('');
 export const NUMRIC_SYMBOLS: string = ['0-9', '０-９'].join('');
 
-export const ZENKAKU: string = '[^\x01-\x7E\xA1-\xDF]'
+export const ZENKAKU: string = '[^\x01-\x7E\xA1-\xDF]';
 
-export const KANJI_1to10_SYMBOLS: string = ['一二三四五六七八九〇十'].join('');
+export const KANJI_NUMS: string = '壱一二ニ弐参三四五六七八ㇵハ九零十';
 export const NUMRIC_AND_KANJI_SYMBOLS: string = [
   '0-9',
   '０-９',
@@ -67,21 +67,28 @@ export const SPACE: string = '␣';
 // 基本的に住所には含まれていなはず
 export const DASH: string = '@';
 
+export const BEGIN_SPECIAL = '<';
+export const END_SPECIAL = '>';
+
+// 北海道勇払郡安平町字安平番外地 のように「番外地」の部分は、「番外地」で当たるべきである。
+// 「番」が含まれているため、上手く処理できないので
+// 別の文字列に置き換える
+export const BANGAICHI: string = `${BEGIN_SPECIAL}BG${END_SPECIAL}`;
 
 // 東京都青ヶ島村無番地 のように「無番地」の部分は、「無番地」で当たるべきである。
 // 「番地」が含まれているため、上手く処理できないので
 // 別の文字列に置き換える
-export const MUBANCHI: string = '<MUBANCHI>';
+export const MUBANCHI: string = `${BEGIN_SPECIAL}MB${END_SPECIAL}`;
 
 // 岡山市北区 と 香川県高松市に、「番町1丁目」があり、
 //「番町」を DASH に置換すると正しく処理ができないので、
 // 別の文字列に置き換える
-export const OAZA_BANCHO: string = '<OAZA_BANCHO>';
+export const OAZA_BANCHO: string = `${BEGIN_SPECIAL}OB${END_SPECIAL}`;
 
 // 半角数字と漢数字が連続する（例：〇〇町1-2-3三田マンション）と
 // 検索に失敗してしまうので、仮想の空白を挿入する。
 // 基本的に住所には含まれていなはず
-export const VIRTUAL_SPACE: string = '<';
+export const VIRTUAL_SPACE: string = '~';
 
 export const SPACE_CHARS: string = [
   ' ', // 半角スペース
@@ -97,7 +104,7 @@ export const SPACE_SYMBOLS: string = [
 export const DEFAULT_FUZZY_CHAR: string = '?';
 
 // yargs が '-' を解析できないので、別の文字に置き換える
-export const SINGLE_DASH_ALTERNATIVE: string = '<stdin>';
+export const STDIN_FILEPATH: string = '<stdin>';
 
 // 出力の最後に改行を追加するためのマーク
 export const BREAK_AT_EOF = '\n';

@@ -21,17 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+import { MatchLevel } from "./match-level";
+
 export type WardInfo = {
   pref_key: number;
   pref: string;
   city: string;
   county: string;
   ward: string;
-  oaza_cho: string;
   lg_code: string;
   city_key: number;
-  rep_lat: number;
-  rep_lon: number;
+  rep_lat: string;
+  rep_lon: string;
+  match_level: MatchLevel;
+  coordinate_level: MatchLevel;
 };
 export type WardMatchingInfo = {
   key: string;

@@ -32,7 +32,7 @@ export class CommonDbDownloadSqlite3
   implements ICommonDbDownload {
 
   async closeDb(): Promise<void> {
-    this.close();
+    Promise.resolve(this.close());
   }
 
   // Prefテーブルにデータを挿入する
@@ -92,16 +92,16 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.pref_key = TableKeyProvider.getPrefKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
+            lg_code: row[DataField.LG_CODE.dbColumn] as string,
           });
           params.upsert.run(row);
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 
   // Cityテーブルにデータを挿入する
@@ -181,17 +181,17 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.pref_key = params.prefKey;
           row.city_key = TableKeyProvider.getCityKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
+            lg_code: row[DataField.LG_CODE.dbColumn] as string,
           });
           params.upsert.run(row);
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 
   // Townテーブルにデータを挿入する
@@ -204,7 +204,8 @@ export class CommonDbDownloadSqlite3
         ${DataField.OAZA_CHO.dbColumn},
         ${DataField.CHOME.dbColumn},
         ${DataField.KOAZA.dbColumn},
-        ${DataField.RSDT_ADDR_FLG.dbColumn}
+        ${DataField.RSDT_ADDR_FLG.dbColumn},
+        ${DataField.KOAZA_AKA_CODE.dbColumn}
       ) VALUES (
         @town_key,
         @city_key,
@@ -212,13 +213,15 @@ export class CommonDbDownloadSqlite3
         @oaza_cho,
         @chome,
         @koaza,
-        @rsdt_addr_flg
+        @rsdt_addr_flg,
+        @koaza_aka_code
       ) ON CONFLICT (town_key) DO UPDATE SET
         ${DataField.MACHIAZA_ID.dbColumn} = @machiaza_id,
         ${DataField.OAZA_CHO.dbColumn} = @oaza_cho,
         ${DataField.CHOME.dbColumn} = @chome,
         ${DataField.KOAZA.dbColumn} = @koaza,
-        ${DataField.RSDT_ADDR_FLG.dbColumn} = @rsdt_addr_flg
+        ${DataField.RSDT_ADDR_FLG.dbColumn} = @rsdt_addr_flg,
+        ${DataField.KOAZA_AKA_CODE.dbColumn} = @koaza_aka_code
       WHERE 
         town_key = @town_key
     `;
@@ -272,17 +275,17 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.city_key = params.cityKey;
           row.town_key = TableKeyProvider.getTownKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn],
-          });
+            lg_code: row[DataField.LG_CODE.dbColumn] as string,
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn] as string,
+          }) as number;
           params.upsert.run(row);
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 }

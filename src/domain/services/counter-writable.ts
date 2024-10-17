@@ -23,13 +23,13 @@
  */
 import { Writable } from 'node:stream';
 
-export class CounterWritable extends Writable {
+export class CounterWritable<T> extends Writable {
   
   private _counts: number = 0;
 
   constructor(private readonly option: {
     write: (
-      chunk: any,
+      chunk: T,
       encoding: BufferEncoding,
       callback: (error?: Error | null) => void,
     ) => void;
@@ -38,7 +38,7 @@ export class CounterWritable extends Writable {
       objectMode: true,
     });
   }
-  _write(chunk: any, _: BufferEncoding, callback: (error?: Error | null) => void): void {
+  _write(chunk: T, _: BufferEncoding, callback: (error?: Error | null) => void): void {
     this._counts++;
     this.option.write(chunk, _, callback);
   }

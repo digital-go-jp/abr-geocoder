@@ -33,4 +33,4 @@ export const makeDirIfNotExists = (dirPath: string) => {
   fs.mkdirSync(dirPath, {
     recursive: true,
   });
-}
+};

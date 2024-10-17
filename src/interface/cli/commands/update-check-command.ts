@@ -32,6 +32,7 @@ import path from 'node:path';
 import readline from 'node:readline/promises';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 import downloadCommand from './download-command';
+import { getPackageInfo } from '@domain/services/package/get-package-info';
 
 export type UpdateCheckCommandArgv = {
   abrgDir?: string;
@@ -40,7 +41,7 @@ export type UpdateCheckCommandArgv = {
   silent?: boolean;
   yes?: boolean;
   no?: boolean;
-}
+};
 
 /**
  * abrg update-check
@@ -57,19 +58,19 @@ const updateCheckCommand: CommandModule = {
         type: 'string',
         default: EnvProvider.DEFAULT_ABRG_DIR,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
       })
       .option('debug', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DEBUG_OPTION
+          AbrgMessage.CLI_COMMON_DEBUG_OPTION,
         ),
       })
       .option('silent', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_SILENT_OPTION
+          AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
       })
       .option('yes', {
@@ -77,7 +78,7 @@ const updateCheckCommand: CommandModule = {
         type: 'boolean',
         conflicts: 'no',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_YES_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE
+          AbrgMessage.CLI_YES_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE,
         ),
       })
       .option('no', {
@@ -85,14 +86,14 @@ const updateCheckCommand: CommandModule = {
         type: 'boolean',
         conflicts: 'yes',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_NO_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE
+          AbrgMessage.CLI_NO_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE,
         ),
       });
   },
 
   handler: async (argv: ArgumentsCamelCase<UpdateCheckCommandArgv>) => {
     // silent = true のときは、プログレスバーを表示しない
-    const progressBar = argv.silent ? undefined : createSingleProgressBar();
+    const progressBar = argv.silent ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total}');
     progressBar?.start(1, 0);
 
     if (argv.debug) {
@@ -100,23 +101,24 @@ const updateCheckCommand: CommandModule = {
     }
 
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
+    const { version } = getPackageInfo();
 
     // 環境設定
     const updateChecker = new UpdateChecker({
-      cacheDir: path.join(abrgDir, 'download'),
+      cacheDir: path.join(abrgDir, 'download', version),
       downloadDir: path.join(abrgDir, 'download'),
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
         schemaDir: path.join(__dirname, '..', '..', '..', 'schemas', 'sqlite3'),
-      }
+      },
     });
     
     // アップデートチェック
     const results = await updateChecker.updateCheck({
       progress: (current: number, total: number) => {
-        progressBar?.setTotal(total);
         progressBar?.update(current);
+        progressBar?.setTotal(total);
       },
     });
     
@@ -138,9 +140,15 @@ const updateCheckCommand: CommandModule = {
       return;
     }
     if (!argv.silent) {
-      console.log(AbrgMessage.toString(AbrgMessage.UPDATE_IS_AVAILABLE));
+      console.log(AbrgMessage.toString(AbrgMessage.UPDATE_IS_AVAILABLE, {
+        num_of_update: results.length,
+      }));
     }
     if (argv.yes === undefined) {
+      // 指定がなければ終了
+      if (argv.silent) {
+        return;
+      }
       // 続けてダウンロードをするか、確認する
       const continueToDownload = await askContinueToDownload();
       if (!continueToDownload) {
@@ -149,7 +157,7 @@ const updateCheckCommand: CommandModule = {
     }
     const lgCode: string[] = Array
       .from(new Set(results.map(x => x.lgCode)).values())
-      .filter(x => x !== PrefLgCode.ALL);
+      .filter(x => x !== PrefLgCode.ALL as string);
     
     // ダウンロード処理を行う
     await downloadCommand.handler({
@@ -161,7 +169,7 @@ const updateCheckCommand: CommandModule = {
       silent: argv.silent,
       _: argv._,
       $0: argv.$0,
-    })
+    });
   },
 };
 const askContinueToDownload = async (): Promise<boolean> => {
@@ -179,5 +187,5 @@ const askContinueToDownload = async (): Promise<boolean> => {
   }
   ask.close();
   return answer;
-}
+};
 export default updateCheckCommand;

@@ -26,14 +26,54 @@ import { BLANK_CHAR, BREAK_AT_EOF } from '@config/constant-values';
 import { Query } from '@usecases/geocode/models/query';
 import { IFormatTransform } from './iformat-transform';
 
+export type JsonOutput = {
+  query: {
+    input: string;
+  },
+  result: {
+    output: string;
+    others: string[];
+    score: number;
+    match_level: string;
+    coordinate_level: string;
+    lat: number | null;
+    lon: number | null;
+    lg_code: string | null;
+    machiaza_id: string | null;
+    rsdt_addr_flg: number | undefined;
+    blk_id: string | null;
+    rsdt_id: string | null;
+    rsdt2_id: string | null;
+    prc_id: string | null;
+    pref: string | null;
+    county: string | null;
+    city: string | null;
+    ward: string | null;
+    oaza_cho: string | null;
+    chome: string | null;
+    koaza: string | null;
+    blk_num: string | null;
+    rsdt_num: string | null;
+    rsdt_num2: string | null;
+    prc_num1: string | null;
+    prc_num2: string | null;
+    prc_num3: string | null;
+  },
+  debug?: {
+    pref_key: number | undefined;
+    city_key: number | undefined;
+    town_key: number | undefined;
+    parcel_key: number | undefined;
+    rsdtblk_key: number | undefined;
+    rsdtdsp_key: number | undefined;
+  }
+};
 export class JsonTransform extends Stream.Transform implements IFormatTransform {
 
   mimetype: string = 'application/json';
 
   private buffer: string = '';
   private lineNum: number = 0;
-
-  public readonly mimeType = 'application/json';
 
   constructor(private readonly options: {
     debug?: boolean;
@@ -52,9 +92,14 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     const out = this.buffer;
+
+    const unmatched: string[] = [...result.unmatched];
+    if (result.tempAddress) {
+      unmatched.push(result.tempAddress?.toOriginalString()?.trim());
+    }
 
     if (this.lineNum > 0) {
       this.buffer = ',';
@@ -62,18 +107,18 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
       this.buffer = '[';
     }
     this.lineNum++;
-    const output = {
+    const output: JsonOutput = {
       query: {
         input: result.input.data.address,
       },
       result: {
         output: result.formatted.address,
-        other: result.tempAddress?.toOriginalString() || BLANK_CHAR,
+        others: unmatched,
         score: result.formatted.score,
         match_level: result.match_level.str,
         coordinate_level: result.coordinate_level.str,
-        lat: result.rep_lat,
-        lon: result.rep_lon,
+        lat: result.rep_lat && parseFloat(result.rep_lat) || null,
+        lon: result.rep_lon && parseFloat(result.rep_lon) || null,
         lg_code: result.lg_code ? result.lg_code : BLANK_CHAR,
         machiaza_id: result.machiaza_id || BLANK_CHAR,
         rsdt_addr_flg: result.rsdt_addr_flg,
@@ -89,32 +134,33 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
         chome: result.chome || BLANK_CHAR,
         koaza: result.koaza || BLANK_CHAR,
         blk_num: result.block?.toString() || BLANK_CHAR,
-        rsdt_num: result.rsdt_num || BLANK_CHAR,
-        rsdt_num2: result.rsdt_num2 || BLANK_CHAR,
+        rsdt_num: result.rsdt_num?.toString() || BLANK_CHAR,
+        rsdt_num2: result.rsdt_num2?.toString() || BLANK_CHAR,
         prc_num1: result.prc_num1?.toString() || BLANK_CHAR,
         prc_num2: result.prc_num2?.toString() || BLANK_CHAR,
         prc_num3: result.prc_num3?.toString() || BLANK_CHAR,
       },
     };
     if (this.options.debug) {
-      (output as any).debug = {
+      output.debug = {
         pref_key: result.pref_key,
         city_key: result.city_key,
         town_key: result.town_key,
         parcel_key: result.parcel_key,
         rsdtblk_key: result.rsdtblk_key,
         rsdtdsp_key: result.rsdtdsp_key,
-        spendTime: ((Date.now() - result.startTime) / 1000).toFixed(2),
       };
     }
     this.buffer += JSON.stringify(output);
-    callback(null, out);
+    callback(null);
+    this.push(out);
   }
 
   _final(callback: (error?: Error | null | undefined) => void): void {
-    this.emit('data', this.buffer);
-    this.emit('data', ']');
-    this.emit('data', BREAK_AT_EOF); // ファイルの最後に改行を入れる
+    this.push(this.buffer);
+    this.push(']');
+    this.push(BREAK_AT_EOF); // ファイルの最後に改行を入れる
+    // this.push(null);
     callback();
   }
 }

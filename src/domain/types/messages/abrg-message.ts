@@ -54,6 +54,7 @@ export enum AbrgMessage {
   CLI_GEOCODE_OUTPUT_FILE = 'CLI_GEOCODE_OUTPUT_FILE',
   CLI_SERVE_PORT_OPTION = 'CLI_SERVE_PORT_OPTION',
   CANNOT_FIND_THE_ROOT_DIR = 'CANNOT_FIND_THE_ROOT_DIR',
+  NOT_IMPLEMENTED = "NOT_IMPLEMENTED",
 }
 
 const enMessages: Record<AbrgMessage, string> = {
@@ -64,7 +65,7 @@ const enMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_COMMON_DEBUG_OPTION]: 'Output debug information',
   [AbrgMessage.CLI_COMMON_SILENT_OPTION]: 'Hide progress bar',
   [AbrgMessage.NO_UPDATE_IS_AVAILABLE]: 'The current datasets are latest. No update is available',
-  [AbrgMessage.UPDATE_IS_AVAILABLE]: 'new datasets are available.',
+  [AbrgMessage.UPDATE_IS_AVAILABLE]: 'new datasets are available({num_of_update}).',
   [AbrgMessage.PROMPT_CONTINUE_TO_DOWNLOAD]: 'Continue to download?',
   [AbrgMessage.CLI_YES_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE]: 'Yes for downloading if update is available',
   [AbrgMessage.CLI_NO_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE]: 'No for downloading if update is available',
@@ -83,6 +84,7 @@ const enMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_GEOCODE_OUTPUT_FILE]: 'The path for the output file. If omit, print out to stdout.',
   [AbrgMessage.CLI_SERVE_PORT_OPTION]: 'The port number for rest api',
   [AbrgMessage.CANNOT_FIND_THE_ROOT_DIR]: 'Can not find the root directory',
+  [AbrgMessage.NOT_IMPLEMENTED]: 'Not implemented',
 };
 const jaMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_SERVE_DESC]: 'REST apiサーバーとしてジオコーディング機能を提供します',
@@ -92,7 +94,7 @@ const jaMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CLI_COMMON_DEBUG_OPTION]: 'デバッグ情報を出力します',
   [AbrgMessage.CLI_COMMON_SILENT_OPTION]: 'プログレスバーを表示しません',
   [AbrgMessage.NO_UPDATE_IS_AVAILABLE]: '利用可能な更新データはありません',
-  [AbrgMessage.UPDATE_IS_AVAILABLE]: '利用可能な更新データがあります。',
+  [AbrgMessage.UPDATE_IS_AVAILABLE]: '利用可能な更新データ({num_of_update})があります。',
   [AbrgMessage.PROMPT_CONTINUE_TO_DOWNLOAD]: '続けてデータをダウンロードしますか？',
   [AbrgMessage.CLI_YES_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE]: '利用可能な更新データがあるとき、続けてダウンロードします',
   [AbrgMessage.CLI_NO_FOR_DOWNLOAD_IF_UPDATE_IS_AVAILABLE]: '利用可能な更新データがあっても、何もしないで、更新チェックを終了します',
@@ -110,24 +112,27 @@ const jaMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE]: '"package.json"ファイルが見つかりませんでした',
   [AbrgMessage.CLI_GEOCODE_OUTPUT_FILE]: '出力するファイルのパス。省略すると、標準出力に出力します。',
   [AbrgMessage.CLI_SERVE_PORT_OPTION]: 'REST apiのためのポート番号',
-  [AbrgMessage.CANNOT_FIND_THE_ROOT_DIR]: 'ルートディレクトリを見つけることが出来ませんでした'
-}
+  [AbrgMessage.CANNOT_FIND_THE_ROOT_DIR]: 'ルートディレクトリを見つけることが出来ませんでした',
+  [AbrgMessage.NOT_IMPLEMENTED]: '実装されていません',
+};
+
+
+i18next.init({
+  fallbackLng: 'en',
+  resources: {
+    en: {
+      translation: enMessages,
+    },
+    ja: {
+      translation: jaMessages,
+    },
+  },
+});
+
+const locale = getSystemLocale();
+let originalTranslater = i18next.getFixedT(locale);
 
 export namespace AbrgMessage {
-  i18next.init({
-    fallbackLng: 'en',
-    resources: {
-      en: {
-        translation: enMessages,
-      },
-      ja: {
-        translation: jaMessages,
-      },
-    },
-  });
-
-  const locale = getSystemLocale();
-  let originalTranslater = i18next.getFixedT(locale);
 
   /**
    * 言語設定を設定します。
@@ -142,7 +147,14 @@ export namespace AbrgMessage {
    * @param messageId メッセージID
    * @returns メッセージ
    */
-  export function toString(messageId: AbrgMessage): string {
-    return originalTranslater(messageId);
+  export function toString(messageId: AbrgMessage, others?: { [key: string] : number | string}): string {
+    let message = originalTranslater(messageId);
+    if (others) {
+      Object.keys(others).forEach(key => {
+        message = message.replaceAll('{' + key + '}', others[key].toString());
+      });
+    }
+    
+    return message;
   }
 }

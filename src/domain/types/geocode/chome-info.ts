@@ -34,6 +34,6 @@ export type ChomeMachingInfo = {
   county: string;
   ward: string;
   koaza: string;
-  rep_lat: number;
-  rep_lon: number;
+  rep_lat: string;
+  rep_lon: string;
 };
