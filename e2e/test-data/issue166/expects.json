@@ -5,7 +5,9 @@
     },
     "result": {
       "output": "岩手県胆沢郡金ケ崎町西根大谷120 金ケ崎小学校",
-      "others": ["120 金ケ崎小学校"],
+      "others": [
+        "120 金ケ崎小学校"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza",
       "lat": 39.214458,
@@ -38,7 +40,9 @@
     },
     "result": {
       "output": "岩手県胆沢郡金ケ崎町西根二ツ堤45-24 第一小学校",
-      "others": ["第一小学校"],
+      "others": [
+        "第一小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 39.214458,
@@ -71,7 +75,9 @@
     },
     "result": {
       "output": "岩手県胆沢郡金ケ崎町三ヶ尻十三本塚16-2 三ケ尻小学校",
-      "others": ["三ケ尻小学校"],
+      "others": [
+        "三ケ尻小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "city",
       "lat": 39.195687,
@@ -104,7 +110,9 @@
     },
     "result": {
       "output": "岩手県胆沢郡金ケ崎町永沢堀切後下5 永岡小学校",
-      "others": ["5 永岡小学校"],
+      "others": [
+        "5 永岡小学校"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza",
       "lat": 39.167782,
@@ -137,7 +145,9 @@
     },
     "result": {
       "output": "岩手県胆沢郡金ケ崎町西根高谷野原23 西小学校",
-      "others": ["西小学校"],
+      "others": [
+        "西小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 39.196620515,
@@ -170,7 +180,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市3316 龍ケ崎小学校",
-      "others": ["3316 龍ケ崎小学校"],
+      "others": [
+        "3316 龍ケ崎小学校"
+      ],
       "match_level": "city",
       "coordinate_level": "city",
       "lat": 35.911594,
@@ -202,7 +214,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市若柴町3135 馴柴小学校",
-      "others": ["馴柴小学校"],
+      "others": [
+        "馴柴小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 35.925948646,
@@ -235,7 +249,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市藤ケ丘一丁目22-4 八原小学校",
-      "others": ["八原小学校"],
+      "others": [
+        "八原小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.934719,
@@ -268,7 +284,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市大徳町4945 大宮小学校",
-      "others": ["大宮小学校"],
+      "others": [
+        "大宮小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 35.894375143,
@@ -301,7 +319,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市川原代町3518 川原代小学校",
-      "others": ["川原代小学校"],
+      "others": [
+        "川原代小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.912865,
@@ -334,7 +354,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市8810 龍ケ崎西小学校",
-      "others": ["8810 龍ケ崎西小学校"],
+      "others": [
+        "8810 龍ケ崎西小学校"
+      ],
       "match_level": "city",
       "coordinate_level": "city",
       "lat": 35.911594,
@@ -366,7 +388,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市松葉二丁目9 松葉小学校",
-      "others": ["松葉小学校"],
+      "others": [
+        "松葉小学校"
+      ],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 35.937145,
@@ -399,7 +423,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市長山五丁目7-1 長山小学校",
-      "others": ["長山小学校"],
+      "others": [
+        "長山小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.947666,
@@ -432,7 +458,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市平台四丁目23-1 馴馬台小学校",
-      "others": ["-1 馴馬台小学校"],
+      "others": [
+        "-1 馴馬台小学校"
+      ],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 35.923411,
@@ -465,7 +493,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市久保台二丁目3 久保台小学校",
-      "others": ["久保台小学校"],
+      "others": [
+        "久保台小学校"
+      ],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 35.933121,
@@ -498,7 +528,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市城ノ内五丁目27 城ノ内小学校",
-      "others": ["城ノ内小学校"],
+      "others": [
+        "城ノ内小学校"
+      ],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 35.921192,
@@ -531,16 +563,18 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市中央二丁目1-1 鎌ケ谷小学校",
-      "others": ["-1-1 鎌ケ谷小学校"],
-      "match_level": "machiaza_detail",
-      "coordinate_level": "machiaza_detail",
-      "lat": 35.775872,
-      "lon": 140.004662,
+      "others": [
+        "鎌ケ谷小学校"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.773163544,
+      "lon": 140.002166008,
       "lg_code": "122246",
       "machiaza_id": "0011002",
       "rsdt_addr_flg": 1,
-      "blk_id": null,
-      "rsdt_id": null,
+      "blk_id": "001",
+      "rsdt_id": "001",
       "rsdt2_id": null,
       "prc_id": null,
       "pref": "千葉県",
@@ -550,8 +584,8 @@
       "oaza_cho": "中央",
       "chome": "二丁目",
       "koaza": null,
-      "blk_num": null,
-      "rsdt_num": null,
+      "blk_num": "1",
+      "rsdt_num": "1",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -564,7 +598,9 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市中沢726-41 南部小学校",
-      "others": ["726-41 南部小学校"],
+      "others": [
+        "726-41 南部小学校"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.76156,
@@ -597,7 +633,9 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市粟野735 北部小学校",
-      "others": ["735 北部小学校"],
+      "others": [
+        "735 北部小学校"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.785893,
@@ -630,7 +668,9 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市鎌ケ谷八丁目3-11 東部小学校",
-      "others": ["東部小学校"],
+      "others": [
+        "東部小学校"
+      ],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.755290439,
@@ -650,7 +690,7 @@
       "chome": "八丁目",
       "koaza": null,
       "blk_num": "3",
-      "rsdt_num": 11,
+      "rsdt_num": "11",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -663,7 +703,9 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市初富110 西部小学校",
-      "others": ["110 西部小学校"],
+      "others": [
+        "110 西部小学校"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.782955,
@@ -696,7 +738,9 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市道野辺中央三丁目12-3 中部小学校",
-      "others": ["中部小学校"],
+      "others": [
+        "中部小学校"
+      ],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.764076714,
@@ -716,7 +760,7 @@
       "chome": "三丁目",
       "koaza": null,
       "blk_num": "12",
-      "rsdt_num": 3,
+      "rsdt_num": "3",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -729,7 +773,9 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市東初富一丁目20-1 初富小学校",
-      "others": ["-1 初富小学校"],
+      "others": [
+        "-1 初富小学校"
+      ],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 35.771757,
@@ -762,7 +808,9 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市東道野辺五丁目5-1 道野辺小学校",
-      "others": ["-1 道野辺小学校"],
+      "others": [
+        "-1 道野辺小学校"
+      ],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 35.75237,
@@ -795,7 +843,9 @@
     },
     "result": {
       "output": "千葉県鎌ケ谷市南初富一丁目16-1 五本松小学校",
-      "others": ["五本松小学校"],
+      "others": [
+        "五本松小学校"
+      ],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.775498061,
@@ -815,7 +865,7 @@
       "chome": "一丁目",
       "koaza": null,
       "blk_num": "16",
-      "rsdt_num": 1,
+      "rsdt_num": "1",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -828,7 +878,9 @@
     },
     "result": {
       "output": "千葉県袖ケ浦市坂戸市場1431 昭和小学校",
-      "others": ["1431 昭和小学校"],
+      "others": [
+        "1431 昭和小学校"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.426415,
@@ -861,7 +913,9 @@
     },
     "result": {
       "output": "千葉県袖ケ浦市長浦駅前六丁目1-4 長浦小学校",
-      "others": ["長浦小学校"],
+      "others": [
+        "長浦小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 35.449798255,
@@ -894,7 +948,9 @@
     },
     "result": {
       "output": "千葉県袖ケ浦市三ツ作761 根形小学校",
-      "others": ["根形小学校"],
+      "others": [
+        "根形小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.415682,
@@ -927,7 +983,9 @@
     },
     "result": {
       "output": "千葉県袖ケ浦市横田2583 中川小学校",
-      "others": ["2583 中川小学校"],
+      "others": [
+        "2583 中川小学校"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.388458,
@@ -960,7 +1018,9 @@
     },
     "result": {
       "output": "千葉県袖ケ浦市野里1503 平岡小学校",
-      "others": ["平岡小学校"],
+      "others": [
+        "平岡小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.396317,
@@ -993,7 +1053,9 @@
     },
     "result": {
       "output": "千葉県袖ケ浦市川原井470 平岡小学校幽谷分校",
-      "others": ["平岡小学校幽谷分校"],
+      "others": [
+        "平岡小学校幽谷分校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.414167,
@@ -1026,7 +1088,9 @@
     },
     "result": {
       "output": "千葉県袖ケ浦市蔵波台四丁目19-1 蔵波小学校",
-      "others": ["蔵波小学校"],
+      "others": [
+        "蔵波小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 35.441813367,
@@ -1059,7 +1123,9 @@
     },
     "result": {
       "output": "千葉県袖ケ浦市奈良輪425-1 奈良輪小学校",
-      "others": ["奈良輪小学校"],
+      "others": [
+        "奈良輪小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.434822,
@@ -1092,7 +1158,9 @@
     },
     "result": {
       "output": "岐阜県不破郡関ケ原町大字関ケ原3132-3 関ケ原小学校",
-      "others": ["関ケ原小学校"],
+      "others": [
+        "関ケ原小学校"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.368524,

@@ -36,6 +36,7 @@ import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { toHiragana } from '../services/to-hiragana';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
+import { isDigitForCharNode } from '../services/is-number';
 
 export class KoazaTransform extends Transform {
 
@@ -148,6 +149,10 @@ export class KoazaTransform extends Transform {
       findResults?.forEach(findResult => {
         if (!findResult.info) {
           throw new Error('findResult.info is empty');
+        }
+        // ◯◯地割 + 数字が残った場合、ミスマッチの可能性が高い
+        if (findResult.info.koaza.includes('地割') && isDigitForCharNode(findResult.unmatched)) {
+          return;
         }
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 

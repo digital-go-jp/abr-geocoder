@@ -5,7 +5,9 @@
     },
     "result": {
       "output": "岩手県胆沢郡金ケ崎町西根大谷120 金ケ崎小学校",
-      "others": ["120 金ケ崎小学校"],
+      "others": [
+        "120 金ケ崎小学校"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza",
       "lat": 39.214458,
@@ -38,7 +40,9 @@
     },
     "result": {
       "output": "東京都調布市国領町三丁目8-15 都営くすのきアパート2号棟1階",
-      "others": ["都営くすのきアパート2号棟1階"],
+      "others": [
+        "都営くすのきアパート2号棟1階"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 35.649614,
@@ -137,7 +141,9 @@
     },
     "result": {
       "output": "千葉県山武郡横芝光町横芝真砂482-2",
-      "others": ["真砂482-2"],
+      "others": [
+        "真砂482-2"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.66006,
@@ -170,7 +176,9 @@
     },
     "result": {
       "output": "群馬県渋川市渋川778",
-      "others": ["778"],
+      "others": [
+        "778"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 36.496038,
@@ -203,7 +211,9 @@
     },
     "result": {
       "output": "富山県富山市町村58-2 アパート Ⅰ Ⅱ",
-      "others": ["アパート Ⅰ Ⅱ"],
+      "others": [
+        "アパート Ⅰ Ⅱ"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 36.678579,
@@ -236,7 +246,9 @@
     },
     "result": {
       "output": "北海道札幌市北区北二十四条西七丁目1-10",
-      "others": ["-10"],
+      "others": [
+        "-10"
+      ],
       "match_level": "residential_block",
       "coordinate_level": "residential_block",
       "lat": 43.090336,
@@ -302,7 +314,9 @@
     },
     "result": {
       "output": "長野県大町市八坂11648",
-      "others": ["11648"],
+      "others": [
+        "11648"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 36.504567,
@@ -368,7 +382,9 @@
     },
     "result": {
       "output": "大阪府大阪市中央区上町A-5 どこか",
-      "others": ["どこか"],
+      "others": [
+        "どこか"
+      ],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 34.678361918,
@@ -388,7 +404,7 @@
       "chome": null,
       "koaza": null,
       "blk_num": "A",
-      "rsdt_num": 5,
+      "rsdt_num": "5",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -401,7 +417,9 @@
     },
     "result": {
       "output": "北海道札幌市中央区南二条西一丁目5 1番館",
-      "others": ["1番館"],
+      "others": [
+        "1番館"
+      ],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 43.058730899,
@@ -434,7 +452,9 @@
     },
     "result": {
       "output": "北海道札幌市中央区南二条西一丁目5 2号室",
-      "others": ["2号室"],
+      "others": [
+        "2号室"
+      ],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 43.058730899,
@@ -467,7 +487,9 @@
     },
     "result": {
       "output": "愛知県豊田市西丹波町九九十",
-      "others": ["九九十"],
+      "others": [
+        "九九十"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 35.237834,
@@ -500,7 +522,9 @@
     },
     "result": {
       "output": "兵庫県三田市三輪二丁目1 三田市役所",
-      "others": ["三田市役所"],
+      "others": [
+        "三田市役所"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 34.892084,
@@ -533,7 +557,9 @@
     },
     "result": {
       "output": "兵庫県三田市三輪二丁目1-1 三田市役所",
-      "others": ["-1 三田市役所"],
+      "others": [
+        "-1 三田市役所"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
       "lat": 34.892084,
@@ -566,7 +592,9 @@
     },
     "result": {
       "output": "埼玉県春日部市八丁目353-1",
-      "others": ["-1"],
+      "others": [
+        "-1"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 35.995717,
@@ -599,7 +627,9 @@
     },
     "result": {
       "output": "北海道札幌市中央区南二条西一丁目52 302号室",
-      "others": ["52 302号室"],
+      "others": [
+        "52 302号室"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 43.05842,
@@ -632,7 +662,9 @@
     },
     "result": {
       "output": "北海道札幌市中央区南二条西一丁目53 2A",
-      "others": ["53 2A"],
+      "others": [
+        "53 2A"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 43.05842,
@@ -665,7 +697,9 @@
     },
     "result": {
       "output": "北海道札幌市中央区南二条西一丁目5 301C",
-      "others": ["301C"],
+      "others": [
+        "301C"
+      ],
       "match_level": "parcel",
       "coordinate_level": "parcel",
       "lat": 43.058730899,
@@ -698,7 +732,9 @@
     },
     "result": {
       "output": "大分県大分市大石町3丁目3-5(小野ビル101号)",
-      "others": ["3丁目3-5(小野ビル101号)"],
+      "others": [
+        "3丁目3-5(小野ビル101号)"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 33.20835,
@@ -731,7 +767,9 @@
     },
     "result": {
       "output": "大分県大分市大字荏隈394-1 (小野ビル101号)",
-      "others": ["(小野ビル101号)"],
+      "others": [
+        "(小野ビル101号)"
+      ],
       "match_level": "parcel",
       "coordinate_level": "machiaza",
       "lat": 33.214209,
@@ -763,8 +801,10 @@
       "input": "久太郎町４丁目渡辺3号"
     },
     "result": {
-      "output": "大阪府大阪市久太郎町四丁目渡辺3",
-      "others": ["渡辺3"],
+      "output": "大阪府大阪市中央区久太郎町四丁目渡辺3",
+      "others": [
+        "渡辺3"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 34.680897,
@@ -779,7 +819,7 @@
       "pref": "大阪府",
       "county": null,
       "city": "大阪市",
-      "ward": null,
+      "ward": "中央区",
       "oaza_cho": "久太郎町",
       "chome": "四丁目",
       "koaza": null,
@@ -797,7 +837,9 @@
     },
     "result": {
       "output": "茨城県龍ケ崎市3928",
-      "others": ["3928"],
+      "others": [
+        "3928"
+      ],
       "match_level": "city",
       "coordinate_level": "city",
       "lat": 35.911594,
@@ -849,7 +891,7 @@
       "chome": null,
       "koaza": null,
       "blk_num": "C",
-      "rsdt_num": 3,
+      "rsdt_num": "3",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -862,7 +904,9 @@
     },
     "result": {
       "output": "大阪府大阪市天王寺区堀越町アベノ地下街8",
-      "others": ["アベノ地下街8"],
+      "others": [
+        "アベノ地下街8"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 34.649512,
@@ -895,7 +939,9 @@
     },
     "result": {
       "output": "北海道勇払郡安平町安平番外地",
-      "others": ["番外地"],
+      "others": [
+        "番外地"
+      ],
       "match_level": "machiaza",
       "coordinate_level": "machiaza",
       "lat": 42.816856,
@@ -928,7 +974,9 @@
     },
     "result": {
       "output": "神奈川県綾瀬市無番地",
-      "others": ["無番地"],
+      "others": [
+        "無番地"
+      ],
       "match_level": "city",
       "coordinate_level": "city",
       "lat": 35.437161,
@@ -1026,7 +1074,9 @@
     },
     "result": {
       "output": "北海道雨竜郡秩父別町秩父別2085(2条1丁目)",
-      "others": ["2085(2条1丁目)"],
+      "others": [
+        "2085(2条1丁目)"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 43.770886,
@@ -1079,7 +1129,7 @@
       "chome": "三丁目",
       "koaza": null,
       "blk_num": "1",
-      "rsdt_num": 1,
+      "rsdt_num": "1",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -1092,7 +1142,9 @@
     },
     "result": {
       "output": "青森県八戸市大字尻内町字下根市25-2",
-      "others": ["25-2"],
+      "others": [
+        "25-2"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza",
       "lat": 40.520882,
@@ -1125,7 +1177,9 @@
     },
     "result": {
       "output": "福島県いわき市山玉町脇川2 いわき市役所 水道局 山玉浄水場",
-      "others": ["2 いわき市役所 水道局 山玉浄水場"],
+      "others": [
+        "2 いわき市役所 水道局 山玉浄水場"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 36.901176,
@@ -1158,7 +1212,9 @@
     },
     "result": {
       "output": "岩手県盛岡市飯岡新田4地割1001 河南自治公民館",
-      "others": ["1001 河南自治公民館"],
+      "others": [
+        "1001 河南自治公民館"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza",
       "lat": 39.665898,
@@ -1184,7 +1240,8 @@
       "prc_num2": null,
       "prc_num3": null
     }
-  },{
+  },
+  {
     "query": {
       "input": "北海道札幌市白石区平和通１丁目南６番１６号"
     },
@@ -1197,8 +1254,8 @@
       "lon": 141.407126409,
       "lg_code": "011045",
       "machiaza_id": "0099102",
+      "rsdt_addr_flg": 1,
       "blk_id": "006",
-      "blk_num": "6",
       "rsdt_id": "016",
       "rsdt2_id": null,
       "prc_id": null,
@@ -1209,7 +1266,8 @@
       "oaza_cho": "平和通",
       "chome": null,
       "koaza": "一丁目南",
-      "rsdt_num": 16,
+      "blk_num": "6",
+      "rsdt_num": "16",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -1217,4 +1275,3 @@
     }
   }
 ]
-  

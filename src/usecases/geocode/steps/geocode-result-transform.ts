@@ -74,27 +74,6 @@ export class GeocodeResultTransform extends Transform {
         }
         return query;
       }
-      // if (query.chome?.includes('丁目')) {
-      //   switch (true) {
-      //     case !query.parcel_key && query.rsdt_addr_flg !== 0: {
-      //       query = query.copy({
-      //         rsdt_addr_flg: 0,
-      //       });
-      //       break;
-      //     }
-
-      //     case query.rsdtblk_key && query.rsdt_addr_flg !== 1: {
-      //       query = query.copy({
-      //         rsdt_addr_flg: 1,
-      //       });
-      //       break;
-      //     }
-
-      //     default:
-      //       // Nothing to do here
-      //       break;
-      //   }
-      // }
       return query;
     });
 
@@ -106,76 +85,47 @@ export class GeocodeResultTransform extends Transform {
 
       const aLv = a.match_level.num;
       const bLv = b.match_level.num;
-      const isArsdt = aLv === MatchLevel.RESIDENTIAL_BLOCK.num || aLv === MatchLevel.RESIDENTIAL_DETAIL.num;
-      const isBrsdt = bLv === MatchLevel.RESIDENTIAL_BLOCK.num || bLv === MatchLevel.RESIDENTIAL_DETAIL.num;
-      const isAprcl = aLv === MatchLevel.PARCEL.num;
-      const isBprcl = bLv === MatchLevel.PARCEL.num;
-      const hasAchome = a.chome?.includes('丁目');
-      const hasBchome = b.chome?.includes('丁目');
+      const isArsdt = aLv === MatchLevel.RESIDENTIAL_BLOCK.num || aLv === MatchLevel.RESIDENTIAL_DETAIL.num || a.rsdt_addr_flg === 1;
+      const isBrsdt = bLv === MatchLevel.RESIDENTIAL_BLOCK.num || bLv === MatchLevel.RESIDENTIAL_DETAIL.num || b.rsdt_addr_flg === 1;
+      const isAprcl = aLv === MatchLevel.PARCEL.num || a.rsdt_addr_flg === 0;
+      const isBprcl = bLv === MatchLevel.PARCEL.num || b.rsdt_addr_flg === 0;
+
+      if (a.match_level === MatchLevel.UNKNOWN) {
+        totalScoreA -= 100;
+      }
+      if (b.match_level === MatchLevel.UNKNOWN) {
+        totalScoreB -= 100;
+      }
 
       switch (true) {
         // SearchTarget.ALL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
         case searchTarget === SearchTarget.ALL && isArsdt && isBprcl:
-          if (hasAchome) {
-            totalScoreA += 1;
-          }
-          // Bが地番なのに chome を持っていた場合、Bのスコアを下げる
-          if (hasBchome) {
-            totalScoreB -= 1;
-          }
+          totalScoreA += 2;
           break;
 
         // SearchTarget.RESIDENTIAL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
         case searchTarget === SearchTarget.RESIDENTIAL && isArsdt && isBprcl:
-          if (hasAchome) {
-            totalScoreA += 2;
-          }
-          // Bが地番なのに chome を持っていた場合、Bのスコアを下げる
-          if (hasBchome) {
-            totalScoreB -= 1;
-          }
+          totalScoreA += 2;
           break;
 
         // SearchTarget.ALL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
         case searchTarget === SearchTarget.ALL && isAprcl && isBrsdt:
-          if (hasBchome) {
-            totalScoreB += 1;
-          }
-          // Aが地番なのに chome を持っていた場合、Aのスコアを下げる
-          if (hasAchome) {
-            totalScoreA -= 1;
-          }
+          totalScoreB += 2;
           break;
 
         // SearchTarget.RESIDENTIAL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
         case searchTarget === SearchTarget.RESIDENTIAL && isAprcl && isBrsdt:
-          if (hasBchome) {
-            totalScoreB += 2;
-          }
-          // Aが地番なのに chome を持っていた場合、Aのスコアを下げる
-          if (hasAchome) {
-            totalScoreA -= 1;
-          }
+          totalScoreB += 2;
           break;
         
         // SearchTarget.PARCEL のとき、Aが地番、Bが住居表示の場合、地番を優先
         case (searchTarget === SearchTarget.PARCEL) && isAprcl && isBrsdt:
-          // Aが地番なのに chome を持っていた場合、Aのスコアを下げる
-          if (hasAchome) {
-            totalScoreA -= 1;
-          } else {
-            totalScoreA += 2;
-          }
+          totalScoreA += 2;
           break;
 
         // SearchTarget.PARCEL のとき、Aが住居表示、Bが地番の場合、地番を優先
         case (searchTarget === SearchTarget.PARCEL) && isArsdt && isBprcl:
-          // Bが地番なのに chome を持っていた場合、Bのスコアを下げる
-          if (hasAchome) {
-            totalScoreB -= 1;
-          } else {
-            totalScoreB += 2;
-          }
+          totalScoreB += 2;
           break;
 
         default:
@@ -195,11 +145,9 @@ export class GeocodeResultTransform extends Transform {
       }
       
       // マッチングした文字列が多い方に+1
-      const aMatchedCnt = a.matchedCnt - a.ambiguousCnt;
-      const bMatchedCnt = b.matchedCnt - b.ambiguousCnt;
-      if (aMatchedCnt > bMatchedCnt) {
+      if (a.matchedCnt > b.matchedCnt) {
         totalScoreA += 1;
-      } else if (aMatchedCnt < bMatchedCnt) {
+      } else if (a.matchedCnt < b.matchedCnt) {
         totalScoreB += 1;
       }
 
@@ -221,49 +169,58 @@ export class GeocodeResultTransform extends Transform {
         totalScoreB += 1;
       }
       
-      // 緯度経度の精度が高い方に+1
-      // switch (true) {
-      //   case a.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num &&
-      //     b.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num: {
-          
-      //     if (a.coordinate_level.num < b.coordinate_level.num) {
-      //       totalScoreA += 1;
-      //     } else if (a.coordinate_level.num > b.coordinate_level.num) {
-      //       totalScoreB += 1;
-      //     }
-      //     break;
-      //   }
+      if (isAprcl && isBprcl || isArsdt && isBrsdt) {
+        // 精度が高い方に+1
+        if (a.match_level.num < b.match_level.num) {
+          totalScoreB += 1;
+        } else if (a.match_level.num > b.match_level.num) {
+          totalScoreA += 1;
+        }
+        // 緯度経度の精度が高い方に+1
+        if (a.coordinate_level.num < b.coordinate_level.num) {
+          totalScoreB += 1;
+        } else if (a.coordinate_level.num > b.coordinate_level.num) {
+          totalScoreA += 1;
+        }
+        // switch (true) {
+        //   case a.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num &&
+        //     b.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num: {
+            
+        //     if (a.coordinate_level.num < b.coordinate_level.num) {
+        //       totalScoreB += 1;
+        //     } else if (a.coordinate_level.num > b.coordinate_level.num) {
+        //       totalScoreA += 1;
+        //     }
+        //     break;
+        //   }
 
-      //   case a.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num &&
-      //     b.coordinate_level.num > MatchLevel.MACHIAZA_DETAIL.num: {
-      //       totalScoreB += 1;
-      //     break;
-      //   }
+        //   case a.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num &&
+        //     b.coordinate_level.num > MatchLevel.MACHIAZA_DETAIL.num: {
+        //       totalScoreB += 1;
+        //     break;
+        //   }
 
-      //   case a.coordinate_level.num > MatchLevel.MACHIAZA_DETAIL.num &&
-      //     b.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num: {
-      //       totalScoreA += 1;
-      //     break;
-      //   }
+        //   case a.coordinate_level.num > MatchLevel.MACHIAZA_DETAIL.num &&
+        //     b.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num: {
+        //       totalScoreA += 1;
+        //     break;
+        //   }
 
-      //   default:
-      //     // Do nothing here
-      //     break;
-      // }
-
-      // マッチレベルが高いほうが優先
-      if (totalScoreB - totalScoreA !== 0) {
-        return totalScoreB - totalScoreA;
+        //   default:
+        //     // Do nothing here
+        //     break;
+        // }
       }
 
       // ambiguousCnt が少ない方を優先
       if (a.ambiguousCnt < b.ambiguousCnt) {
-        return -1;
+        totalScoreA += 1;
       } else if (a.ambiguousCnt > b.ambiguousCnt) {
-        return 1;
+        totalScoreB += 1;
       }
  
-      return 0;
+      // マッチレベルが高いほうが優先
+      return totalScoreB - totalScoreA;
     });
     
     if (queryList.length === 0) {

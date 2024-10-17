@@ -5,7 +5,9 @@
     },
     "result": {
       "output": "大分県大分市新川西二丁目3-1",
-      "others": ["3-1"],
+      "others": [
+        "3-1"
+      ],
       "match_level": "machiaza_detail",
       "coordinate_level": "city",
       "lat": 33.239526,

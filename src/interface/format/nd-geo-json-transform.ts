@@ -57,8 +57,8 @@ export type NdGeoJsonOutput = {
     chome: string | null;
     koaza: string | null;
     blk_num: string | null;
-    rsdt_num: number | null;
-    rsdt_num2: number | null;
+    rsdt_num: string | null;
+    rsdt_num2: string | null;
     prc_num1: string | null;
     prc_num2: string | null;
     prc_num3: string | null;
@@ -144,8 +144,8 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
         chome: result.chome || BLANK_CHAR,
         koaza: result.koaza || BLANK_CHAR,
         blk_num: result.block?.toString() || BLANK_CHAR,
-        rsdt_num: result.rsdt_num || BLANK_CHAR,
-        rsdt_num2: result.rsdt_num2 || BLANK_CHAR,
+        rsdt_num: result.rsdt_num?.toString() || BLANK_CHAR,
+        rsdt_num2: result.rsdt_num2?.toString() || BLANK_CHAR,
         prc_num1: result.prc_num1?.toString() || BLANK_CHAR,
         prc_num2: result.prc_num2?.toString() || BLANK_CHAR,
         prc_num3: result.prc_num3?.toString() || BLANK_CHAR,

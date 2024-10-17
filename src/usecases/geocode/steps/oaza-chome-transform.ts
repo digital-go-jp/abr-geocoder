@@ -30,6 +30,7 @@ import { OazaChoTrieFinder } from '../models/oaza-cho-trie-finder';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
+import { isDigitForCharNode } from '../services/is-number';
 
 export class OazaChomeTransform extends Transform {
 
@@ -163,17 +164,22 @@ export class OazaChomeTransform extends Transform {
           // if (matched && query.town_key) {
           //   matched = result.info?.town_key === query.town_key;
           // }
+
+          // ◯丁目 + 数字が残った場合、ミスマッチの可能性が高い
+          if (matched &&
+            isDigitForCharNode(result.unmatched) &&
+            (result.info?.oaza_cho.includes('丁目') || result.info?.chome.includes('丁目'))) {
+            matched = false;
+          }
+          // ◯◯地割 + 数字が残った場合、ミスマッチの可能性が高い
+          if (matched && result.info?.koaza.includes('地割') && isDigitForCharNode(result.unmatched)) {
+            matched = false;
+          }
           return matched;
         });
 
         // 複数都道府県にヒットする可能性があるので、全て試す
         filteredResult?.forEach(findResult => {
-          // city_key が判別している場合で
-          // city_key が異なる場合はスキップ
-          if ((copiedQuery.city_key !== undefined) &&
-            (copiedQuery.city_key !== findResult.info?.city_key)) {
-            return;
-          }
           anyAmbiguous = anyAmbiguous || findResult.ambiguous;
 
           const info = findResult.info!;

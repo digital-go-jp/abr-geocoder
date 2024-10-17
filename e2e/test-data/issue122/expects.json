@@ -5,7 +5,10 @@
     },
     "result": {
       "output": "北海道空知郡上砂川町下鶉南二条1-3-2",
-      "others": ["南二条1-3-2"],
+      "others": [
+        "南二条1-3-2"
+      ],
+      "score": 1,
       "match_level": "machiaza_detail",
       "coordinate_level": "machiaza_detail",
       "lat": 43.478589,
