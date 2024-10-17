@@ -1,8 +1,7 @@
 import { DownloadRequest } from '@domain/models/download-process-query';
 import { EnvProvider } from '@domain/models/env-provider';
-import { beforeAll, describe, expect, jest, test } from '@jest/globals';
-import { Downloader } from '../download-process';
 import * as geocodeDbControllerModule from '@interface/database/geocode-db-controller';
+import { describe, expect, jest, test } from '@jest/globals';
 import * as CsvParserTransformMockModule from '@usecases/download/transformations/__mocks__/csv-parse-transform';
 import * as DownloadTransformMockModule from '@usecases/download/transformations/__mocks__/download-transform';
 
@@ -263,35 +262,35 @@ describe.skip('Downloader', () => {
     },
   ];
 
-  beforeAll(async () => {
-    const instance = new Downloader({
-      database: {
-        type: 'sqlite3',
-        dataDir: 'dataDir_somewhere',
-        schemaDir: 'schemaDir_somewhere',
-      },
-      cacheDir: 'cacheDir_somewhere',
-      downloadDir: 'downloadDir_somewhere',
-    });
+  // beforeAll(async () => {
+  //   const instance = new Downloader({
+  //     database: {
+  //       type: 'sqlite3',
+  //       dataDir: 'dataDir_somewhere',
+  //       schemaDir: 'schemaDir_somewhere',
+  //     },
+  //     cacheDir: 'cacheDir_somewhere',
+  //     downloadDir: 'downloadDir_somewhere',
+  //   });
 
-    expect(instance).not.toBeNull();
+  //   expect(instance).not.toBeNull();
 
-    // privateメソッドなので、instance as any にしてアクセスする
-    aggregaterSpy = jest.spyOn(instance as any, 'aggregateLGcodes');
+  //   // privateメソッドなので、instance as any にしてアクセスする
+  //   aggregaterSpy = jest.spyOn(instance as any, 'aggregateLGcodes');
 
-    // privateメソッドなので、instance as any にしてアクセスする
-    createDownloadRequestsSpy = jest.spyOn(instance as any, 'createDownloadRequests');
+  //   // privateメソッドなので、instance as any にしてアクセスする
+  //   createDownloadRequestsSpy = jest.spyOn(instance as any, 'createDownloadRequests');
 
-    await instance.download({
-      lgCodes: [
-        '131016', // 東京都千代田区
-        '262013', // 京都府福知山市
-        '260002', // 京都府
-      ],
-      progress: progressSpy,
-      concurrentDownloads: 7,
-    });
-  });
+  //   await instance.download({
+  //     lgCodes: [
+  //       '131016', // 東京都千代田区
+  //       '262013', // 京都府福知山市
+  //       '260002', // 京都府
+  //     ],
+  //     progress: progressSpy,
+  //     concurrentDownloads: 7,
+  //   });
+  // });
 
   test('aggregateLGcodes() should aggregate LG codes ', () => {
 

@@ -100,32 +100,32 @@ export class GeocodeResultTransform extends Transform {
       switch (true) {
         // SearchTarget.ALL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
         case searchTarget === SearchTarget.ALL && isArsdt && isBprcl:
-          totalScoreA += 2;
+          totalScoreA += 5;
           break;
 
         // SearchTarget.RESIDENTIAL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
         case searchTarget === SearchTarget.RESIDENTIAL && isArsdt && isBprcl:
-          totalScoreA += 2;
+          totalScoreA += 10;
           break;
 
         // SearchTarget.ALL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
         case searchTarget === SearchTarget.ALL && isAprcl && isBrsdt:
-          totalScoreB += 2;
+          totalScoreB += 5;
           break;
 
         // SearchTarget.RESIDENTIAL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
         case searchTarget === SearchTarget.RESIDENTIAL && isAprcl && isBrsdt:
-          totalScoreB += 2;
+          totalScoreB += 10;
           break;
         
         // SearchTarget.PARCEL のとき、Aが地番、Bが住居表示の場合、地番を優先
         case (searchTarget === SearchTarget.PARCEL) && isAprcl && isBrsdt:
-          totalScoreA += 2;
+          totalScoreA += 10;
           break;
 
         // SearchTarget.PARCEL のとき、Aが住居表示、Bが地番の場合、地番を優先
         case (searchTarget === SearchTarget.PARCEL) && isArsdt && isBprcl:
-          totalScoreB += 2;
+          totalScoreB += 10;
           break;
 
         default:

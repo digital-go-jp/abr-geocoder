@@ -124,7 +124,18 @@ export class OazaChomeTransform extends Transform {
       // 大字が中途半端に当たっている場合がある。大字を含めて探索する
       // input: "藤野一条", oaza_cho: "藤野"
       if (query.oaza_cho) {
-        targets.push(CharNode.create(query.oaza_cho)?.concat(targets[0]));
+        let prefix = CharNode.create(query.oaza_cho);
+        if (query.chome) {
+          if (prefix) {
+            prefix = prefix.concat(CharNode.create(query.chome))!;
+          } else {
+            prefix = CharNode.create(query.chome);
+          }
+        }
+        if (prefix) {
+          targets.push(prefix.concat(targets[0]));
+          results.add(query);
+        }
       }
 
       let anyHit = false;
