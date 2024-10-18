@@ -3,6 +3,10 @@
 
 - [日本語版](./README.ja.md)
 
+## 🚨 Upgrade to version 2.1 from v2.0
+
+- Due to the significant changes for the database structure, removes `the database directory` (default: `~/.abr-geocoder`), then runs the `abrg download` command.
+
 ## Description
 
 A geocoder that matches input address strings with the [Address Base Registry](https://catalog.registries.digital.go.jp/rc/dataset/) maintained by the Digital Agency, Government of Japan, outputting normalized address strings, town IDs, latitude and longitude, etc. It analyzes Japanese domestic address notation, absorbs variations, and outputs normalized results according to the hierarchy.
@@ -272,12 +276,30 @@ $ abrg <inputFile> [<outputFile>] [options]
   ```
   </details>
 
+- <details>
+  <summary>Change geocoding target</summary>
+  
+  You can change the geocoding target with the `--target` option. The default is `all`.
+
+  | format      | Description                                                                                                          |
+  |-------------|----------------------------------------------------------------------------------------------------------------------|
+  | all         | Searches both residential address and parcel number data. The result for the residential address takes precedence.   |
+  | residential | Searches only the residential address data.                                                                          |
+  | parcel      | Searches only the parcel number data.                                                                                |
+  </details>
+
 ## `abrg serve` command
 
 Starts the geocoder as a REST API server.
 
 ```sh
 abrg serve [options]
+```
+
+Example:
+
+```sh
+curl http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3
 ```
 
 - <details>
@@ -299,3 +321,66 @@ abrg serve [options]
   abrg serve  -d (path to directory to save data)
   ```
 </details>
+
+- <details>
+  <summary>Request parameters</summary>
+
+  The request is made via HTTP/GET. The following parameters can be specified:
+
+  | Parameter   | Required | Description                                            |
+  |-------------|-------------------------------------------------------------------|
+  | address     |     Y    | The address string to be geocoded. Required parameter. |
+  | target      |          | Search target (all, residential, parcel)               |
+  | format      |          | Output format for the result.                          |
+  | fuzzy       |          | A single character used as a wildcard.                 |
+</details>
+
+
+## Usage from your code
+
+  ```typescript
+  import {
+    AbrGeocoder,
+    AbrGeocoderDiContainer,
+    FormatterProvider,
+    Query,
+  } from '@digital-go-jp/abr-geocoder';
+  import path from 'node:path';
+
+  const abrgDir = `(path to working directory)`;
+  const rootDir = `(path to this library directory)`;
+
+  // Sets up parameters
+  const container = new AbrGeocoderDiContainer({
+    database: {
+      type: 'sqlite3',
+      dataDir: path.join(abrgDir, 'database'),
+      schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
+    },
+    cacheDir: path.join(abrgDir, 'cache'),
+  });
+
+  // Creates the geocoder instance
+  const geocoder = await AbrGeocoder.create({
+    container,
+    numOfThreads: 5, // adjusts with the number of CPU cores
+  });
+
+  const addresses: string[] = [
+    "(Japanese address1)",
+    "(Japanese address2)",
+  ];
+
+  const tasks: Promise<Query> = addresses.map(address => {
+    return this.geocoder.geocode({
+      address,
+      tag: undefined,
+      searchTarget,
+      fuzzy,
+    });
+  });
+
+  const results = await Promise.all(tasks);
+
+  geocoder.close();
+  ```

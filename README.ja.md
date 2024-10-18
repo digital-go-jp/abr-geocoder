@@ -2,6 +2,10 @@
 
 - [English version](./README.md)
 
+## 🚨 Version 2.0 から Version 2.1 へのアップグレード
+
+- データベースの構造に大きな変更があり下位互換性がないため、`abrgディレクトリ` (デフォルトでは `~/.abr-geocoder`) を削除して、もう一度 `abrg download` を行ってください。
+
 ## 説明
 
   入力した住所文字列とデジタル庁が整備する [アドレス・ベース・レジストリ](https://catalog.registries.digital.go.jp/rc/dataset/)を突合し、正規化された住所文字列・町字 ID ・緯度経度等を出力するジオコーダーです。
@@ -278,12 +282,31 @@
     ```
   </details>
 
+  - <details>
+    <summary>ジオコーディング対象</summary>
+    
+    `--target` オプションで住居表示・地番のジオコーディング対象を変更できます。デフォルトは`all`です。
+
+    | format      | 説明                                                         |
+    |-------------|-------------------------------------------------------------|
+    | all         | 住居表示と地番のデータの両方を調べます。住居表示の結果が優先されます    |
+    | residential | 住居表示データのみを調べます                                     |
+    | parcel      | 地番データのみを調べます                                        |
+
+    </details>
+
 ## `abrg serve`コマンド
 
   ジオコーダをREST APIサーバーとして起動します。
 
   ```sh
   abrg serve [options]
+  ```
+
+  リクエスト方法
+
+  ```sh
+  curl http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3
   ```
 
   - <details>
@@ -305,3 +328,66 @@
     abrg serve  -d (データを保存するディレクトリへのパス)
     ```
   </details>
+
+  - <details>
+    <summary>リクエスト・パラメータ</summary>
+
+    HTTP/GETでリクエストを行います。以下のパラメータが指定可能です。
+
+    | パラメータ    | 必須 | 説明                                      |
+    |-------------|-------------------------------------------------|
+    | address     |   Y  | ジオコーディングしたい住所文字列。必須パラメータ |
+    | target      |      | 検索対象(all, residentaial, parcel)       |
+    | format      |      | 結果の出力形式                             |
+    | fuzzy       |      | ワイルドカードとして使用する1文字             |
+
+  </details>
+
+## コードからの利用
+
+  ```typescript
+  import {
+    AbrGeocoder,
+    AbrGeocoderDiContainer,
+    FormatterProvider,
+    Query,
+  } from '@digital-go-jp/abr-geocoder';
+  import path from 'node:path';
+
+  const abrgDir = `(path to working directory)`;
+  const rootDir = `(path to this library directory)`;
+
+  // ジオコーダ作成のためのパラメータ
+  const container = new AbrGeocoderDiContainer({
+    database: {
+      type: 'sqlite3',
+      dataDir: path.join(abrgDir, 'database'),
+      schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
+    },
+    cacheDir: path.join(abrgDir, 'cache'),
+  });
+
+  // ジオコーダーの作成
+  const geocoder = await AbrGeocoder.create({
+    container,
+    numOfThreads: 5, // CPUコア数に合わせて調整すると良い
+  });
+
+  const addresses: string[] = [
+    "(住所文字列1)",
+    "(住所文字列2)",
+  ];
+
+  const tasks: Promise<Query> = addresses.map(address => {
+    return this.geocoder.geocode({
+      address,
+      tag: undefined,
+      searchTarget,
+      fuzzy,
+    });
+  });
+
+  const results = await Promise.all(tasks);
+
+  geocoder.close();
+  ```
