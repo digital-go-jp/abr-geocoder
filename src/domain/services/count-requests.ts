@@ -21,10 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { LineStream } from 'byline';
 import fs from 'node:fs';
 import { Writable } from 'node:stream';
 import { TrimTransform } from '../transformations/trim-transform';
+import { LineStream } from './line-stream';
+
 export const countRequests = (filePath: string) => {
   const lineByLine = new LineStream();
   const commentFilter = new TrimTransform();
@@ -32,8 +33,8 @@ export const countRequests = (filePath: string) => {
     resolve: (total: number) => void,
   ) => {
     fs.createReadStream(filePath)
-      .pipe(lineByLine)
-      .pipe(commentFilter)
+    .pipe(lineByLine)
+    .pipe(commentFilter)
       .pipe(new Writable({
         objectMode: true,
         write(chunk, encoding, callback) {

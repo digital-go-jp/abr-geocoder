@@ -24,6 +24,7 @@
 import { DEFAULT_FUZZY_CHAR, STDIN_FILEPATH } from '@config/constant-values';
 import { EnvProvider } from '@domain/models/env-provider';
 import { countRequests } from '@domain/services/count-requests';
+import { LineStream } from '@domain/services/line-stream';
 import { getPackageInfo } from '@domain/services/package/get-package-info';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
 import { resolveHome } from '@domain/services/resolve-home';
@@ -35,7 +36,6 @@ import { SearchTarget } from '@domain/types/search-target';
 import { FormatterProvider } from '@interface/format/formatter-provider';
 import { AbrGeocodeStream } from '@usecases/geocode/abr-geocode-stream';
 import { getReadStreamFromSource } from '@usecases/geocode/services/get-read-stream-from-source';
-import { LineStream } from 'byline';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Writable } from 'node:stream';
