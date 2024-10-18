@@ -44,4 +44,4 @@ export default {
   fromFile,
   fromBuffer,
   fromString,
-}
+};

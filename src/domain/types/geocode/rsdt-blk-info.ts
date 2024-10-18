@@ -26,6 +26,6 @@ export type RsdtBlkInfo = {
   town_key: number;
   blk_num: number;
   blk_id: string;
-  rep_lat: number;
-  rep_lon: number;
+  rep_lat: string;
+  rep_lon: string;
 };

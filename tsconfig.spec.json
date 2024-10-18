@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "typeRoots": [
+    "node_modules/@types",
+    "node_modules/@jest"
+  ],
+  "compilerOptions": {
+    "types": [ "node", "jest" ],
+    "moduleResolution": "node",
+    "lib": ["ES2023"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "__mocks__/**/*.ts",
+    "e2e/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/__skips__/*",
+    "node_modules"
+  ]
+}

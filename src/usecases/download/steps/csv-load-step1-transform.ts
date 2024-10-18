@@ -39,6 +39,8 @@ import { TownPosDatasetFile } from '@domain/models/town-pos-dataset-file';
 import { parseFilename } from '@domain/services/parse-filename';
 import { ThreadJob } from '@domain/services/thread/thread-task';
 import { ICsvFile } from '@domain/types/download/icsv-file';
+import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
+import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { Duplex, TransformCallback } from 'node:stream';
 
 export class CsvLoadStep1Transform extends Duplex {
@@ -50,11 +52,11 @@ export class CsvLoadStep1Transform extends Duplex {
     super({
       objectMode: true,
       allowHalfOpen: true,
-      read() {}
-    })
+      read() {},
+    });
   }
 
-  async _write(
+  _write(
     job: ThreadJob<DownloadResult | DownloadProcessError>,
     _: BufferEncoding,
     callback: TransformCallback,
@@ -95,7 +97,7 @@ export class CsvLoadStep1Transform extends Duplex {
         csvFile,
         datasetFile,
         fileMeta,
-      })
+      });
     }
     
     this.push({
@@ -105,7 +107,7 @@ export class CsvLoadStep1Transform extends Duplex {
         dataset: job.data.dataset,
         files: results,
         status: DownloadProcessStatus.UNSET,
-      }
+      },
     } as ThreadJob<CsvLoadQuery2>);
     this.timeAmount += Date.now() - start;
   }
@@ -170,7 +172,10 @@ export class CsvLoadStep1Transform extends Duplex {
       }
       
       default:
-        throw 'not implemented yet';
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
     }
   }
 }

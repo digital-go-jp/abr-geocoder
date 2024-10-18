@@ -27,8 +27,8 @@ import { packageJsonMeta } from './package-json-meta';
 import { parsePackageJson } from './parse-package-json';
 import { upwardFileSearch } from '../upward-file-search';
 
-export const getPackageInfo = async (): Promise<packageJsonMeta> => {
-  const packageJsonFilePath = await upwardFileSearch(__dirname, 'package.json');
+export const getPackageInfo = (): packageJsonMeta => {
+  const packageJsonFilePath = upwardFileSearch(__dirname, 'package.json');
   if (!packageJsonFilePath) {
     throw new AbrgError({
       messageId: AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE,

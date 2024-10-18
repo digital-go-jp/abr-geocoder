@@ -51,23 +51,14 @@ export class PrefDatasetFile
       });
     }
     
-    const lgCodes = new Set<string>();
-    parsedRows.forEach(row => {
-      lgCodes.add(row[DataField.LG_CODE.dbColumn] as string);
-    })
-
     // DBに取り込む
-    if (!params.noUpdate) {
-      await params.db.prefCsvRows(parsedRows);
-    }
-
-    return lgCodes;
+    await params.db.prefCsvRows(parsedRows);
   }
 
   get fields(): DataField[] {
     return [
       DataField.LG_CODE,
-      DataField.PREF
+      DataField.PREF,
     ];
   }
 
