@@ -103,11 +103,7 @@ export class WorkerThread<I, T, R> extends Worker {
       resolve(received.data);
     });
   }
-  private initAsync(signal?: AbortSignal) {
-    signal?.addEventListener('abort', () => {
-      this.terminate();
-      // reject('cancelled');
-    });
+  private initAsync() {
     return new Promise((
       resolve: (_?: unknown) => void,
       // reject: (_?: unknown) => void,
@@ -158,10 +154,9 @@ export class WorkerThread<I, T, R> extends Worker {
   static readonly create = async <I, T, R>(params: {
     filename: string | URL;
     initData?: I;
-    signal?: AbortSignal;
   }) => {
     const worker = new WorkerThread<I, T, R>(params);
-    await worker.initAsync(params.signal);
+    await worker.initAsync();
     return worker;
   };
 }
@@ -228,6 +223,10 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
         this.emit(addWorkerEvent);
       });
     };
+    
+    params.signal?.addEventListener('abort', () => {
+      this.workers.forEach(worker => worker.terminate());
+    });
 
     await this.addWorker(params);
     this.on(addWorkerEvent, onAddWorkerEvent);
