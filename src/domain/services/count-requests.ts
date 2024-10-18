@@ -33,8 +33,8 @@ export const countRequests = (filePath: string) => {
     resolve: (total: number) => void,
   ) => {
     fs.createReadStream(filePath)
-    .pipe(lineByLine)
-    .pipe(commentFilter)
+      .pipe(lineByLine)
+      .pipe(commentFilter)
       .pipe(new Writable({
         objectMode: true,
         write(chunk, encoding, callback) {
