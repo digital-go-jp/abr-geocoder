@@ -110,11 +110,11 @@ export class Downloader {
 
     // ダウンロード処理を行う
     // 最大6コネクション
-    const numOfDownloadThreads = Math.min(Math.max(parallel >> 1, 1), 6);
+    const numOfDownloadThreads = Math.max(Math.floor(parallel / 3 * 1), 1);
     const downloadTransform = new DownloadTransform({
       container: this.container,
       maxConcurrency: numOfDownloadThreads,
-      maxTasksPerWorker: Math.min(params.concurrentDownloads || MAX_CONCURRENT_DOWNLOAD),
+      maxTasksPerWorker: Math.max(params.concurrentDownloads || 1),
     });
 
     // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する

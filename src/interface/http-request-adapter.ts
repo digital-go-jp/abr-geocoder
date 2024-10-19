@@ -142,6 +142,7 @@ export class HttpRequestAdapter {
     });
     this.session.once('close', () => {
       // console.log(`--->session close`);
+      this.session?.destroy();
       this.session?.close();
       this.session = undefined;
       if (this.noLongerReconnect) {
@@ -428,6 +429,7 @@ export class HttpRequestAdapter {
     ), requestOptions);
     const onSessionClose = () => {
       console.log(`--->req.close`);
+      req.destroy();
       req.close();
     };
     this.session.on('close', onSessionClose);
@@ -462,6 +464,7 @@ export class HttpRequestAdapter {
 
   close() {
     this.noLongerReconnect = true;
+    this.session?.destroy();
     this.session?.close();
     clearInterval(this.timer);
   }
