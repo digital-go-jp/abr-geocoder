@@ -1,0 +1,37 @@
+[
+  {
+    "query": {
+      "input": "大分県大分市新川西2-3-1"
+    },
+    "result": {
+      "output": "大分県大分市新川西二丁目3-1",
+      "others": [
+        "3-1"
+      ],
+      "match_level": "machiaza_detail",
+      "coordinate_level": "city",
+      "lat": 33.239526,
+      "lon": 131.609377,
+      "lg_code": "442011",
+      "machiaza_id": "0479002",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "大分県",
+      "county": null,
+      "city": "大分市",
+      "ward": null,
+      "oaza_cho": "新川西",
+      "chome": "二丁目",
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  }
+]

@@ -40,7 +40,7 @@ jobs:
       # - name: test
       #   run: |
       #     npm run test
-      #     npm run test:system
+      #     npm run test:e2e
           
       - name: git setup
         run: |

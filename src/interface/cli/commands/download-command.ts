@@ -23,6 +23,7 @@
  */
 import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
 import { EnvProvider } from '@domain/models/env-provider';
+import { getPackageInfo } from '@domain/services/package/get-package-info';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
 import { resolveHome } from '@domain/services/resolve-home';
 import { upwardFileSearch } from '@domain/services/upward-file-search';
@@ -40,7 +41,7 @@ export type DownloadCommandArgv = {
   c?: string[];
   debug?: boolean;
   silent?: boolean;
-}
+};
 
 /**
  * abrg download
@@ -57,34 +58,34 @@ const downloadCommand: CommandModule = {
         type: 'string',
         default: EnvProvider.DEFAULT_ABRG_DIR,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
       })
       .option('lgCode', {
         alias: 'c',
         type: 'array',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_DOWNLOAD_TARGET_LGCODES
+          AbrgMessage.CLI_DOWNLOAD_TARGET_LGCODES,
         ),
         coerce: (lgCode: string | number) => lgCode.toString().split(','),
       })
       .option('debug', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DEBUG_OPTION
+          AbrgMessage.CLI_COMMON_DEBUG_OPTION,
         ),
       })
       .option('silent', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_SILENT_OPTION
+          AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
       });
   },
 
   handler: async (argv: ArgumentsCamelCase<DownloadCommandArgv>) => {
     // silent = true のときは、プログレスバーを表示しない
-    const progressBar = argv.silent ? undefined : createSingleProgressBar();
+    const progressBar = argv.silent ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total}');
     progressBar?.start(1, 0);
 
     if (argv.debug) {
@@ -95,7 +96,7 @@ const downloadCommand: CommandModule = {
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
 
     // ルートディレクトリを探す
-    const rootDir = await upwardFileSearch(__dirname, 'build');
+    const rootDir = upwardFileSearch(__dirname, 'build');
     if (!rootDir) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_FIND_THE_ROOT_DIR,
@@ -103,15 +104,17 @@ const downloadCommand: CommandModule = {
       });
     }
 
+    const { version } = getPackageInfo();
+    
     // ダウンロードを行う
     const downloader = new Downloader({
-      cacheDir: path.join(abrgDir, 'cache'),
+      cacheDir: path.join(abrgDir, 'cache', version),
       downloadDir: path.join(abrgDir, 'download'),
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
         schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
-      }
+      },
     });
     await downloader.download({
       // 進捗状況を知らせるコールバック
@@ -121,7 +124,7 @@ const downloadCommand: CommandModule = {
       },
 
       // ダウンロード対象のlgcode
-      lgCodes: argv.lgCode as string[] | undefined,
+      lgCodes: argv.lgCode,
 
       // 同時ダウンロード数
       concurrentDownloads: MAX_CONCURRENT_DOWNLOAD,
@@ -131,7 +134,7 @@ const downloadCommand: CommandModule = {
     if (argv.debug) {
       console.timeEnd("download");
     }
-  }
+  },
 };
 
 export default downloadCommand;

@@ -37,14 +37,11 @@ export class ParcelPosDatasetFile
       DataField.REP_LON,
       DataField.MACHIAZA_ID,
       DataField.PRC_ID,
-      DataField.REP_SRID
+      DataField.REP_SRID,
     ];
   }
   
   async process(params: Omit<ProcessOptions, 'db'> & {db : IParcelDbDownload}) {
-    if (params.noUpdate) {
-      return;
-    }
     const parsedRows = params.lines.map(row => this.parseCsv(row));
     await params.db.parcelPosCsvRows(parsedRows);
   }

@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { PackageInfo } from "@domain/services/parse-package-id";
 import { ChomeMachingInfo } from "@domain/types/geocode/chome-info";
 import { CityInfo, CityMatchingInfo } from "@domain/types/geocode/city-info";
 import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
@@ -29,9 +30,17 @@ import { ParcelInfo } from "@domain/types/geocode/parcel-info";
 import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { RsdtBlkInfo } from "@domain/types/geocode/rsdt-blk-info";
 import { RsdtDspInfo } from "@domain/types/geocode/rsdt-dsp-info";
-import { TownInfo, TownMatchingInfo } from "@domain/types/geocode/town-info";
+import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
+import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
 
+export interface ICommonDbUpdateCheck {
+  getLgCodes(): Promise<string[]>;
+  hasPrefRows(): Promise<boolean>;
+  hasCityRows(packageInfo: PackageInfo): Promise<boolean>;
+  hasTownRows(packageInfo: PackageInfo): Promise<boolean>;
+  closeDb(): Promise<void>;
+}
 export interface ICommonDbDownload {
   prefCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   prefPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
@@ -50,9 +59,9 @@ export interface ICommonDbGeocode {
   getPrefList(): Promise<PrefInfo[]>;
   getCityList(): Promise<CityInfo[]>;
 
-  getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined>;
-  getCityInfoByKey(city_key: number): Promise<CityInfo | undefined>;
-  getTownInfoByKey(town_key: number): Promise<TownInfo | undefined>;
+  // getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined>;
+  // getCityInfoByKey(city_key: number): Promise<CityInfo | undefined>;
+  // getTownInfoByKey(town_key: number): Promise<TownInfo | undefined>;
   
   getCountyAndCityList(): Promise<CityMatchingInfo[]>;
   getCityAndWardList(): Promise<CityMatchingInfo[]>;
@@ -60,19 +69,20 @@ export interface ICommonDbGeocode {
   getTokyo23Towns(): Promise<TownMatchingInfo[]>;
   getWards(): Promise<WardMatchingInfo[]>;
   getTokyo23Wards(): Promise<CityMatchingInfo[]>;
-  getWardRows(where: Required<{
-    ward: string;
-    city_key: number;
-  }>): Promise<WardMatchingInfo[]>;
+  // getWardRows(where: Required<{
+  //   ward: string;
+  //   city_key: number;
+  // }>): Promise<WardMatchingInfo[]>;
 
   getOazaChomes(): Promise<OazaChoMachingInfo[]>;
+  getKyotoStreetRows(): Promise<KoazaMachingInfo[]>;
 
-  getOazaChoPatterns(where: Partial<{
-    pref_key: number;
-    city_key: number;
-    town_key: number;
-  }>): Promise<OazaChoMachingInfo[]>;
-  getWardAndOazaChoList(): Promise<OazaChoMachingInfo[]>;
+  // getOazaChoPatterns(where: Partial<{
+  //   pref_key: number;
+  //   city_key: number;
+  //   town_key: number;
+  // }>): Promise<OazaChoMachingInfo[]>;
+  getWardAndOazaChoList(): Promise<WardAndOazaMatchingInfo[]>;
 
   getChomeRows(where: Partial<{
     pref_key: number;

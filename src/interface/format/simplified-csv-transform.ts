@@ -25,6 +25,7 @@
 import { Query } from '@usecases/geocode/models/query';
 import { Stream, TransformCallback } from 'node:stream';
 import { IFormatTransform } from './iformat-transform';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class SimplifiedCsvTransform extends Stream.Transform implements IFormatTransform {
 
@@ -43,7 +44,7 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
     private readonly options: {
       skipHeader: boolean;
       debug?: boolean;
-    }
+    },
   ) {
     super({
       // Data format coming from the previous stream is object mode.
@@ -73,15 +74,20 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     const line = this.columns
       .map(column => {
         switch (column) {
-          case 'input':
-            return `"${result.input.data.address}"`;
+          case 'input': {
+            // ダブルクォートを含む場合は、ダブルクォートは2つ並べて（""）エスケープする。
+            const input = result.input.data.address.replaceAll(RegExpEx.create('"{1,2}', 'g'), '""');
+            return `"${input}"`;
+          }
           case 'output':
             return `"${result.formatted.address || ''}"`;
+          case 'other':
+            return `"${result.tempAddress?.toOriginalString().trim() || ''}"`;
           case 'score':
             return result.formatted.score;
           case 'match_level':

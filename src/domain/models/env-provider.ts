@@ -27,6 +27,9 @@ import path from 'node:path';
 
 export class EnvProvider {
   static readonly DEFAULT_ABRG_DIR: string = path.join(os.homedir(), '.abr-geocoder');
+  static readonly isDebug: boolean = (() => {
+    return process.env.NODE_ENV?.startsWith('test') || false;
+  })();
   
   public readonly hostname: string = 'catalog.registries.digital.go.jp';
   public readonly userAgent: string = 'curl/7.81.0';
@@ -34,7 +37,7 @@ export class EnvProvider {
 
   constructor() {
     this.nodeRuntimeVersion = Array
-      .from(process.version.matchAll(RegExpEx.create('(\d+)', 'g')))
+      .from(process.version.matchAll(RegExpEx.create('([0-9]+)', 'g')))
       .map(match => parseInt(match[0]));
   }
 

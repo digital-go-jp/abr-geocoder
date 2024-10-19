@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 export type KoazaMachingInfo = {
+  key: string;
   oaza_cho: string;
   chome: string;
   pref: string;
@@ -31,8 +32,10 @@ export type KoazaMachingInfo = {
   koaza: string;
   rsdt_addr_flg: number;
   machiaza_id: string;
-  rep_lat: number;
-  rep_lon: number;
+  lg_code: string;
+  rep_lat: string;
+  rep_lon: string;
   city_key: number;
+  pref_key: number;
   town_key: number;
 };

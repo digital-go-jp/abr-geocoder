@@ -96,4 +96,4 @@ export const toPrefLgCode = (lgCode: string): PrefLgCode | undefined => {
       return prefLgCode as PrefLgCode;
     }
   }
-}
+};

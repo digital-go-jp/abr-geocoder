@@ -50,7 +50,7 @@ export class UrlCacheManager {
     try {
       const encoded = await fs.promises.readFile(cacheFilePath);
       return deserialize(encoded) as UrlCache | undefined;
-    } catch (e: unknown) {
+    } catch (_: unknown) {
       // Do nothing here
       return undefined;
     }
