@@ -90,7 +90,6 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
         ${DataField.RSDT2_ID.dbColumn},
         ${DataField.RSDT_NUM.dbColumn},
         ${DataField.RSDT_NUM2.dbColumn},
-        ${DataField.RSDT_ADDR_FLG.dbColumn},
         crc32
       ) VALUES (
         @rsdtdsp_key,
@@ -99,20 +98,17 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
         @rsdt2_id,
         @rsdt_num,
         @rsdt_num2,
-        @rsdt_addr_flg,
         @crc32
       ) ON CONFLICT (rsdtdsp_key) DO UPDATE SET
         ${DataField.RSDT_ID.dbColumn} = @rsdt_id,
         ${DataField.RSDT2_ID.dbColumn} = @rsdt2_id,
         ${DataField.RSDT_NUM.dbColumn} = @rsdt_num,
         ${DataField.RSDT_NUM2.dbColumn} = @rsdt_num2,
-        ${DataField.RSDT_ADDR_FLG.dbColumn} = @rsdt_addr_flg,
         crc32 = @crc32
       WHERE 
         crc32 != @crc32 OR
         crc32 IS NULL
     `;
-    
     await this.createRsdtDspTable();
     return await this.upsertRows({
       upsert: this.prepare(sql),
@@ -146,7 +142,6 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
             blk_id: row[DataField.BLK_ID.dbColumn].toString(),
             rsdt_id: row[DataField.RSDT_ID.dbColumn].toString(),
             rsdt2_id: row[DataField.RSDT2_ID.dbColumn].toString(),
-            rsdt_addr_flg: row[DataField.RSDT_ADDR_FLG.dbColumn] as number,
           });
           
           params.upsert.run(row);

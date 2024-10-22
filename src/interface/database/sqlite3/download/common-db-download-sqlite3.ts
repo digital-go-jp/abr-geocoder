@@ -161,10 +161,10 @@ export class CommonDbDownloadSqlite3
         crc32 IS NULL
     `;
 
+    await this.createCityTable();
     const prefKey = TableKeyProvider.getPrefKey({
       lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
     });
-    await this.createCityTable();
     return await this.upsertRowsForCity({
       prefKey,
       upsert: this.prepare(sql),
@@ -195,10 +195,10 @@ export class CommonDbDownloadSqlite3
         ${DataField.REP_LON.dbColumn} IS NULL
     `;
 
+    await this.createCityTable();
     const prefKey = TableKeyProvider.getPrefKey({
       lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
     });
-    await this.createCityTable();
     return await this.upsertRowsForCity({
       prefKey,
       upsert: this.prepare(sql),
@@ -279,7 +279,6 @@ export class CommonDbDownloadSqlite3
         crc32 IS NULL
     `;
     await this.createTownTable();
-
     const cityKey = TableKeyProvider.getCityKey({
       lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
     });

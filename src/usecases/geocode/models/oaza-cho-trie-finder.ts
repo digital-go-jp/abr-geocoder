@@ -81,8 +81,11 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
 
+    const commonDb = await diContainer.database.openCommonDb();
+    const genHash = commonDb.getOazaChomesGeneratorHash();
+
     const tree = new OazaChoTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, 'oaza-cho.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, `oaza-cho_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
@@ -94,7 +97,6 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getOazaChomes();
 
     for (const oazaInfo of rows) {

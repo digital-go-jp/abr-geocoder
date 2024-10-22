@@ -40,6 +40,7 @@ import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
+import crc32Lib from "@domain/services/crc32-lib";
 
 type GetKoazaRowsOptions = {
   city_key: string;
@@ -56,7 +57,11 @@ type GetChomeRowsOptions = {
 export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbGeocode {
 
   async closeDb(): Promise<void> {
-    this.closeDb();
+    this.close();
+  }
+
+  getKyotoStreetGeneratorHash() : string {
+    return crc32Lib.fromString(this.getKyotoStreetRows.toString());
   }
 
   getKyotoStreetRows(): Promise<KoazaMachingInfo[]> {
@@ -99,6 +104,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return Promise.resolve(results);
   }
 
+  getKoazaRowsGeneratorHash() : string {
+    return crc32Lib.fromString(this.getKoazaRows.toString());
+  }
+  
   getKoazaRows(where: Partial<GetKoazaRowsOptions>): Promise<KoazaMachingInfo[]> {
     const conditions: string[] = [];
     if (where.city_key) {
@@ -152,6 +161,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return Promise.resolve(results);
   }
 
+  getChomeRowsGeneratorHash() : string {
+    return crc32Lib.fromString(this.getChomeRows.toString());
+  }
+
   getChomeRows(where: Partial<GetChomeRowsOptions>): Promise<ChomeMachingInfo[]> {
     const conditions: string[] = [];
     if (where.pref_key) {
@@ -172,7 +185,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         c.pref_key,
         c.city_key,
         t.town_key,
-        p.${DataField.PREF.dbColumn} as pref,
         t.${DataField.CHOME.dbColumn} as chome,
         p.${DataField.PREF.dbColumn} as pref,
         c.${DataField.CITY.dbColumn} as city,
@@ -236,6 +248,13 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       resolve(rows);
     });
   }
+  getPrefListGeneratorHash() : string {
+    return crc32Lib.fromString(this.getPrefList.toString());
+  }
+
+  getCityListGeneratorHash() : string {
+    return crc32Lib.fromString(this.getCityList.toString());
+  }
 
   async getCityList(): Promise<CityInfo[]> {
     type CityRow = Omit<CityInfo, 'pref'>;
@@ -275,7 +294,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return results;
   }
   
-
   private async getCityMap(): Promise<Map<string, CityInfo>> {
     // if (this.resultCache.has('city_map')) {
     //   return this.resultCache.get('city_map') as Map<number, CityInfo>;
@@ -299,6 +317,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
 
     // this.resultCache.set('city_map', cityMap);
     return cityMap;
+  }
+  
+  getOazaChomesGeneratorHash() : string {
+    return crc32Lib.fromString(this.getOazaChomes.toString());
   }
   
   async getOazaChomes(): Promise<OazaChoMachingInfo[]> {
@@ -360,12 +382,12 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         INSERT INTO resultTable
         SELECT
           (
-            city_key ||
-            ${DataField.RSDT_ADDR_FLG.dbColumn} ||
-            ${DataField.MACHIAZA_ID.dbColumn}
+            t.city_key ||
+            t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
+            t.${DataField.MACHIAZA_ID.dbColumn}
           ) as pkey,
-          town_key,
-          city_key,
+          t.town_key,
+          t.city_key,
           t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           t.${DataField.CHOME.dbColumn} as chome,
@@ -387,7 +409,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           ) as coordinate_level
         FROM
           ${DbTableName.TOWN} as t
-          JOIN ${DbTableName.CITY} ON t.city_key = c.city_key
+          JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
         WHERE
           (
             t.${DataField.OAZA_CHO.dbColumn} != '' AND
@@ -413,13 +435,13 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         INSERT INTO resultTable
         SELECT
           (
-            city_key ||
+            t.city_key ||
             t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
             substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) ||
             '000'
           ) as pkey,
           NULL as town_key,
-          city_key,
+          t.city_key,
           (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000') as machiaza_id,
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           '' as chome,
@@ -457,17 +479,17 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         INSERT INTO resultTable
         SELECT
           (
-            city_key ||
+            t.city_key ||
             t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
             t.${DataField.MACHIAZA_ID.dbColumn}
           ) as pkey,
-          town_key,
-          city_key,
-          ${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+          t.town_key,
+          t.city_key,
+          t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
           '' as oaza_cho,
           '' as chome,
-          ${DataField.KOAZA.dbColumn} as koaza,
-          CAST(${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
+          t.${DataField.KOAZA.dbColumn} as koaza,
+          CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
           IFNULL(
             t.${DataField.REP_LAT.dbColumn},
             c.${DataField.REP_LAT.dbColumn}
@@ -484,7 +506,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           ) as coordinate_level
         FROM
           ${DbTableName.TOWN} as t
-          JOIN ${DbTableName.CITY} ON t.city_key = c.city_key
+          JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
         WHERE
           (
             t.${DataField.OAZA_CHO.dbColumn} = '' OR
@@ -559,12 +581,12 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         INSERT INTO resultTable
         SELECT
             (
-              city_key ||
+              t.city_key ||
               t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
               t.${DataField.MACHIAZA_ID.dbColumn}
           ) as pkey,
-          town_key,
-          city_key,
+          t.town_key,
+          t.city_key,
           t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           t.${DataField.CHOME.dbColumn} as chome,
@@ -586,7 +608,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           ) as coordinate_level
         FROM
           ${DbTableName.TOWN} as t
-          JOIN ${DbTableName.CITY} ON t.city_key = c.city_key
+          JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
         WHERE
           (
             t.${DataField.OAZA_CHO.dbColumn} != '' AND
@@ -620,8 +642,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         SELECT
           (
             city_key ||
-            t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
-            t.${DataField.MACHIAZA_ID.dbColumn}
+            ${DataField.RSDT_ADDR_FLG.dbColumn} ||
+            ${DataField.MACHIAZA_ID.dbColumn}
           ) as pkey,
           ${DataField.REP_LAT.dbColumn} as rep_lat,
           ${DataField.REP_LON.dbColumn} as rep_lon,
@@ -643,7 +665,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
             ${DataField.KOAZA.dbColumn} = '' OR
             ${DataField.KOAZA.dbColumn} IS NULL
           ) AND
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
+          ${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
       `).all();
       const memo = new TrieAddressFinder<OtherRow>();
       otherRows.forEach(row => {
@@ -724,6 +746,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return rows;
   }
   
+  getTokyo23TownsGeneratorHash() : string {
+    return crc32Lib.fromString(this.getTokyo23Towns.toString());
+  }
+
   // -------------------------------------------------------------------------
   //  〇〇市〇〇大字〇〇丁目 と 〇〇市〇〇丁目〇〇小字 を作成する
   //
@@ -780,6 +806,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     });
   };
 
+  getCountyAndCityListGeneratorHash() : string {
+    return crc32Lib.fromString(this.getCountyAndCityList.toString());
+  }
+  
   // -----------------------------------------
   // 〇〇区〇〇市、〇〇郡〇〇市町村 のHashMapを返す
   // -----------------------------------------
@@ -800,6 +830,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       }
       resolve(results);
     });
+  }
+
+  getWardAndOazaChoListGeneratorHash() : string {
+    return crc32Lib.fromString(this.getWardAndOazaChoList.toString());
   }
 
   // -----------------------------------------
@@ -962,6 +996,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         return Promise.resolve(results);
       });
   }
+
+  getCityAndWardListGeneratorHash() : string {
+    return crc32Lib.fromString(this.getCityAndWardList.toString());
+  }
+
   // -----------------------------------------
   // 〇〇市〇〇区 のHashMapを返す
   // -----------------------------------------
@@ -982,6 +1021,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return results;
   }
 
+  getWardsGeneratorHash() : string {
+    return crc32Lib.fromString(this.getWards.toString());
+  }
+  
   async getWards(): Promise<WardMatchingInfo[]> {
     type WardRow = Omit<WardMatchingInfo, 'coordinate_level'>;
     
@@ -1013,6 +1056,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         coordinate_level: MatchLevel.CITY,
       };
     });
+  }
+
+  getTokyo23WardsGeneratorHash() : string {
+    return crc32Lib.fromString(this.getTokyo23Wards.toString());
   }
 
   async getTokyo23Wards(): Promise<CityMatchingInfo[]> {

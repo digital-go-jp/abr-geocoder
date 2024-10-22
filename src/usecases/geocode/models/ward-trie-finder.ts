@@ -30,8 +30,11 @@ export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
 
+    const commonDb = await diContainer.database.openCommonDb();
+    const genHash = commonDb.getPrefListGeneratorHash();
+
     const tree = new WardTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, 'ward.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, `ward_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
@@ -43,7 +46,6 @@ export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getWards();
 
     for (const row of rows) {

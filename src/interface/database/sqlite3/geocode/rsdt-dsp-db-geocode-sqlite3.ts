@@ -53,6 +53,11 @@ export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbG
   }
 
   async getRsdtDspRows(where: Required<GetRsdtDspRows>): Promise<RsdtDspInfo[]> {
+    const existTable = await this.hasTable();
+    if (!existTable) {
+      return [];
+    }
+
     return new Promise((resolve: (rows: RsdtDspInfo[]) => void) => {
 
       const rows = this.prepare<GetRsdtDspRows, RsdtDspInfo>(`

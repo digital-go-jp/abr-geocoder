@@ -32,8 +32,11 @@ export class CityAndWardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
     const cacheDir = path.join(diContainer.cacheDir);
     makeDirIfNotExists(cacheDir);
 
+    const commonDb = await diContainer.database.openCommonDb();
+    const genHash = commonDb.getCityAndWardListGeneratorHash();
+    
     const tree = new CityAndWardTrieFinder();
-    const cacheFilePath = path.join(cacheDir, 'city-and-ward.v8');
+    const cacheFilePath = path.join(cacheDir, `city-and-ward_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
@@ -45,7 +48,6 @@ export class CityAndWardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getCityAndWardList();
 
     for (const row of rows) {

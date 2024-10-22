@@ -35,7 +35,22 @@ export class CommonDbUpdateCheckSqlite3
     this.close();
   }
 
-  getLgCodes(): Promise<string[]> {
+  hasCityTable(): Promise<boolean> {
+    const rows = this.prepare(`
+      SELECT name FROM sqlite_master
+      WHERE
+        type = 'table' AND
+        name = '${DbTableName.CITY}'
+    `).all();
+    return Promise.resolve(rows.length === 1);
+  }
+
+  async getLgCodes(): Promise<string[]> {
+    const existTable = await this.hasCityTable();
+    if (!existTable) {
+      return [];
+    }
+    
     type Row = {
       lg_code: string;
     };
@@ -50,7 +65,22 @@ export class CommonDbUpdateCheckSqlite3
     return Promise.resolve(results);
   }
 
-  hasPrefRows(): Promise<boolean> {
+  hasPrefTable(): Promise<boolean> {
+    const rows = this.prepare(`
+      SELECT name FROM sqlite_master
+      WHERE
+        type = 'table' AND
+        name = '${DbTableName.PREF}'
+    `).all();
+    return Promise.resolve(rows.length === 1);
+  }
+
+  async hasPrefRows(): Promise<boolean> {
+    const existTable = await this.hasPrefTable();
+    if (!existTable) {
+      return false;
+    }
+
     type Row = {
       count: number;
     };
@@ -65,7 +95,12 @@ export class CommonDbUpdateCheckSqlite3
     return Promise.resolve(row?.count !== 0);
   }
 
-  hasCityRows(packageInfo: PackageInfo): Promise<boolean> {
+  async hasCityRows(packageInfo: PackageInfo): Promise<boolean> {
+    const existTable = await this.hasCityTable();
+    if (!existTable) {
+      return false;
+    }
+
     type Row = {
       count: number;
     };
@@ -90,7 +125,22 @@ export class CommonDbUpdateCheckSqlite3
     return Promise.resolve(row?.count !== 0);
   }
 
-  hasTownRows(packageInfo: PackageInfo): Promise<boolean> {
+  hasTownTable(): Promise<boolean> {
+    const rows = this.prepare(`
+      SELECT name FROM sqlite_master
+      WHERE
+        type = 'table' AND
+        name = '${DbTableName.TOWN}'
+    `).all();
+    return Promise.resolve(rows.length === 1);
+  }
+
+  async hasTownRows(packageInfo: PackageInfo): Promise<boolean> {
+    const existTable = await this.hasTownTable();
+    if (!existTable) {
+      return false;
+    }
+
     type Row = {
       count: number;
     };

@@ -30,8 +30,11 @@ export class WardAndOazaTrieFinder extends TrieAddressFinder<WardAndOazaMatching
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
 
+    const commonDb = await diContainer.database.openCommonDb();
+    const genHash = commonDb.getWardAndOazaChoListGeneratorHash();
+
     const tree = new WardAndOazaTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, 'ward-and-oaza.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, `ward-and-oaza_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
@@ -43,7 +46,6 @@ export class WardAndOazaTrieFinder extends TrieAddressFinder<WardAndOazaMatching
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getWardAndOazaChoList();
 
     for (const row of rows) {

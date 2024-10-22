@@ -34,7 +34,7 @@ export class TableKeyProvider {
     if (result) {
       return result;
     }
-    result = stringHash(key).toFixed(16);
+    result = stringHash(key).toString(16)
     this.cache.set(key, result);
     return result;
   };
@@ -85,7 +85,6 @@ export class TableKeyProvider {
     blk_id: string;
     rsdt_id: string;
     rsdt2_id: string;
-    rsdt_addr_flg: number;
   }): string => {
     const key = [
       params.lg_code,
@@ -93,7 +92,6 @@ export class TableKeyProvider {
       params.blk_id,
       params.rsdt_id,
       params.rsdt2_id,
-      params.rsdt_addr_flg.toString(),
     ].join('/');
 
     return this.generateKey(key);

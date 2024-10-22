@@ -1,5 +1,4 @@
 import { expect, jest } from '@jest/globals';
-import { LineStream } from 'byline';
 import { execaNode } from 'execa-cjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,6 +9,7 @@ import {
   DEFAULT_FUZZY_CHAR,
   EnvProvider,
   FormatterProvider,
+  LineStream,
   OutputFormat,
   SearchTarget,
 } from '../../src/index';
@@ -53,7 +53,6 @@ export const runGeocoder = async (options: ExecOptions) => {
       database: {
         type: 'sqlite3',
         dataDir: path.join(dbPath, 'database'),
-        schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
       debug: false,
       progress(current: number) {},

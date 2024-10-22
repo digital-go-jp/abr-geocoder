@@ -36,8 +36,11 @@ export class Tokyo23WardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
 
+    const commonDb = await diContainer.database.openCommonDb();
+    const genHash = commonDb.getTokyo23WardsGeneratorHash();
+
     const tree = new Tokyo23WardTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, 'tokyo23-ward.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, `tokyo23-ward_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
@@ -49,7 +52,6 @@ export class Tokyo23WardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getTokyo23Wards();
 
     for (const row of rows) {

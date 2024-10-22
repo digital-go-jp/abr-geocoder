@@ -50,10 +50,15 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
   }
 
   async closeDb(): Promise<void> {
-    Promise.resolve(this.closeDb());
+    this.closeDb();
   }
 
   async getBlockNumRows(where: Required<GetBlockNumRowsOptions>): Promise<RsdtBlkInfo[]> {
+    const existTable = await this.hasTable();
+    if (!existTable) {
+      return [];
+    }
+    
     return new Promise((resolve: (rows: RsdtBlkInfo[]) => void) => {
       const rows = this.prepare<GetBlockNumRowsOptions, RsdtBlkInfo>(`
         SELECT

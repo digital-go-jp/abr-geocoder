@@ -29,3 +29,4 @@ export { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 export { FormatterProvider } from '@interface/format/formatter-provider';
 export { EnvProvider } from '@domain/models/env-provider';
 export { Query } from '@usecases/geocode/models/query';
+export { LineStream } from '@domain/services/line-stream';

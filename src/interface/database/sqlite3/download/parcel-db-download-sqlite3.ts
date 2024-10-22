@@ -46,7 +46,7 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
     `);
 
     this.exec(`
-      CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON parcel(town_key, prc_id);
+      CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON ${DbTableName.PARCEL}(town_key, ${DataField.PRC_ID.dbColumn});
     `)
   }
 

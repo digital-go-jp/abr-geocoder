@@ -53,8 +53,11 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
 
+    const commonDb = await diContainer.database.openCommonDb();
+    const genHash = commonDb.getKyotoStreetGeneratorHash();
+
     const tree = new KyotoStreetTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, 'kyoto-street.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, `kyoto-street_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
@@ -66,7 +69,6 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getKyotoStreetRows();
 
     for (const row of rows) {

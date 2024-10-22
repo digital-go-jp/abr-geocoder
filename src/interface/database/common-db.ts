@@ -53,15 +53,35 @@ export interface ICommonDbDownload {
 
 export interface ICommonDbGeocode {
   getPrefList(): Promise<PrefInfo[]>;
+  getPrefListGeneratorHash(): string;
+
   getCityList(): Promise<CityInfo[]>;
+  getCityListGeneratorHash(): string;
+
   getCountyAndCityList(): Promise<CityMatchingInfo[]>;
+  getCountyAndCityListGeneratorHash(): string;
+
   getCityAndWardList(): Promise<CityMatchingInfo[]>;
+  getCityAndWardListGeneratorHash(): string;
+  
   getTokyo23Towns(): Promise<TownMatchingInfo[]>;
+  getTokyo23TownsGeneratorHash(): string;
+  
   getWards(): Promise<WardMatchingInfo[]>;
+  getWardsGeneratorHash(): string;
+
   getTokyo23Wards(): Promise<CityMatchingInfo[]>;
+  getTokyo23WardsGeneratorHash(): string;
+  
   getOazaChomes(): Promise<OazaChoMachingInfo[]>;
+  getOazaChomesGeneratorHash(): string;
+
   getKyotoStreetRows(): Promise<KoazaMachingInfo[]>;
+  getKyotoStreetGeneratorHash() : string;
+
   getWardAndOazaChoList(): Promise<WardAndOazaMatchingInfo[]>;
+  getWardAndOazaChoListGeneratorHash(): string;
+
   getChomeRows(where: Partial<{
     pref_key: string;
     city_key: string;

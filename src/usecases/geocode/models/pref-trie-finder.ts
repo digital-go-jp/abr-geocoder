@@ -31,8 +31,11 @@ export class PrefTrieFinder extends TrieAddressFinder<PrefInfo> {
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
 
+    const commonDb = await diContainer.database.openCommonDb();
+    const genHash = commonDb.getPrefListGeneratorHash();
+
     const tree = new PrefTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, 'pref.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, `pref_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
@@ -44,7 +47,6 @@ export class PrefTrieFinder extends TrieAddressFinder<PrefInfo> {
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
     const prefList = await commonDb.getPrefList();
     for (const prefInfo of prefList) {
       tree.append({

@@ -32,21 +32,22 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
   
   async createRsdtBlkTable() {
     this.exec(`
-      CREATE TABLE IF NOT EXISTS "${DbTableName.PARCEL}" (
-        "parcel_key" TEXT PRIMARY KEY,
-        "town_key" TEXT DEFAULT null,
-        "${DataField.PRC_ID.dbColumn}" TEXT,
-        "${DataField.PRC_NUM1.dbColumn}" TEXT,
-        "${DataField.PRC_NUM2.dbColumn}" TEXT,
-        "${DataField.PRC_NUM3.dbColumn}" TEXT,
+      CREATE TABLE IF NOT EXISTS "${DbTableName.RSDT_BLK}" (
+        "rsdtblk_key" TEXT PRIMARY KEY,
+        "town_key" TEXT,
+        "${DataField.BLK_ID.dbColumn}" TEXT,
+        "${DataField.BLK_NUM.dbColumn}" TEXT,
         "crc32" TEXT,
+
         "${DataField.REP_LAT.dbColumn}" TEXT,
         "${DataField.REP_LON.dbColumn}" TEXT
       );
     `);
 
     this.exec(`
-      CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON parcel(town_key, prc_id);
+      CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key_and_blk_num" ON "${DbTableName.RSDT_BLK}" (
+        "town_key", "${DataField.BLK_NUM.dbColumn}"
+      );
     `)
   }
 
@@ -71,12 +72,10 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
       WHERE 
-        rsdtblk_key = @rsdtblk_key AND (
-          ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
-          ${DataField.REP_LON.dbColumn} != @rep_lon OR 
-          ${DataField.REP_LAT.dbColumn} IS NULL OR
-          ${DataField.REP_LON.dbColumn} IS NULL
-        )
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
+        ${DataField.REP_LON.dbColumn} != @rep_lon OR 
+        ${DataField.REP_LAT.dbColumn} IS NULL OR
+        ${DataField.REP_LON.dbColumn} IS NULL
     `;
 
     await this.createRsdtBlkTable();

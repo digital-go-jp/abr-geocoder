@@ -31,8 +31,11 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder<CityMatchingInfo>
   static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
 
+    const commonDb = await diContainer.database.openCommonDb();
+    const genHash = commonDb.getCountyAndCityListGeneratorHash();
+
     const tree = new CountyAndCityTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, 'county-and-city.v8');
+    const cacheFilePath = path.join(diContainer.cacheDir, `county-and-city_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
@@ -44,7 +47,6 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder<CityMatchingInfo>
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getCountyAndCityList();
 
     for (const row of rows) {
