@@ -101,16 +101,14 @@ const updateCheckCommand: CommandModule = {
     }
 
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
-    const { version } = getPackageInfo();
 
     // 環境設定
     const updateChecker = new UpdateChecker({
-      cacheDir: path.join(abrgDir, 'download', version),
+      cacheDir: path.join(abrgDir, 'cache'),
       downloadDir: path.join(abrgDir, 'download'),
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
-        schemaDir: path.join(__dirname, '..', '..', '..', 'schemas', 'sqlite3'),
       },
     });
     

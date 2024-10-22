@@ -88,14 +88,13 @@ export abstract class DatasetFile implements IDatasetFileMeta {
     this.fields.forEach(field => {
       result[field.dbColumn] = line[field.csv];
     });
+
+    // 与えられたデータからパラメータのcrc32 を計算する
+    result.crc32 = crc32.fromRecord(result);
     return result;
   }
-
-  // 与えられたデータからパラメータのcrc32 を計算する
-  protected getParamsCrc32(params: Record<string, string | number>): number {
-    return crc32.fromString(JSON.stringify(params));
-  }
 }
+
 export abstract class DataWithDateFile
   extends DatasetFile
   implements IDatasetFileMeta

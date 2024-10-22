@@ -50,9 +50,9 @@ export class ChomeTranform extends Transform {
   private createWhereCondition(query: Query) {
     
     const conditions: Partial<{
-      pref_key: number;
-      city_key: number;
-      town_key: number;
+      pref_key: string;
+      city_key: string;
+      town_key: string;
       oaza_cho: string;
     }> = {};
     let anyHit = false;

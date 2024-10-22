@@ -32,7 +32,19 @@ export class CommonDbDownloadSqlite3
   implements ICommonDbDownload {
 
   async closeDb(): Promise<void> {
-    Promise.resolve(this.close());
+    this.close();
+  }
+
+  async createPrefTable() {
+    this.exec(`
+      CREATE TABLE IF NOT EXISTS "${DbTableName.PREF}" (
+        "pref_key" TEXT PRIMARY KEY,
+        "${DataField.LG_CODE.dbColumn}" TEXT,
+        "${DataField.PREF.dbColumn}" TEXT,
+        "${DataField.REP_LAT.dbColumn}" TEXT,
+        "${DataField.REP_LON.dbColumn}" TEXT
+      );
+    `);
   }
 
   // Prefテーブルにデータを挿入する
@@ -49,10 +61,9 @@ export class CommonDbDownloadSqlite3
       ) ON CONFLICT (pref_key) DO UPDATE SET
         ${DataField.LG_CODE.dbColumn} = @lg_code,
         ${DataField.PREF.dbColumn} = @pref
-      WHERE 
-        pref_key = @pref_key
     `;
 
+    await this.createPrefTable();
     return await this.upsertRowsForPref({
       upsert: this.prepare(sql),
       rows,
@@ -74,13 +85,12 @@ export class CommonDbDownloadSqlite3
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
       WHERE 
-        pref_key = @pref_key AND (
-          ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
-          ${DataField.REP_LON.dbColumn} != @rep_lon OR 
-          ${DataField.REP_LAT.dbColumn} IS NULL OR
-          ${DataField.REP_LON.dbColumn} IS NULL
-        )
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
+        ${DataField.REP_LON.dbColumn} != @rep_lon OR 
+        ${DataField.REP_LAT.dbColumn} IS NULL OR
+        ${DataField.REP_LON.dbColumn} IS NULL
     `;
+    await this.createPrefTable();
     return await this.upsertRowsForPref({
       upsert: this.prepare(sql),
       rows,
@@ -104,6 +114,23 @@ export class CommonDbDownloadSqlite3
     });
   }
 
+  async createCityTable() {
+    this.exec(`
+      CREATE TABLE IF NOT EXISTS "${DbTableName.CITY}" (
+        "city_key" TEXT PRIMARY KEY,
+        "pref_key" TEXT,
+        "${DataField.LG_CODE.dbColumn}" TEXT UNIQUE,
+        "${DataField.COUNTY.dbColumn}" TEXT,
+        "${DataField.CITY.dbColumn}" TEXT,
+        "${DataField.WARD.dbColumn}" TEXT,
+        "crc32" TEXT,
+
+        "${DataField.REP_LAT.dbColumn}" TEXT,
+        "${DataField.REP_LON.dbColumn}" TEXT
+      );
+    `);
+  }
+
   // Cityテーブルにデータを挿入する
   async cityCsvRows(rows: Record<string, string | number>[]) {
     const sql = `
@@ -113,26 +140,31 @@ export class CommonDbDownloadSqlite3
         ${DataField.LG_CODE.dbColumn},
         ${DataField.COUNTY.dbColumn},
         ${DataField.CITY.dbColumn},
-        ${DataField.WARD.dbColumn}
+        ${DataField.WARD.dbColumn},
+        crc32
       ) VALUES (
         @city_key,
         @pref_key,
         @lg_code,
         @county,
         @city,
-        @ward
+        @ward,
+        @crc32
       ) ON CONFLICT (city_key) DO UPDATE SET
         ${DataField.LG_CODE.dbColumn} = @lg_code,
         ${DataField.COUNTY.dbColumn} = @county,
         ${DataField.CITY.dbColumn} = @city,
-        ${DataField.WARD.dbColumn} = @ward
+        ${DataField.WARD.dbColumn} = @ward,
+        crc32 = @crc32
       WHERE 
-        city_key = @city_key
+        crc32 != @crc32 OR
+        crc32 IS NULL
     `;
 
     const prefKey = TableKeyProvider.getPrefKey({
       lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
     });
+    await this.createCityTable();
     return await this.upsertRowsForCity({
       prefKey,
       upsert: this.prepare(sql),
@@ -157,17 +189,16 @@ export class CommonDbDownloadSqlite3
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
       WHERE 
-        city_key = @city_key AND (
-          ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
-          ${DataField.REP_LON.dbColumn} != @rep_lon OR 
-          ${DataField.REP_LAT.dbColumn} IS NULL OR
-          ${DataField.REP_LON.dbColumn} IS NULL
-        )
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
+        ${DataField.REP_LON.dbColumn} != @rep_lon OR 
+        ${DataField.REP_LAT.dbColumn} IS NULL OR
+        ${DataField.REP_LON.dbColumn} IS NULL
     `;
 
     const prefKey = TableKeyProvider.getPrefKey({
       lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
     });
+    await this.createCityTable();
     return await this.upsertRowsForCity({
       prefKey,
       upsert: this.prepare(sql),
@@ -177,7 +208,7 @@ export class CommonDbDownloadSqlite3
 
   private async upsertRowsForCity(params: Required<{
     upsert: Statement;
-    prefKey: number;
+    prefKey: string;
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
@@ -194,6 +225,24 @@ export class CommonDbDownloadSqlite3
     });
   }
 
+  async createTownTable() {
+    this.exec(`
+      CREATE TABLE IF NOT EXISTS "${DbTableName.TOWN}" (
+        "town_key" TEXT PRIMARY KEY,
+        "city_key" TEXT,
+        "${DataField.MACHIAZA_ID.dbColumn}" TEXT,
+        "${DataField.OAZA_CHO.dbColumn}" TEXT,
+        "${DataField.CHOME.dbColumn}" TEXT,
+        "${DataField.KOAZA.dbColumn}" TEXT,
+        "${DataField.RSDT_ADDR_FLG.dbColumn}" TEXT,
+        "${DataField.KOAZA_AKA_CODE.dbColumn}" TEXT,
+        "crc32" TEXT,
+        "${DataField.REP_LAT.dbColumn}" TEXT,
+        "${DataField.REP_LON.dbColumn}" TEXT
+      );
+    `);
+  }
+
   // Townテーブルにデータを挿入する
   async townCsvRows(rows: Record<string, string | number>[]) {
     const sql = `
@@ -205,7 +254,8 @@ export class CommonDbDownloadSqlite3
         ${DataField.CHOME.dbColumn},
         ${DataField.KOAZA.dbColumn},
         ${DataField.RSDT_ADDR_FLG.dbColumn},
-        ${DataField.KOAZA_AKA_CODE.dbColumn}
+        ${DataField.KOAZA_AKA_CODE.dbColumn},
+        crc32
       ) VALUES (
         @town_key,
         @city_key,
@@ -214,17 +264,22 @@ export class CommonDbDownloadSqlite3
         @chome,
         @koaza,
         @rsdt_addr_flg,
-        @koaza_aka_code
+        @koaza_aka_code,
+        @crc32
       ) ON CONFLICT (town_key) DO UPDATE SET
         ${DataField.MACHIAZA_ID.dbColumn} = @machiaza_id,
         ${DataField.OAZA_CHO.dbColumn} = @oaza_cho,
         ${DataField.CHOME.dbColumn} = @chome,
         ${DataField.KOAZA.dbColumn} = @koaza,
         ${DataField.RSDT_ADDR_FLG.dbColumn} = @rsdt_addr_flg,
-        ${DataField.KOAZA_AKA_CODE.dbColumn} = @koaza_aka_code
-      WHERE 
-        town_key = @town_key
+        ${DataField.KOAZA_AKA_CODE.dbColumn} = @koaza_aka_code,
+        crc32 = @crc32
+      WHERE
+        crc32 != @crc32 OR
+        crc32 IS NULL
     `;
+    await this.createTownTable();
+
     const cityKey = TableKeyProvider.getCityKey({
       lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
     });
@@ -252,13 +307,13 @@ export class CommonDbDownloadSqlite3
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
       WHERE 
-        town_key = @town_key AND (
-          ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
-          ${DataField.REP_LON.dbColumn} != @rep_lon OR 
-          ${DataField.REP_LAT.dbColumn} IS NULL OR
-          ${DataField.REP_LON.dbColumn} IS NULL
-        )
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
+        ${DataField.REP_LON.dbColumn} != @rep_lon OR 
+        ${DataField.REP_LAT.dbColumn} IS NULL OR
+        ${DataField.REP_LON.dbColumn} IS NULL
     `;
+    await this.createTownTable();
+
     const cityKey = TableKeyProvider.getCityKey({
       lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
     });
@@ -271,7 +326,7 @@ export class CommonDbDownloadSqlite3
 
   private async upsertRowsForTown(params: Required<{
     upsert: Statement;
-    cityKey: number;
+    cityKey: string;
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
@@ -281,7 +336,7 @@ export class CommonDbDownloadSqlite3
           row.town_key = TableKeyProvider.getTownKey({
             lg_code: row[DataField.LG_CODE.dbColumn] as string,
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn] as string,
-          }) as number;
+          });
           params.upsert.run(row);
         }
         resolve();

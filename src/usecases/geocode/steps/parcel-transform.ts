@@ -107,7 +107,7 @@ export class ParcelTransform extends Transform {
 
         const machiaza_id = (() => {
           if (query.koaza_aka_code !== 2) {
-            return query.machiaza_id;
+            return query.machiaza_id!;
           }
 
           // 京都の通り名の場合、大字のmachiaza_idを使用する
@@ -163,7 +163,7 @@ export class ParcelTransform extends Transform {
       if (searchInfo2) {
         const machiaza_id = (() => {
           if (query.koaza_aka_code !== 2) {
-            return query.machiaza_id;
+            return query.machiaza_id!;
           }
 
           // 京都の通り名の場合、大字のmachiaza_idを使用する

@@ -35,7 +35,7 @@ export type KoazaMachingInfo = {
   lg_code: string;
   rep_lat: string;
   rep_lon: string;
-  city_key: number;
-  pref_key: number;
-  town_key: number;
+  city_key: string;
+  pref_key: string;
+  town_key: string;
 };

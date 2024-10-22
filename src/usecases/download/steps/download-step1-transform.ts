@@ -179,7 +179,7 @@ export class DownloadStep1Transform extends Duplex {
       src,
       dst,
     );
-    const fileCrc32 = await crc32.fromFile(csvFilePath);
+    const fileCrc32 = await crc32.fromFile(csvFilePath)!;
 
     // キャッシュに情報を保存する
     await this.params.urlCacheMgr.writeCache({

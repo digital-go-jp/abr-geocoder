@@ -104,16 +104,13 @@ const downloadCommand: CommandModule = {
       });
     }
 
-    const { version } = getPackageInfo();
-    
     // ダウンロードを行う
     const downloader = new Downloader({
-      cacheDir: path.join(abrgDir, 'cache', version),
+      cacheDir: path.join(abrgDir, 'cache'),
       downloadDir: path.join(abrgDir, 'download'),
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
-        schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
     });
     await downloader.download({

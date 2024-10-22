@@ -64,7 +64,6 @@ export class GeocodeDbController {
       case 'sqlite3': {
         return Promise.resolve(new CommonDbGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, 'common.sqlite'),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-common.sql'),
           readonly: true,
         }));
       }
@@ -92,7 +91,6 @@ export class GeocodeDbController {
 
         return Promise.resolve(new RsdtBlkGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: true,
         }));
       }
@@ -120,7 +118,6 @@ export class GeocodeDbController {
 
         return Promise.resolve(new RsdtDspGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: true,
         }));
       }
@@ -149,7 +146,6 @@ export class GeocodeDbController {
 
         return Promise.resolve(new ParcelDbGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: true,
         }));
       }

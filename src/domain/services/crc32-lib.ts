@@ -23,25 +23,31 @@
  */
 import fs from 'node:fs';
 import buffCrc32 from 'buffer-crc32';
+import { serialize } from 'node:v8';
 
-export const fromFile = async (pathToFile: string): Promise<number> => {
+export const fromFile = (pathToFile: string): string | null => {
   if (!fs.existsSync(pathToFile)) {
-    return 0;
+    return null;
   }
-  const fileBuff = await fs.promises.readFile(pathToFile);
-  return buffCrc32.unsigned(fileBuff);
+  const fileBuff = fs.readFileSync(pathToFile);
+  return fromBuffer(fileBuff);
 };
 
-export const fromBuffer = (data: Buffer): number => {
-  return buffCrc32.unsigned(data);
+export const fromBuffer = (data: Buffer): string => {
+  return buffCrc32.unsigned(data).toString(16);
 };
 
-export const fromString = (data: string): number => {
+export const fromString = (data: string): string => {
   return fromBuffer(Buffer.from(data));
+};
+
+export const fromRecord = (data: {}): string => {
+  return fromString(JSON.stringify(data))
 };
 
 export default {
   fromFile,
   fromBuffer,
   fromString,
+  fromRecord,
 };

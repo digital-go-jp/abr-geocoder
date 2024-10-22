@@ -35,9 +35,9 @@ export type OazaChoMachingInfo = {
   lg_code: string;
   oaza_cho: string;
   machiaza_id: string;
-  pref_key: number;
-  city_key: number;
-  town_key: number | null;
+  pref_key: string;
+  city_key: string;
+  town_key: string;
   rep_lat?: string;
   rep_lon?: string;
   rsdt_addr_flg: number;

@@ -40,7 +40,6 @@ export class UpdateCheckDbController {
       case 'sqlite3':
         return Promise.resolve(new CommonDbUpdateCheckSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, 'common.sqlite'),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-common.sql'),
           readonly: true,
         }));
       

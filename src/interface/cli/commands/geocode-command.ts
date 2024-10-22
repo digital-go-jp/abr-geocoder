@@ -221,8 +221,6 @@ const geocodeCommand: CommandModule = {
       });
     }
 
-    const { version } = getPackageInfo();
-    
     // ジオコーダーの作成と、ファイルからリクエスト数のカウントを並行して行う
     const tasks: [
       Promise<AbrGeocodeStream>,
@@ -232,11 +230,10 @@ const geocodeCommand: CommandModule = {
       AbrGeocodeStream.create({
         fuzzy: argv.fuzzy || DEFAULT_FUZZY_CHAR,
         searchTarget: argv.target || SearchTarget.ALL,
-        cacheDir: path.join(abrgDir, 'cache', version),
+        cacheDir: path.join(abrgDir, 'cache'),
         database: {
           type: 'sqlite3',
           dataDir: path.join(abrgDir, 'database'),
-          schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
         },
         debug,
         progress(current: number) {

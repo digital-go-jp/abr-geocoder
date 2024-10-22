@@ -28,15 +28,30 @@ import { IParcelDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 
 export type GetParcelRowsOptions = {
-  city_key: number;
-  town_key?: number | null;
+  city_key: string;
+  town_key?: string | null;
   prc_id: string; 
 };
 
 export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbGeocode {
 
+  async hasTable(): Promise<boolean> {
+    const rows = this.prepare<{ name: string; }, { name: string; }>(`
+      SELECT
+        name
+      FROM
+        sqlite_master
+      WHERE
+        type = 'table' AND
+        name = @name
+    `).all({
+      name: DbTableName.PARCEL
+    });
+    return rows.length === 1;
+  }
+
   async closeDb(): Promise<void> {
-    Promise.resolve(this.close());
+    this.closeDb();
   }
 
   async getParcelRows(where: Required<GetParcelRowsOptions>): Promise<ParcelInfo[]> {

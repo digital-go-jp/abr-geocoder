@@ -30,8 +30,28 @@ import { Statement } from "better-sqlite3";
 
 export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbDownload {
   
+  async createRsdtBlkTable() {
+    this.exec(`
+      CREATE TABLE IF NOT EXISTS "${DbTableName.PARCEL}" (
+        "parcel_key" TEXT PRIMARY KEY,
+        "town_key" TEXT DEFAULT null,
+        "${DataField.PRC_ID.dbColumn}" TEXT,
+        "${DataField.PRC_NUM1.dbColumn}" TEXT,
+        "${DataField.PRC_NUM2.dbColumn}" TEXT,
+        "${DataField.PRC_NUM3.dbColumn}" TEXT,
+        "crc32" TEXT,
+        "${DataField.REP_LAT.dbColumn}" TEXT,
+        "${DataField.REP_LON.dbColumn}" TEXT
+      );
+    `);
+
+    this.exec(`
+      CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON parcel(town_key, prc_id);
+    `)
+  }
+
   async closeDb(): Promise<void> {
-    Promise.resolve(this.close());
+    this.close();
   }
 
   // rep_lat, rep_lon を rsdt_blkテーブルに挿入/更新する
@@ -59,6 +79,7 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
         )
     `;
 
+    await this.createRsdtBlkTable();
     return await this.upsertRows({
       upsert: this.prepare(sql),
       rows,
@@ -72,20 +93,24 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
         rsdtblk_key,
         town_key,
         ${DataField.BLK_ID.dbColumn},
-        ${DataField.BLK_NUM.dbColumn}
+        ${DataField.BLK_NUM.dbColumn},
+        crc32
       ) VALUES (
         @rsdtblk_key,
         @town_key,
         @blk_id,
-        @blk_num
+        @blk_num,
+        @crc32
       ) ON CONFLICT (rsdtblk_key) DO UPDATE SET
         ${DataField.BLK_ID.dbColumn} = @blk_id,
-        ${DataField.BLK_NUM.dbColumn} = @blk_num
+        ${DataField.BLK_NUM.dbColumn} = @blk_num,
+        crc32 = @crc32
       WHERE 
-        rsdtblk_key = @rsdtblk_key
+        crc32 != @crc32 OR
+        crc32 IS NULL
     `;
 
-    
+    await this.createRsdtBlkTable();
     return await this.upsertRows({
       upsert: this.prepare(sql),
       rows,
@@ -101,6 +126,9 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
         const lg_code = rows[0][DataField.LG_CODE.dbColumn].toString();
 
         for (const row of rows) {
+          if (row.rsdt_addr_flg === 0) {
+            continue;
+          }
           row.town_key = TableKeyProvider.getTownKey({
             lg_code,
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),

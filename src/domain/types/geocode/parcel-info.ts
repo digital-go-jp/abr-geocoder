@@ -23,7 +23,7 @@
  */
 
 export type ParcelInfo = {
-  parcel_key: number;
+  parcel_key: string;
   prc_id: string;
   prc_num1: string;
   prc_num2: string;

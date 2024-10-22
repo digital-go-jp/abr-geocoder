@@ -25,13 +25,13 @@
 import { MatchLevel } from "./match-level";
 
 export type WardInfo = {
-  pref_key: number;
+  pref_key: string;
   pref: string;
   city: string;
   county: string;
   ward: string;
   lg_code: string;
-  city_key: number;
+  city_key: string;
   rep_lat: string;
   rep_lon: string;
   match_level: MatchLevel;

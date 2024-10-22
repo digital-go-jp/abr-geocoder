@@ -48,56 +48,33 @@ export interface ICommonDbDownload {
   cityPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   townCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   townPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
-  // readTown(where: Required<{
-  //   lg_code: string;
-  //   machiaza_id: string;
-  // }>): Promise<TownRow | undefined>;
   closeDb(): Promise<void>;
 }
 
 export interface ICommonDbGeocode {
   getPrefList(): Promise<PrefInfo[]>;
   getCityList(): Promise<CityInfo[]>;
-
-  // getPrefInfoByKey(pref_key: number): Promise<PrefInfo | undefined>;
-  // getCityInfoByKey(city_key: number): Promise<CityInfo | undefined>;
-  // getTownInfoByKey(town_key: number): Promise<TownInfo | undefined>;
-  
   getCountyAndCityList(): Promise<CityMatchingInfo[]>;
   getCityAndWardList(): Promise<CityMatchingInfo[]>;
-
   getTokyo23Towns(): Promise<TownMatchingInfo[]>;
   getWards(): Promise<WardMatchingInfo[]>;
   getTokyo23Wards(): Promise<CityMatchingInfo[]>;
-  // getWardRows(where: Required<{
-  //   ward: string;
-  //   city_key: number;
-  // }>): Promise<WardMatchingInfo[]>;
-
   getOazaChomes(): Promise<OazaChoMachingInfo[]>;
   getKyotoStreetRows(): Promise<KoazaMachingInfo[]>;
-
-  // getOazaChoPatterns(where: Partial<{
-  //   pref_key: number;
-  //   city_key: number;
-  //   town_key: number;
-  // }>): Promise<OazaChoMachingInfo[]>;
   getWardAndOazaChoList(): Promise<WardAndOazaMatchingInfo[]>;
-
   getChomeRows(where: Partial<{
-    pref_key: number;
-    city_key: number;
-    town_key: number;
+    pref_key: string;
+    city_key: string;
+    town_key: string;
     oaza_cho: string;
   }>): Promise<ChomeMachingInfo[]>;
-
   getKoazaRows(where: Partial<{
-    city_key: number;
+    city_key: string;
     oaza_cho: string;
     chome: string;
   }>): Promise<KoazaMachingInfo[]>;
+  closeDb(): Promise<void>;
 }
-
 
 export interface IRsdtBlkDbDownload {
   rsdtBlkCsvRows(rows: Record<string, string | number>[]): Promise<void>;
@@ -108,11 +85,10 @@ export interface IRsdtBlkDbDownload {
 export interface IRsdtBlkDbGeocode {
   closeDb(): Promise<void>;
   getBlockNumRows(where: Required<{
-    town_key: number;
+    town_key: string;
     blk_num: string; 
   }>): Promise<RsdtBlkInfo[]>;
 }
-
 
 export interface IRsdtDspDbDownload {
   rsdtDspCsvRows(rows: Record<string, string | number>[]): Promise<void>;
@@ -123,7 +99,7 @@ export interface IRsdtDspDbDownload {
 export interface IRsdtDspDbGeocode {
   closeDb(): Promise<void>;
   getRsdtDspRows(where: Required<{
-    rsdtblk_key: number;
+    rsdtblk_key: string;
   }>): Promise<RsdtDspInfo[]>;
 }
 
@@ -136,8 +112,8 @@ export interface IParcelDbDownload {
 export interface IParcelDbGeocode {
   closeDb(): Promise<void>;
   getParcelRows(where: Required<{
-    city_key: number;
-    town_key?: number | null;
+    city_key: string;
+    town_key?: string | null;
     prc_id: string; 
   }>): Promise<ParcelInfo[]>;
 }

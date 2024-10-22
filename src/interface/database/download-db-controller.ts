@@ -27,7 +27,7 @@ import { ICommonDbDownload, IParcelDbDownload, IRsdtBlkDbDownload, IRsdtDspDbDow
 import { CommonDbDownloadSqlite3 } from "./sqlite3/download/common-db-download-sqlite3";
 import { ParcelDbDownloadSqlite3 } from "./sqlite3/download/parcel-db-download-sqlite3";
 import { RsdtBlkDbDownloadSqlite3 } from "./sqlite3/download/rsdt-blk-db-download-sqlite3";
-import { RsdtDspDownloadSqlite3 } from "./sqlite3/download/rsdt-dsp-db-sqlite3";
+import { RsdtDspDownloadSqlite3 } from "./sqlite3/download/rsdt-dsp-db-download-sqlite3";
 import { Sqlite3Util } from "./sqlite3/sqlite3-util";
 import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
 import { AbrgMessage } from "@domain/types/messages/abrg-message";
@@ -57,7 +57,6 @@ export class DownloadDbController {
       case 'sqlite3':
         return Promise.resolve(new CommonDbDownloadSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, 'common.sqlite'),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-common.sql'),
           readonly: false,
         }));
       
@@ -85,7 +84,6 @@ export class DownloadDbController {
 
         return Promise.resolve(new RsdtBlkDbDownloadSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: false,
         }));
       }
@@ -114,7 +112,6 @@ export class DownloadDbController {
 
         return Promise.resolve(new RsdtDspDownloadSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: false,
         }));
       }
@@ -143,7 +140,6 @@ export class DownloadDbController {
 
         return Promise.resolve(new ParcelDbDownloadSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: false,
         }));
       }

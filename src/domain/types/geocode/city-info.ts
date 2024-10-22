@@ -23,9 +23,9 @@
  */
 
 export type CityInfo = {
-  city_key: number;
+  city_key: string;
   pref: string;
-  pref_key: number;
+  pref_key: string;
   county: string;
   city: string;
   ward: string;

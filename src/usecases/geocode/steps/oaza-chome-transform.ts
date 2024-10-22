@@ -41,35 +41,6 @@ export class OazaChomeTransform extends Transform {
       objectMode: true,
     });
   }
-  private createWhereCondition(query: Query): Partial<{
-    pref_key: number;
-    city_key: number;
-    town_key: number;
-  }> | undefined {
-    const conditions: Partial<{
-      pref_key: number;
-      city_key: number;
-      town_key: number;
-    }> = {};
-
-    let anyHit = false;
-    if (query.pref_key) {
-      anyHit = true;
-      conditions.pref_key = query.pref_key;
-    }
-    if (query.city_key) {
-      anyHit = true;
-      conditions.city_key = query.city_key;
-    }
-    if (query.oaza_cho) {
-      anyHit = true;
-      conditions.town_key = query.town_key;
-    }
-    if (!anyHit) {
-      return undefined;
-    }
-    return conditions;
-  }
 
   async _transform(
     queries: QuerySet,

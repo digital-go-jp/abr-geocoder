@@ -22,12 +22,12 @@
  * SOFTWARE.
  */
 export type RsdtDspInfo = {
-  rsdtblk_key: number;
-  rsdtdsp_key: number;
+  rsdtblk_key: string;
+  rsdtdsp_key: string;
   rsdt_id: string;
   rsdt2_id: string;
-  rsdt_num: number;
-  rsdt_num2: number;
+  rsdt_num: string;
+  rsdt_num2: string;
   rep_lat: string;
   rep_lon: string;
 };

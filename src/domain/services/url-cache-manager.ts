@@ -32,7 +32,7 @@ export type UrlCache = {
   cache_file: string;
   last_modified?: string;
   content_length: number;
-  crc32: number;
+  crc32: string;
 };
 
 export class UrlCacheManager {

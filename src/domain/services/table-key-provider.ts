@@ -25,45 +25,38 @@ import { LRUCache } from "lru-cache";
 import stringHash from "string-hash";
 
 export class TableKeyProvider {
-  private static readonly cache = new LRUCache<string, number>({
+  private static readonly cache = new LRUCache<string, string>({
     max: 300,
   });
 
-  private static generateKey = (key: string): number => {
+  private static generateKey = (key: string): string => {
     let result = this.cache.get(key);
     if (result) {
       return result;
     }
-    result = stringHash(key);
+    result = stringHash(key).toFixed(16);
     this.cache.set(key, result);
     return result;
   };
 
-  static readonly getPrefKey = (params: {
+  static readonly getPrefKey = (params: Required<{
     lg_code: string;
-  }): number => {
+  }>): string => {
     const prefix = params.lg_code.substring(0, 2);
     return this.generateKey(prefix);
   };
 
-  static getCityKey(params: {
+  static getCityKey(params: Required<{
     lg_code: string;
-  }): number {
+  }>): string {
     const key = params.lg_code;
     return this.generateKey(key);
   }
 
-  static readonly getTownKey = (params: {
+  static readonly getTownKey = (params: Required<{
     lg_code: string;
-    machiaza_id?: string;
-  }): number | null => {
-    if (!params.lg_code ||
-        params.lg_code === '' ||
-        !params.machiaza_id ||
-        params.machiaza_id === '' ||
-        params.machiaza_id === '0000000') {
-      return null;
-    }
+    machiaza_id: string;
+  }>): string => {
     const key = [
       params.lg_code,
       params.machiaza_id,
@@ -72,11 +65,11 @@ export class TableKeyProvider {
     return this.generateKey(key);
   };
 
-  static readonly getRsdtBlkKey = (params: {
+  static readonly getRsdtBlkKey = (params: Required<{
     lg_code: string;
     machiaza_id: string;
     blk_id: string;
-  }): number => {
+  }>): string => {
     const key = [
       params.lg_code,
       params.machiaza_id,
@@ -93,7 +86,7 @@ export class TableKeyProvider {
     rsdt_id: string;
     rsdt2_id: string;
     rsdt_addr_flg: number;
-  }): number => {
+  }): string => {
     const key = [
       params.lg_code,
       params.machiaza_id,
@@ -110,7 +103,7 @@ export class TableKeyProvider {
     lg_code: string;
     machiaza_id?: string | null;
     prc_id: string;
-  }): number => {
+  }): string => {
     const key = [
       params.lg_code,
       params.machiaza_id,

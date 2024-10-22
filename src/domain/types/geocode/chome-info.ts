@@ -23,9 +23,9 @@
  */
 
 export type ChomeMachingInfo = {
-  pref_key: number;
-  city_key: number;
-  town_key: number;
+  pref_key: string;
+  city_key: string;
+  town_key: string;
   machiaza_id: string;
   rsdt_addr_flg: number;
   chome: string;

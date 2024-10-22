@@ -92,16 +92,13 @@ const serveCommand: CommandModule = {
       });
     }
     
-    const { version } = getPackageInfo();
-    
     // ジオコーダ作成のためのパラメータ
     const container = new AbrGeocoderDiContainer({
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
-        schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
-      cacheDir: path.join(abrgDir, 'cache', version),
+      cacheDir: path.join(abrgDir, 'cache'),
       debug: EnvProvider.isDebug,
     });
 

@@ -176,22 +176,22 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.coordinate_level.str;
 
           case 'pref_key':
-            return result.pref_key;
+            return `"${result.pref_key || ''}"`;
 
           case 'city_key':
-            return result.city_key;
+            return `"${result.city_key || ''}"`;
 
           case 'town_key':
-            return result.town_key;
+            return `"${result.town_key || ''}"`;
 
           case 'parcel_key':
-            return result.parcel_key;
+            return `"${result.parcel_key || ''}"`;
 
           case 'rsdtblk_key':
-            return result.rsdtblk_key;
+            return `"${result.rsdtblk_key || ''}"`;
 
           case 'rsdtdsp_key':
-            return result.rsdtdsp_key;
+            return `"${result.rsdtdsp_key || ''}"`;
 
           case 'spend_time':
             return ((Date.now() - result.startTime) / 1000).toFixed(2);

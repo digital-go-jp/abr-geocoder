@@ -51,7 +51,7 @@ export class KoazaTransform extends Transform {
   private createWhereCondition(query: Query) {
 
     const conditions: Partial<{
-      city_key: number;
+      city_key: string;
       oaza_cho: string;
       chome: string;
     }> = {

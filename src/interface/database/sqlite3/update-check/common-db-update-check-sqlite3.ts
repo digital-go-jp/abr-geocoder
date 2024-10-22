@@ -32,7 +32,7 @@ export class CommonDbUpdateCheckSqlite3
   implements ICommonDbUpdateCheck {
 
   async closeDb(): Promise<void> {
-    Promise.resolve(this.close());
+    this.close();
   }
 
   getLgCodes(): Promise<string[]> {
@@ -75,7 +75,7 @@ export class CommonDbUpdateCheckSqlite3
     });
 
     const row = this.prepare<{
-      city_key: number;
+      city_key: string;
     }, Row>(`
       SELECT
         count(city_key) as count
@@ -100,12 +100,12 @@ export class CommonDbUpdateCheckSqlite3
     });
 
     const row = this.prepare<{
-      city_key: number;
+      city_key: string;
     }, Row>(`
       SELECT
         count(city_key) as count
       FROM
-        ${DbTableName.TOWN}
+        ${DbTableName.PARCEL}
       WHERE
         city_key = @city_key
       LIMIT 1

@@ -29,8 +29,25 @@ import { Sqlite3Wrapper } from "@interface/database/sqlite3/better-sqlite3-wrap"
 import { Statement } from "better-sqlite3";
 
 export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbDownload {
+  
+  async createRsdtDspTable() {
+    this.exec(`
+      CREATE TABLE IF NOT EXISTS "${DbTableName.RSDT_DSP}" (
+        "rsdtdsp_key" TEXT PRIMARY KEY,
+        "rsdtblk_key" TEXT,
+        "${DataField.RSDT_ID.dbColumn}" TEXT,
+        "${DataField.RSDT2_ID.dbColumn}" TEXT,
+        "${DataField.RSDT_NUM.dbColumn}" TEXT,
+        "${DataField.RSDT_NUM2.dbColumn}" TEXT,
+        "crc32" TEXT,
+        "${DataField.REP_LAT.dbColumn}" TEXT,
+        "${DataField.REP_LON.dbColumn}" TEXT
+      );
+    `);
+  }
+
   async closeDb(): Promise<void> {
-    Promise.resolve(this.close());
+    this.close();
   }
 
   // Lat,Lonを テーブルにcsvのデータを溜め込む
@@ -49,15 +66,14 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
       ) ON CONFLICT (rsdtdsp_key) DO UPDATE SET
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
-      WHERE 
-        rsdtdsp_key = @rsdtdsp_key AND
-        (${DataField.REP_LAT.dbColumn} != @rep_lat OR 
+      WHERE
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
         ${DataField.REP_LON.dbColumn} != @rep_lon OR 
         ${DataField.REP_LAT.dbColumn} IS NULL OR
-        ${DataField.REP_LON.dbColumn} IS NULL)
+        ${DataField.REP_LON.dbColumn} IS NULL
     `;
     
-    
+    await this.createRsdtDspTable();
     return await this.upsertRows({
       upsert: this.prepare(sql),
       rows,
@@ -74,7 +90,8 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
         ${DataField.RSDT2_ID.dbColumn},
         ${DataField.RSDT_NUM.dbColumn},
         ${DataField.RSDT_NUM2.dbColumn},
-        ${DataField.RSDT_ADDR_FLG.dbColumn}
+        ${DataField.RSDT_ADDR_FLG.dbColumn},
+        crc32
       ) VALUES (
         @rsdtdsp_key,
         @rsdtblk_key,
@@ -82,17 +99,21 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
         @rsdt2_id,
         @rsdt_num,
         @rsdt_num2,
-        @rsdt_addr_flg
+        @rsdt_addr_flg,
+        @crc32
       ) ON CONFLICT (rsdtdsp_key) DO UPDATE SET
         ${DataField.RSDT_ID.dbColumn} = @rsdt_id,
         ${DataField.RSDT2_ID.dbColumn} = @rsdt2_id,
         ${DataField.RSDT_NUM.dbColumn} = @rsdt_num,
         ${DataField.RSDT_NUM2.dbColumn} = @rsdt_num2,
-        ${DataField.RSDT_ADDR_FLG.dbColumn} = @rsdt_addr_flg
+        ${DataField.RSDT_ADDR_FLG.dbColumn} = @rsdt_addr_flg,
+        crc32 = @crc32
       WHERE 
-        rsdtdsp_key = @rsdtdsp_key
+        crc32 != @crc32 OR
+        crc32 IS NULL
     `;
     
+    await this.createRsdtDspTable();
     return await this.upsertRows({
       upsert: this.prepare(sql),
       rows,
@@ -110,6 +131,10 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
         const lg_code = rows[0][DataField.LG_CODE.dbColumn].toString();
 
         for (const row of rows) {
+          if (row.rsdt_addr_flg === 0) {
+            continue;
+          }
+
           row.rsdtblk_key = TableKeyProvider.getRsdtBlkKey({
             lg_code,
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),

@@ -46,12 +46,12 @@ export interface IQuery {
   unmatched: string[];
 
   pref?: string;
-  pref_key?: number;
-  city_key?: number;
-  town_key?: number;
+  pref_key?: string;
+  city_key?: string;
+  town_key?: string;
   machiaza_id?: string;
-  rsdtblk_key?: number;
-  rsdtdsp_key?: number;
+  rsdtblk_key?: string;
+  rsdtdsp_key?: string;
   rsdt_addr_flg?: number;
   koaza_aka_code?: number;
 
@@ -79,7 +79,7 @@ export interface IQuery {
   prc_num2?: string;
   prc_num3?: string;
   prc_id?: string;
-  parcel_key?: number;
+  parcel_key?: string;
 
   // 文字列として、どのレベルまでマッチしたか
   match_level: MatchLevel;
@@ -108,18 +108,18 @@ export class Query implements IQuery {
   public readonly fuzzy?: string;
   public readonly unmatched: string[];
   public readonly pref?: string;
-  public readonly pref_key?: number;
+  public readonly pref_key?: string;
   public readonly county?: string;
   public readonly city?: string;
-  public readonly city_key?: number;
+  public readonly city_key?: string;
   public readonly ward?: string;
   public readonly oaza_cho?: string;
   public readonly chome?: string;
   public readonly koaza?: string;
-  public readonly town_key?: number;
-  public readonly rsdtblk_key?: number;
-  public readonly rsdtdsp_key?: number;
-  public readonly parcel_key?: number;
+  public readonly town_key?: string;
+  public readonly rsdtblk_key?: string;
+  public readonly rsdtdsp_key?: string;
+  public readonly parcel_key?: string;
   public readonly lg_code?: string;
   public readonly rep_lat?: string;
   public readonly rep_lon?: string;
@@ -204,9 +204,9 @@ export class Query implements IQuery {
       ambiguousCnt: this.ambiguousCnt,
       fuzzy: this.fuzzy,
       searchTarget: this.searchTarget,
-      city_key: this.city_key as number || undefined,
-      pref_key: this.pref_key as number || undefined,
-      town_key: this.town_key as number || undefined,
+      city_key: this.city_key as string || undefined,
+      pref_key: this.pref_key as string || undefined,
+      town_key: this.town_key as string || undefined,
       rsdtblk_key: this.rsdtblk_key,
       rsdtdsp_key: this.rsdtdsp_key,
       matchedCnt: this.matchedCnt,
