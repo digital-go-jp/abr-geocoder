@@ -35,6 +35,7 @@ export type WardAndOazaInfo = {
   machiaza_id?: string;
   lg_code: string;
   city_key: string;
+  town_key: string | null;
   rep_lat: string;
   rep_lon: string;
   match_level: MatchLevel;

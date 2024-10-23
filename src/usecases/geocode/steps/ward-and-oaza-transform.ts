@@ -101,6 +101,7 @@ export class WardAndOazaTransform extends Transform {
           pref: query.pref || mResult.info!.pref,
           pref_key: query.pref_key || mResult.info!.pref_key,
           city_key: mResult.info!.city_key,
+          town_key: mResult.info!.town_key || undefined,
           tempAddress: mResult.unmatched,
           city: mResult.info!.city,
           county: mResult.info!.county,

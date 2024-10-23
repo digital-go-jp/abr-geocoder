@@ -43,14 +43,17 @@ export class TableKeyProvider {
     lg_code: string;
   }>): string => {
     const prefix = params.lg_code.substring(0, 2);
-    return this.generateKey(prefix);
+
+    // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
+    return 'p' + this.generateKey(prefix);
   };
 
   static getCityKey(params: Required<{
     lg_code: string;
   }>): string {
     const key = params.lg_code;
-    return this.generateKey(key);
+    // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
+    return 'c' + this.generateKey(key);
   }
 
   static readonly getTownKey = (params: Required<{
@@ -62,7 +65,8 @@ export class TableKeyProvider {
       params.machiaza_id,
     ].join('/');
 
-    return this.generateKey(key);
+    // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
+    return 't' + this.generateKey(key);
   };
 
   static readonly getRsdtBlkKey = (params: Required<{
@@ -75,7 +79,8 @@ export class TableKeyProvider {
       params.machiaza_id,
       params.blk_id,
     ].join('/');
-    return this.generateKey(key);
+    // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
+    return 'b' + this.generateKey(key);
   };
 
 
@@ -94,7 +99,8 @@ export class TableKeyProvider {
       params.rsdt2_id,
     ].join('/');
 
-    return this.generateKey(key);
+    // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
+    return 'd' + this.generateKey(key);
   };
 
   static readonly getParcelKey = (params: {
@@ -110,6 +116,7 @@ export class TableKeyProvider {
       .filter(x => x !== null && x !== '')
       .join('/');
 
-    return this.generateKey(key);
+    // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
+    return 'n' + this.generateKey(key);
   };
 }

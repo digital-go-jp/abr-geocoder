@@ -6,17 +6,16 @@
     "result": {
       "output": "千葉県浦安市舞浜二丁目11 # all:住居表示, rsdt:住居表示, parcel:地番",
       "others": [
-        "-11 # all:住居表示, rsdt:住居表示, parcel:地番"
+        "# all:住居表示, rsdt:住居表示, parcel:地番"
       ],
-      "score": 0.94,
-      "match_level": "machiaza_detail",
-      "coordinate_level": "machiaza_detail",
-      "lat": 35.641821,
-      "lon": 139.882566,
+      "match_level": "residential_block",
+      "coordinate_level": "residential_block",
+      "lat": 35.641178,
+      "lon": 139.880872,
       "lg_code": "122271",
       "machiaza_id": "0018002",
       "rsdt_addr_flg": 1,
-      "blk_id": null,
+      "blk_id": "011",
       "rsdt_id": null,
       "rsdt2_id": null,
       "prc_id": null,
@@ -27,7 +26,7 @@
       "oaza_cho": "舞浜",
       "chome": "二丁目",
       "koaza": null,
-      "blk_num": null,
+      "blk_num": "11",
       "rsdt_num": null,
       "rsdt_num2": null,
       "prc_num1": null,

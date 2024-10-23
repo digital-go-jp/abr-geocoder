@@ -85,7 +85,9 @@ export class GeocodeResultTransform extends Transform {
       [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
       [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
       [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
-      [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, -1],
+      
+       // rsdt_addr_flgが間違えている可能性もあるので、MACHIAZA_DETAILより僅かに上の価値、というスコアにしておく
+      [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, 4.5],
 
       [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN}`, -2],
       [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE}`, 1],
@@ -106,7 +108,6 @@ export class GeocodeResultTransform extends Transform {
       [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL}`, 6],
     ]);
 
-    const searchTarget = queryList[0].searchTarget;
     const withScore: {
       query: Query;
       score: number;
@@ -167,7 +168,7 @@ export class GeocodeResultTransform extends Transform {
     // スコアを降順にソート
     withScore.sort((a, b) => b.score - a.score);
 
-    callback(null, withScore[0]);
+    callback(null, withScore[0].query);
   }
 
   private restoreCharNode(query: Query): Query {

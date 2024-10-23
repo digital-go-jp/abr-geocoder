@@ -109,8 +109,6 @@ export class OazaChomeTransform extends Transform {
         }
       }
 
-      let anyHit = false;
-      let anyAmbiguous = false;
       for (const target of targets) {
         if (!target) {
           continue;
@@ -161,10 +159,20 @@ export class OazaChomeTransform extends Transform {
         });
 
         // 複数都道府県にヒットする可能性があるので、全て試す
-        filteredResult?.forEach(findResult => {
-          anyAmbiguous = anyAmbiguous || findResult.ambiguous;
+        let anyHit = false;
+        let anyAmbiguous = false;
+        filteredResult?.forEach(result => {
+          anyAmbiguous = anyAmbiguous || result.ambiguous;
+          let matchedCnt = copiedQuery.matchedCnt + result.depth;
 
-          const info = findResult.info!;
+          let unmatched = result.unmatched;
+          if ((result.info?.chome.includes('丁目') || result.info?.oaza_cho.includes('丁目')) &&
+            result.unmatched?.char === DASH) {
+            matchedCnt += 1;
+            unmatched = trimDashAndSpace(result.unmatched);
+          }
+
+          const info = result.info!;
           anyHit = true;
           const params: Record<string, CharNode | number | string | MatchLevel | null | undefined> = {
             pref_key: info.pref_key,
@@ -179,10 +187,10 @@ export class OazaChomeTransform extends Transform {
             ward: info.ward,
             machiaza_id: info.machiaza_id,
             rsdt_addr_flg: info.rsdt_addr_flg,
-            tempAddress: findResult.unmatched,
+            tempAddress: unmatched,
             match_level: info.match_level,
-            matchedCnt: copiedQuery.matchedCnt + findResult.depth,
-            ambiguousCnt: copiedQuery.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
+            matchedCnt,
+            ambiguousCnt: copiedQuery.ambiguousCnt + (result.ambiguous ? 1 : 0), 
           };
           if (info.rep_lat && info.rep_lon) {
             params.rep_lat = info.rep_lat;
@@ -192,11 +200,11 @@ export class OazaChomeTransform extends Transform {
           const copied = copiedQuery.copy(params);
           results.add(copied);
         });
+        if (!anyHit || anyAmbiguous) {
+          results.add(query);
+        }
       }
 
-      if (!anyHit || anyAmbiguous) {
-        results.add(query);
-      }
     }
     callback(null, results);
   }
