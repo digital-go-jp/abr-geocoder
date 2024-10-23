@@ -77,157 +77,97 @@ export class GeocodeResultTransform extends Transform {
       return query;
     });
 
+    const matchLevelToScroe = new Map<string, number>([
+      [`${SearchTarget.ALL}:${MatchLevel.UNKNOWN}`, -2],
+      [`${SearchTarget.ALL}:${MatchLevel.PREFECTURE}`, 1],
+      [`${SearchTarget.ALL}:${MatchLevel.CITY}`, 2],
+      [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA}`, 3],
+      [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+      [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
+      [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+      [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, -1],
+
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN}`, -2],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE}`, 1],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.CITY}`, 2],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA}`, 3],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PARCEL}`, -1],
+
+      [`${SearchTarget.PARCEL}:${MatchLevel.UNKNOWN}`, -2],
+      [`${SearchTarget.PARCEL}:${MatchLevel.PREFECTURE}`, 1],
+      [`${SearchTarget.PARCEL}:${MatchLevel.CITY}`, 2],
+      [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA}`, 3],
+      [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+      [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_BLOCK}`, -1],
+      [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_DETAIL}`, -1],
+      [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL}`, 6],
+    ]);
+
     const searchTarget = queryList[0].searchTarget;
-    queryList.sort((a, b) => {
-      // いくつかの項目を比較して、合計値の高い方を優先する
-      let totalScoreA = 0;
-      let totalScoreB = 0;
-
-      const aLv = a.match_level.num;
-      const bLv = b.match_level.num;
-      const isArsdt = aLv === MatchLevel.RESIDENTIAL_BLOCK.num || aLv === MatchLevel.RESIDENTIAL_DETAIL.num || a.rsdt_addr_flg === 1;
-      const isBrsdt = bLv === MatchLevel.RESIDENTIAL_BLOCK.num || bLv === MatchLevel.RESIDENTIAL_DETAIL.num || b.rsdt_addr_flg === 1;
-      const isAprcl = aLv === MatchLevel.PARCEL.num || a.rsdt_addr_flg === 0;
-      const isBprcl = bLv === MatchLevel.PARCEL.num || b.rsdt_addr_flg === 0;
-
-      if (a.match_level === MatchLevel.UNKNOWN) {
-        totalScoreA -= 100;
-      }
-      if (b.match_level === MatchLevel.UNKNOWN) {
-        totalScoreB -= 100;
-      }
-
-      switch (true) {
-        // SearchTarget.ALL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
-        case searchTarget === SearchTarget.ALL && isArsdt && isBprcl:
-          totalScoreA += 5;
-          break;
-
-        // SearchTarget.RESIDENTIAL のとき、Aが住居表示、Bが地番の場合、住居表示を優先
-        case searchTarget === SearchTarget.RESIDENTIAL && isArsdt && isBprcl:
-          totalScoreA += 10;
-          break;
-
-        // SearchTarget.ALL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
-        case searchTarget === SearchTarget.ALL && isAprcl && isBrsdt:
-          totalScoreB += 5;
-          break;
-
-        // SearchTarget.RESIDENTIAL のとき、Aが地番、Bが住居表示の場合、住居表示を優先
-        case searchTarget === SearchTarget.RESIDENTIAL && isAprcl && isBrsdt:
-          totalScoreB += 10;
-          break;
-        
-        // SearchTarget.PARCEL のとき、Aが地番、Bが住居表示の場合、地番を優先
-        case (searchTarget === SearchTarget.PARCEL) && isAprcl && isBrsdt:
-          totalScoreA += 10;
-          break;
-
-        // SearchTarget.PARCEL のとき、Aが住居表示、Bが地番の場合、地番を優先
-        case (searchTarget === SearchTarget.PARCEL) && isArsdt && isBprcl:
-          totalScoreB += 10;
-          break;
-
-        default:
-        // if (a.match_level.num > b.match_level.num) {
-        //   totalScoreA += 1;
-        // } else if (a.match_level.num < b.match_level.num) {
-        //   totalScoreB += 1;
-        // }
-          break;
-      }
-
-      // 元の文字と類似度が高い方に+1
-      if (a.formatted.score > b.formatted.score) {
-        totalScoreA += 1;
-      } else if (a.formatted.score < b.formatted.score) {
-        totalScoreB += 1;
-      }
+    const withScore: {
+      query: Query;
+      score: number;
+      debug: string[];
+    }[] = queryList.map(query => {
+      const debug: string[] = [];
+      let score = 0;
       
-      // マッチングした文字列が多い方に+1
-      if (a.matchedCnt > b.matchedCnt) {
-        totalScoreA += 1;
-      } else if (a.matchedCnt < b.matchedCnt) {
-        totalScoreB += 1;
+      // match_level をスコアにする
+      let key = `${query.searchTarget}:${query.match_level.str}`;
+      if (query.koaza_aka_code === 2) {
+        // 京都通り名で Parcelになっているときは Parcelを参照
+        key = `${SearchTarget.PARCEL}:${query.match_level.str}`;
       }
+      score = matchLevelToScroe.get(key)!;
+      debug.push(`match_level: ${key} -> ${score}`);
 
-      // 残り文字数が少ないほうに+1
-      const restA = a.tempAddress?.toProcessedString().length || 0;
-      const restB = b.tempAddress?.toProcessedString().length || 0;
-      if (restA < restB) {
-        totalScoreA += 1;
-      } else if (restA > restB) {
-        totalScoreB += 1;
+      // coordinate_leve をスコアにする
+      key = `${query.searchTarget}:${query.coordinate_level.str}`;
+      if (query.koaza_aka_code === 2) {
+        // 京都通り名で Parcelになっているときは Parcelを参照
+        key = `${SearchTarget.PARCEL}:${query.coordinate_level.str}`;
       }
+      score += matchLevelToScroe.get(key)!;
+      debug.push(`coordinate_level: ${key} -> ${matchLevelToScroe.get(key)!}`);
 
-      // unmatchedが少ないほうに+1
-      const unmatchedA = a.unmatched.length;
-      const unmatchedB = b.unmatched.length;
-      if (unmatchedA < unmatchedB) {
-        totalScoreA += 1;
-      } else if (unmatchedA > unmatchedB) {
-        totalScoreB += 1;
+      // matched_cnt (多いほど良い)
+      score += query.matchedCnt;
+      debug.push(`matchedCnt: ${query.matchedCnt}`);
+
+      // unmatched_cnt (少ないほど良い)
+      const unmatchedCnt = query.unmatched.reduce((total, word) => total + word.length, 0);
+      score += orgInput.data.address.length - unmatchedCnt;
+      debug.push(`unmatchedCnt: ${orgInput.data.address.length - unmatchedCnt}`);
+
+      // 残り文字数 (少ないほど良い)
+      const remainLen = orgInput.data.address.length - (query.tempAddress?.toProcessedString().length || 0);
+      score += remainLen;
+      debug.push(`remainLen: ${remainLen}`);
+
+      // 類似度 (1.0になるほど良い)
+      score += query.formatted.score;
+      debug.push(`formatted.score: ${query.formatted.score}`);
+
+      // match_level と coordinate_level の差
+      // (差が少ないほど良い)
+      const diff = query.match_level.num - query.coordinate_level.num;
+      score -= diff;
+      debug.push(`diff of two levels: -${diff}`);
+
+      return {
+        score,
+        query,
+        debug,
       }
-      
-      if (isAprcl && isBprcl || isArsdt && isBrsdt) {
-        // 精度が高い方に+1
-        if (a.match_level.num < b.match_level.num) {
-          totalScoreB += 1;
-        } else if (a.match_level.num > b.match_level.num) {
-          totalScoreA += 1;
-        }
-        // 緯度経度の精度が高い方に+1
-        if (a.coordinate_level.num < b.coordinate_level.num) {
-          totalScoreB += 1;
-        } else if (a.coordinate_level.num > b.coordinate_level.num) {
-          totalScoreA += 1;
-        }
-        // switch (true) {
-        //   case a.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num &&
-        //     b.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num: {
-            
-        //     if (a.coordinate_level.num < b.coordinate_level.num) {
-        //       totalScoreB += 1;
-        //     } else if (a.coordinate_level.num > b.coordinate_level.num) {
-        //       totalScoreA += 1;
-        //     }
-        //     break;
-        //   }
-
-        //   case a.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num &&
-        //     b.coordinate_level.num > MatchLevel.MACHIAZA_DETAIL.num: {
-        //       totalScoreB += 1;
-        //     break;
-        //   }
-
-        //   case a.coordinate_level.num > MatchLevel.MACHIAZA_DETAIL.num &&
-        //     b.coordinate_level.num <= MatchLevel.MACHIAZA_DETAIL.num: {
-        //       totalScoreA += 1;
-        //     break;
-        //   }
-
-        //   default:
-        //     // Do nothing here
-        //     break;
-        // }
-      }
-
-      // ambiguousCnt が少ない方を優先
-      if (a.ambiguousCnt < b.ambiguousCnt) {
-        totalScoreA += 1;
-      } else if (a.ambiguousCnt > b.ambiguousCnt) {
-        totalScoreB += 1;
-      }
- 
-      // マッチレベルが高いほうが優先
-      return totalScoreB - totalScoreA;
     });
-    
-    if (queryList.length === 0) {
-      queryList.push(Query.create(orgInput));
-    }
 
-    callback(null, queryList[0]);
+    // スコアを降順にソート
+    withScore.sort((a, b) => b.score - a.score);
+
+    callback(null, withScore[0]);
   }
 
   private restoreCharNode(query: Query): Query {
