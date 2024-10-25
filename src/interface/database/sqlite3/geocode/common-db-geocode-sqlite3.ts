@@ -431,7 +431,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * 霞が関 -> NULL, NULL
         */
       this.exec(`
-        INSERT INTO resultTable
+        INSERT OR IGNORE INTO resultTable
         SELECT
           (
             t.city_key ||
@@ -474,7 +474,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
        * 寺地 -> 40.462681,141.541286
        */
       this.exec(`
-        INSERT INTO resultTable
+        INSERT OR IGNORE INTO resultTable
         SELECT
           (
             t.city_key ||
@@ -520,7 +520,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
        * パターン： 〇〇(大字)〇〇(小字)
        */
       this.exec(`
-        INSERT INTO resultTable
+        INSERT OR IGNORE INTO resultTable
         SELECT
           (
             t.city_key ||
