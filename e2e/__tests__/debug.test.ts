@@ -8,8 +8,8 @@ import { runGeocoder } from './common';
 
 describe('debug', () => {
 
-  test('山科区音羽森廻リ町32', async () => {
-    const input = '山科区音羽森廻リ町32';
+  test('東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番', async () => {
+    const input = '東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番';
     const { stdout } = await runGeocoder({
       input,
       geocode: {
@@ -20,32 +20,33 @@ describe('debug', () => {
 
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "山科区音羽森廻リ町32"
+        "input": "東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番"
       },
       "result": {
-        "output": "京都府京都市山科区音羽森廻り町32",
+        "output": "東京都港区芝浦三丁目1-1 # all:住居表示, rsdt:住居表示, parcel:地番",
         "others": [
-          "32"
+          "-1 # all:住居表示, rsdt:住居表示, parcel:地番"
         ],
-        "match_level": "machiaza",
-        "coordinate_level": "machiaza",
-        "lat": 34.985641,
-        "lon": 135.823916,
-        "lg_code": "261106",
-        "machiaza_id": "0076000",
-        "rsdt_addr_flg": 0,
-        "blk_id": null,
+        "score": 0.94,
+        "match_level": "residential_block",
+        "coordinate_level": "residential_block",
+        "lat": 35.644986,
+        "lon": 139.748888,
+        "lg_code": "131032",
+        "machiaza_id": "0005003",
+        "rsdt_addr_flg": 1,
+        "blk_id": "001",
         "rsdt_id": null,
         "rsdt2_id": null,
         "prc_id": null,
-        "pref": "京都府",
+        "pref": "東京都",
         "county": null,
-        "city": "京都市",
-        "ward": "山科区",
-        "oaza_cho": "音羽森廻り町",
-        "chome": null,
+        "city": "港区",
+        "ward": null,
+        "oaza_cho": "芝浦",
+        "chome": "三丁目",
         "koaza": null,
-        "blk_num": null,
+        "blk_num": "1",
         "rsdt_num": null,
         "rsdt_num2": null,
         "prc_num1": null,

@@ -45,7 +45,7 @@ export class GeocodeResultTransform extends Transform {
   ) {
     let queryList = Array.from(queries.values());
     const orgInput = queryList[0].input;
-    const N = orgInput.data.address.length;
+    const addressLen = orgInput.data.address.length;
 
     queryList = queryList.map(query => {
       // 処理のために置き換えた文字列を元に戻す
@@ -61,7 +61,7 @@ export class GeocodeResultTransform extends Transform {
       // inputの文字列に対して30％以上の割合でマッチしている or
       // 市区町村が判明している
       return (query.formatted.score >= 0.5 ||
-        (query.matchedCnt / N) >= 0.3 || 
+        (query.matchedCnt / addressLen) >= 0.3 || 
         query.match_level.num >= MatchLevel.CITY.num);
     });
 
@@ -144,9 +144,9 @@ export class GeocodeResultTransform extends Transform {
       debug.push(`unmatchedCnt: ${orgInput.data.address.length - unmatchedCnt}`);
 
       // 残り文字数 (少ないほど良い)
-      const remainLen = orgInput.data.address.length - (query.tempAddress?.toProcessedString().length || 0);
-      score += remainLen;
-      debug.push(`remainLen: ${remainLen}`);
+      const remainLen = query.tempAddress?.toOriginalString().length || 0;
+      score -= remainLen;
+      debug.push(`remainLen: -${remainLen}`);
 
       // 不明瞭な文字 (少ないほど良い)
       score -= query.ambiguousCnt;
@@ -159,8 +159,8 @@ export class GeocodeResultTransform extends Transform {
       // match_level と coordinate_level の差
       // (差が少ないほど良い)
       const diff = query.match_level.num - query.coordinate_level.num;
-      score -= diff;
-      debug.push(`diff of two levels: -${diff}`);
+      score -= diff * 2;
+      debug.push(`diff of two levels: -${diff * 2}`);
 
       return {
         score,
@@ -172,7 +172,74 @@ export class GeocodeResultTransform extends Transform {
     // スコアを降順にソート
     withScore.sort((a, b) => b.score - a.score);
 
-    callback(null, withScore[0].query);
+    if (withScore.length === 1) {
+      callback(null, withScore[0].query);
+      return;
+    }
+
+    // targetオプションの期待に沿うように結果を返す
+    // ただしallの場合、rsdt_addr_flg が間違えている可能性もあるので
+    // スコアも加味する
+
+    const topRSDT = (() => {
+      for (const result of withScore) {
+        if (result.query.rsdt_addr_flg === 1) {
+          return result;
+        }
+      }
+      return null;
+    })();
+    const topParcel = (() => {
+      for (const result of withScore) {
+        if (result.query.rsdt_addr_flg === 0) {
+          return result;
+        }
+      }
+      return null;
+    })();
+
+    if (!topParcel) {
+      callback(null, topRSDT!.query);
+      return;
+    }
+    if (!topRSDT) {
+      callback(null, topParcel!.query);
+      return;
+    }
+
+    const searchTarget = queryList[0].searchTarget;
+    switch (true) {
+      case searchTarget === SearchTarget.ALL: {
+        if (
+          // RSDTのがスコアが高ければRSDTを返す
+          topRSDT.score >= topParcel.score ||
+
+          // Parcelのがスコアが高くても RSDTと差が少なければRSDTを返す
+          topParcel.score - topRSDT.score <= 5
+        ) {
+          callback(null, topRSDT.query);
+          return;
+        }
+        // parcelを返す
+        callback(null, topParcel.query);
+        return;
+      }
+      
+      case searchTarget === SearchTarget.RESIDENTIAL: {
+        // 強制的にRSDTを返す
+        callback(null, topRSDT.query);
+        return;
+      }
+      
+      case searchTarget === SearchTarget.PARCEL: {
+        // 強制的にPARCELを返す
+        callback(null, topParcel.query);
+        return;
+      }
+      
+      default:
+        throw `unexpected case`
+    }
   }
 
   private restoreCharNode(query: Query): Query {

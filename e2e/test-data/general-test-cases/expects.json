@@ -41,19 +41,19 @@
     "result": {
       "output": "東京都調布市国領町三丁目8-15 都営くすのきアパート2号棟1階",
       "others": [
-        "都営くすのきアパート2号棟1階"
+        "-15 都営くすのきアパート2号棟1階"
       ],
-      "match_level": "parcel",
-      "coordinate_level": "machiaza_detail",
-      "lat": 35.649614,
-      "lon": 139.560117,
+      "match_level": "residential_block",
+      "coordinate_level": "residential_block",
+      "lat": 35.649823,
+      "lon": 139.561713,
       "lg_code": "132080",
       "machiaza_id": "0016003",
-      "rsdt_addr_flg": 0,
-      "blk_id": null,
+      "rsdt_addr_flg": 1,
+      "blk_id": "008",
       "rsdt_id": null,
       "rsdt2_id": null,
-      "prc_id": "000080001500000",
+      "prc_id": null,
       "pref": "東京都",
       "county": null,
       "city": "調布市",
@@ -61,11 +61,11 @@
       "oaza_cho": "国領町",
       "chome": "三丁目",
       "koaza": null,
-      "blk_num": null,
+      "blk_num": "8",
       "rsdt_num": null,
       "rsdt_num2": null,
-      "prc_num1": "8",
-      "prc_num2": "15",
+      "prc_num1": null,
+      "prc_num2": null,
       "prc_num3": null
     }
   },
