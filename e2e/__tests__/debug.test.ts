@@ -8,8 +8,8 @@ import { runGeocoder } from './common';
 
 describe('debug', () => {
 
-  test('岩手県八幡平市大更第35地割', async () => {
-    const input = '岩手県八幡平市大更第35地割';
+  test('山科区音羽森廻リ町32', async () => {
+    const input = '山科区音羽森廻リ町32';
     const { stdout } = await runGeocoder({
       input,
       geocode: {
@@ -20,29 +20,31 @@ describe('debug', () => {
 
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "岩手県八幡平市大更第35地割"
+        "input": "山科区音羽森廻リ町32"
       },
       "result": {
-        "output": "岩手県八幡平市大更第35地割",
-        "others": [],
-        "match_level": "machiaza_detail",
+        "output": "京都府京都市山科区音羽森廻り町32",
+        "others": [
+          "32"
+        ],
+        "match_level": "machiaza",
         "coordinate_level": "machiaza",
-        "lat": 39.911413,
-        "lon": 141.125139,
-        "lg_code": "032140",
-        "machiaza_id": "0034128",
+        "lat": 34.985641,
+        "lon": 135.823916,
+        "lg_code": "261106",
+        "machiaza_id": "0076000",
         "rsdt_addr_flg": 0,
         "blk_id": null,
         "rsdt_id": null,
         "rsdt2_id": null,
         "prc_id": null,
-        "pref": "岩手県",
+        "pref": "京都府",
         "county": null,
-        "city": "八幡平市",
-        "ward": null,
-        "oaza_cho": "大更",
+        "city": "京都市",
+        "ward": "山科区",
+        "oaza_cho": "音羽森廻り町",
         "chome": null,
-        "koaza": "第35地割",
+        "koaza": null,
         "blk_num": null,
         "rsdt_num": null,
         "rsdt_num2": null,

@@ -378,46 +378,45 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * 霞が関二丁目 -> 35.675551,139.750413
         * 霞が関三丁目 -> 35.671825,139.746988
         */
-      this.exec(`
-        INSERT INTO resultTable
-        SELECT
-          (
-            t.city_key ||
-            t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
-            t.${DataField.MACHIAZA_ID.dbColumn}
-          ) as pkey,
-          t.town_key,
-          t.city_key,
-          t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
-          t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-          t.${DataField.CHOME.dbColumn} as chome,
-          '' as koaza,
-          CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} as INTEGER) as rsdt_addr_flg,
-          IFNULL(
-            t.${DataField.REP_LAT.dbColumn},
-            c.${DataField.REP_LAT.dbColumn}
-          ) as rep_lat,
-          IFNULL(
-            t.${DataField.REP_LON.dbColumn},
-            c.${DataField.REP_LON.dbColumn}
-          ) as rep_lon,
-          ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
-          IIF(
-            t.${DataField.REP_LAT.dbColumn} = '' OR t.${DataField.REP_LAT.dbColumn} IS NULL,
-            ${MatchLevel.CITY.num},
-            ${MatchLevel.MACHIAZA_DETAIL.num}
-          ) as coordinate_level
-        FROM
-          ${DbTableName.TOWN} as t
-          JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
-        WHERE
-          (
-            t.${DataField.OAZA_CHO.dbColumn} != '' AND
-            t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
-          ) AND 
-          substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
-      `);
+      // this.exec(`
+      //   INSERT INTO resultTable
+      //   SELECT
+      //     (
+      //       t.city_key ||
+      //       t.${DataField.MACHIAZA_ID.dbColumn}
+      //     ) as pkey,
+      //     t.town_key,
+      //     t.city_key,
+      //     t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+      //     t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+      //     t.${DataField.CHOME.dbColumn} as chome,
+      //     '' as koaza,
+      //     CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} as INTEGER) as rsdt_addr_flg,
+      //     IFNULL(
+      //       t.${DataField.REP_LAT.dbColumn},
+      //       c.${DataField.REP_LAT.dbColumn}
+      //     ) as rep_lat,
+      //     IFNULL(
+      //       t.${DataField.REP_LON.dbColumn},
+      //       c.${DataField.REP_LON.dbColumn}
+      //     ) as rep_lon,
+      //     ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
+      //     IIF(
+      //       t.${DataField.REP_LAT.dbColumn} = '' OR t.${DataField.REP_LAT.dbColumn} IS NULL,
+      //       ${MatchLevel.CITY.num},
+      //       ${MatchLevel.MACHIAZA_DETAIL.num}
+      //     ) as coordinate_level
+      //   FROM
+      //     ${DbTableName.TOWN} as t
+      //     JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
+      //   WHERE
+      //     (
+      //       t.${DataField.OAZA_CHO.dbColumn} != '' AND
+      //       t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
+      //     ) AND 
+      //     substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
+      //     t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
+      // `);
 
       /*
         * パターン： 〇〇(大字)〇〇丁目
@@ -436,7 +435,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         SELECT
           (
             t.city_key ||
-            t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
             substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) ||
             '000'
           ) as pkey,
@@ -446,7 +444,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           '' as chome,
           '' as koaza,
-          CAST(${AMBIGUOUS_RSDT_ADDR_FLG} AS INTEGER) as rsdt_addr_flg,  /* 0 と 1が混ざる可能性があるので、AMBIGUOUS_RSDT_ADDR_FLG */
+          ${AMBIGUOUS_RSDT_ADDR_FLG} as rsdt_addr_flg,  /* 0 と 1が混ざる可能性があるので、AMBIGUOUS_RSDT_ADDR_FLG */
           c.${DataField.REP_LAT.dbColumn} as rep_lat,
           c.${DataField.REP_LON.dbColumn} as rep_lon,
           ${MatchLevel.MACHIAZA.num} as match_level,
@@ -480,7 +478,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         SELECT
           (
             t.city_key ||
-            t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
             t.${DataField.MACHIAZA_ID.dbColumn}
           ) as pkey,
           t.town_key,
@@ -511,6 +508,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           (
             t.${DataField.OAZA_CHO.dbColumn} = '' OR
             t.${DataField.OAZA_CHO.dbColumn} IS NULL
+          ) AND (
+            t.${DataField.CHOME.dbColumn} = '' OR
+            t.${DataField.CHOME.dbColumn} IS NULL
           ) AND 
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
           t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
@@ -520,18 +520,17 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
        * パターン： 〇〇(大字)〇〇(小字)
        */
       this.exec(`
-        REPLACE INTO resultTable
+        INSERT INTO resultTable
         SELECT
           (
             t.city_key ||
-            t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
             t.${DataField.MACHIAZA_ID.dbColumn}
           ) as pkey,
           t.town_key,
           t.city_key,
           t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-          '' as chome,
+          t.${DataField.CHOME.dbColumn} as chome,
           t.${DataField.KOAZA.dbColumn} as koaza,
           CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
           IFNULL(
@@ -555,13 +554,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           (
             t.${DataField.OAZA_CHO.dbColumn} != '' AND
             t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
-          ) AND (
-            t.${DataField.CHOME.dbColumn} = '' OR
-            t.${DataField.CHOME.dbColumn} IS NULL
-          ) AND (
-            t.${DataField.KOAZA.dbColumn} != '' AND
-            t.${DataField.KOAZA.dbColumn} IS NOT NULL
           ) AND
+          substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
           t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
       `);
 
@@ -582,7 +576,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         SELECT
             (
               t.city_key ||
-              t.${DataField.RSDT_ADDR_FLG.dbColumn} ||
               t.${DataField.MACHIAZA_ID.dbColumn}
           ) as pkey,
           t.town_key,
@@ -643,8 +636,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         SELECT
           (
             city_key ||
-            ${DataField.RSDT_ADDR_FLG.dbColumn} ||
-            ${DataField.OAZA_CHO.dbColumn}
+            substr(${DataField.MACHIAZA_ID.dbColumn}, 1, 4)
           ) as oaza_key,
           ${DataField.REP_LAT.dbColumn} as rep_lat,
           ${DataField.REP_LON.dbColumn} as rep_lon,
@@ -677,7 +669,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           return row;
         }
       
-        const oaza_key = `${row.city_key}${row.rsdt_addr_flg}${row.oaza_cho || ''}`;
+        const oaza_key = `${row.city_key}${row.machiaza_id.substring(0, 4)}`;
         const results = memo.find({
           target: CharNode.create(oaza_key)!,
           fuzzy: undefined,
@@ -695,7 +687,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         }
         return row;
       });
-
 
       this.exec('DROP TABLE resultTable');
       

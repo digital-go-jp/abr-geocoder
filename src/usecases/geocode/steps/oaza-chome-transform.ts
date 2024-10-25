@@ -80,17 +80,9 @@ export class OazaChomeTransform extends Transform {
       // トライ木を使って探索
       // ------------------------------------
       const copiedQuery = this.normalizeQuery(query);
-      if (!copiedQuery.tempAddress) {
-        results.add(copiedQuery);
-        continue;
-      }
       const targets = [
-        trimDashAndSpace(query.tempAddress),
+        copiedQuery,
       ];
-      if (!targets[0]) {
-        results.add(copiedQuery);
-        continue;
-      }
 
       // 大字が中途半端に当たっている場合がある。大字を含めて探索する
       // input: "藤野一条", oaza_cho: "藤野"
@@ -104,13 +96,15 @@ export class OazaChomeTransform extends Transform {
           }
         }
         if (prefix) {
-          targets.push(prefix.concat(targets[0]));
-          results.add(query);
+          targets.push(copiedQuery.copy({
+            matchedCnt: copiedQuery.matchedCnt - prefix.toOriginalString().length,
+            tempAddress: prefix.concat(copiedQuery.tempAddress),
+          }));
         }
       }
 
-      for (const target of targets) {
-        if (!target) {
+      for (const targetQuery of targets) {
+        if (!targetQuery || !targetQuery.tempAddress) {
           continue;
         }
         // 小字に数字が含まれていて、それが番地にヒットする場合がある。
@@ -121,7 +115,7 @@ export class OazaChomeTransform extends Transform {
         // expected = 末広町
         // wrong_matched_result = 末広町18字
         const findResults = this.trie.find({
-          target,
+          target: targetQuery.tempAddress,
           partialMatches: true,
 
           // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
@@ -163,7 +157,12 @@ export class OazaChomeTransform extends Transform {
         let anyAmbiguous = false;
         filteredResult?.forEach(result => {
           anyAmbiguous = anyAmbiguous || result.ambiguous;
-          let matchedCnt = copiedQuery.matchedCnt + result.depth;
+          let ambiguousCnt = targetQuery.ambiguousCnt + (result.ambiguous ? 1 : 0);
+          let matchedCnt = targetQuery.matchedCnt + result.depth;
+          if (targetQuery.oaza_cho && targetQuery.oaza_cho !== result.info?.oaza_cho) {
+            anyAmbiguous = true;
+            ambiguousCnt += targetQuery.oaza_cho.length;
+          }
 
           let unmatched = result.unmatched;
           if ((result.info?.chome.includes('丁目') || result.info?.oaza_cho.includes('丁目')) &&
@@ -190,18 +189,18 @@ export class OazaChomeTransform extends Transform {
             tempAddress: unmatched,
             match_level: info.match_level,
             matchedCnt,
-            ambiguousCnt: copiedQuery.ambiguousCnt + (result.ambiguous ? 1 : 0), 
+            ambiguousCnt, 
           };
           if (info.rep_lat && info.rep_lon) {
             params.rep_lat = info.rep_lat;
             params.rep_lon = info.rep_lon;
             params.coordinate_level = info.coordinate_level;
           }
-          const copied = copiedQuery.copy(params);
+          const copied = targetQuery.copy(params);
           results.add(copied);
         });
         if (!anyHit || anyAmbiguous) {
-          results.add(query);
+          results.add(targetQuery);
         }
       }
 

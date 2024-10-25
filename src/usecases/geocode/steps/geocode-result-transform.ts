@@ -148,6 +148,10 @@ export class GeocodeResultTransform extends Transform {
       score += remainLen;
       debug.push(`remainLen: ${remainLen}`);
 
+      // 不明瞭な文字 (少ないほど良い)
+      score -= query.ambiguousCnt;
+      debug.push(`ambiguousCnt: -${query.ambiguousCnt}`);
+
       // 類似度 (1.0になるほど良い)
       score += query.formatted.score;
       debug.push(`formatted.score: ${query.formatted.score}`);
