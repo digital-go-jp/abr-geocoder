@@ -32,7 +32,6 @@ import path from 'node:path';
 import readline from 'node:readline/promises';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 import downloadCommand from './download-command';
-import { getPackageInfo } from '@domain/services/package/get-package-info';
 
 export type UpdateCheckCommandArgv = {
   abrgDir?: string;

@@ -45,7 +45,7 @@ export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbG
         type = 'table' AND
         name = @name
     `).all({
-      name: DbTableName.PARCEL
+      name: DbTableName.PARCEL,
     });
     return rows.length === 1;
   }

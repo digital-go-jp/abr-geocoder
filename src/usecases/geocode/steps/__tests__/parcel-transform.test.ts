@@ -18,7 +18,6 @@ const dbCtrl = new GeocodeDbController({
   connectParams: {
     type: 'sqlite3',
     dataDir: 'somewhere',
-    schemaDir: 'somewhere',
   },
 });
 
@@ -26,10 +25,10 @@ const parcelDb: jest.Mocked<IParcelDbGeocode> = {
   closeDb: jest.fn(),
   getParcelRows: jest.fn<IParcelDbGeocode["getParcelRows"]>().mockImplementation(async (params): Promise<ParcelInfo[]> => {
     switch (true) {
-      case params.town_key === 2758760445: {
+      case params.town_key === 'ta46f57fd': {
         return [
           {
-            parcel_key: 685855111,
+            parcel_key: 'n28e15187',
             prc_id: "000050000000000",
             prc_num1: "5",
             prc_num2: "",
@@ -93,7 +92,7 @@ describe('ParcelTransform', () => {
       ambiguousCnt: 0,
       chome: '一丁目',
       city: '札幌市',
-      city_key: 3783623301,
+      city_key: 'ce1858285',
       coordinate_level: MatchLevel.MACHIAZA_DETAIL,
       county: '',
       fuzzy: DEFAULT_FUZZY_CHAR,
@@ -104,11 +103,11 @@ describe('ParcelTransform', () => {
       matchedCnt: 12,
       oaza_cho: '南二条西',
       pref: '北海道',
-      pref_key: 5859364,
+      pref_key: 'p596824',
       rep_lat: '43.05842',
       rep_lon: '141.357046',
       tempAddress,
-      town_key: 2758760445,
+      town_key: 'ta46f57fd',
       ward: '中央区',
       rsdt_addr_flg: 0,
     }));
@@ -120,7 +119,7 @@ describe('ParcelTransform', () => {
 
     // ヒットした場合
     expect(queries[0].toJSON()).toMatchObject({
-      parcel_key: 685855111,
+      parcel_key: 'n28e15187',
       prc_num1: "5",
       prc_num2: "",
       prc_num3: "",
@@ -153,7 +152,7 @@ describe('ParcelTransform', () => {
       ambiguousCnt: 0,
       chome: '一丁目',
       city: '札幌市',
-      city_key: 3783623301,
+      city_key: 'ce1858285',
       coordinate_level: MatchLevel.MACHIAZA_DETAIL,
       county: '',
       fuzzy: DEFAULT_FUZZY_CHAR,
@@ -164,11 +163,11 @@ describe('ParcelTransform', () => {
       matchedCnt: 12,
       oaza_cho: '南二条西',
       pref: '北海道',
-      pref_key: 5859364,
+      pref_key: 'p596824',
       rep_lat: '43.05842',
       rep_lon: '141.357046',
       tempAddress,
-      town_key: 2758760445,
+      town_key: 'ta46f57fd',
       ward: '中央区',
       rsdt_addr_flg: 0,
     }));
@@ -180,7 +179,7 @@ describe('ParcelTransform', () => {
 
     // ヒットした場合
     expect(queries[0].toJSON()).toMatchObject({
-      parcel_key: 685855111,
+      parcel_key: 'n28e15187',
       prc_num1: "5",
       prc_num2: "",
       prc_num3: "",

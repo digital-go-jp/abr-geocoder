@@ -51,7 +51,6 @@ describe('AbrGeocoder', () => {
           database: {
             type: 'sqlite3',
             dataDir: '~/.abr-geocoder/database_test',
-            schemaDir: '../schema',
           },
           debug: false,
         },

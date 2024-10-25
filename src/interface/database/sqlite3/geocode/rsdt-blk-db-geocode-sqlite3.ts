@@ -44,7 +44,7 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
         type = 'table' AND
         name = @name
     `).all({
-      name: DbTableName.RSDT_BLK
+      name: DbTableName.RSDT_BLK,
     });
     return rows.length === 1;
   }

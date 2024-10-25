@@ -43,7 +43,7 @@ export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbG
         type = 'table' AND
         name = @name
     `).all({
-      name: DbTableName.RSDT_DSP
+      name: DbTableName.RSDT_DSP,
     });
     return rows.length === 1;
   }

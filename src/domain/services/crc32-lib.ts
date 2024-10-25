@@ -21,9 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import fs from 'node:fs';
 import buffCrc32 from 'buffer-crc32';
-import { serialize } from 'node:v8';
+import fs from 'node:fs';
 
 export const fromFile = (pathToFile: string): string | null => {
   if (!fs.existsSync(pathToFile)) {
@@ -42,7 +41,7 @@ export const fromString = (data: string): string => {
 };
 
 export const fromRecord = (data: {}): string => {
-  return fromString(JSON.stringify(data))
+  return fromString(JSON.stringify(data));
 };
 
 export default {

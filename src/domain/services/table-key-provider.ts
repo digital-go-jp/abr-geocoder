@@ -34,7 +34,7 @@ export class TableKeyProvider {
     if (result) {
       return result;
     }
-    result = stringHash(key).toString(16)
+    result = stringHash(key).toString(16);
     this.cache.set(key, result);
     return result;
   };

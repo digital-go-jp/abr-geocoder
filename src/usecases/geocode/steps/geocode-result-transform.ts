@@ -86,7 +86,7 @@ export class GeocodeResultTransform extends Transform {
       [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
       [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
       
-       // rsdt_addr_flgが間違えている可能性もあるので、MACHIAZA_DETAILより僅かに上の価値、というスコアにしておく
+      // rsdt_addr_flgが間違えている可能性もあるので、MACHIAZA_DETAILより僅かに上の価値、というスコアにしておく
       [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, 4.5],
 
       [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN}`, -2],
@@ -166,7 +166,7 @@ export class GeocodeResultTransform extends Transform {
         score,
         query,
         debug,
-      }
+      };
     });
 
     // スコアを降順にソート
@@ -238,7 +238,7 @@ export class GeocodeResultTransform extends Transform {
       }
       
       default:
-        throw `unexpected case`
+        throw `unexpected case`;
     }
   }
 

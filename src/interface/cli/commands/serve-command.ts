@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 import { EnvProvider } from '@domain/models/env-provider';
-import { getPackageInfo } from '@domain/services/package/get-package-info';
 import { resolveHome } from '@domain/services/resolve-home';
 import { upwardFileSearch } from '@domain/services/upward-file-search';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';

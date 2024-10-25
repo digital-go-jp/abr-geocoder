@@ -736,7 +736,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         coordinate_level,
       };
     })
-    .filter(x => x !== null);
+      .filter(x => x !== null);
 
     return rows;
   }

@@ -23,7 +23,6 @@
  */
 import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
 import { EnvProvider } from '@domain/models/env-provider';
-import { getPackageInfo } from '@domain/services/package/get-package-info';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
 import { resolveHome } from '@domain/services/resolve-home';
 import { upwardFileSearch } from '@domain/services/upward-file-search';

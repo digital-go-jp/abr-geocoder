@@ -48,7 +48,7 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
       CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key_and_blk_num" ON "${DbTableName.RSDT_BLK}" (
         "town_key", "${DataField.BLK_NUM.dbColumn}"
       );
-    `)
+    `);
   }
 
   async closeDb(): Promise<void> {

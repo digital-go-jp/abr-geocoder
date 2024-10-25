@@ -5,7 +5,6 @@ import { jest } from '@jest/globals';
 const database: Sqlite3Params = {
   type: 'sqlite3',
   dataDir: '~/.abr-geocoder/database_test',
-  schemaDir: '../schema',
 };
 
 const originalModule = jest.requireActual('@usecases/geocode/models/abr-geocoder-di-container');
