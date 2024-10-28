@@ -435,28 +435,38 @@ for (const oldAndNew of kanji_table) {
   });
 }
 
-export const jisKanji = (target: string): string => {
-  let head = CharNode.create(target);
-  const buffer: string[] = [];
+export const jisKanji = <T extends string | CharNode | undefined>(target: T): T => {
+  if (target === undefined) {
+    return undefined as T;
+  }
+  if (target instanceof CharNode) {
+    return jisKanjiForCharNode(target) as T;
+  }
+  if (typeof target === 'string') {
+    let head = CharNode.create(target);
+    const buffer: string[] = [];
 
-  while (head) {
-    const matches = tree.find({
-      target: head,
-      fuzzy: undefined,
-    });
-    if (!matches || matches.length === 0) {
-      buffer.push(head.char!);
-      head = head.next;
-      continue;
+    while (head) {
+      const matches = tree.find({
+        target: head,
+        fuzzy: undefined,
+      });
+      if (!matches || matches.length === 0) {
+        buffer.push(head.char!);
+        head = head.next;
+        continue;
+      }
+      buffer.push(matches[0].info!);
+      head = matches[0].unmatched;
     }
-    buffer.push(matches[0].info!);
-    head = matches[0].unmatched;
+
+    return buffer.join('') as T;
   }
 
-  return buffer.join('');
+  throw `unsupported value type`;
 };
 
-export const jisKanjiForCharNode = (target: CharNode | undefined): CharNode | undefined => {
+const jisKanjiForCharNode = (target: CharNode | undefined): CharNode | undefined => {
   let head = target;
   const buffer: CharNode[] = [];
 

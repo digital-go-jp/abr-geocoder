@@ -231,20 +231,29 @@ const hiraganaMap = new Map<string, string>([
   ['之', 'の'],  // 堀之内 → 堀の内
 ]);
 
-export const toHiragana = (target: string) => {
-  const buffer: string[] = [];
-  // Unicode正規化を行う
-  // https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/String/normalize
-  //
-  // NFKCは、濁音付きの半角カタカナを全角カタカナに変換する
-  for (const char of target.normalize('NFKC')) {
-    buffer.push(hiraganaMap.get(char) || char);
+export const toHiragana = <T extends string | CharNode | undefined>(target: T): T => {
+  if (target === undefined) {
+    return undefined as T;
   }
-  
-  return buffer.join('');
+  if (typeof target === 'string') {
+    const buffer: string[] = [];
+    // Unicode正規化を行う
+    // https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/String/normalize
+    //
+    // NFKCは、濁音付きの半角カタカナを全角カタカナに変換する
+    for (const char of target.normalize('NFKC')) {
+      buffer.push(hiraganaMap.get(char) || char);
+    }
+    
+    return buffer.join('') as T;
+  }
+  if (target instanceof CharNode) {
+    return toHiraganaForCharNode(target) as T;
+  }
+  throw `unsupported value type`;
 };
 
-export const toHiraganaForCharNode = (target: CharNode | undefined): CharNode | undefined => {
+const toHiraganaForCharNode = (target: CharNode | undefined): CharNode | undefined => {
   let head = target;
   const root = target;
   while (head && head.char) {

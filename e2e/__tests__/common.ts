@@ -1,6 +1,7 @@
 import { expect, jest } from '@jest/globals';
 import { execaNode } from 'execa-cjs';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -40,19 +41,22 @@ export type ExecOptions = {
   input?: string;
   inputFile?: string;
   geocode: GeocoderOptions,
+  useGlobalDB?: boolean;
 };
 
 export const runGeocoder = async (options: ExecOptions) => {
   if (EnvProvider.isDebug) {
     // VSCode でデバッグする場合は、geocode-command.ts と同様の処理をすることで
     // ビルドしないでもデバッグできる
+    const abrgDir = options.useGlobalDB ? resolveHome(EnvProvider.DEFAULT_ABRG_DIR) : dbPath;
+    
     const geocoderStream = await AbrGeocodeStream.create({
       fuzzy: DEFAULT_FUZZY_CHAR,
       searchTarget: options.geocode.searchTarget,
-      cacheDir: path.join(dbPath, 'cache'),
+      cacheDir: path.join(abrgDir, 'cache'),
       database: {
         type: 'sqlite3',
-        dataDir: path.join(dbPath, 'database'),
+        dataDir: path.join(abrgDir, 'database'),
       },
       debug: false,
       progress(current: number) {},
@@ -130,4 +134,11 @@ export const jsonTestRunner = async (testCaseName: string) => {
       searchTarget: SearchTarget.ALL,
     },
   });
+};
+
+export const resolveHome = (filepath: string): string => {
+  if (!filepath || filepath[0] !== '~') {
+    return filepath;
+  }
+  return path.join(os.homedir(), filepath.slice(1));
 };

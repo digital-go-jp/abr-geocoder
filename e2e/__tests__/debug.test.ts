@@ -6,47 +6,46 @@ import {
 import { runGeocoder } from './common';
 
 
-describe.skip('debug', () => {
+describe('debug', () => {
 
-  test('伏見区久我森の宮町14番地の27', async () => {
-    const input = '伏見区久我森の宮町14番地の27';
+  test('北海道釧路市豊川８－１９', async () => {
+    const input = '北海道釧路市豊川８－１９';
     const { stdout } = await runGeocoder({
       input,
       geocode: {
         outputFormat: OutputFormat.NDJSON,
         searchTarget: SearchTarget.ALL,
       },
+      useGlobalDB: true,
     });
 
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "伏見区久我森の宮町14番地の27"
+        "input": "北海道釧路市豊川８－１９"
       },
       "result": {
-        "output": "京都府京都市伏見区久我森の宮町14-27",
-        "others": [
-          "14-27"
-        ],
-        "match_level": "machiaza",
-        "coordinate_level": "machiaza",
-        "lat": 34.937412,
-        "lon": 135.727766,
-        "lg_code": "261092",
-        "machiaza_id": "0076000",
-        "rsdt_addr_flg": 0,
-        "blk_id": null,
-        "rsdt_id": null,
+        "output": "北海道釧路市豊川町8-19",
+        "others": [],
+        "match_level": "residential_detail",
+        "coordinate_level": "residential_detail",
+        "lat": 43.009050373,
+        "lon": 144.376992784,
+        "lg_code": "012068",
+        "machiaza_id": "0292000",
+        "blk_id": "008",
+        "rsdt_id": "019",
         "rsdt2_id": null,
         "prc_id": null,
-        "pref": "京都府",
+        "pref": "北海道",
         "county": null,
-        "city": "京都市",
-        "ward": "伏見区",
-        "oaza_cho": "久我森の宮町",
+        "city": "釧路市",
+        "ward": null,
+        "oaza_cho": "豊川町",
         "chome": null,
         "koaza": null,
-        "blk_num": null,
-        "rsdt_num": null,
+        "blk_num": "8",
+        "rsdt_addr_flg": 1,
+        "rsdt_num": "19",
         "rsdt_num2": null,
         "prc_num1": null,
         "prc_num2": null,

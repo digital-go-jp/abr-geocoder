@@ -712,17 +712,16 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     });
 
     const skipDupKey = new Set<string>();
-    const rows: OazaChoMachingInfo[] = townRows.map(townRow => {
-      const key = [
-        townRow.oaza_cho || '',
-        townRow.chome || '',
-        townRow.koaza || '',
-      ].join('');
-      if (skipDupKey.has(`${townRow.city_key}:${key}`)) {
-        return null;
+    const results: OazaChoMachingInfo[] = [];
+    townRows.forEach(townRow => {
+
+      // チェック済みパターンはスキップ
+      if (skipDupKey.has(`${townRow.city_key}:${townRow.machiaza_id}`)) {
+        return;
       }
-      skipDupKey.add(`${townRow.city_key}:${key}`);
+      skipDupKey.add(`${townRow.city_key}:${townRow.machiaza_id}`);
       
+      // 情報を補正する
       const city = cityMap.get(townRow.city_key)!;
       const pref = prefMap.get(city.pref_key)!;
 
@@ -733,7 +732,13 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         coordinate_level = MatchLevel.CITY;
       }
 
-      return {
+      const key = [
+        townRow.oaza_cho || '',
+        townRow.chome || '',
+        townRow.koaza || '',
+      ].join('');
+
+      results.push({
         key,
         pref: pref.pref,
         city: city.city,
@@ -752,11 +757,36 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         rep_lat: townRow.rep_lat,
         rep_lon: townRow.rep_lon,
         coordinate_level,
-      };
-    })
-      .filter(x => x !== null);
+      });
 
-    return rows;
+      // 〇〇町の「町」が省略されているケースがあるので、「町」を削除して登録する
+      if (!townRow.oaza_cho || !townRow.oaza_cho.includes('町') || townRow.oaza_cho.includes('町田')) {
+        return;
+      }
+
+      results.push({
+        key: key.replace('町', ''),
+        pref: pref.pref,
+        city: city.city,
+        county: city.county,
+        ward: city.ward,
+        chome: townRow.chome,
+        lg_code: city.lg_code,
+        oaza_cho: townRow.oaza_cho,
+        machiaza_id: townRow.machiaza_id,
+        pref_key: city.pref_key,
+        city_key: townRow.city_key,
+        koaza: townRow.koaza,
+        town_key: townRow.town_key,
+        rsdt_addr_flg: townRow.rsdt_addr_flg,
+        match_level: MatchLevel.from(townRow.match_level),
+        rep_lat: townRow.rep_lat,
+        rep_lon: townRow.rep_lon,
+        coordinate_level,
+      });
+    });
+
+    return results;
   }
   
   getTokyo23TownsGeneratorHash() : string {

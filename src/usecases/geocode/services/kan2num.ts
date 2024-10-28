@@ -102,91 +102,102 @@ const targetPatterns = new Set<string>([
   '丿',
 ]);
 
-export const kan2num = (target: string) => {
-  const result: string[] = [];
-  const stack: string[] = [];
-
-  target = target + SENTINEL;
-  
-  // Monotonic stackを使って解く
-  const N = target.length;
-  for (let i = 0; i < N; i++) {
-    const char = target[i];
-
-    // 漢数字なら、stackに溜め込む
-    if (kanjiNum.has(char)) {
-      stack.push(char);
-      continue;
-    }
-
-    if (!targetPatterns.has(char)) {
-      // ターゲットパターンではないので、漢数字を復元する
-      result.push(...stack);
-      result.push(char);
-      stack.length = 0;
-      continue;
-    }
-
-
-    // 漢数字が現れてきて、別の文字が現れたので、連続した漢数字が終了したことを意味する。
-    // なので、stack に溜まっている漢数字を算用数字に変換する
-    let current = 0;
-    const tempResult = [];
-    while (stack.length > 0) {
-      let val = kanjiNum.get(stack.pop()!)!;
-
-      if (val === 0) {
-        tempResult.push(current.toString());
-        if (current !== 0) {
-          tempResult.push('0');
-        }
-        current = 0;
-        continue;
-
-      } else if (val === 10) {
-        val = 10;
-        // 十が初めて出現する場合、current = 0 なので、
-        // current = 0 + 10 = 10 となる。
-        //
-        // または「"十六"」のように漢数字だけで、最後が「十」でない場合、
-        // current = 6 となっているので
-        // current = 6 + 10 = 16 となる。 
-        if (!stack.length) {
-          current += val;
-          continue;
-        }
-        // 二十一のように、「一」の後に「十」が出てきた場合
-        // 続く「二」を取って「20」を作成した後に「1」を足す
-        const bias10 = kanjiNum.get(stack.pop()!)!;
-        current = bias10 * val + current;
-        tempResult.push(current.toString());
-        current = 0;
-        continue;
-      } else {
-        // 五四三 のように １桁の数字が続く場合、一度リセットする
-        if (current > 0) {
-          tempResult.push(current.toString());
-        }
-        current = 0;
-      }
-      // 「十三」の場合、「三」が先に出現するので、currentにキープ。
-      current += val;
-    }
-    if (current > 0) {
-      tempResult.push(current.toString());
-    }
-    result.push(...tempResult.reverse());
-
-    // iが最後ではない or 最後の文字が漢数字ではない場合、resultに追加
-    if (!kanjiNum.has(char)) {
-      result.push(char);
-    }
+export const kan2num = <T extends string | CharNode | undefined>(target: T): T => {
+  if (target === undefined) {
+    return undefined as T;
   }
-  result.pop();
-  return result.join('');
+  if (target instanceof CharNode) {
+    return kan2numForCharNode(target) as T;
+  }
+  if (typeof target === 'string') {
+
+    const result: string[] = [];
+    const stack: string[] = [];
+
+    const target2 = target + SENTINEL;
+    
+    // Monotonic stackを使って解く
+    const N = target2.length;
+    for (let i = 0; i < N; i++) {
+      const char = target2[i];
+
+      // 漢数字なら、stackに溜め込む
+      if (kanjiNum.has(char)) {
+        stack.push(char);
+        continue;
+      }
+
+      if (!targetPatterns.has(char)) {
+        // ターゲットパターンではないので、漢数字を復元する
+        result.push(...stack);
+        result.push(char);
+        stack.length = 0;
+        continue;
+      }
+
+
+      // 漢数字が現れてきて、別の文字が現れたので、連続した漢数字が終了したことを意味する。
+      // なので、stack に溜まっている漢数字を算用数字に変換する
+      let current = 0;
+      const tempResult = [];
+      while (stack.length > 0) {
+        let val = kanjiNum.get(stack.pop()!)!;
+
+        if (val === 0) {
+          tempResult.push(current.toString());
+          if (current !== 0) {
+            tempResult.push('0');
+          }
+          current = 0;
+          continue;
+
+        } else if (val === 10) {
+          val = 10;
+          // 十が初めて出現する場合、current = 0 なので、
+          // current = 0 + 10 = 10 となる。
+          //
+          // または「"十六"」のように漢数字だけで、最後が「十」でない場合、
+          // current = 6 となっているので
+          // current = 6 + 10 = 16 となる。 
+          if (!stack.length) {
+            current += val;
+            continue;
+          }
+          // 二十一のように、「一」の後に「十」が出てきた場合
+          // 続く「二」を取って「20」を作成した後に「1」を足す
+          const bias10 = kanjiNum.get(stack.pop()!)!;
+          current = bias10 * val + current;
+          tempResult.push(current.toString());
+          current = 0;
+          continue;
+        } else {
+          // 五四三 のように １桁の数字が続く場合、一度リセットする
+          if (current > 0) {
+            tempResult.push(current.toString());
+          }
+          current = 0;
+        }
+        // 「十三」の場合、「三」が先に出現するので、currentにキープ。
+        current += val;
+      }
+      if (current > 0) {
+        tempResult.push(current.toString());
+      }
+      result.push(...tempResult.reverse());
+
+      // iが最後ではない or 最後の文字が漢数字ではない場合、resultに追加
+      if (!kanjiNum.has(char)) {
+        result.push(char);
+      }
+    }
+    result.pop();
+    return result.join('') as T;
+  }
+  
+  throw `unsupported value type`;
 };
 
-export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | undefined => {
+const kan2numForCharNode = (target: CharNode | undefined) : CharNode | undefined => {
   const result: CharNode[] = [];
   const buffer: CharNode[] = [];
   

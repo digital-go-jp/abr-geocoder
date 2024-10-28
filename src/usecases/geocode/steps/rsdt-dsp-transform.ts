@@ -54,6 +54,14 @@ export class RsdtDspTransform extends Transform {
     // ------------------------
     const trie = new TrieAddressFinder<RsdtDspInfo>();
     for await (const query of queries.values()) {
+      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key) {
+        continue;
+      }
+      if (query.city === '京都市') {
+        // 京都市がマッチしている場合、スキップする
+        // (京都市は住居表示を行っていない)
+        continue;
+      }
       if (query.searchTarget === SearchTarget.PARCEL) {
         // 地番検索が指定されている場合、このステップはスキップする
         continue;

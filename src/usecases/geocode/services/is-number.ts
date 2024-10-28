@@ -25,10 +25,16 @@
 import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
-export const isDigit = (char: string): boolean => {
-  return RegExpEx.create('^[0-9]$').test(char);
+export const isDigit = (char: string | CharNode | undefined): boolean => {
+  if (char === undefined) {
+    return false;
+  }
+  if (typeof char === 'string') {
+    return RegExpEx.create('^[0-9]$').test(char);
+  }
+  return isDigitForCharNode(char);
 };
 
-export const isDigitForCharNode = (charNode: CharNode | undefined): boolean => {
+const isDigitForCharNode = (charNode: CharNode | undefined): boolean => {
   return charNode && !charNode.ignore && charNode.char && RegExpEx.create('^[0-9]$').test(charNode.char) || false;
 };

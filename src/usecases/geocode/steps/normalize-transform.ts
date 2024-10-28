@@ -28,11 +28,11 @@ import { Transform, TransformCallback } from 'node:stream';
 import { Query, QueryInput } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { insertSpaceBeforeRoomOrFacility } from '../services/insert-space-before-room-or-facility';
-import { isDigitForCharNode } from '../services/is-number';
-import { jisKanjiForCharNode } from '../services/jis-kanji';
-import { kan2numForCharNode } from '../services/kan2num';
-import { toHankakuAlphaNumForCharNode } from '../services/to-hankaku-alpha-num';
-import { toHiraganaForCharNode } from '../services/to-hiragana';
+import { isDigit } from '../services/is-number';
+import { jisKanji } from '../services/jis-kanji';
+import { kan2num } from '../services/kan2num';
+import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
+import { toHiragana } from '../services/to-hiragana';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class NormalizeTransform extends Transform {
@@ -104,7 +104,7 @@ export class NormalizeTransform extends Transform {
     );
     
     // 英数字を半角にする
-    address = toHankakuAlphaNumForCharNode(address);
+    address = toHankakuAlphaNum<CharNode | undefined>(address);
 
     // 数字＋ダッシュ または ダッシュ+数字 の組み合わせのとき、ダッシュを DASHにする
     // (ダッシュの記号は類似するものが多いので、統一する)
@@ -133,17 +133,17 @@ export class NormalizeTransform extends Transform {
     );
 
     // 半角カナ・全角カナ => 平仮名
-    address = toHiraganaForCharNode(address);
+    address = toHiragana(address);
 
     // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
+    address = jisKanji(address);
 
     // DBに島の名前が入っていないので、消しておく
     address = address?.replace('八丈島', '');
     address = address?.replace('三宅島', '');
     
     // 漢数字 => 算用数字
-    address = kan2numForCharNode(address);
+    address = kan2num(address);
 
     // 大字が「番町」の場合があるので、置換する
     // address = address?.replace(RegExpEx.create('(高松市|岡山市北区|北区)番町', 'g'), `$1${OAZA_BANCHO}`);
@@ -197,7 +197,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
     const tmp = charNodeToString(stack) + pointer.char;
     const nextPointer = pointer.next?.moveToNext();
     switch (true) {
-      case isDigitForCharNode(pointer): {
+      case isDigit(pointer): {
       // 1番地999, 2番丁999, 3番街999, 4番町999, 5丁目999, 55線86番地, 66地割77, 24軒2条3丁目
         if (RegExpEx.create('([0-9]+)番[丁地街][の目]?([0-9]+)$').test(tmp) ||
             RegExpEx.create('([0-9]+)丁目?([0-9]+)$').test(tmp) ||
@@ -208,7 +208,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
             RegExpEx.create('([0-9]+)の町([0-9]+)$').test(tmp)) {
           
           const buffer: string[] = [];
-          while (!isDigitForCharNode(stack.at(-1))) {
+          while (!isDigit(stack.at(-1))) {
             const removed = stack.pop();
             if (removed && removed.originalChar) {
               buffer.push(removed.originalChar);
@@ -236,7 +236,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
 
       // (数字) + [東西南北] + (数字) の場合
       // ex. "北16西2-1-1" => "北16-西2-1-1"
-      case RegExpEx.create('[0-9][東西南北]$').test(tmp) && nextPointer && isDigitForCharNode(nextPointer): {
+      case RegExpEx.create('[0-9][東西南北]$').test(tmp) && nextPointer && isDigit(nextPointer): {
         // DASHを入れる
         stack.push(new CharNode({
           char: DASH,
@@ -246,7 +246,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
       }
 
       // 番地の + (数字) の場合
-      case RegExpEx.create('番地[の目]$').test(tmp) && nextPointer && isDigitForCharNode(nextPointer): {
+      case RegExpEx.create('番地[の目]$').test(tmp) && nextPointer && isDigit(nextPointer): {
         // 「番地」を取る
         stack.pop();
         stack.pop();
@@ -259,7 +259,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
         break;
       }
       // 番地 + (数字) の場合
-      case tmp.endsWith('番地') && nextPointer && isDigitForCharNode(nextPointer): {
+      case tmp.endsWith('番地') && nextPointer && isDigit(nextPointer): {
       // 「番」を取る
         stack.pop();
         // DASHを入れる
@@ -283,9 +283,9 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
       //   break;
       // }
       // (数字) + 番 + (数字) の場合
-      case isDigitForCharNode(stack.at(-1)) && 
+      case isDigit(stack.at(-1)) && 
         tmp.endsWith('番') &&
-        nextPointer && isDigitForCharNode(nextPointer):
+        nextPointer && isDigit(nextPointer):
       {
       // DASHを入れる
         stack.push(new CharNode({
@@ -296,7 +296,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
         break;
       }
       // 番地 + (数字以外) の場合
-      case tmp.endsWith('番地') && nextPointer && !isDigitForCharNode(nextPointer) && !RegExpEx.create('[の目]').test(nextPointer?.char || ''): {
+      case tmp.endsWith('番地') && nextPointer && !isDigit(nextPointer) && !RegExpEx.create('[の目]').test(nextPointer?.char || ''): {
       // 「番」を取る
         stack.pop();
         // スペースを入れる
@@ -341,7 +341,7 @@ const replaceBanchome = (address: CharNode | undefined): CharNode | undefined =>
 
   const tmp = charNodeToString(stack);
   if (RegExpEx.create('([0-9]+)[番号線][丁地街町]?(?![室棟館])$').test(tmp)) {
-    while (!isDigitForCharNode(stack.at(-1))) {
+    while (!isDigit(stack.at(-1))) {
       stack.pop();
     }
   }

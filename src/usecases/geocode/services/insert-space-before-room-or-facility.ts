@@ -23,7 +23,7 @@
  */
 import { SPACE, KANJI_NUMS, DASH } from "@config/constant-values";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
-import { isDigitForCharNode } from "./is-number";
+import { isDigit } from "./is-number";
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNode | undefined => {
@@ -51,14 +51,14 @@ export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): 
 
     // DASH + (数字) + (数字以外)の場合、(数字)+(数字以外)の間にスペースを入れる
     if (
-      isDigitForCharNode(stack.at(-1)) &&
-      !isDigitForCharNode(top) &&
+      isDigit(stack.at(-1)) &&
+      !isDigit(top) &&
       !RegExpEx.create(`[号番通条棟階${DASH}${SPACE}a-z]`, 'i').test(top.char)
     ) {
       let foundDash = false;
       for (let i = -2; i >= -stack.length + 1; i--) {
         const node = stack.at(i);
-        if (isDigitForCharNode(node)) {
+        if (isDigit(node)) {
           continue;
         }
         foundDash = node?.char === DASH;
@@ -80,12 +80,12 @@ export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): 
     if (
       (
         kanjiNums.test(stack.at(-2)?.originalChar || '') ||
-        isDigitForCharNode(stack.at(-2))
+        isDigit(stack.at(-2))
       ) &&
       RegExpEx.create('[のノ丿之]').test(stack.at(-1)?.char || '') &&
       (
         kanjiNums.test(top?.originalChar || '') ||
-        isDigitForCharNode(top)
+        isDigit(top)
       )
     ) {
       // 「の」を取る
@@ -102,7 +102,7 @@ export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): 
     }
 
     // 算用数字と漢数字の間にスペースを入れる
-    if (isDigitForCharNode(top) && !kanjiNums.test(top.originalChar!) &&
+    if (isDigit(top) && !kanjiNums.test(top.originalChar!) &&
       head.next?.moveToNext()?.char !== DASH &&  // (数字)+(漢数字の「一」)+(数字)の場合、「一」をDashに置き換えるため
       kanjiNums.test(head.next?.moveToNext()?.originalChar || '')) {
       const space = new CharNode({
@@ -116,7 +116,7 @@ export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): 
 
     // 12-34-56号室のとき、4-5の間のDashをスペースに置き換える
     // https://github.com/digital-go-jp/abr-geocoder/issues/157
-    if (isDigitForCharNode(stack.at(-1)) && 
+    if (isDigit(stack.at(-1)) && 
       ((top.char === '号' && head.next?.char === '室') || 
       RegExpEx.create('[a-z]', 'i').test(top.char))
     ) {
@@ -124,7 +124,7 @@ export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): 
       top.next = head.next;
       head.next = top;
       // 数字を headにつなげる
-      while (isDigitForCharNode(stack.at(-1))) {
+      while (isDigit(stack.at(-1))) {
         const num = stack.pop()!;
         num.next = head.next;
         head.next = num;

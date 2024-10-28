@@ -30,7 +30,7 @@ import { OazaChoTrieFinder } from '../models/oaza-cho-trie-finder';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
-import { isDigitForCharNode } from '../services/is-number';
+import { isDigit } from '../services/is-number';
 
 export class OazaChomeTransform extends Transform {
 
@@ -141,12 +141,12 @@ export class OazaChomeTransform extends Transform {
 
           // ◯丁目 + 数字が残った場合、ミスマッチの可能性が高い
           if (matched &&
-            isDigitForCharNode(result.unmatched) &&
+            isDigit(result.unmatched) &&
             (result.info?.oaza_cho.includes('丁目') || result.info?.chome.includes('丁目'))) {
             matched = false;
           }
           // ◯◯地割 + 数字が残った場合、ミスマッチの可能性が高い
-          if (matched && result.info?.koaza.includes('地割') && isDigitForCharNode(result.unmatched)) {
+          if (matched && result.info?.koaza.includes('地割') && isDigit(result.unmatched)) {
             matched = false;
           }
           return matched;
@@ -220,6 +220,8 @@ export class OazaChomeTransform extends Transform {
     if (query.city === '海田町' && query.pref === '広島県' && query.county === '安芸郡') {
       address = address?.replaceAll(RegExpEx.create('^(南)?99町', 'g'), '$1つくも町');
     }
+
+    address = OazaChoTrieFinder.normalize(address);
 
     return query.copy({
       tempAddress: address,

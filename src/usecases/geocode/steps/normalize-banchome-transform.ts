@@ -26,7 +26,7 @@ import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
-import { isDigitForCharNode } from '../services/is-number';
+import { isDigit } from '../services/is-number';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class NormalizeBanchomeTransform extends Transform {
@@ -110,9 +110,9 @@ export class NormalizeBanchomeTransform extends Transform {
       // }
 
       // 「第1地番」「第2地区」のようになっているときは、「第」を取る
-      if (stack.at(-2)?.char === '第' && isDigitForCharNode(top)) {
+      if (stack.at(-2)?.char === '第' && isDigit(top)) {
         let pointer2: CharNode | undefined = head.next?.moveToNext();
-        while (pointer2 && isDigitForCharNode(pointer2)) {
+        while (pointer2 && isDigit(pointer2)) {
           pointer2 = pointer2.next?.moveToNext();
         }
         if (pointer2?.char === '地' && 
@@ -138,17 +138,17 @@ export class NormalizeBanchomeTransform extends Transform {
       }
 
       // 他の置換により、「1番(DASH)」「2番地(DASH)」「3号(DASH)「4条(DASH)」「5地割(DASH)」「6地区(DASH)」になっているときは、DASHだけにする
-      if ((isDigitForCharNode(stack.at(-2)) && stack.at(-1)?.char === '番' && top.char === '地' && head.next?.moveToNext()?.char === DASH) ||
-        (isDigitForCharNode(stack.at(-1)) && top.char === '番' && head.next?.moveToNext()?.char === DASH) ||
-        (isDigitForCharNode(stack.at(-1)) && top.char === '号' && head.next?.moveToNext()?.char === DASH) ||
-        (isDigitForCharNode(stack.at(-1)) && top.char === '条' && head.next?.moveToNext()?.char === DASH) ||
-        (isDigitForCharNode(stack.at(-1)) && top.char === '丁' && head.next?.moveToNext()?.char === '目') ||
+      if ((isDigit(stack.at(-2)) && stack.at(-1)?.char === '番' && top.char === '地' && head.next?.moveToNext()?.char === DASH) ||
+        (isDigit(stack.at(-1)) && top.char === '番' && head.next?.moveToNext()?.char === DASH) ||
+        (isDigit(stack.at(-1)) && top.char === '号' && head.next?.moveToNext()?.char === DASH) ||
+        (isDigit(stack.at(-1)) && top.char === '条' && head.next?.moveToNext()?.char === DASH) ||
+        (isDigit(stack.at(-1)) && top.char === '丁' && head.next?.moveToNext()?.char === '目') ||
         // (isDigitForCharNode(stack.at(-1)) && top.char === '地' && head.next?.moveToNext()?.char === '割') ||
         // (isDigitForCharNode(stack.at(-1)) && top.char === '地' && head.next?.moveToNext()?.char === '区') ||
-        (isDigitForCharNode(stack.at(-1)) && top.char === '町' && head.next?.moveToNext()?.char === '目')) {
+        (isDigit(stack.at(-1)) && top.char === '町' && head.next?.moveToNext()?.char === '目')) {
 
         const replaced: string[] = [];
-        while (stack.length > 0 && !isDigitForCharNode(stack.at(-1))) {
+        while (stack.length > 0 && !isDigit(stack.at(-1))) {
           const removed = stack.pop();
           if (removed && removed.originalChar) {
             replaced.push(removed.originalChar);
@@ -163,7 +163,7 @@ export class NormalizeBanchomeTransform extends Transform {
       }
 
       // 1番地, 2番街, 3番地, 4番館, 5号棟, 6号室, 7号館, 8号室 など
-      if (isDigitForCharNode(stack.at(-1)) &&
+      if (isDigit(stack.at(-1)) &&
       RegExpEx.create('[番号]').test(top.char || '')) {
         const removed: string[] = [];
         if (head.next?.char === '地') {
@@ -174,7 +174,7 @@ export class NormalizeBanchomeTransform extends Transform {
           head.next = head.next.next;
         }
         // 「1番地の3」の可能性もあるので、「の」があれば取る
-        if (head.next?.char === 'の' && isDigitForCharNode(head.next?.next)) {
+        if (head.next?.char === 'の' && isDigit(head.next?.next)) {
           if (head.next.originalChar) {
             removed.push(head.next.originalChar);
           }
@@ -195,7 +195,7 @@ export class NormalizeBanchomeTransform extends Transform {
 
         // 3号「室,棟,区,館」の場合、3の前に DASHがあれば、SPACEにする
         const buffer: CharNode[] = [];
-        while (stack.length > 0 && isDigitForCharNode(stack.at(-1))) {
+        while (stack.length > 0 && isDigit(stack.at(-1))) {
           buffer.push(stack.pop()!);
         }
         while (RegExpEx.create(`[号番${DASH}]`).test(stack.at(-1)?.char || '')) {
@@ -213,7 +213,7 @@ export class NormalizeBanchomeTransform extends Transform {
         head.next = top;
         continue;
       }
-      if (isDigitForCharNode(stack.at(-1)) && RegExpEx.create('[のノ之]').test(top.char || '') && isDigitForCharNode(head.next)) {
+      if (isDigit(stack.at(-1)) && RegExpEx.create('[のノ之]').test(top.char || '') && isDigit(head.next)) {
         top.char = DASH;
         top.originalChar = DASH;
         top.next = head.next;

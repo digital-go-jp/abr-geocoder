@@ -1273,5 +1273,69 @@
       "prc_num2": null,
       "prc_num3": null
     }
+  },{
+    "query": {
+      "input": "愛知県豊田市三軒町６－２０－１"
+    },
+    "result": {
+      "output": "愛知県豊田市三軒町六丁目20-1",
+      "others": [],
+      "match_level": "parcel",
+      "coordinate_level": "machiaza_detail",
+      "lat": 35.085199,
+      "lon": 137.140057,
+      "lg_code": "232114",
+      "machiaza_id": "0195006",
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": "000200000100000",
+      "pref": "愛知県",
+      "county": null,
+      "city": "豊田市",
+      "ward": null,
+      "oaza_cho": "三軒町",
+      "chome": "六丁目",
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": "20",
+      "prc_num2": "1",
+      "prc_num3": null
+    }
+  },{
+    "query": {
+      "input": "北海道釧路市豊川８－１９"
+    },
+    "result": {
+      "output": "北海道釧路市豊川町8-19",
+      "others": [],
+      "score": 0.92,
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 43.009050373,
+      "lon": 144.376992784,
+      "lg_code": "012068",
+      "machiaza_id": "0292000",
+      "blk_id": "008",
+      "rsdt_id": "019",
+      "rsdt2_id": "19",
+      "prc_id": null,
+      "pref": "北海道",
+      "county": null,
+      "city": "釧路市",
+      "ward": null,
+      "oaza_cho": "豊川町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "8",
+      "rsdt_addr_flg": 1,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
   }
 ]

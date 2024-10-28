@@ -229,16 +229,25 @@ const katakanaMap = new Map<string, string>([
   ['之', 'ノ'],  // 堀之内 → 堀ノ内
 ]);
 
-export const toKatakana = (target: string) => {
-  const buffer: string[] = [];
-  for (const char of target) {
-    buffer.push(katakanaMap.get(char) || char);
+export const toKatakana = <T extends string | CharNode | undefined>(target: T): T => {
+  if (target === undefined) {
+    return undefined as T;
   }
-  
-  return buffer.join('');
+  if (typeof target === 'string') {
+    const buffer: string[] = [];
+    for (const char of target) {
+      buffer.push(katakanaMap.get(char) || char);
+    }
+    
+    return buffer.join('') as T;
+  }
+  if (target instanceof CharNode) {
+    return toKatakanaForCharNode(target) as T;
+  }
+  throw `unsupported value type`;
 };
 
-export const toKatakanaForCharNode = (target: CharNode | undefined): CharNode | undefined => {
+const toKatakanaForCharNode = (target: CharNode | undefined): CharNode | undefined => {
   let head = target;
   const root = target;
   while (head && head.char) {

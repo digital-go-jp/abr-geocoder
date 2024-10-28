@@ -60,7 +60,7 @@ type InternalResult = {
   ambiguous: boolean;
 };
 
-function createTrieNode<T>(): ITrieNode<T[]> {
+function createTrieNode<T extends {}>(): ITrieNode<T[]> {
   const result: ITrieNode<T[]> = {
     itemHashes: undefined,
     children: new Map(),
@@ -109,7 +109,12 @@ export class TrieAddressFinder<T> {
         parent = trie;
       }
     }
-    const itemHash = crc32Lib.fromRecord(value as {});
+
+    const excludeKey = {
+      ...value,
+      key: undefined,
+    };
+    const itemHash = crc32Lib.fromRecord(excludeKey);
     if (this.items.has(itemHash)) {
       return;
     }
@@ -155,10 +160,10 @@ export class TrieAddressFinder<T> {
     const results: TrieFinderResult<T>[] = [];
 
     for (const [itemHash, internalResult] of searchResults.entries()) {
+      const item = this.items.get(itemHash);
       if (internalResult.depth === 0) {
         continue;
       }
-      const item = this.items.get(itemHash);
       results.push(
         new TrieFinderResult<T>({
           info: item,

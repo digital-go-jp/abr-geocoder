@@ -32,7 +32,7 @@ import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
-import { isDigitForCharNode } from '../services/is-number';
+import { isDigit } from '../services/is-number';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class ParcelTransform extends Transform {
@@ -249,7 +249,7 @@ export class ParcelTransform extends Transform {
         // SPACE, DASH, 漢数字、または終了なら、追加する
         const tmpBuffer: string[] = [];
         let pointer: CharNode | undefined = head;
-        while (pointer && isDigitForCharNode(pointer) && !pointer.ignore) {
+        while (pointer && isDigit(pointer) && !pointer.ignore) {
           tmpBuffer.push(pointer.char!);
           pointer = pointer.next;
         }
@@ -336,7 +336,7 @@ export class ParcelTransform extends Transform {
         // SPACE, DASH, 漢数字、または終了なら、追加する
         const tmpBuffer: string[] = [];
         let pointer: CharNode | undefined = head;
-        while (pointer && isDigitForCharNode(pointer) && !pointer.ignore) {
+        while (pointer && isDigit(pointer) && !pointer.ignore) {
           tmpBuffer.push(pointer.char!);
           pointer = pointer.next;
         }

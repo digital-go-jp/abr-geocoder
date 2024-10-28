@@ -1,18 +1,18 @@
 import { describe, expect, test } from "@jest/globals";
-import { jisKanji, jisKanjiForCharNode } from "../jis-kanji";
+import { jisKanji } from "../jis-kanji";
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
-describe("jisKanjiForCharNode", () => {
+describe("jisKanji", () => {
   test("should change 宇都宮 to 宇都宮", () => {
     const request = CharNode.create("宇都宮");
-    const result = jisKanjiForCharNode(request);
+    const result = jisKanji(request);
     expect(result?.toProcessedString()).toBe("宇都宮");
     expect(result?.toOriginalString()).toBe("宇都宮");
   });
 
   test("should change 楠木町 to 楠町", () => {
     const request = CharNode.create("京都市中京区間之町通竹屋町下る楠木町601-1");
-    const result = jisKanjiForCharNode(request);
+    const result = jisKanji(request);
     expect(result?.toProcessedString()).toBe("京都市中京区間之町通竹屋町下る楠町601-1");
     expect(result?.toOriginalString()).toBe("京都市中京区間之町通竹屋町下る楠木町601-1");
   });
