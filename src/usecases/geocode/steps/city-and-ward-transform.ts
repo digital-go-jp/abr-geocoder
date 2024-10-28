@@ -104,7 +104,6 @@ export class CityAndWardTransform extends Transform {
         results.add(query);
       }
     }
-
     next(null, results);
   }
 }

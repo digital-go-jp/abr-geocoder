@@ -1,10 +1,9 @@
-import { BANGAICHI, DASH, MUBANCHI, OAZA_BANCHO } from "@config/constant-values";
+import { BANGAICHI, DASH, MUBANCHI, OAZA_BANCHO, SPACE } from "@config/constant-values";
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import fs from 'node:fs';
 import path from 'node:path';
-import { deserialize, serialize } from "node:v8";
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from "../services/to-hankaku-alpha-num";
@@ -45,7 +44,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     address = address?.replace(RegExpEx.create('番[の目]'), DASH);
 
     // 「大字」「字」がある場合は削除する
-    address = address.replace(RegExpEx.create('大?字'), '');
+    address = address.replaceAll(RegExpEx.create('大?字', 'g'), '');
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
@@ -75,6 +74,10 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
 
     address = address?.replace(RegExpEx.create(`${DASH}+$`), '');
     
+    address = address?.
+      replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
+      replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+
     return address;
   }
 
@@ -90,8 +93,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
       const encoded = await fs.promises.readFile(cacheFilePath);
-      const treeNodes = deserialize(encoded);
-      tree.root = treeNodes;
+      tree.import(encoded);
       return tree;
     }
 
@@ -110,7 +112,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     }
 
     // キャッシュファイルに保存
-    const encoded = serialize(tree.root);
+    const encoded = tree.export();
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;

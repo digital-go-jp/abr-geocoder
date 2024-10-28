@@ -27,6 +27,7 @@ import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { fromSharedMemory, toSharedMemory } from './shared-memory';
 import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from './thread-task';
+import { DebugLogger } from '../logger/debug-logger';
 
 export class WorkerPoolTaskInfo<T, R> extends AsyncResource {
 
@@ -74,8 +75,8 @@ export class WorkerThread<I, T, R> extends Worker {
       workerData: params.initData,
       name,
       // execArgv: ['--inspect-brk'],
-      stdout: false,
-      stderr: false,
+      stdout: false,  // Sets false to pass the output to the parent thread.
+      stderr: false,  // Sets false to pass the output to the parent thread.
     });
 
     this.on('message', (shareMemory: Uint8Array) => {
@@ -103,26 +104,26 @@ export class WorkerThread<I, T, R> extends Worker {
       resolve(received.data);
     });
   }
-  private initAsync() {
+  private async initAsync() {
+    const logger = DebugLogger.getInstance();
     return new Promise((
       resolve: (_?: unknown) => void,
       // reject: (_?: unknown) => void,
     ) => {
 
-      const listener = (shareMemory: Uint8Array) => {
+      this.once('message', (shareMemory: Uint8Array) => {
         const received = fromSharedMemory<ThreadPong>(shareMemory);
         if (received.kind !== 'pong') {
           return;
         }
-        this.off('message', listener);
+        logger.info(`received: ${received.kind}`);
+        // this.off('message', listener);
         resolve();
-      };
-
-      this.on('message', listener);
-      this.postMessage(toSharedMemory({
+      });
+      this.postMessage(toSharedMemory<ThreadPing>({
         kind: 'ping',
-      } as ThreadPing));
-    });
+      }));
+    })
   }
 
   // スレッド側にタスクを送る
@@ -206,31 +207,37 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
 
     signal?: AbortSignal;
   }) {
-    const addWorkerEvent = Symbol('addWorker');
+    // const addWorkerEvent = Symbol('addWorker');
 
-    const onAddWorkerEvent = async () => {
-      if (this.workers.length === params.maxConcurrency) {
-        this.off(addWorkerEvent, onAddWorkerEvent);
-        return;
-      }
-      await this.addWorker(params);
-      if (params.signal?.aborted || this.abortControl.signal.aborted) {
-        this.off(addWorkerEvent, onAddWorkerEvent);
-        this.close();
-        return;
-      }
-      setImmediate(() => {
-        this.emit(addWorkerEvent);
-      });
-    };
+    // const onAddWorkerEvent = async () => {
+    //   if (this.workers.length === params.maxConcurrency) {
+    //     this.off(addWorkerEvent, onAddWorkerEvent);
+    //     return;
+    //   }
+    //   await this.addWorker(params);
+    //   if (params.signal?.aborted || this.abortControl.signal.aborted) {
+    //     this.off(addWorkerEvent, onAddWorkerEvent);
+    //     this.close();
+    //     return;
+    //   }
+    //   setImmediate(() => {
+    //     this.emit(addWorkerEvent);
+    //   });
+    // };
     
     params.signal?.addEventListener('abort', () => {
       this.workers.forEach(worker => worker.terminate());
     });
 
-    await this.addWorker(params);
-    this.on(addWorkerEvent, onAddWorkerEvent);
-    this.emit(addWorkerEvent);
+    const logger = DebugLogger.getInstance();
+    const tasks = [];
+    for (let i = 0; i < params.maxConcurrency; i++) {
+      tasks.push(this.addWorker(params));
+    }
+    await Promise.all(tasks);
+
+    // this.on(addWorkerEvent, onAddWorkerEvent);
+    //this.emit(addWorkerEvent);
 
     // タスクが挿入 or 1つタスクが完了したら、次のタスクを実行する
     // (ラウンドロビン方式で、各スレッドに均等にタスクを割り当てる)
@@ -255,6 +262,9 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
           this.emit(this.kWorkerFreedEvent);
         });
     });
+
+    // タスクを実行する
+    this.emit(this.kWorkerFreedEvent);
   }
 
   private async createWorker(params: {
@@ -265,7 +275,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     if (params.signal?.aborted || this.abortControl.signal.aborted) {
       return;
     }
-    
+
     const worker = await WorkerThread.create<InitData, TransformData, ReceiveData>(params);
     worker.on('error', async (error: Error) => {
       worker.removeAllListeners();
@@ -300,9 +310,6 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
         this.workers[idx] = newWorker;
       }
       worker.terminate();
-
-      // 次のタスクを実行する
-      this.emit(this.kWorkerFreedEvent);
     });
     if (this.abortControl.signal.aborted) {
       worker.terminate();
@@ -331,10 +338,6 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       this.emit('custom_message', data);
     });
     this.workers.push(worker);
-
-    // エラーのときに再作成する場合、キューにタスクが溜まっているかもしれないので
-    // 次のタスクを実行する
-    this.emit(this.kWorkerFreedEvent);
   }
 
   // 全スレッドに対してメッセージを送信する

@@ -4,13 +4,13 @@ import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
 import fs from 'node:fs';
 import path from 'node:path';
-import { deserialize, serialize } from "node:v8";
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from "../services/to-hankaku-alpha-num";
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder } from "./trie/trie-finder";
+import { MatchLevel } from "@domain/types/geocode/match-level";
 
 export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
 
@@ -62,8 +62,7 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
       const encoded = await fs.promises.readFile(cacheFilePath);
-      const treeNodes = deserialize(encoded);
-      tree.root = treeNodes;
+      tree.import(encoded);
       return tree;
     }
 
@@ -74,23 +73,35 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
     for (const row of rows) {
       row.oaza_cho = toHankakuAlphaNum(row.oaza_cho);
       row.chome = toHankakuAlphaNum(row.chome);
-      row.koaza = toHankakuAlphaNum(row.koaza);
+      switch (row.match_level) {
+        case MatchLevel.MACHIAZA: {
+          // 通り名がヒットしない場合、大字だけで検索を行う
+          tree.append({
+            key: KyotoStreetTrieFinder.normalizeStr(row.oaza_cho),
+            value: row,
+          });
+          break;
+        }
 
-      // (通り名)+(大字)
-      tree.append({
-        key: KyotoStreetTrieFinder.normalizeStr(row.key),
-        value: row,
-      });
+        case MatchLevel.MACHIAZA_DETAIL: {
+          row.koaza = toHankakuAlphaNum(row.koaza);
+  
+          // (通り名)+(大字)
+          tree.append({
+            key: KyotoStreetTrieFinder.normalizeStr(row.key),
+            value: row,
+          });
+          break;
+        }
 
-      // 通り名が間違えている（もしくはDBに該当がない）場合に備えて、大字だけでもヒットさせる
-      tree.append({
-        key: KyotoStreetTrieFinder.normalizeStr(row.oaza_cho),
-        value: row,
-      });
+        default:
+          // Do nothing here
+          break;
+      }
     }
 
     // キャッシュファイルに保存
-    const encoded = serialize(tree.root);
+    const encoded = tree.export();
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;

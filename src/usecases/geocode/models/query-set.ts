@@ -68,4 +68,8 @@ export class QuerySet {
     this.memory.clear();
   }
   
+  size() {
+    return this.memory.size;
+  }
+  
 }

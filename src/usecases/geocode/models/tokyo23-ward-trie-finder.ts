@@ -4,7 +4,6 @@ import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { CityMatchingInfo } from "@domain/types/geocode/city-info";
 import fs from 'node:fs';
 import path from 'node:path';
-import { deserialize, serialize } from "node:v8";
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
@@ -45,8 +44,7 @@ export class Tokyo23WardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
     if (isExist) {
       // キャッシュがあれば、キャッシュから読み込む
       const encoded = await fs.promises.readFile(cacheFilePath);
-      const treeNodes = deserialize(encoded);
-      tree.root = treeNodes;
+      tree.import(encoded);
       return tree;
     }
 
@@ -62,7 +60,7 @@ export class Tokyo23WardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
     }
 
     // キャッシュファイルに保存
-    const encoded = serialize(tree.root);
+    const encoded = tree.export();
     await fs.promises.writeFile(cacheFilePath, encoded);
 
     return tree;

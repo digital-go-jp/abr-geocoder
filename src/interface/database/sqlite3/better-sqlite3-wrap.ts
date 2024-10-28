@@ -41,12 +41,12 @@ export class Sqlite3Wrapper extends BetterSqlite3 {
     if (params.readonly) {
       this.pragma('journal_mode = OFF');
       this.pragma('synchronous = OFF');
+      this.
     } else {
       this.pragma('journal_mode = WAL');
     }
     this.pragma('cache_size = -20000');
     this.pragma('threads = SQLITE_DEFAULT_WORKER_THREADS');
-
   }
 
   prepare<P extends unknown[] | {} = unknown[], R = unknown>(sql: string) {

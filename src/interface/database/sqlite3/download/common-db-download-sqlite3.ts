@@ -295,11 +295,13 @@ export class CommonDbDownloadSqlite3
       INSERT INTO ${DbTableName.TOWN} (
         town_key,
         city_key,
+        ${DataField.MACHIAZA_ID.dbColumn},
         ${DataField.REP_LAT.dbColumn},
         ${DataField.REP_LON.dbColumn}
       ) VALUES (
         @town_key,
         @city_key,
+        @machiaza_id,
         @rep_lat,
         @rep_lon
       ) ON CONFLICT (town_key) DO UPDATE SET

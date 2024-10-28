@@ -21,6 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+import { MatchLevel } from "./match-level";
+
 export type KoazaMachingInfo = {
   key: string;
   oaza_cho: string;
@@ -38,4 +41,6 @@ export type KoazaMachingInfo = {
   city_key: string;
   pref_key: string;
   town_key: string;
+  match_level: MatchLevel;
+  coordinate_level: MatchLevel;
 };

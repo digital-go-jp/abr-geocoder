@@ -8,8 +8,8 @@ import { runGeocoder } from './common';
 
 describe('debug', () => {
 
-  test('東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番', async () => {
-    const input = '東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番';
+  test('伏見区久我森の宮町14番地の27', async () => {
+    const input = '伏見区久我森の宮町14番地の27';
     const { stdout } = await runGeocoder({
       input,
       geocode: {
@@ -20,33 +20,32 @@ describe('debug', () => {
 
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+        "input": "伏見区久我森の宮町14番地の27"
       },
       "result": {
-        "output": "東京都港区芝浦三丁目1-1 # all:住居表示, rsdt:住居表示, parcel:地番",
+        "output": "京都府京都市伏見区久我森の宮町14-27",
         "others": [
-          "-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+          "14-27"
         ],
-        "score": 0.94,
-        "match_level": "residential_block",
-        "coordinate_level": "residential_block",
-        "lat": 35.644986,
-        "lon": 139.748888,
-        "lg_code": "131032",
-        "machiaza_id": "0005003",
-        "rsdt_addr_flg": 1,
-        "blk_id": "001",
+        "match_level": "machiaza",
+        "coordinate_level": "machiaza",
+        "lat": 34.937412,
+        "lon": 135.727766,
+        "lg_code": "261092",
+        "machiaza_id": "0076000",
+        "rsdt_addr_flg": 0,
+        "blk_id": null,
         "rsdt_id": null,
         "rsdt2_id": null,
         "prc_id": null,
-        "pref": "東京都",
+        "pref": "京都府",
         "county": null,
-        "city": "港区",
-        "ward": null,
-        "oaza_cho": "芝浦",
-        "chome": "三丁目",
+        "city": "京都市",
+        "ward": "伏見区",
+        "oaza_cho": "久我森の宮町",
+        "chome": null,
         "koaza": null,
-        "blk_num": "1",
+        "blk_num": null,
         "rsdt_num": null,
         "rsdt_num2": null,
         "prc_num1": null,

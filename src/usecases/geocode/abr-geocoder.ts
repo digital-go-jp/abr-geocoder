@@ -29,6 +29,7 @@ import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
 import { AbrGeocoderInput } from "./models/abrg-input-data";
 import { Query, QueryJson } from "./models/query";
 import { GeocodeTransform, GeocodeWorkerInitData } from "./worker/geocode-worker";
+import { DebugLogger } from "@domain/services/logger/debug-logger";
 
 class AbrGeocoderTaskInfo extends AsyncResource {
   next: AbrGeocoderTaskInfo | undefined;
@@ -112,34 +113,50 @@ export class AbrGeocoder {
     }
 
     setImmediate(() => {
+        
+      const logger = DebugLogger.getInstance();
       WorkerThreadPool.create<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
         // 最大何スレッド生成するか
         maxConcurrency: Math.max(1, params.numOfThreads),
-  
+
         // 1スレッドあたり、いくつのタスクを同時並行させるか
         // (増減させても大差はないので、固定値にする)
         maxTasksPerWorker: 10,
-  
+
         // geocode-worker.ts へのパス
         filename: path.join(__dirname, 'worker', 'geocode-worker'),
-  
+
         // geocode-worker.ts の初期化に必要なデータ
         initData: {
           containerParams: params.container.toJSON(),
           // commonData: toSharedMemory(params.commonData),
         },
-  
+
         signal: this.abortController.signal,
       }).then(pool => {
         if (this.isClosed) {
           pool.close();
           return;
         }
+        logger.info(`pool is ready: ${this.taskToNodeMap.size}`);
         this.workerPool = pool;
+        const tasks = Array.from(this.taskToNodeMap.values());
+        tasks.forEach(taskNode => {
+          this.workerPool?.run(taskNode.data)
+            .then((result: QueryJson) => {
+              const query = Query.from(result);
+              taskNode.setResult(null, query);
+            })
+            .catch((error: Error) => {
+              taskNode.setResult(error);
+            })
+            .finally(() => this.flushResults());
+        })
+
       }).catch((reason: unknown) => {
         console.error(reason);
       });
-    });
+    })
   }
 
   private flushResults() {

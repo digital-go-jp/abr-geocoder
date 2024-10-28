@@ -42,11 +42,9 @@ import { Tokyo23WardTrieFinder } from '../models/tokyo23-ward-trie-finder';
 import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
 import { WardTrieFinder } from '../models/ward-trie-finder';
 import { loadGeocoderTrees } from '../services/load-geoder-trees';
-import { ChomeTranform } from '../steps/chome-transform';
 import { CityAndWardTransform } from '../steps/city-and-ward-transform';
 import { CountyAndCityTransform } from '../steps/county-and-city-transform';
 import { GeocodeResultTransform } from '../steps/geocode-result-transform';
-import { KoazaTransform } from '../steps/koaza-transform';
 import { KyotoStreetTransform } from '../steps/kyoto-street-transform';
 import { NormalizeBanchomeTransform } from '../steps/normalize-banchome-transform';
 import { NormalizeTransform } from '../steps/normalize-transform';
@@ -129,12 +127,6 @@ export class GeocodeTransform extends Duplex {
     //
     const normalizeTransform = new NormalizeTransform();
 
-    // 丁目を試す
-    const chomeTransform = new ChomeTranform(params.commonDb);
-
-    // 小字を試す
-    const koazaTransform = new KoazaTransform(params.commonDb);
-    
     // 地番の特定を試みる
     const parcelTransform = new ParcelTransform(params.dbCtrl);
 
@@ -168,13 +160,12 @@ export class GeocodeTransform extends Duplex {
       .pipe(wardTransform)
       .pipe(tokyo23TownTransform)
       .pipe(tokyo23WardTransform)
+
       .pipe(kyotoStreetTransform)
       .pipe(oazaChomeTransform)
-      .pipe(chomeTransform)
-      .pipe(koazaTransform)
       .pipe(rsdtBlkTransform)
-      .pipe(rsdtDspTransform)
-      .pipe(parcelTransform)
+      // .pipe(rsdtDspTransform)
+      // .pipe(parcelTransform)
       .pipe(geocodeResultTransform)
       .pipe(dst);
   }
@@ -192,8 +183,8 @@ export class GeocodeTransform extends Duplex {
   static readonly create = async (params: Required<GeocodeWorkerInitData>) => {
     const container = new AbrGeocoderDiContainer(params.containerParams);
     const dbCtrl = container.database;
-    const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
     const logger: DebugLogger | undefined = container.logger;
+    const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
 
     const trees = await loadGeocoderTrees(params.containerParams);
     
@@ -208,6 +199,7 @@ export class GeocodeTransform extends Duplex {
   };
 }
 
+
 // 作業スレッド
 if (!isMainThread && parentPort) {
   // if (process.execArgv.includes("--inspect-brk")) {
@@ -216,12 +208,14 @@ if (!isMainThread && parentPort) {
   //   inspector.waitForDebugger();
   // }
 
+
   (async (parentPort: MessagePort) => {
     const reader = new Readable({
       objectMode: true,
       read() {},
     });
 
+    workerData.debug = true;
     const geocodeTransform = await GeocodeTransform.create(workerData);
 
     // メインスレッドからメッセージを受け取る
@@ -229,9 +223,9 @@ if (!isMainThread && parentPort) {
       const received = fromSharedMemory<ThreadJob<QueryInput> | ThreadPing>(task);
       switch (received.kind) {
         case 'ping': {
-          parentPort.postMessage(toSharedMemory({
+          parentPort.postMessage(toSharedMemory<ThreadPong>({
             kind: 'pong',
-          } as ThreadPong));
+          }));
           return;
         }
 

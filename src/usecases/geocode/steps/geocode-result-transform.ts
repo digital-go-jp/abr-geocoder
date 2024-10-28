@@ -52,6 +52,11 @@ export class GeocodeResultTransform extends Transform {
       return this.restoreCharNode(query);
     });
 
+    if (queryList.length === 1) {
+      callback(null, queryList[0]);
+      return;
+    }
+
     // 信頼度の低い結果を取り除く
     queryList = queryList.filter(query => {
       if (query === undefined) {
@@ -172,31 +177,36 @@ export class GeocodeResultTransform extends Transform {
     // スコアを降順にソート
     withScore.sort((a, b) => b.score - a.score);
 
-    if (withScore.length === 1) {
-      callback(null, withScore[0].query);
-      return;
-    }
-
     // targetオプションの期待に沿うように結果を返す
     // ただしallの場合、rsdt_addr_flg が間違えている可能性もあるので
     // スコアも加味する
+    const {
+      topRSDT,
+      topParcel
+    } = (() => {
+      let topRSDT;
+      let topParcel;
 
-    const topRSDT = (() => {
       for (const result of withScore) {
-        if (result.query.rsdt_addr_flg === 1) {
-          return result;
+        if (!topRSDT && result.query.rsdt_addr_flg === 1) {
+          topRSDT = result;
+        }
+        if (!topParcel && result.query.rsdt_addr_flg === 0) {
+          topParcel = result;
+        }
+        if (topParcel && topRSDT) {
+          break
         }
       }
-      return null;
+      return {
+        topParcel,
+        topRSDT,
+      };
     })();
-    const topParcel = (() => {
-      for (const result of withScore) {
-        if (result.query.rsdt_addr_flg === 0) {
-          return result;
-        }
-      }
-      return null;
-    })();
+    if (!topParcel && !topRSDT) {
+      callback(null, withScore[0].query);
+      return;
+    }
 
     if (!topParcel) {
       callback(null, topRSDT!.query);

@@ -42,6 +42,10 @@ export class DebugLogger {
     const dirname = path.normalize(path.join(__dirname, '..', '..', '..', '..'));
 
     this.logger = winston.createLogger({
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      ),
       transports: [
         new winston.transports.File({
           dirname,

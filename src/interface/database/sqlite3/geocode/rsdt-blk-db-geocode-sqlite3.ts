@@ -72,7 +72,7 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
           ${DbTableName.RSDT_BLK}
         WHERE
           town_key = @town_key AND
-          ${DataField.BLK_NUM.dbColumn} LIKE @blk_num
+          ${DataField.BLK_NUM.dbColumn} = @blk_num
       `).all(where);
 
       resolve(rows);

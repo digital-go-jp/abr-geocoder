@@ -32,11 +32,11 @@ export type ThreadJob<T> = {
 
 export type ThreadPing = {
   kind: 'ping';
-} & Omit<'data', 'taskId'>;
+} ;
 
 export type ThreadPong = {
   kind: 'pong';
-} & Omit<'data', 'taskId'>;
+};
 
 export type ThreadMessage<T> = {
   kind: 'message';

@@ -6212,7 +6212,7 @@
         "東入"
       ],
       "match_level": "parcel",
-      "coordinate_level": "machiaza_detail",
+      "coordinate_level": "machiaza",
       "lat": 35.009328,
       "lon": 135.761356,
       "lg_code": "261041",
@@ -7978,7 +7978,7 @@
         "上る"
       ],
       "match_level": "parcel",
-      "coordinate_level": "machiaza_detail",
+      "coordinate_level": "machiaza",
       "lat": 35.00542,
       "lon": 135.752357,
       "lg_code": "261041",

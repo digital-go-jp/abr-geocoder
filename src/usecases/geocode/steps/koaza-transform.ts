@@ -72,7 +72,7 @@ export class KoazaTransform extends Transform {
     return conditions;
   }
 
-  async _transform(
+  _transform(
     queries: QuerySet,
     _: BufferEncoding,
     callback: TransformCallback,
@@ -81,35 +81,35 @@ export class KoazaTransform extends Transform {
     // 小字を特定する
     // ----------------------------------
     const results = new QuerySet();
-    for await (const query of queries.values()) {
+    Array.from(queries.values()).forEach(async query => {
 
       if (query.koaza_aka_code === 2) {
         // 通り名が当たっている場合はスキップ
         results.add(query);
-        continue;
+        return;
       }
       
       // 最低限、市区町村レベルまでは分かっている必要がある
       if (query.match_level.num < MatchLevel.CITY.num) {
         results.add(query);
-        continue;
+        return;
       }
       // 既に判明している場合はスキップ
       if (query.match_level.num >= MatchLevel.MACHIAZA_DETAIL.num) {
         results.add(query);
-        continue;
+        return;
       }
 
       // 小字が判明している場合はスキップ
       if (query.town_key && query.koaza) {
         results.add(query);
-        continue;
+        return;
       }
 
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
         results.add(query);
-        continue;
+        return;
       }
 
       // ------------------------------------
@@ -135,7 +135,7 @@ export class KoazaTransform extends Transform {
         replace(RegExpEx.create('^([0-9]+)地割', 'g'), `$1${DASH}`);
       if (!target) {
         results.add(query);
-        continue;
+        return;
       }
       const findResults = trie.find({
         target,
@@ -184,7 +184,7 @@ export class KoazaTransform extends Transform {
       if (!anyHit || anyAmbiguous) {
         results.add(query);
       }
-    }
+    });
 
     callback(null, results);
   }

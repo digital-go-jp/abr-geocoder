@@ -65,7 +65,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
 
   getKyotoStreetRows(): Promise<KoazaMachingInfo[]> {
-    const results = this.prepare<{}, KoazaMachingInfo>(`
+    type Row = Omit<KoazaMachingInfo, 'coordinate_level' | 'match_level'> & {
+      coordinate_level: number;
+    };
+    const rows = this.prepare<{}, Row>(`
       SELECT
         c.city_key,
         t.town_key,
@@ -78,28 +81,47 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         c.${DataField.WARD.dbColumn} as ward,
         c.${DataField.LG_CODE.dbColumn} AS lg_code,
         t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-        CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} as INTEGER) as rsdt_addr_flg,
+        CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
 
         -- koaza_aka_code = 2 のときは、京都の通り名
         -- koaza に通り名が格納されている
-        -- (通り名)(大字) になっているので、keyに大字を含める
-        (
-          t.${DataField.KOAZA.dbColumn} ||
+        IIF(
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} = '2', 
+
+          -- (通り名)(大字) になっているので、keyに大字を含める
+          t.${DataField.KOAZA.dbColumn}||
+          t.${DataField.OAZA_CHO.dbColumn},
+
+          -- 大字だけでも検索をしたいので、京都市内の大字をリストアップする
           t.${DataField.OAZA_CHO.dbColumn}
         ) as key,
         t.${DataField.KOAZA.dbColumn} as koaza,
         t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
         t.${DataField.REP_LAT.dbColumn} as rep_lat,
-        t.${DataField.REP_LON.dbColumn} as rep_lon
+        t.${DataField.REP_LON.dbColumn} as rep_lon,
+        IIF(
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} = '2', 
+          ${MatchLevel.MACHIAZA_DETAIL.num},
+          ${MatchLevel.MACHIAZA.num}
+        ) as coordinate_level
       FROM
         ${DbTableName.PREF} p
         JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
         JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
       WHERE
-        t.${DataField.KOAZA.dbColumn} != '' AND
-        t.${DataField.KOAZA.dbColumn} IS NOT NULL AND
-        t.${DataField.KOAZA_AKA_CODE.dbColumn} = '2'
+        -- 京都市に係るLG_Codeは"261"から始まる
+        substr(c.${DataField.LG_CODE.dbColumn}, 1, 3) = '261' AND
+        t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
     `).all({});
+
+    const results = rows.map(row => {
+      const match_level = row.coordinate_level === MatchLevel.MACHIAZA.num ? MatchLevel.MACHIAZA : MatchLevel.MACHIAZA_DETAIL;
+      return {
+        ...row,
+        match_level,
+        coordinate_level: match_level,
+      }
+    });
 
     return Promise.resolve(results);
   }
@@ -346,7 +368,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       this.getPrefMap(),
       this.getCityMap(),
     ]);
-    
+
     const townRows = await new Promise((resolve: (rows: TownRow[]) => void) => {
 
       this.exec('BEGIN TRANSACTION');
