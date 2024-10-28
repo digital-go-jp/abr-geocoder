@@ -124,7 +124,7 @@ export class AbrGeocodeStream extends Duplex {
 
     const numOfThreads = Math.max(container.env.availableParallelism() - 1, 1);
 
-    const geocoder = await AbrGeocoder.create({
+    const geocoder = new AbrGeocoder({
       container,
       numOfThreads,
     });

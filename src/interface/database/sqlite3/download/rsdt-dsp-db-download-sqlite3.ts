@@ -30,8 +30,12 @@ import { Statement } from "better-sqlite3";
 
 export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbDownload {
   
+  async close() {
+    this.driver.close();
+  }
+
   async createRsdtDspTable() {
-    this.exec(`
+    this.driver.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.RSDT_DSP}" (
         "rsdtdsp_key" INTEGER PRIMARY KEY,
         "rsdtblk_key" INTEGER,
@@ -45,7 +49,7 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
       );
     `);
 
-    this.exec(`
+    this.driver.exec(`
       CREATE INDEX IF NOT EXISTS "idx_rsdt_dsp_rsdtblk_key" ON "${DbTableName.RSDT_DSP}" (
         "rsdtblk_key"
       );
@@ -124,7 +128,7 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
 
-      this.transaction((rows: Record<string, string | number>[]) => {
+      this.driver.transaction((rows: Record<string, string | number>[]) => {
 
         const lg_code = rows[0][DataField.LG_CODE.dbColumn].toString();
 

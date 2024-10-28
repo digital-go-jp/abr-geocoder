@@ -27,6 +27,7 @@ import { upwardFileSearch } from '@domain/services/upward-file-search';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { AbrgApiServer } from '@interface/api-server';
+import { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
 import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
 import path from 'node:path';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
@@ -101,8 +102,14 @@ const serveCommand: CommandModule = {
       debug: EnvProvider.isDebug,
     });
 
+    // ジオコーダ
+    const geocoder = new AbrGeocoder({
+      container,
+      numOfThreads: 5,
+    });
+    
     // APIサーバー
-    const server = await AbrgApiServer.create(container);
+    const server = new AbrgApiServer(geocoder);
     const port = argv.port || 3000;
     const host = '0.0.0.0';
     await server.listen(port, host);

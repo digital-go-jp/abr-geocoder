@@ -36,7 +36,7 @@ export class CsvParseTransform extends Duplex {
   private abortCtrl = new AbortController();
 
   // ダウンロードされた zip ファイルを展開して、データベースに登録するワーカースレッド
-  private csvParsers?: WorkerThreadPool<
+  private csvParsers: WorkerThreadPool<
     Required<ParseWorkerInitData>,
     DownloadQuery2,
     DownloadResult | DownloadProcessError
@@ -60,7 +60,7 @@ export class CsvParseTransform extends Duplex {
     // ブロックする必要がないので、maxConcurrency * 4となる
     const semaphoreSharedMemory = new SharedArrayBuffer(4 + params.maxConcurrency * 4);
 
-    WorkerThreadPool.create<
+    this.csvParsers = new WorkerThreadPool<
       Required<ParseWorkerInitData>,
       DownloadQuery2,
       DownloadResult | DownloadProcessError
@@ -84,8 +84,6 @@ export class CsvParseTransform extends Duplex {
       },
 
       signal: this.abortCtrl.signal,
-    }).then(pool => {
-      this.csvParsers = pool;
     });
   }
 

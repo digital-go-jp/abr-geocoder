@@ -76,6 +76,7 @@ export class RsdtDspTransform extends Transform {
       const rows = await db.getRsdtDspRows({
         rsdtblk_key: query.rsdtblk_key!,
       });
+      db.close();
 
       for (const row of rows) {
         const key = [row.rsdt_num, row.rsdt_num2].filter(x => x !== null).join(DASH);

@@ -33,6 +33,10 @@ export type GetRsdtDspRows = {
 
 export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbGeocode {
 
+  async close() {
+    this.driver.close();
+  }
+
   async hasTable(): Promise<boolean> {
     const rows = this.prepare<{ name: string; }, { name: string; }>(`
       SELECT

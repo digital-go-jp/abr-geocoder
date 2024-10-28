@@ -72,87 +72,40 @@ class AbrGeocoderTaskInfo extends AsyncResource {
   }
 }
 export class AbrGeocoder {
-  private workerPool?: WorkerThreadPool<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>;
+  private workerPool: WorkerThreadPool<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>;
   private readonly reader = new Readable({
     objectMode: true,
     read() {},
   });
-  private isClosed = false;
+  
   private readonly abortController = new AbortController();
   private taskHead: AbrGeocoderTaskInfo | undefined;
   private taskTail: AbrGeocoderTaskInfo | undefined;
   private readonly taskToNodeMap: Map<number, AbrGeocoderTaskInfo> = new Map();
   private flushing: boolean = false;
 
-  private constructor(params: {
-    geocodeTransformOnMainThread: GeocodeTransform,
+  constructor(params: {
     container: AbrGeocoderDiContainer;
     numOfThreads: number;
   }) {
-    // Promiseの resolveに結果を渡す
-    const dst = new Writable({
-      objectMode: true,
-      write: (query: Query, _, callback) => {
-        callback();
-        const taskId = query.input.taskId;
-        if (!this.taskToNodeMap.has(taskId)) {
-          throw `Can not find the taskId: ${taskId}`;
-        }
+    this.workerPool = new WorkerThreadPool<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
+      // 最大何スレッド生成するか
+      maxConcurrency: Math.max(1, params.numOfThreads),
 
-        const taskNode = this.taskToNodeMap.get(taskId);
-        this.taskToNodeMap.delete(taskId);
-        taskNode?.setResult(null, query);
-        this.flushResults();
+      // 1スレッドあたり、いくつのタスクを同時並行させるか
+      // (増減させても大差はないので、固定値にする)
+      maxTasksPerWorker: 10,
+
+      // geocode-worker.ts へのパス
+      filename: path.join(__dirname, 'worker', 'geocode-worker'),
+
+      // geocode-worker.ts の初期化に必要なデータ
+      initData: {
+        containerParams: params.container.toJSON(),
+        // commonData: toSharedMemory(params.commonData),
       },
-    });
-    this.reader.pipe(params.geocodeTransformOnMainThread).pipe(dst);
 
-    if (process.env.NODE_ENV === 'test:e2e') {
-      return;
-    }
-
-    setImmediate(() => {
-        
-      WorkerThreadPool.create<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
-        // 最大何スレッド生成するか
-        maxConcurrency: Math.max(1, params.numOfThreads),
-
-        // 1スレッドあたり、いくつのタスクを同時並行させるか
-        // (増減させても大差はないので、固定値にする)
-        maxTasksPerWorker: 10,
-
-        // geocode-worker.ts へのパス
-        filename: path.join(__dirname, 'worker', 'geocode-worker'),
-
-        // geocode-worker.ts の初期化に必要なデータ
-        initData: {
-          containerParams: params.container.toJSON(),
-          // commonData: toSharedMemory(params.commonData),
-        },
-
-        signal: this.abortController.signal,
-      }).then(pool => {
-        if (this.isClosed) {
-          pool.close();
-          return;
-        }
-        this.workerPool = pool;
-        const tasks = Array.from(this.taskToNodeMap.values());
-        tasks.forEach(taskNode => {
-          this.workerPool?.run(taskNode.data)
-            .then((result: QueryJson) => {
-              const query = Query.from(result);
-              taskNode.setResult(null, query);
-            })
-            .catch((error: Error) => {
-              taskNode.setResult(error);
-            })
-            .finally(() => this.flushResults());
-        });
-
-      }).catch((reason: unknown) => {
-        console.error(reason);
-      });
+      signal: this.abortController.signal,
     });
   }
 
@@ -197,49 +150,23 @@ export class AbrGeocoder {
         this.taskTail = taskNode;
       }
       
-      // バックグラウンドスレッドが利用できるときは、そちらで処理する
-      if (this.workerPool) {
-        this.workerPool
-          .run(input)
-          .then((result: QueryJson) => {
-            const query = Query.from(result);
-            taskNode.setResult(null, query);
-          })
-          .catch((error: Error) => {
-            taskNode.setResult(error);
-          })
-          .finally(() => this.flushResults());
-        return;
-      }
-      
-      // バックグラウンドが準備中なので、メインスレッドで処理する
-      this.reader.push({
-        data: input,
-        taskId,
-      });
+      this.workerPool
+        .run(input)
+        .then((result: QueryJson) => {
+          const query = Query.from(result);
+          taskNode.setResult(null, query);
+        })
+        .catch((error: Error) => {
+          taskNode.setResult(error);
+        })
+        .finally(() => this.flushResults());
     });
   }
   
   close() {
-    this.isClosed = true;
     this.reader.push(null);
     this.abortController.abort();
     this.workerPool?.close();
   }
 
-  static readonly create = async (params: Required<{
-    container: AbrGeocoderDiContainer;
-    numOfThreads: number;
-  }>): Promise<AbrGeocoder> => {
-    // geocode-worker の初期化中はメインスレッドで処理を行う
-    const geocodeTransformOnMainThread = await GeocodeTransform.create({
-      containerParams: params.container.toJSON(),
-    });
-
-    const geocoder = new AbrGeocoder({
-      ...params,
-      geocodeTransformOnMainThread,
-    });
-    return geocoder;
-  };
 }

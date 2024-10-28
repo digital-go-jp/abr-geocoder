@@ -31,6 +31,10 @@ export class CommonDbUpdateCheckSqlite3
   extends Sqlite3Wrapper
   implements ICommonDbUpdateCheck {
 
+  async close() {
+    this.driver.close();
+  }
+  
   hasCityTable(): Promise<boolean> {
     const rows = this.prepare(`
       SELECT name FROM sqlite_master

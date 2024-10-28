@@ -207,6 +207,7 @@ export class ParcelTransform extends Transform {
           });
         }
       }
+      db.close();
       
       if (!anyHit) {
         results.add(query);

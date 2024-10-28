@@ -39,6 +39,7 @@ export interface ICommonDbUpdateCheck {
   hasPrefRows(): Promise<boolean>;
   hasCityRows(packageInfo: PackageInfo): Promise<boolean>;
   hasTownRows(packageInfo: PackageInfo): Promise<boolean>;
+  close(): Promise<void>
 }
 export interface ICommonDbDownload {
   prefCsvRows(rows: Record<string, string | number>[]): Promise<void>;
@@ -47,6 +48,7 @@ export interface ICommonDbDownload {
   cityPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   townCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   townPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
+  close(): Promise<void>
 }
 
 export interface ICommonDbGeocode {
@@ -91,11 +93,13 @@ export interface ICommonDbGeocode {
     oaza_cho: string;
     chome: string;
   }>): Promise<KoazaMachingInfo[]>;
+  close(): Promise<void>
 }
 
 export interface IRsdtBlkDbDownload {
   rsdtBlkCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   rsdtBlkPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
+  close(): Promise<void>
 }
 
 export interface IRsdtBlkDbGeocode {
@@ -103,22 +107,26 @@ export interface IRsdtBlkDbGeocode {
     town_key: number;
     blk_num: string; 
   }>): Promise<RsdtBlkInfo[]>;
+  close(): Promise<void>
 }
 
 export interface IRsdtDspDbDownload {
   rsdtDspCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   rsdtDspPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
+  close(): Promise<void>
 }
 
 export interface IRsdtDspDbGeocode {
   getRsdtDspRows(where: Required<{
     rsdtblk_key: number;
   }>): Promise<RsdtDspInfo[]>;
+  close(): Promise<void>
 }
 
 export interface IParcelDbDownload {
   parcelCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   parcelPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
+  close(): Promise<void>
 }
 
 export interface IParcelDbGeocode {
@@ -127,5 +135,6 @@ export interface IParcelDbGeocode {
     town_key?: number | null;
     prc_id: string; 
   }>): Promise<ParcelInfo[]>;
+  close(): Promise<void>
 }
 

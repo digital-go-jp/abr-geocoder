@@ -425,6 +425,7 @@ const kanji_table: string[][] = [
   ['鸙', '雲雀'], // 鸙野
   ['楠木', '楠'],
   ['樟', '楠'],
+  ['冶', '治'], // 鍛治
 ];
 
 const tree = new TrieAddressFinder<string>();

@@ -31,8 +31,12 @@ export class CommonDbDownloadSqlite3
   extends Sqlite3Wrapper
   implements ICommonDbDownload {
 
+  async close() {
+    this.driver.close();
+  }
+
   async createPrefTable() {
-    this.exec(`
+    this.driver.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.PREF}" (
         "pref_key" INTEGER PRIMARY KEY,
         "${DataField.LG_CODE.dbColumn}" TEXT,
@@ -98,7 +102,7 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows: Record<string, string | number>[]) => {
+      this.driver.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.pref_key = TableKeyProvider.getPrefKey({
             lg_code: row[DataField.LG_CODE.dbColumn] as string,
@@ -111,7 +115,7 @@ export class CommonDbDownloadSqlite3
   }
 
   async createCityTable() {
-    this.exec(`
+    this.driver.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.CITY}" (
         "city_key" INTEGER PRIMARY KEY,
         "pref_key" INTEGER,
@@ -208,7 +212,7 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows: Record<string, string | number>[]) => {
+      this.driver.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.pref_key = params.prefKey;
           row.city_key = TableKeyProvider.getCityKey({
@@ -222,7 +226,7 @@ export class CommonDbDownloadSqlite3
   }
 
   async createTownTable() {
-    this.exec(`
+    this.driver.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.TOWN}" (
         "town_key" INTEGER PRIMARY KEY,
         "city_key" INTEGER,
@@ -327,7 +331,7 @@ export class CommonDbDownloadSqlite3
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows: Record<string, string | number>[]) => {
+      this.driver.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
           row.city_key = params.cityKey;
           row.town_key = TableKeyProvider.getTownKey({

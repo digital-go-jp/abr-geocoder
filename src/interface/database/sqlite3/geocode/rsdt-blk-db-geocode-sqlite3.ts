@@ -34,6 +34,10 @@ export type GetBlockNumRowsOptions = {
 
 export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbGeocode {
 
+  async close() {
+    this.driver.close();
+  }
+
   async hasTable(): Promise<boolean> {
     const rows = this.prepare<{ name: string; }, { name: string; }>(`
       SELECT

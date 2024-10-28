@@ -56,6 +56,10 @@ type GetChomeRowsOptions = {
 
 export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbGeocode {
 
+  async close() {
+    this.driver.close();
+  }
+
   getKyotoStreetGeneratorHash() : string {
     return crc32Lib.fromString(this.getKyotoStreetRows.toString());
   }
@@ -367,9 +371,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
 
     const townRows = await new Promise((resolve: (rows: TownRow[]) => void) => {
 
-      this.exec('BEGIN TRANSACTION');
+      this.driver.exec('BEGIN TRANSACTION');
 
-      this.exec(`
+      this.driver.exec(`
         CREATE TEMP TABLE resultTable (
           pkey TEXT PRIMARY KEY,
           town_key INTEGER DEFAULT null,
@@ -396,7 +400,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * 霞が関二丁目 -> 35.675551,139.750413
         * 霞が関三丁目 -> 35.671825,139.746988
         */
-      // this.exec(`
+      // this.driver.exec(`
       //   INSERT INTO resultTable
       //   SELECT
       //     (
@@ -448,7 +452,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * ↓
         * 霞が関 -> NULL, NULL
         */
-      this.exec(`
+      this.driver.exec(`
         INSERT OR IGNORE INTO resultTable
         SELECT
           (
@@ -491,7 +495,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
        * 長沢団地 -> 40.503892,141.564006
        * 寺地 -> 40.462681,141.541286
        */
-      this.exec(`
+      this.driver.exec(`
         INSERT OR IGNORE INTO resultTable
         SELECT
           (
@@ -537,7 +541,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       /*
        * パターン： 〇〇(大字)〇〇(小字)
        */
-      this.exec(`
+      this.driver.exec(`
         INSERT OR IGNORE INTO resultTable
         SELECT
           (
@@ -589,7 +593,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * ...
         *
         */
-      this.exec(`
+      this.driver.exec(`
         INSERT INTO resultTable
         SELECT
             (
@@ -637,7 +641,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           coordinate_level = ${MatchLevel.CITY.num}
       `);
 
-      this.exec('COMMIT');
+      this.driver.exec('COMMIT');
 
       //--------------------------------------
       // 大字・丁目で丁目が緯度経度を持っていないが
@@ -706,7 +710,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         return row;
       });
 
-      this.exec('DROP TABLE resultTable');
+      this.driver.exec('DROP TABLE resultTable');
       
       resolve(townRows);
     });
@@ -904,9 +908,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
 
     return new Promise((resolve: (rows: WardAndOazaRow[]) => void) => {
 
-      this.exec('BEGIN TRANSACTION');
+      this.driver.exec('BEGIN TRANSACTION');
 
-      this.exec(`
+      this.driver.exec(`
         CREATE TEMP TABLE WardAndOazaChoTmpTable (
           pkey TEXT PRIMARY KEY,
           key TEXT,
@@ -927,7 +931,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         );
       `);
 
-      this.exec(`
+      this.driver.exec(`
         INSERT INTO WardAndOazaChoTmpTable
         SELECT
           (
@@ -974,7 +978,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           pkey
       `);
       
-      this.exec(`
+      this.driver.exec(`
         REPLACE INTO WardAndOazaChoTmpTable
         SELECT
           (
@@ -1027,7 +1031,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         SELECT * FROM WardAndOazaChoTmpTable
       `).all();
       
-      this.exec('DROP TABLE WardAndOazaChoTmpTable');
+      this.driver.exec('DROP TABLE WardAndOazaChoTmpTable');
       
       resolve(rows);
     })

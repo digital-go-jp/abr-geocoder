@@ -35,6 +35,10 @@ export type GetParcelRowsOptions = {
 
 export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbGeocode {
 
+  async close() {
+    this.driver.close();
+  }
+
   async hasTable(): Promise<boolean> {
     const rows = this.prepare<{ name: string; }, { name: string; }>(`
       SELECT

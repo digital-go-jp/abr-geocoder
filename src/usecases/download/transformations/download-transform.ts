@@ -53,7 +53,7 @@ export class DownloadTransform extends Duplex {
       read() {},
     });
 
-    WorkerThreadPool.create<
+    this.downloader = new WorkerThreadPool<
       DownloadWorkerInitData, 
       DownloadRequest,
       DownloadQueryBase
@@ -73,8 +73,6 @@ export class DownloadTransform extends Duplex {
 
       // 同時ダウンロード数
       maxTasksPerWorker: params.maxTasksPerWorker,
-    }).then(pool => {
-      this.downloader = pool;
     });
   }
 

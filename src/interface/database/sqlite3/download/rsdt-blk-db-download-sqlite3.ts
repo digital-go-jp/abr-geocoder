@@ -30,8 +30,12 @@ import { Statement } from "better-sqlite3";
 
 export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbDownload {
   
+  async close() {
+    this.driver.close();
+  }
+
   async createRsdtBlkTable() {
-    this.exec(`
+    this.driver.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.RSDT_BLK}" (
         "rsdtblk_key" INTEGER PRIMARY KEY,
         "town_key" INTEGER,
@@ -44,12 +48,12 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
       );
     `);
 
-    this.exec(`
+    this.driver.exec(`
       CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key" ON "${DbTableName.RSDT_BLK}" (
         "town_key"
       );
     `);
-    this.exec(`
+    this.driver.exec(`
       CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key_and_blk_num" ON "${DbTableName.RSDT_BLK}" (
         "town_key",
         "${DataField.BLK_NUM.dbColumn}"
@@ -123,7 +127,7 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows: Record<string, string | number>[]) => {
+      this.driver.transaction((rows: Record<string, string | number>[]) => {
         const lg_code = rows[0][DataField.LG_CODE.dbColumn].toString();
 
         for (const row of rows) {

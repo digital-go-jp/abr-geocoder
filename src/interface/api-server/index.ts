@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 import { AbrGeocoder } from "@usecases/geocode/abr-geocoder";
-import { AbrGeocoderDiContainer } from "@usecases/geocode/models/abr-geocoder-di-container";
 import { StatusCodes } from 'http-status-codes';
 import { MiddlewareNext, Request, Response, Router, Server } from "hyper-express";
 import { OnGeocodeRequest } from "./on-geocode-request";
@@ -32,7 +31,7 @@ export class AbrgApiServer extends Server {
   // アクセスルーター
   private readonly router: Router = new Router();
   
-  private constructor(geocoder: AbrGeocoder) {
+  constructor(geocoder: AbrGeocoder) {
     super();
 
     const corsMiddleware = (_: Request, response: Response, next: MiddlewareNext) => {
@@ -75,14 +74,5 @@ export class AbrgApiServer extends Server {
       response.send(error.toString());
     }
   }
-
-  static readonly create = async (container: AbrGeocoderDiContainer) => {
-    const geocoder = await AbrGeocoder.create({
-      container,
-      numOfThreads: 5,
-    });
-
-    return new AbrgApiServer(geocoder);
-  };
 }
 

@@ -110,6 +110,8 @@ export class RsdtBlkTransform extends Transform {
         town_key: query.town_key,
         blk_num: queryInfo.block_num,
       });
+      
+      db.close();
 
       // 番地が見つからなかった
       // if (findResults.length === 0) {

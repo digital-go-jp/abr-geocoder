@@ -30,8 +30,12 @@ import { Statement } from "better-sqlite3";
 
 export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDbDownload {
   
+  async close() {
+    this.driver.close();
+  }
+
   async createParcelTable() {
-    this.exec(`
+    this.driver.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.PARCEL}" (
         "parcel_key" INTEGER PRIMARY KEY,
         "town_key" INTEGER DEFAULT null,
@@ -45,7 +49,7 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
       );
     `);
 
-    this.exec(`
+    this.driver.exec(`
       CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON ${DbTableName.PARCEL}(town_key, ${DataField.PRC_ID.dbColumn});
     `);
   }
@@ -126,7 +130,7 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows: Record<string, string | number>[]) => {
+      this.driver.transaction((rows: Record<string, string | number>[]) => {
         const lg_code = rows[0][DataField.LG_CODE.dbColumn] as string;
 
         for (const row of rows) {
