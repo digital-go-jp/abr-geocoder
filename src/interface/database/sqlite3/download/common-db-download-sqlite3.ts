@@ -31,14 +31,10 @@ export class CommonDbDownloadSqlite3
   extends Sqlite3Wrapper
   implements ICommonDbDownload {
 
-  async closeDb(): Promise<void> {
-    this.close();
-  }
-
   async createPrefTable() {
     this.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.PREF}" (
-        "pref_key" TEXT PRIMARY KEY,
+        "pref_key" INTEGER PRIMARY KEY,
         "${DataField.LG_CODE.dbColumn}" TEXT,
         "${DataField.PREF.dbColumn}" TEXT,
         "${DataField.REP_LAT.dbColumn}" TEXT,
@@ -117,8 +113,8 @@ export class CommonDbDownloadSqlite3
   async createCityTable() {
     this.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.CITY}" (
-        "city_key" TEXT PRIMARY KEY,
-        "pref_key" TEXT,
+        "city_key" INTEGER PRIMARY KEY,
+        "pref_key" INTEGER,
         "${DataField.LG_CODE.dbColumn}" TEXT UNIQUE,
         "${DataField.COUNTY.dbColumn}" TEXT,
         "${DataField.CITY.dbColumn}" TEXT,
@@ -208,7 +204,7 @@ export class CommonDbDownloadSqlite3
 
   private async upsertRowsForCity(params: Required<{
     upsert: Statement;
-    prefKey: string;
+    prefKey: number;
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
@@ -228,8 +224,8 @@ export class CommonDbDownloadSqlite3
   async createTownTable() {
     this.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.TOWN}" (
-        "town_key" TEXT PRIMARY KEY,
-        "city_key" TEXT,
+        "town_key" INTEGER PRIMARY KEY,
+        "city_key" INTEGER,
         "${DataField.MACHIAZA_ID.dbColumn}" TEXT,
         "${DataField.OAZA_CHO.dbColumn}" TEXT,
         "${DataField.CHOME.dbColumn}" TEXT,
@@ -327,7 +323,7 @@ export class CommonDbDownloadSqlite3
 
   private async upsertRowsForTown(params: Required<{
     upsert: Statement;
-    cityKey: string;
+    cityKey: number;
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {

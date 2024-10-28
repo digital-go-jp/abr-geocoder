@@ -24,12 +24,12 @@
 
 export type PrefMatchinInfo = {
   pref: string;
-  pref_key: string;
+  pref_key: number;
   lg_code: string;
 };
 export type PrefInfo = {
   pref: string;
-  pref_key: string;
+  pref_key: number;
   rep_lat: string;
   rep_lon: string;
   lg_code: string;

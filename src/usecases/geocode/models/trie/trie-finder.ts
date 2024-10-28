@@ -165,7 +165,7 @@ export class TrieAddressFinder<T> {
           unmatched: internalResult.unmatched,
           depth: internalResult.depth,
           ambiguous: internalResult.ambiguous,
-        })
+        }),
       );
     }
 

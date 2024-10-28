@@ -93,17 +93,17 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
           case 'match_level':
             return `"${result.match_level.str || ''}"`;
           case 'pref_key':
-            return `"${result.pref_key || ''}"`;
+            return result.pref_key?.toString() || '';
           case 'city_key':
-            return `"${result.city_key || ''}"`;
+            return result.city_key?.toString() || '';
           case 'town_key':
-            return `"${result.town_key || ''}"`;
+            return result.town_key?.toString() || '';
           case 'parcel_key':
-            return `"${result.parcel_key || ''}"`;
+            return result.parcel_key || '';
           case 'rsdtblk_key':
-            return `"${result.rsdtblk_key || ''}"`;
+            return result.rsdtblk_key || '';
           case 'rsdtdsp_key':
-            return `"${result.rsdtdsp_key || ''}"`;
+            return result.rsdtdsp_key || '';
           default:
             throw new Error(`Unimplemented field : ${column}`);
         }

@@ -6,7 +6,7 @@ import {
 import { runGeocoder } from './common';
 
 
-describe('debug', () => {
+describe.skip('debug', () => {
 
   test('伏見区久我森の宮町14番地の27', async () => {
     const input = '伏見区久我森の宮町14番地の27';

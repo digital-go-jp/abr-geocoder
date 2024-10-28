@@ -29,7 +29,6 @@ import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
 import { AbrGeocoderInput } from "./models/abrg-input-data";
 import { Query, QueryJson } from "./models/query";
 import { GeocodeTransform, GeocodeWorkerInitData } from "./worker/geocode-worker";
-import { DebugLogger } from "@domain/services/logger/debug-logger";
 
 class AbrGeocoderTaskInfo extends AsyncResource {
   next: AbrGeocoderTaskInfo | undefined;
@@ -114,7 +113,6 @@ export class AbrGeocoder {
 
     setImmediate(() => {
         
-      const logger = DebugLogger.getInstance();
       WorkerThreadPool.create<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
         // 最大何スレッド生成するか
         maxConcurrency: Math.max(1, params.numOfThreads),
@@ -138,7 +136,6 @@ export class AbrGeocoder {
           pool.close();
           return;
         }
-        logger.info(`pool is ready: ${this.taskToNodeMap.size}`);
         this.workerPool = pool;
         const tasks = Array.from(this.taskToNodeMap.values());
         tasks.forEach(taskNode => {
@@ -151,12 +148,12 @@ export class AbrGeocoder {
               taskNode.setResult(error);
             })
             .finally(() => this.flushResults());
-        })
+        });
 
       }).catch((reason: unknown) => {
         console.error(reason);
       });
-    })
+    });
   }
 
   private flushResults() {

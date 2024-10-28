@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 export type RsdtDspInfo = {
-  rsdtblk_key: string;
-  rsdtdsp_key: string;
+  rsdtblk_key: number;
+  rsdtdsp_key: number;
   rsdt_id: string;
   rsdt2_id: string;
   rsdt_num: string;

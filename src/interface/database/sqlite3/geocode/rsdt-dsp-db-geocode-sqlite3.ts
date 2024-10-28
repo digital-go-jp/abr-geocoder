@@ -28,7 +28,7 @@ import { IRsdtDspDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 
 export type GetRsdtDspRows = {
-  rsdtblk_key: string;
+  rsdtblk_key: number;
 };
 
 export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbGeocode {
@@ -46,10 +46,6 @@ export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbG
       name: DbTableName.RSDT_DSP,
     });
     return rows.length === 1;
-  }
-
-  async closeDb(): Promise<void> {
-    Promise.resolve(this.closeDb());
   }
 
   async getRsdtDspRows(where: Required<GetRsdtDspRows>): Promise<RsdtDspInfo[]> {

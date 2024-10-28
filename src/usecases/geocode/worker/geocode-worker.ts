@@ -164,8 +164,8 @@ export class GeocodeTransform extends Duplex {
       .pipe(kyotoStreetTransform)
       .pipe(oazaChomeTransform)
       .pipe(rsdtBlkTransform)
-      // .pipe(rsdtDspTransform)
-      // .pipe(parcelTransform)
+      .pipe(rsdtDspTransform)
+      .pipe(parcelTransform)
       .pipe(geocodeResultTransform)
       .pipe(dst);
   }

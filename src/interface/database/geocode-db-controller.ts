@@ -76,7 +76,7 @@ export class GeocodeDbController {
     }
   }
 
-  openRsdtBlkDb(params: Required<{
+  async openRsdtBlkDb(params: Required<{
     lg_code: string;
     createIfNotExists: boolean;
   }>): Promise<IRsdtBlkDbGeocode | null> {
@@ -86,13 +86,20 @@ export class GeocodeDbController {
           lg_code: params.lg_code,
         });
         if (!hasTheDbFile && !params.createIfNotExists) {
-          return Promise.resolve(null);
+          return null;
         }
 
-        return Promise.resolve(new RsdtBlkGeocodeSqlite3({
+        const db = new RsdtBlkGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
           readonly: true,
-        }));
+        });
+
+        const tableExists = await db.hasTable();
+        if (tableExists) {
+          return db;
+        }
+        db.close();
+        return null;
       }
 
       default:
@@ -103,7 +110,7 @@ export class GeocodeDbController {
     }
   }
 
-  openRsdtDspDb(params: Required<{
+  async openRsdtDspDb(params: Required<{
     lg_code: string;
     createIfNotExists: boolean;
   }>): Promise<IRsdtDspDbGeocode | null> {
@@ -113,13 +120,19 @@ export class GeocodeDbController {
           lg_code: params.lg_code,
         });
         if (!hasTheDbFile && !params.createIfNotExists) {
-          return Promise.resolve(null);
+          return null;
         }
 
-        return Promise.resolve(new RsdtDspGeocodeSqlite3({
+        const db = new RsdtDspGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
           readonly: true,
-        }));
+        });
+        const tableExists = await db.hasTable();
+        if (tableExists) {
+          return db;
+        }
+        db.close();
+        return null;
       }
 
       default: {
@@ -131,7 +144,7 @@ export class GeocodeDbController {
     }
   }
 
-  openParcelDb(params: Required<{
+  async openParcelDb(params: Required<{
     lg_code: string;
     createIfNotExists: boolean;
   }>): Promise<IParcelDbGeocode | null> {
@@ -141,13 +154,19 @@ export class GeocodeDbController {
           lg_code: params.lg_code,
         });
         if (!hasTheDbFile && !params.createIfNotExists) {
-          return Promise.resolve(null);
+          return null;
         }
 
-        return Promise.resolve(new ParcelDbGeocodeSqlite3({
+        const db = new ParcelDbGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
           readonly: true,
-        }));
+        });
+        const tableExists = await db.hasTable();
+        if (tableExists) {
+          return db;
+        }
+        db.close();
+        return null;
       }
 
       default:

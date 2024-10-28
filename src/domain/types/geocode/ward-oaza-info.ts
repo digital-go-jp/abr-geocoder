@@ -25,7 +25,7 @@
 import { MatchLevel } from "./match-level";
 
 export type WardAndOazaInfo = {
-  pref_key: string;
+  pref_key: number;
   pref: string;
   city: string;
   county: string;
@@ -34,8 +34,8 @@ export type WardAndOazaInfo = {
   rsdt_addr_flg: number;
   machiaza_id?: string;
   lg_code: string;
-  city_key: string;
-  town_key: string | null;
+  city_key: number;
+  town_key: number | null;
   rep_lat: string;
   rep_lon: string;
   match_level: MatchLevel;

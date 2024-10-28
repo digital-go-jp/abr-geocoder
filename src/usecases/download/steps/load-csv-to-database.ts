@@ -88,8 +88,6 @@ export const loadCsvToDatabase = async (params : Required<{
           }).catch((e) => {
             console.error(`error: ${e}`);
           });
-
-          await db.closeDb();
         }
 
         // 書き込みロックを解除

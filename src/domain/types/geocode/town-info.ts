@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 export type TownInfo = {
-  town_key: string;
-  city_key: string;
-  pref_key: string;
+  town_key: number;
+  city_key: number;
+  pref_key: number;
   pref: string;
   city: string;
   county: string;

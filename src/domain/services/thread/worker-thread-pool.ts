@@ -105,7 +105,6 @@ export class WorkerThread<I, T, R> extends Worker {
     });
   }
   private async initAsync() {
-    const logger = DebugLogger.getInstance();
     return new Promise((
       resolve: (_?: unknown) => void,
       // reject: (_?: unknown) => void,
@@ -116,14 +115,13 @@ export class WorkerThread<I, T, R> extends Worker {
         if (received.kind !== 'pong') {
           return;
         }
-        logger.info(`received: ${received.kind}`);
         // this.off('message', listener);
         resolve();
       });
       this.postMessage(toSharedMemory<ThreadPing>({
         kind: 'ping',
       }));
-    })
+    });
   }
 
   // スレッド側にタスクを送る
@@ -229,7 +227,6 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       this.workers.forEach(worker => worker.terminate());
     });
 
-    const logger = DebugLogger.getInstance();
     const tasks = [];
     for (let i = 0; i < params.maxConcurrency; i++) {
       tasks.push(this.addWorker(params));
@@ -279,7 +276,8 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     const worker = await WorkerThread.create<InitData, TransformData, ReceiveData>(params);
     worker.on('error', async (error: Error) => {
       worker.removeAllListeners();
-      console.error(`[createWorker error]`, error);
+      const logger = DebugLogger.getInstance();
+      logger.error(`thread error`, error);
 
       // エラーが発生したら、rejectを呼び出す
       // (どうするかは呼び出し元で考える)

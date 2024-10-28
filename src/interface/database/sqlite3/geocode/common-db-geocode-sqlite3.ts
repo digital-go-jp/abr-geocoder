@@ -43,22 +43,18 @@ import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
 import crc32Lib from "@domain/services/crc32-lib";
 
 type GetKoazaRowsOptions = {
-  city_key: string;
+  city_key: number;
   oaza_cho: string;
   chome: string;
 };
 type GetChomeRowsOptions = {
-  pref_key: string;
-  city_key: string;
-  town_key: string;
+  pref_key: number;
+  city_key: number;
+  town_key: number;
   oaza_cho: string;
 };
 
 export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbGeocode {
-
-  async closeDb(): Promise<void> {
-    this.close();
-  }
 
   getKyotoStreetGeneratorHash() : string {
     return crc32Lib.fromString(this.getKyotoStreetRows.toString());
@@ -120,7 +116,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         ...row,
         match_level,
         coordinate_level: match_level,
-      }
+      };
     });
 
     return Promise.resolve(results);
@@ -234,12 +230,12 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return Promise.resolve(results);
   }
 
-  async getPrefMap(): Promise<Map<string, PrefInfo>> {
+  async getPrefMap(): Promise<Map<number, PrefInfo>> {
     // if (this.resultCache.has('pref_map')) {
     //   return this.resultCache.get('pref_map') as Map<number, PrefInfo>;
     // }
     const prefRows = await this.getPrefList();
-    const prefMap = new Map<string, PrefInfo>();
+    const prefMap = new Map<number, PrefInfo>();
     prefRows.forEach(pref => {
       prefMap.set(pref.pref_key, pref);
     });
@@ -316,7 +312,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return results;
   }
   
-  private async getCityMap(): Promise<Map<string, CityInfo>> {
+  private async getCityMap(): Promise<Map<number, CityInfo>> {
     // if (this.resultCache.has('city_map')) {
     //   return this.resultCache.get('city_map') as Map<number, CityInfo>;
     // }
@@ -329,7 +325,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       this.getCityList(),
     ]);
 
-    const cityMap = new Map<string, CityInfo>();
+    const cityMap = new Map<number, CityInfo>();
     cityRows.forEach(city => {
       cityMap.set(city.city_key, {
         ...city,
@@ -349,8 +345,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     type TownRow = {
       pkey: string;
       match_level: number;
-      town_key: string;
-      city_key: string;
+      town_key: number;
+      city_key: number;
       machiaza_id: string;
       oaza_cho: string;
       chome: string;
@@ -376,8 +372,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       this.exec(`
         CREATE TEMP TABLE resultTable (
           pkey TEXT PRIMARY KEY,
-          town_key TEXT DEFAULT null,
-          city_key TEXT,
+          town_key INTEGER DEFAULT null,
+          city_key INTEGER,
           machiaza_id TEXT,
           oaza_cho TEXT,
           chome TEXT,
@@ -861,9 +857,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       key: string;
       match_level: number;
       coordinate_level: number;
-      town_key: string | null;
-      city_key: string;
-      pref_key: string;
+      town_key: number | null;
+      city_key: number;
+      pref_key: number;
       machiaza_id: string;
       oaza_cho: string;
       county: string;
@@ -884,9 +880,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         CREATE TEMP TABLE WardAndOazaChoTmpTable (
           pkey TEXT PRIMARY KEY,
           key TEXT,
-          pref_key TEXT,
-          city_key TEXT,
-          town_key TEXT,
+          pref_key INTEGER,
+          city_key INTEGER,
+          town_key INTEGER,
           pref TEXT,
           county TEXT,
           city TEXT,
@@ -1006,13 +1002,15 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       resolve(rows);
     })
       .then((rows: WardAndOazaRow[]) => {
-        const results: WardAndOazaMatchingInfo[] = rows.map(row => {
-          return {
-            ...row,
-            match_level: MatchLevel.MACHIAZA,
-            coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA,
-          };
-        });
+        const results: WardAndOazaMatchingInfo[] = rows
+          .filter(result => result.key !== null)
+          .map(row => {
+            return {
+              ...row,
+              match_level: MatchLevel.MACHIAZA,
+              coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA,
+            };
+          });
 
         return Promise.resolve(results);
       });

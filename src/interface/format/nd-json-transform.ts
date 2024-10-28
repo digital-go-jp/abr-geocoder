@@ -61,12 +61,12 @@ export type NDJsonOutputType = {
     prc_num3: string | null;
   },
   debug?: {
-    pref_key: string | undefined;
-    city_key: string | undefined;
-    town_key: string | undefined;
-    parcel_key: string | undefined;
-    rsdtblk_key: string | undefined;
-    rsdtdsp_key: string | undefined;
+    pref_key: number | undefined;
+    city_key: number | undefined;
+    town_key: number | undefined;
+    parcel_key: number | undefined;
+    rsdtblk_key: number | undefined;
+    rsdtdsp_key: number | undefined;
   }
 };
 

@@ -15,14 +15,14 @@ import { PrefTransform } from "../pref-transform";
 const prefList: PrefInfo[] = [
   {
     pref: '長野県',
-    pref_key: "p1",
+    pref_key: 1,
     lg_code: PrefLgCode.NAGANO,
     rep_lat: '36.65131',
     rep_lon: '138.180991',
   },
   {
     pref: '長崎県',
-    pref_key: "p2",
+    pref_key: 2,
     lg_code: PrefLgCode.NAGASAKI,
     rep_lat: '32.749601',
     rep_lon: '129.867969',
@@ -82,7 +82,7 @@ describe('PrefTransform', () => {
     // query.input.address=「長野県」に対して、trie treeの「長野県」がヒットした
     expect(queries[0].toJSON()).toMatchObject({
       ambiguousCnt: 0,
-      pref_key: "p1",
+      pref_key: 1,
       matchedCnt: 3,
       pref: '長野県',
       match_level: MatchLevel.PREFECTURE,
@@ -115,7 +115,7 @@ describe('PrefTransform', () => {
       // 「長崎」+「県」にマッチした
       expect.objectContaining({
         ambiguousCnt: 1, // 1文字不明瞭
-        pref_key: "p2",
+        pref_key: 2,
         matchedCnt: 3,
         pref: '長崎県',
         match_level: MatchLevel.PREFECTURE,
@@ -157,7 +157,7 @@ describe('PrefTransform', () => {
       // 「長崎県」にマッチした
       expect.objectContaining({
         ambiguousCnt: 1, // 1文字不明瞭
-        pref_key: "p2",
+        pref_key: 2,
         matchedCnt: 3,
         pref: '長崎県',
         match_level: MatchLevel.PREFECTURE,
@@ -167,7 +167,7 @@ describe('PrefTransform', () => {
       // 「長野県」にマッチした
       expect.objectContaining({
         ambiguousCnt: 1, // 1文字不明瞭
-        pref_key: "p1",
+        pref_key: 1,
         matchedCnt: 3,
         pref: '長野県',
         match_level: MatchLevel.PREFECTURE,

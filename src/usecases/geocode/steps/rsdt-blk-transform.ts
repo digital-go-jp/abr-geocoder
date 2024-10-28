@@ -49,17 +49,17 @@ export class RsdtBlkTransform extends Transform {
   ) {
 
     const results = new QuerySet();
-    Array.from(queries.values()).forEach(async query => {
+    for await (const query of queries.values()) {
       if (query.searchTarget === SearchTarget.PARCEL) {
         // 地番検索が指定されている場合、このステップはスキップする
         results.add(query);
-        return;
+        continue;
       }
       if (query.city === '京都市') {
         // 京都市がマッチしている場合、スキップする
         // (京都市は住居表示を行っていない)
         results.add(query);
-        return;
+        continue;
       }
 
       // town_key が必要なので、TOWN_LOCAL未満はスキップ
@@ -67,12 +67,12 @@ export class RsdtBlkTransform extends Transform {
       if (query.match_level.num < MatchLevel.MACHIAZA.num || 
         query.match_level === MatchLevel.PARCEL) {
         results.add(query);
-        return;
+        continue;
       }
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
         results.add(query);
-        return;
+        continue;
       }
 
       // rsdt_addr_flg = 0のものは地番を検索する
@@ -84,12 +84,12 @@ export class RsdtBlkTransform extends Transform {
 
       if (!query.town_key) {
         results.add(query);
-        return;
+        continue;
       }
       const target = trimDashAndSpace(query.tempAddress);
       if (!target || !query.lg_code) {
         results.add(query);
-        return;
+        continue;
       }
 
       const db = await this.dbCtrl.openRsdtBlkDb({
@@ -99,7 +99,7 @@ export class RsdtBlkTransform extends Transform {
       if (!db) {
         // DBをオープンできなければスキップ
         results.add(query);
-        return;
+        continue;
       }
 
       // ------------------------
@@ -138,7 +138,7 @@ export class RsdtBlkTransform extends Transform {
         const copied = query.copy(params);
         results.add(copied);
       });
-    })
+    }
 
     // this.params.logger?.info(`rsdt-blk : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);

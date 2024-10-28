@@ -31,10 +31,6 @@ export class CommonDbUpdateCheckSqlite3
   extends Sqlite3Wrapper
   implements ICommonDbUpdateCheck {
 
-  async closeDb(): Promise<void> {
-    this.close();
-  }
-
   hasCityTable(): Promise<boolean> {
     const rows = this.prepare(`
       SELECT name FROM sqlite_master
@@ -110,7 +106,7 @@ export class CommonDbUpdateCheckSqlite3
     });
 
     const row = this.prepare<{
-      city_key: string;
+      city_key: number;
     }, Row>(`
       SELECT
         count(city_key) as count
@@ -150,7 +146,7 @@ export class CommonDbUpdateCheckSqlite3
     });
 
     const row = this.prepare<{
-      city_key: string;
+      city_key: number;
     }, Row>(`
       SELECT
         count(city_key) as count

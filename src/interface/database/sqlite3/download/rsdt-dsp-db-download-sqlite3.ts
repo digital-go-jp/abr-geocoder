@@ -33,8 +33,8 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
   async createRsdtDspTable() {
     this.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.RSDT_DSP}" (
-        "rsdtdsp_key" TEXT PRIMARY KEY,
-        "rsdtblk_key" TEXT,
+        "rsdtdsp_key" INTEGER PRIMARY KEY,
+        "rsdtblk_key" INTEGER,
         "${DataField.RSDT_ID.dbColumn}" TEXT,
         "${DataField.RSDT2_ID.dbColumn}" TEXT,
         "${DataField.RSDT_NUM.dbColumn}" TEXT,
@@ -44,10 +44,12 @@ export class RsdtDspDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtDspDb
         "${DataField.REP_LON.dbColumn}" TEXT
       );
     `);
-  }
 
-  async closeDb(): Promise<void> {
-    this.close();
+    this.exec(`
+      CREATE INDEX IF NOT EXISTS "idx_rsdt_dsp_rsdtblk_key" ON "${DbTableName.RSDT_DSP}" (
+        "rsdtblk_key"
+      );
+    `);
   }
 
   // Lat,Lonを テーブルにcsvのデータを溜め込む

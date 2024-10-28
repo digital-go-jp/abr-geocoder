@@ -182,7 +182,7 @@ export class GeocodeResultTransform extends Transform {
     // スコアも加味する
     const {
       topRSDT,
-      topParcel
+      topParcel,
     } = (() => {
       let topRSDT;
       let topParcel;
@@ -195,7 +195,7 @@ export class GeocodeResultTransform extends Transform {
           topParcel = result;
         }
         if (topParcel && topRSDT) {
-          break
+          break;
         }
       }
       return {

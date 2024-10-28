@@ -33,8 +33,8 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
   async createParcelTable() {
     this.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.PARCEL}" (
-        "parcel_key" TEXT PRIMARY KEY,
-        "town_key" TEXT DEFAULT null,
+        "parcel_key" INTEGER PRIMARY KEY,
+        "town_key" INTEGER DEFAULT null,
         "${DataField.PRC_ID.dbColumn}" TEXT,
         "${DataField.PRC_NUM1.dbColumn}" TEXT,
         "${DataField.PRC_NUM2.dbColumn}" TEXT,
@@ -48,10 +48,6 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
     this.exec(`
       CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON ${DbTableName.PARCEL}(town_key, ${DataField.PRC_ID.dbColumn});
     `);
-  }
-
-  async closeDb(): Promise<void> {
-    this.close();
   }
 
   // Lat,Lonを テーブルにcsvのデータを溜め込む
@@ -137,7 +133,7 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
           row.town_key = TableKeyProvider.getTownKey({
             lg_code,
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
-          }) as string;
+          });
           row.parcel_key = TableKeyProvider.getParcelKey({
             lg_code: row[DataField.LG_CODE.dbColumn].toString().toString(),
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),

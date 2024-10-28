@@ -28,7 +28,7 @@ import { IRsdtBlkDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 
 export type GetBlockNumRowsOptions = {
-  town_key: string;
+  town_key: number;
   blk_num: string; 
 };
 
@@ -47,10 +47,6 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
       name: DbTableName.RSDT_BLK,
     });
     return rows.length === 1;
-  }
-
-  async closeDb(): Promise<void> {
-    this.closeDb();
   }
 
   async getBlockNumRows(where: Required<GetBlockNumRowsOptions>): Promise<RsdtBlkInfo[]> {

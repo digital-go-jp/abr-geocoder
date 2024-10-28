@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 export type RsdtBlkInfo = {
-  rsdtblk_key: string;
-  town_key: string;
+  rsdtblk_key: number;
+  town_key: number;
   blk_num: string;
   blk_id: string;
   rep_lat: string;

@@ -25,62 +25,62 @@ import { LRUCache } from "lru-cache";
 import stringHash from "string-hash";
 
 export class TableKeyProvider {
-  private static readonly cache = new LRUCache<string, string>({
+  private static readonly cache = new LRUCache<string, number>({
     max: 300,
   });
 
-  private static generateKey = (key: string): string => {
+  private static generateKey = (key: string): number => {
     let result = this.cache.get(key);
     if (result) {
       return result;
     }
-    result = stringHash(key).toString(16);
+    result = stringHash(key);
     this.cache.set(key, result);
     return result;
   };
 
   static readonly getPrefKey = (params: Required<{
     lg_code: string;
-  }>): string => {
+  }>): number => {
     const prefix = params.lg_code.substring(0, 2);
 
     // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
-    return 'p' + this.generateKey(prefix);
+    return this.generateKey(prefix);
   };
 
   static getCityKey(params: Required<{
     lg_code: string;
-  }>): string {
+  }>): number {
     const key = params.lg_code;
     // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
-    return 'c' + this.generateKey(key);
+    return this.generateKey(key);
   }
 
   static readonly getTownKey = (params: Required<{
     lg_code: string;
     machiaza_id: string;
-  }>): string => {
+  }>): number => {
     const key = [
       params.lg_code,
       params.machiaza_id,
     ].join('/');
 
     // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
-    return 't' + this.generateKey(key);
+    return this.generateKey(key);
   };
 
   static readonly getRsdtBlkKey = (params: Required<{
     lg_code: string;
     machiaza_id: string;
     blk_id: string;
-  }>): string => {
+  }>): number => {
     const key = [
       params.lg_code,
       params.machiaza_id,
       params.blk_id,
     ].join('/');
     // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
-    return 'b' + this.generateKey(key);
+    return this.generateKey(key);
   };
 
 
@@ -90,7 +90,7 @@ export class TableKeyProvider {
     blk_id: string;
     rsdt_id: string;
     rsdt2_id: string;
-  }): string => {
+  }): number => {
     const key = [
       params.lg_code,
       params.machiaza_id,
@@ -100,14 +100,14 @@ export class TableKeyProvider {
     ].join('/');
 
     // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
-    return 'd' + this.generateKey(key);
+    return this.generateKey(key);
   };
 
   static readonly getParcelKey = (params: {
     lg_code: string;
     machiaza_id?: string | null;
     prc_id: string;
-  }): string => {
+  }): number => {
     const key = [
       params.lg_code,
       params.machiaza_id,
@@ -117,6 +117,6 @@ export class TableKeyProvider {
       .join('/');
 
     // SQLiteライブラリが勝手に number型にキャストするのを防ぐためにprefixを付ける
-    return 'n' + this.generateKey(key);
+    return this.generateKey(key);
   };
 }

@@ -44,7 +44,7 @@ export class DebugLogger {
     this.logger = winston.createLogger({
       format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json()
+        winston.format.json(),
       ),
       transports: [
         new winston.transports.File({
@@ -77,6 +77,11 @@ export class DebugLogger {
   notice(message: string, ...meta: any[]) {
     setImmediate(() => {
       this.logger.notice(message, ...meta);
+    });
+  }
+  error(message: string, ...meta: any[]) {
+    setImmediate(() => {
+      this.logger.error(message, ...meta);
     });
   }
 }

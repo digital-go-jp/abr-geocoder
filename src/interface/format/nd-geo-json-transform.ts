@@ -62,12 +62,12 @@ export type NdGeoJsonOutput = {
     prc_num1: string | null;
     prc_num2: string | null;
     prc_num3: string | null;
-    debug_pref_key?: string;
-    debug_city_key?: string;
-    debug_town_key?: string;
-    debug_parcel_key?: string;
-    debug_rsdtblk_key?: string;
-    debug_rsdtdsp_key?: string;
+    debug_pref_key?: number;
+    debug_city_key?: number;
+    debug_town_key?: number;
+    debug_parcel_key?: number;
+    debug_rsdtblk_key?: number;
+    debug_rsdtdsp_key?: number;
   },
 };
 

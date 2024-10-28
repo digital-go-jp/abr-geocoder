@@ -33,8 +33,8 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
   async createRsdtBlkTable() {
     this.exec(`
       CREATE TABLE IF NOT EXISTS "${DbTableName.RSDT_BLK}" (
-        "rsdtblk_key" TEXT PRIMARY KEY,
-        "town_key" TEXT,
+        "rsdtblk_key" INTEGER PRIMARY KEY,
+        "town_key" INTEGER,
         "${DataField.BLK_ID.dbColumn}" TEXT,
         "${DataField.BLK_NUM.dbColumn}" TEXT,
         "crc32" TEXT,
@@ -45,17 +45,18 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
     `);
 
     this.exec(`
+      CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key" ON "${DbTableName.RSDT_BLK}" (
+        "town_key"
+      );
+    `);
+    this.exec(`
       CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key_and_blk_num" ON "${DbTableName.RSDT_BLK}" (
         "town_key",
         "${DataField.BLK_NUM.dbColumn}"
       );
     `);
   }
-
-  async closeDb(): Promise<void> {
-    this.close();
-  }
-
+  
   // rep_lat, rep_lon を rsdt_blkテーブルに挿入/更新する
   async rsdtBlkPosCsvRows(rows: Record<string, string | number>[]): Promise<void> {
     const sql = `

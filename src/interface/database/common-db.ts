@@ -39,7 +39,6 @@ export interface ICommonDbUpdateCheck {
   hasPrefRows(): Promise<boolean>;
   hasCityRows(packageInfo: PackageInfo): Promise<boolean>;
   hasTownRows(packageInfo: PackageInfo): Promise<boolean>;
-  closeDb(): Promise<void>;
 }
 export interface ICommonDbDownload {
   prefCsvRows(rows: Record<string, string | number>[]): Promise<void>;
@@ -48,7 +47,6 @@ export interface ICommonDbDownload {
   cityPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   townCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   townPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
-  closeDb(): Promise<void>;
 }
 
 export interface ICommonDbGeocode {
@@ -83,29 +81,26 @@ export interface ICommonDbGeocode {
   getWardAndOazaChoListGeneratorHash(): string;
 
   getChomeRows(where: Partial<{
-    pref_key: string;
-    city_key: string;
-    town_key: string;
+    pref_key: number;
+    city_key: number;
+    town_key: number;
     oaza_cho: string;
   }>): Promise<ChomeMachingInfo[]>;
   getKoazaRows(where: Partial<{
-    city_key: string;
+    city_key: number;
     oaza_cho: string;
     chome: string;
   }>): Promise<KoazaMachingInfo[]>;
-  closeDb(): Promise<void>;
 }
 
 export interface IRsdtBlkDbDownload {
   rsdtBlkCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   rsdtBlkPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
-  closeDb(): Promise<void>;
 }
 
 export interface IRsdtBlkDbGeocode {
-  closeDb(): Promise<void>;
   getBlockNumRows(where: Required<{
-    town_key: string;
+    town_key: number;
     blk_num: string; 
   }>): Promise<RsdtBlkInfo[]>;
 }
@@ -113,27 +108,23 @@ export interface IRsdtBlkDbGeocode {
 export interface IRsdtDspDbDownload {
   rsdtDspCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   rsdtDspPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
-  closeDb(): Promise<void>;
 }
 
 export interface IRsdtDspDbGeocode {
-  closeDb(): Promise<void>;
   getRsdtDspRows(where: Required<{
-    rsdtblk_key: string;
+    rsdtblk_key: number;
   }>): Promise<RsdtDspInfo[]>;
 }
 
 export interface IParcelDbDownload {
   parcelCsvRows(rows: Record<string, string | number>[]): Promise<void>;
   parcelPosCsvRows(rows: Record<string, string | number>[]): Promise<void>;
-  closeDb(): Promise<void>;
 }
 
 export interface IParcelDbGeocode {
-  closeDb(): Promise<void>;
   getParcelRows(where: Required<{
-    city_key: string;
-    town_key?: string | null;
+    city_key: number;
+    town_key?: number | null;
     prc_id: string; 
   }>): Promise<ParcelInfo[]>;
 }

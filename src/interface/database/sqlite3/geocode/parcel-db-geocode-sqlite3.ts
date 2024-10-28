@@ -28,8 +28,8 @@ import { IParcelDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 
 export type GetParcelRowsOptions = {
-  city_key: string;
-  town_key?: string | null;
+  city_key: number;
+  town_key?: number | null;
   prc_id: string; 
 };
 
@@ -49,11 +49,7 @@ export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbG
     });
     return rows.length === 1;
   }
-
-  async closeDb(): Promise<void> {
-    this.closeDb();
-  }
-
+  
   async getParcelRows(where: Required<GetParcelRowsOptions>): Promise<ParcelInfo[]> {
     where.town_key = where.town_key || null;
     return new Promise((resolve: (rows: ParcelInfo[]) => void) => {
