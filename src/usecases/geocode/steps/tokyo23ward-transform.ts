@@ -53,19 +53,19 @@ export class Tokyo23WardTranform extends Transform {
     callback: TransformCallback,
   ) {
     const results = new QuerySet();
-    for (const query of queries.values()) {
+    Array.from(queries.values()).forEach(query => {
       // 行政区が判明している場合はスキップ
       if (!query.tempAddress || 
         query.match_level.num >= MatchLevel.CITY.num) {
         results.add(query);
-        continue;
+        return;
       }
 
       // 東京都〇〇区〇〇パターンを探索する
       const target = trimDashAndSpace(query.tempAddress);
       if (!target) {
         results.add(query);
-        continue;
+        return;
       }
       const searchResults = this.tokyo23WardTrie.find({
         target,
@@ -75,7 +75,7 @@ export class Tokyo23WardTranform extends Transform {
       });
       if (!searchResults || searchResults.length === 0) {
         results.add(query);
-        continue;
+        return;
       }
 
       let anyAmbiguous = false;
@@ -112,8 +112,7 @@ export class Tokyo23WardTranform extends Transform {
       if (!anyHit || anyAmbiguous) {
         results.add(query);
       }
-    }
-
+    });
     callback(null, results);
   }
 }

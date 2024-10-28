@@ -51,7 +51,7 @@ export class OazaChomeTransform extends Transform {
     // 大字・丁目・小字で当たるものがあるか
     // ------------------------
     const results = new QuerySet();
-    for await (const query of queries.values()) {
+    Array.from(queries.values()).forEach(query => {
       // if (query.match_level.num >= MatchLevel.MACHIAZA.num) {
       //   // 大字が既に判明している場合はスキップ
       //   results.add(query);
@@ -60,22 +60,21 @@ export class OazaChomeTransform extends Transform {
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
         results.add(query);
-        continue;
+        return;
       }
       if (query.koaza_aka_code === 2) {
         // 通り名が当たっている場合はスキップ
         results.add(query);
-        continue;
+        return;
       }
       
       const bearingWord = query.tempAddress.match(RegExpEx.create('(?:(?:上る|下る|東入る?|西入る?)|(?:角[東西南北])|(?:[東西南北]側))'));
       if (bearingWord) {
         // 京都通り名の特徴がある場合はスキップ
         results.add(query);
-        continue;
+        return;
       }
 
-      
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
@@ -97,15 +96,16 @@ export class OazaChomeTransform extends Transform {
         }
         if (prefix) {
           targets.push(copiedQuery.copy({
+            oaza_cho: '',
             matchedCnt: copiedQuery.matchedCnt - prefix.toOriginalString().length,
             tempAddress: prefix.concat(copiedQuery.tempAddress),
           }));
         }
       }
 
-      for (const targetQuery of targets) {
+      targets.forEach(targetQuery => {
         if (!targetQuery || !targetQuery.tempAddress) {
-          continue;
+          return;
         }
         // 小字に数字が含まれていて、それが番地にヒットする場合がある。
         // この場合は、マッチしすぎているので、中間結果を返す必要がある。
@@ -152,9 +152,9 @@ export class OazaChomeTransform extends Transform {
           return matched;
         });
 
-        // 複数都道府県にヒットする可能性があるので、全て試す
         let anyHit = false;
         let anyAmbiguous = false;
+        // 複数都道府県にヒットする可能性があるので、全て試す
         filteredResult?.forEach(result => {
           anyAmbiguous = anyAmbiguous || result.ambiguous;
           let ambiguousCnt = targetQuery.ambiguousCnt + (result.ambiguous ? 1 : 0);
@@ -162,6 +162,7 @@ export class OazaChomeTransform extends Transform {
           if (targetQuery.oaza_cho && targetQuery.oaza_cho !== result.info?.oaza_cho) {
             anyAmbiguous = true;
             ambiguousCnt += targetQuery.oaza_cho.length;
+            return;
           }
 
           let unmatched = result.unmatched;
@@ -199,12 +200,12 @@ export class OazaChomeTransform extends Transform {
           const copied = targetQuery.copy(params);
           results.add(copied);
         });
+
         if (!anyHit || anyAmbiguous) {
           results.add(targetQuery);
         }
-      }
-
-    }
+      });
+    });
     callback(null, results);
   }
 

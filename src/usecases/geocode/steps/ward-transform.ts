@@ -101,7 +101,6 @@ export class WardTransform extends Transform {
         results.add(query);
       }
     }
-
     callback(null, results);
   }
 }

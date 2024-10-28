@@ -72,12 +72,12 @@ export class ThreadGeocodeTransform extends Duplex {
     // Out of memory を避けるために、受け入れを一時停止
     // 処理済みが追いつくまで、待機する
     const waitingCnt = this.writeIdx - this.nextIdx;
-    if (waitingCnt < 2000) {
+    if (waitingCnt < 100) {
       return;
     }
 
-    while (this.writeIdx - this.nextIdx > 1000) {
-      await timers.setTimeout(50);
+    while (this.writeIdx - this.nextIdx > 50) {
+      await timers.setTimeout(10);
     }
   }
 
