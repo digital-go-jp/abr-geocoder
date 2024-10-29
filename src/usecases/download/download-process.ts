@@ -110,7 +110,7 @@ export class Downloader {
 
     // ダウンロード処理を行う
     // 最大6コネクション
-    const numOfDownloadThreads = Math.max(Math.floor(parallel / 3 * 1), 1);
+    const numOfDownloadThreads = Math.min(Math.max(Math.floor(parallel / 3 * 2), 1), 6);
     const downloadTransform = new DownloadTransform({
       container: this.container,
       maxConcurrency: numOfDownloadThreads,
