@@ -82,8 +82,6 @@ export class AbrGeocoder {
       this.taskTail = taskNode;
     }
 
-    input.address += `(background:${this.workerPool instanceof WorkerThreadPool})`
-
     return new Promise<Query>((
       resolve: (result: Query) => void,
       reject: (error: Error) => void,

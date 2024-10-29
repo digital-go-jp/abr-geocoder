@@ -10,6 +10,7 @@ import {
   AbrGeocoder,
   AbrGeocoderDiContainer,
   AbrGeocoderStream,
+  CommentFilterTransform,
   DEFAULT_FUZZY_CHAR,
   EnvProvider,
   FormatterProvider,
@@ -98,10 +99,12 @@ export const runGeocoder = async (options: ExecOptions) => {
     });
 
     const lineByLine = new LineStream();
+    const commentFilter = new CommentFilterTransform();
 
     await pipeline(
       reader,
       lineByLine,
+      commentFilter,
       geocoderStream,
       formatter,
       dst,

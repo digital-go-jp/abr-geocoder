@@ -32,3 +32,4 @@ export { EnvProvider } from '@domain/models/env-provider';
 export { Query } from '@usecases/geocode/models/query';
 export { LineByLineTransform as LineStream } from '@domain/services/transformations/line-by-line-transform';
 export { AbrAbortController, AbrAbortSignal } from '@domain/models/abr-abort-controller';
+export { CommentFilterTransform } from '@domain/services/transformations/comment-filter-transform';
