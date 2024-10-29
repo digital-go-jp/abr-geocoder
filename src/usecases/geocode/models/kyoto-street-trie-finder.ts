@@ -11,6 +11,7 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder } from "./trie/trie-finder";
 import { MatchLevel } from "@domain/types/geocode/match-level";
+import { rimraf } from "rimraf";
 
 export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
 
@@ -71,6 +72,9 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
       // ここではエラーを殺すだけで良い
     }
 
+    // 古いキャッシュファイルを削除
+    await rimraf(`${path.join(diContainer.cacheDir, 'kyoto-street_*.v8')}`);
+    
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
     const rows = await commonDb.getKyotoStreetRows();

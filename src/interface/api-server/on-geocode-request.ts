@@ -91,7 +91,7 @@ export class OnGeocodeRequest {
       return;
     }
 
-    const isDebugMode = EnvProvider.isDebug || request.query_parameters['debug'].toLowerCase() === 'true';
+    const isDebugMode = EnvProvider.isDebug || request.query_parameters['debug']?.toLowerCase() === 'true';
 
     // フォーマッターの出力結果を response に書き込む
     const formatTransform = FormatterProvider.get({

@@ -7,6 +7,7 @@ import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder } from "./trie/trie-finder";
+import { rimraf } from "rimraf";
 
 export class PrefTrieFinder extends TrieAddressFinder<PrefInfo> {
 
@@ -48,6 +49,9 @@ export class PrefTrieFinder extends TrieAddressFinder<PrefInfo> {
       // ここではエラーを殺すだけで良い
     }
 
+    // 古いキャッシュファイルを削除
+    await rimraf(`${path.join(diContainer.cacheDir, 'pref_*.v8')}`);
+    
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
     const prefList = await commonDb.getPrefList();

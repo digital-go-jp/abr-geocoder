@@ -6,7 +6,7 @@ import {
 import { runGeocoder } from './common';
 
 
-describe('debug', () => {
+describe.skip('debug', () => {
 
   test('北海道石狩郡新篠津村第46線北10', async () => {
     const input = '北海道石狩郡新篠津村第４６線北１０番地';

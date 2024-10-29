@@ -4,14 +4,14 @@ import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import fs from 'node:fs';
 import path from 'node:path';
+import { rimraf } from "rimraf";
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from "../services/to-hankaku-alpha-num";
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
-import { TrieAddressFinder } from "./trie/trie-finder";
 import { CharNode } from "./trie/char-node";
-import { DebugLogger } from "@domain/services/logger/debug-logger";
+import { TrieAddressFinder } from "./trie/trie-finder";
 
 export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
 
@@ -106,21 +106,18 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
       // インポートエラーが発生した場合は、キャッシュを作り直すので、
       // ここではエラーを殺すだけで良い
     }
+    // 古いキャッシュファイルを削除
+    await rimraf(`${path.join(diContainer.cacheDir, 'oaza-cho_*.v8')}`);
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
     const rows = await commonDb.getOazaChomes();
-
-    const logger = DebugLogger.getInstance();
 
     for (const oazaInfo of rows) {
       oazaInfo.oaza_cho = toHankakuAlphaNum(oazaInfo.oaza_cho);
       oazaInfo.chome = toHankakuAlphaNum(oazaInfo.chome);
       oazaInfo.koaza = toHankakuAlphaNum(oazaInfo.koaza);
       const key = OazaChoTrieFinder.normalize(oazaInfo.key);
-      if (oazaInfo.city_key === 4051647979) {
-        logger.info(key);
-      }
       tree.append({
         key,
         value: oazaInfo,
