@@ -11,6 +11,7 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder } from "./trie/trie-finder";
 import { CharNode } from "./trie/char-node";
+import { DebugLogger } from "@domain/services/logger/debug-logger";
 
 export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
 
@@ -62,7 +63,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     // 第1地割 → 1地割 と書くこともあるので、「1(DASH)」にする
     // 第1地区、1丁目、1号、1部、1番地、第1なども同様。
     // トライ木でマッチすれば良いだけなので、正確である必要性はない
-    address = address?.replaceAll(RegExpEx.create('第?([0-9]+)(?:地[割区]|番[地丁]?|軒|号|部|条通?|字)(?![室棟区館階])', 'g'), `$1${DASH}`) as T;
+    address = address?.replaceAll(RegExpEx.create(`第?([0-9]+)(?:地[割区]|番[地丁]?|軒|号|線|部|条通?|字|${DASH})(?![室棟区館階])`, 'g'), `$1${DASH}`) as T;
 
     // 北海道に「太田五の通り」という大字がある。DASHにする
     address = address?.replace(RegExpEx.create('の通り?'), DASH) as T;
@@ -110,12 +111,18 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     // キャッシュファイルも作成する
     const rows = await commonDb.getOazaChomes();
 
+    const logger = DebugLogger.getInstance();
+
     for (const oazaInfo of rows) {
       oazaInfo.oaza_cho = toHankakuAlphaNum(oazaInfo.oaza_cho);
       oazaInfo.chome = toHankakuAlphaNum(oazaInfo.chome);
       oazaInfo.koaza = toHankakuAlphaNum(oazaInfo.koaza);
+      const key = OazaChoTrieFinder.normalize(oazaInfo.key);
+      if (oazaInfo.city_key === 4051647979) {
+        logger.info(key);
+      }
       tree.append({
-        key: OazaChoTrieFinder.normalize(oazaInfo.key),
+        key,
         value: oazaInfo,
       });
     }

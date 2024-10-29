@@ -22,6 +22,8 @@ const dbCtrl = new GeocodeDbController({
 });
 
 const parcelDb: jest.Mocked<IParcelDbGeocode> = {
+  close: jest.fn(),
+  
   getParcelRows: jest.fn<IParcelDbGeocode["getParcelRows"]>().mockImplementation(async (params): Promise<ParcelInfo[]> => {
     switch (true) {
       case params.town_key === 4657: {

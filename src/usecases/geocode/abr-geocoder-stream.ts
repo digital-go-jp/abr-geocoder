@@ -92,27 +92,27 @@ export class AbrGeocoderStream extends Duplex {
     callback();
 
     this.geocoder.geocode({
-        address: input.toString(),
-        searchTarget: this.searchTarget,
-        fuzzy: this.fuzzy,
-        tag: {
-          lineId,
-        },
-      })
+      address: input.toString(),
+      searchTarget: this.searchTarget,
+      fuzzy: this.fuzzy,
+      tag: {
+        lineId,
+      },
+    })
       // 処理が成功したら、別スレッドで処理した結果をQueryに変換する
       .then((result: Query) => {
         this.push(result);
         this.nextIdx++;
         this.closer();
         // this.emit(this.kShiftEvent, result);
-      })
-      // エラーが発生した
-      // .catch((error: Error | string) => {
-      //   const query = Query.create(input);
-      //   this.emit(this.kShiftEvent, query.copy({
-      //     match_level: MatchLevel.ERROR,
-      //   }));
-      // })
+      });
+    // エラーが発生した
+    // .catch((error: Error | string) => {
+    //   const query = Query.create(input);
+    //   this.emit(this.kShiftEvent, query.copy({
+    //     match_level: MatchLevel.ERROR,
+    //   }));
+    // })
 
   }
 

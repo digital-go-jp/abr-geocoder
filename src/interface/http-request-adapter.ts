@@ -125,11 +125,15 @@ export class HttpRequestAdapter {
     if (!this.session || this.session.closed) {
       return;
     }
-    this.session.ping((error: Error | null) => {
-      if (error) {
-        console.error('ping error', error);
-      }
-    });
+    try {
+      this.session.ping((error: Error | null) => {
+        if (error) {
+          console.error('ping error', error);
+        }
+      });
+    } catch (_error: unknown) {
+      // Do nothing here
+    }
   }
   private connect() {
     this.session = http2.connect(`https://${this.options.hostname}`, {
@@ -148,11 +152,11 @@ export class HttpRequestAdapter {
       if (this.noLongerReconnect) {
         return;
       }
-      console.log(`  ->retry`);
+      // console.log(`  ->retry`);
       setTimeout(() => this.connect(), 1000);
     });
     this.session.once('error', () => {
-      console.log(`--->session error (${process.pid})`);
+      // console.log(`--->session error (${process.pid})`);
       this.session = undefined;
       if (this.noLongerReconnect) {
         return;
@@ -428,7 +432,7 @@ export class HttpRequestAdapter {
       },
     ), requestOptions);
     const onSessionClose = () => {
-      console.log(`--->req.close`);
+      // console.log(`--->req.close`);
       req.destroy();
       req.close();
     };

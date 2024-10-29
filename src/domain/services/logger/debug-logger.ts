@@ -55,33 +55,18 @@ export class DebugLogger {
     });
   }
   debug(message: string, ...meta: any[]) {
-    setImmediate(() => {
-      this.logger.debug(message, ...meta);
-    });
+    this.logger.debug(message, ...meta);
   }
   info(message: string, ...meta: any[]) {
-    setImmediate(() => {
-      this.logger.info(message, ...meta);
-    });
+    this.logger.info(message, ...meta);
   }
   warn(message: string, ...meta: any[]) {
-    setImmediate(() => {
-      this.logger.warn(message, ...meta);
-    });
-  }
-  data(message: string, ...meta: any[]) {
-    setImmediate(() => {
-      this.logger.data(message, ...meta);
-    });
+    this.logger.warn(message, ...meta);
   }
   notice(message: string, ...meta: any[]) {
-    setImmediate(() => {
-      this.logger.notice(message, ...meta);
-    });
+    this.logger.notice(message, ...meta);
   }
   error(message: string, ...meta: any[]) {
-    setImmediate(() => {
-      this.logger.error(message, ...meta);
-    });
+    this.logger.error(message, ...meta);
   }
 }

@@ -40,7 +40,7 @@ export class StreamCounter extends Transform {
     });
 
     if (fps <= 1) {
-      fps = 10
+      fps = 10;
     }
 
     this.timer = setInterval(() => {

@@ -92,7 +92,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
         this.workers.push(worker);
         // タスクを実行する
         this.emit(this.kWorkerFreedEvent);
-      })
+      });
     }
   }
 

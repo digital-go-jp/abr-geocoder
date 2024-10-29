@@ -83,10 +83,12 @@ export class WorkerThread<I, T, R> extends Worker {
       reject: (_?: unknown) => void,
     ) => {
       const abortListener = () => {
-        this.off('abort', abortListener);
-        reject('abort');
-      }
-      this.once('abort', abortListener);
+        signal?.removeEventListener('abort', abortListener);
+        reject(new Event('abort'));
+      };
+      signal?.addEventListener('abort', abortListener, {
+        once: true,
+      });
 
       this.once('message', (shareMemory: Uint8Array) => {
         const received = fromSharedMemory<ThreadPong>(shareMemory);

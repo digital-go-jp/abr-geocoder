@@ -1,4 +1,3 @@
-import { WorkerThreadPool } from "@domain/services/thread/worker-thread-pool";
 import { SearchTarget } from "@domain/types/search-target";
 import { describe, expect, jest, test } from "@jest/globals";
 // import { setImmediateSpy } from '@mock/global';
@@ -19,7 +18,7 @@ jest.mock("@domain/services/thread/worker-thread-pool");
 const container = new AbrGeocoderDiContainer({} as AbrGeocoderDiContainerParams);
 
 describe('AbrGeocoder', () => {
-  const mockedWorkerThreadPool = jest.mocked(WorkerThreadPool);
+  // const mockedWorkerThreadPool = jest.mocked(WorkerThreadPool);
 
   // test('should create an instance correctly', async () => {
 
@@ -104,7 +103,7 @@ describe('AbrGeocoder', () => {
   test.skip('should involve the geocodeTransformOnMainThread.pipe() method', async () => {
 
     // AbrGeocoderクラスの作成
-    const abrGeocoder = new AbrGeocoder({
+    const abrGeocoder = await AbrGeocoder.create({
       container,
       numOfThreads: 3,
     });

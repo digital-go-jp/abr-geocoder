@@ -48,7 +48,7 @@ interface AddEventListenerOptions extends EventListenerOptions {
 type ListenerInfo = {
   listener: EventListener | EventListenerObject;
   options?: AddEventListenerOptions | boolean;
-}
+};
 
 export class AbrAbortSignal implements AbortSignal {
   private cancelled = false;

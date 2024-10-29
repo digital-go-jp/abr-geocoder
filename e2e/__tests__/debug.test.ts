@@ -9,7 +9,7 @@ import { runGeocoder } from './common';
 describe('debug', () => {
 
   test('北海道石狩郡新篠津村第46線北10', async () => {
-    const input = '北海道石狩郡新篠津村第46線北10';
+    const input = '北海道石狩郡新篠津村第４６線北１０番地';
     const { stdout } = await runGeocoder({
       input,
       geocode: {
@@ -24,17 +24,16 @@ describe('debug', () => {
         "input": "北海道石狩郡新篠津村第４６線北１０番地"
       },
       "result": {
-        "output": "北海道石狩郡新篠津村第46線北10",
+        "output": "北海道石狩郡新篠津村第四十六線北10",
         "others": [
           "10"
         ],
-        "score": 0.9,
-        "match_level": "city",
-        "coordinate_level": "city",
-        "lat": 43.225368,
-        "lon": 141.649247,
+        "match_level": "machiaza",
+        "coordinate_level": "machiaza",
+        "lat": 43.24806,
+        "lon": 141.641829,
         "lg_code": "013048",
-        "machiaza_id": null,
+        "machiaza_id": "0024000",
         "blk_id": null,
         "rsdt_id": null,
         "rsdt2_id": null,
@@ -43,7 +42,7 @@ describe('debug', () => {
         "county": "石狩郡",
         "city": "新篠津村",
         "ward": null,
-        "oaza_cho": "第46線北",
+        "oaza_cho": "第四十六線北",
         "chome": null,
         "koaza": null,
         "blk_num": null,
