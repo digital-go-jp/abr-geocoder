@@ -26,7 +26,7 @@ import { SemaphoreManager } from "@domain/services/thread/semaphore-manager";
 import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
 import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import { DownloadDbController } from "@interface/database/download-db-controller";
-import { StreamLimiter } from "@domain/transformations/stream-limitter";
+import { StreamLimiter } from "@domain/services/transformations/stream-limitter";
 import csvParser from "csv-parser";
 import fs from 'node:fs';
 import { Writable } from 'node:stream';

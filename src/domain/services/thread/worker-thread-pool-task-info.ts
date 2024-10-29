@@ -23,22 +23,88 @@
  */
 import { AsyncResource } from 'node:async_hooks';
 
-export class WorkerPoolTaskInfo<T, R> extends AsyncResource {
+
+export class WorkerPoolTaskInfo<DataType, ResultType> extends AsyncResource {
+  next: WorkerPoolTaskInfo<DataType, ResultType> | undefined;
+  result?: ResultType;
+  error?: null | undefined | Error;
+
+  private _isResolved: boolean = false;
+  private resolve?: (value: ResultType) => void;
+  private reject?: (err: Error) => void;
+
+  get isResolved(): boolean {
+    return this._isResolved;
+  }
+  setResolver(fn: (value: ResultType) => void) {
+    this.resolve = fn;
+  }
+  setRejector(fn: (err: Error) => void) {
+    this.reject = fn;
+  }
 
   constructor(
-    public readonly data: T,
-    public readonly resolve: (value: R) => void,
-    public readonly reject: (err: Error) => void,
+    public readonly data: DataType,
   ) {
     super('WorkerPoolTaskInfo');
   }
 
-  done(err: null | undefined | Error, result?: R) {
-    if (err) {
-      this.runInAsyncScope(this.reject, this, err);
-    } else {
-      this.runInAsyncScope(this.resolve, this, result);
+  emit(): boolean {
+    if (!this.isResolved) {
+      return false;
     }
+    if (this.error) {
+      if (this.reject) {
+        this.runInAsyncScope(this.reject, this, this.error);
+      } else {
+        throw this.error;
+      }
+    } else {
+      if (this.resolve) {
+        this.runInAsyncScope(this.resolve, this, this.result);
+      } else {
+        throw new Error(`A resolver is not set for ${this.asyncId()}`);
+      }
+    }
+    this.emitDestroy();
+    return true;
+  }
+
+  setResult(err: null | undefined | Error, result?: ResultType) {
+    this._isResolved = true;
+    if (err) {
+      this.error = err;
+    } else {
+      this.result = result;
+    }
+  }
+
+  done(err: null | undefined | Error, result?: ResultType) {
+    if (err) {
+      this.setResult(err);
+    } else {
+      this.setResult(null, result);
+    }
+    this.emit();
     this.emitDestroy();
   }
 }
+// export class WorkerPoolTaskInfo<T, R> extends AsyncResource {
+
+//   constructor(
+//     public readonly data: T,
+//     public readonly resolve: (value: R) => void,
+//     public readonly reject: (err: Error) => void,
+//   ) {
+//     super('WorkerPoolTaskInfo');
+//   }
+
+//   done(err: null | undefined | Error, result?: R) {
+//     if (err) {
+//       this.runInAsyncScope(this.reject, this, err);
+//     } else {
+//       this.runInAsyncScope(this.resolve, this, result);
+//     }
+//     this.emitDestroy();
+//   }
+// }

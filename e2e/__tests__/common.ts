@@ -6,7 +6,10 @@ import path from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
-  AbrGeocodeStream,
+  AbrAbortController,
+  AbrGeocoder,
+  AbrGeocoderDiContainer,
+  AbrGeocoderStream,
   DEFAULT_FUZZY_CHAR,
   EnvProvider,
   FormatterProvider,
@@ -50,16 +53,25 @@ export const runGeocoder = async (options: ExecOptions) => {
     // ビルドしないでもデバッグできる
     const abrgDir = options.useGlobalDB ? resolveHome(EnvProvider.DEFAULT_ABRG_DIR) : dbPath;
     
-    const geocoderStream = await AbrGeocodeStream.create({
-      fuzzy: DEFAULT_FUZZY_CHAR,
-      searchTarget: options.geocode.searchTarget,
+    const container = new AbrGeocoderDiContainer({
       cacheDir: path.join(abrgDir, 'cache'),
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
       },
       debug: false,
-      progress(current: number) {},
+    });
+    
+    const geocoder = await AbrGeocoder.create({
+      container,
+      numOfThreads: 1,
+    });
+
+    // ジオコーディング・ストリーマの作成
+    const geocoderStream = new AbrGeocoderStream({
+      geocoder,
+      fuzzy: DEFAULT_FUZZY_CHAR,
+      searchTarget: options.geocode.searchTarget,
     });
 
     const reader = (() => {

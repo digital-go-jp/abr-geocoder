@@ -21,14 +21,43 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export { AbrGeocoderStream } from '@usecases/geocode/abr-geocoder-stream';
-export { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
-export { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
-export { OutputFormat } from '@domain/types/output-format';
-export { SearchTarget } from '@domain/types/search-target';
-export { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-export { FormatterProvider } from '@interface/format/formatter-provider';
-export { EnvProvider } from '@domain/models/env-provider';
-export { Query } from '@usecases/geocode/models/query';
-export { LineByLineTransform as LineStream } from '@domain/services/transformations/line-by-line-transform';
-export { AbrAbortController, AbrAbortSignal } from '@domain/models/abr-abort-controller';
+import { Transform, TransformCallback } from "node:stream";
+
+export class StreamCounter extends Transform {
+  private count: number = 0;
+  private prevCount: number = 0;
+  private timer: NodeJS.Timeout;
+
+  constructor({
+    fps = 10,
+    callback,
+  }: {
+    callback: (current: number) => void,
+    fps: number;
+  }) {
+    super({
+      objectMode: true,
+    });
+
+    if (fps <= 1) {
+      fps = 10
+    }
+
+    this.timer = setInterval(() => {
+      if (this.prevCount === this.count) {
+        return;
+      }
+      this.prevCount = this.count;
+      callback(this.count);
+    }, 1000 / Math.floor(fps));
+  }
+  _transform(chunk: unknown, _: BufferEncoding, callback: TransformCallback): void {
+    this.count++;
+    callback(null, chunk);
+  }
+
+  _final(callback: (error?: Error | null) => void): void {
+    clearInterval(this.timer);
+    callback();
+  }
+}

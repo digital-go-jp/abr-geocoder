@@ -21,14 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export { AbrGeocoderStream } from '@usecases/geocode/abr-geocoder-stream';
-export { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
-export { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
-export { OutputFormat } from '@domain/types/output-format';
-export { SearchTarget } from '@domain/types/search-target';
-export { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-export { FormatterProvider } from '@interface/format/formatter-provider';
-export { EnvProvider } from '@domain/models/env-provider';
-export { Query } from '@usecases/geocode/models/query';
-export { LineByLineTransform as LineStream } from '@domain/services/transformations/line-by-line-transform';
-export { AbrAbortController, AbrAbortSignal } from '@domain/models/abr-abort-controller';
+export interface IWorkerThreadPool<TransformData, ReceiveData> {
+
+  run(workerData: TransformData): Promise<ReceiveData>;
+
+  close(): void;
+}

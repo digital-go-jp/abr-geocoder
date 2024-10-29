@@ -58,10 +58,6 @@ import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
 import { WardTransform } from '../steps/ward-transform';
 
-export type GeocodeWorkerInitData = {
-  containerParams: AbrGeocoderDiContainerParams;
-};
-
 export class GeocodeTransform extends Duplex {
 
   private readonly reader = new Readable({
@@ -180,13 +176,13 @@ export class GeocodeTransform extends Duplex {
     callback();
   }
  
-  static readonly create = async (params: Required<GeocodeWorkerInitData>) => {
-    const container = new AbrGeocoderDiContainer(params.containerParams);
+  static readonly create = async (params: Required<AbrGeocoderDiContainerParams>) => {
+    const container = new AbrGeocoderDiContainer(params);
     const dbCtrl = container.database;
     const logger: DebugLogger | undefined = container.logger;
     const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
 
-    const trees = await loadGeocoderTrees(params.containerParams);
+    const trees = await loadGeocoderTrees(params);
     
     const result = new GeocodeTransform({
       dbCtrl,

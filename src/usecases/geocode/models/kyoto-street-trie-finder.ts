@@ -59,11 +59,16 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
     const tree = new KyotoStreetTrieFinder();
     const cacheFilePath = path.join(diContainer.cacheDir, `kyoto-street_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
-    if (isExist) {
-      // キャッシュがあれば、キャッシュから読み込む
-      const encoded = await fs.promises.readFile(cacheFilePath);
-      tree.import(encoded);
-      return tree;
+    try {
+      if (isExist) {
+        // キャッシュがあれば、キャッシュから読み込む
+        const encoded = await fs.promises.readFile(cacheFilePath);
+        tree.import(encoded);
+        return tree;
+      }
+    } catch (_e: unknown) {
+      // インポートエラーが発生した場合は、キャッシュを作り直すので、
+      // ここではエラーを殺すだけで良い
     }
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む

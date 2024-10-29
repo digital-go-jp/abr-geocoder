@@ -23,7 +23,7 @@
  */
 import { Duplex } from "stream";
 
-export class LineStream extends Duplex {
+export class LineByLineTransform extends Duplex {
   private prevBuffer: Buffer | null = null;
   private bomCheck: boolean;
 

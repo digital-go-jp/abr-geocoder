@@ -23,12 +23,12 @@
  */
 import fs from 'node:fs';
 import { Writable } from 'node:stream';
-import { TrimTransform } from '../transformations/trim-transform';
-import { LineStream } from './line-stream';
+import { CommentFilterTransform } from './transformations/comment-filter-transform';
+import { LineByLineTransform } from './transformations/line-by-line-transform';
 
 export const countRequests = (filePath: string) => {
-  const lineByLine = new LineStream();
-  const commentFilter = new TrimTransform();
+  const lineByLine = new LineByLineTransform();
+  const commentFilter = new CommentFilterTransform();
   return new Promise((
     resolve: (total: number) => void,
   ) => {

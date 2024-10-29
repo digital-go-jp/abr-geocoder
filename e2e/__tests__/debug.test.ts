@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, test, jest } from '@jest/globals';
 import {
   OutputFormat,
   SearchTarget
@@ -8,8 +8,8 @@ import { runGeocoder } from './common';
 
 describe('debug', () => {
 
-  test('北海道釧路市豊川８－１９', async () => {
-    const input = '北海道釧路市豊川８－１９';
+  test('北海道石狩郡新篠津村第46線北10', async () => {
+    const input = '北海道石狩郡新篠津村第46線北10';
     const { stdout } = await runGeocoder({
       input,
       geocode: {
@@ -21,31 +21,33 @@ describe('debug', () => {
 
     expect(JSON.parse(stdout)).toMatchObject({
       "query": {
-        "input": "北海道釧路市豊川８－１９"
+        "input": "北海道石狩郡新篠津村第４６線北１０番地"
       },
       "result": {
-        "output": "北海道釧路市豊川町8-19",
-        "others": [],
-        "match_level": "residential_detail",
-        "coordinate_level": "residential_detail",
-        "lat": 43.009050373,
-        "lon": 144.376992784,
-        "lg_code": "012068",
-        "machiaza_id": "0292000",
-        "blk_id": "008",
-        "rsdt_id": "019",
+        "output": "北海道石狩郡新篠津村第46線北10",
+        "others": [
+          "10"
+        ],
+        "score": 0.9,
+        "match_level": "city",
+        "coordinate_level": "city",
+        "lat": 43.225368,
+        "lon": 141.649247,
+        "lg_code": "013048",
+        "machiaza_id": null,
+        "blk_id": null,
+        "rsdt_id": null,
         "rsdt2_id": null,
         "prc_id": null,
         "pref": "北海道",
-        "county": null,
-        "city": "釧路市",
+        "county": "石狩郡",
+        "city": "新篠津村",
         "ward": null,
-        "oaza_cho": "豊川町",
+        "oaza_cho": "第46線北",
         "chome": null,
         "koaza": null,
-        "blk_num": "8",
-        "rsdt_addr_flg": 1,
-        "rsdt_num": "19",
+        "blk_num": null,
+        "rsdt_num": null,
         "rsdt_num2": null,
         "prc_num1": null,
         "prc_num2": null,

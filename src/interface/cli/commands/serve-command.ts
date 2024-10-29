@@ -103,7 +103,7 @@ const serveCommand: CommandModule = {
     });
 
     // ジオコーダ
-    const geocoder = new AbrGeocoder({
+    const geocoder = await AbrGeocoder.create({
       container,
       numOfThreads: 5,
     });

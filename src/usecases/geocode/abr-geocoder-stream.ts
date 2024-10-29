@@ -25,13 +25,11 @@ import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { SearchTarget } from '@domain/types/search-target';
 import { Duplex } from 'node:stream';
 import timers from 'node:timers/promises';
-import { AbrGeocoder } from '../abr-geocoder';
-import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
-import { AbrGeocoderInput } from '../models/abrg-input-data';
-import { Query } from '../models/query';
+import { AbrGeocoder } from './abr-geocoder';
+import { Query } from './models/query';
 // import inspector from "node:inspector";
 
-export class ThreadGeocodeTransform extends Duplex {
+export class AbrGeocoderStream extends Duplex {
   private writeIdx: number = 0;
   private receivedFinal: boolean = false;
   private nextIdx: number = 1;
@@ -40,7 +38,6 @@ export class ThreadGeocodeTransform extends Duplex {
   private fuzzy: string | undefined;
 
   constructor(params: Required<{
-    container: AbrGeocoderDiContainer,
     geocoder: AbrGeocoder,
     fuzzy: string;
     searchTarget?: SearchTarget;
@@ -83,7 +80,7 @@ export class ThreadGeocodeTransform extends Duplex {
 
   // 前のstreamからデータが渡されてくる
   async _write(
-    input: string | AbrGeocoderInput, 
+    input: string, 
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
@@ -91,36 +88,31 @@ export class ThreadGeocodeTransform extends Duplex {
 
     const lineId = ++this.writeIdx;
 
-    if (typeof input === 'string') {
-      input = {
-        address: input,
+    // 次のタスクをもらうために、callbackを呼び出す
+    callback();
+
+    this.geocoder.geocode({
+        address: input.toString(),
         searchTarget: this.searchTarget,
         fuzzy: this.fuzzy,
         tag: {
           lineId,
         },
-      };
-    }
-
-    // 次のタスクをもらうために、callbackを呼び出す
-    callback();
-
-    this.geocoder.geocode(input)
+      })
       // 処理が成功したら、別スレッドで処理した結果をQueryに変換する
       .then((result: Query) => {
         this.push(result);
-        this.emit('progress', this.nextIdx, this.writeIdx);
         this.nextIdx++;
         this.closer();
         // this.emit(this.kShiftEvent, result);
-      });
-    // エラーが発生した
-    // .catch((error: Error | string) => {
-    //   const query = Query.create(input);
-    //   this.emit(this.kShiftEvent, query.copy({
-    //     match_level: MatchLevel.ERROR,
-    //   }));
-    // })
+      })
+      // エラーが発生した
+      // .catch((error: Error | string) => {
+      //   const query = Query.create(input);
+      //   this.emit(this.kShiftEvent, query.copy({
+      //     match_level: MatchLevel.ERROR,
+      //   }));
+      // })
 
   }
 

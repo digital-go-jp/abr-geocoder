@@ -77,18 +77,22 @@ export class WorkerThread<I, T, R> extends Worker {
       resolve(received.data);
     });
   }
-  private async initAsync() {
+  private async initAsync(signal?: AbortSignal) {
     return new Promise((
       resolve: (_?: unknown) => void,
-      // reject: (_?: unknown) => void,
+      reject: (_?: unknown) => void,
     ) => {
+      const abortListener = () => {
+        this.off('abort', abortListener);
+        reject('abort');
+      }
+      this.once('abort', abortListener);
 
       this.once('message', (shareMemory: Uint8Array) => {
         const received = fromSharedMemory<ThreadPong>(shareMemory);
         if (received.kind !== 'pong') {
           return;
         }
-        // this.off('message', listener);
         resolve();
       });
       this.postMessage(toSharedMemory<ThreadPing>({
@@ -126,9 +130,10 @@ export class WorkerThread<I, T, R> extends Worker {
   static readonly create = async <I, T, R>(params: {
     filename: string | URL;
     initData?: I;
+    signal?: AbortSignal;
   }) => {
     const worker = new WorkerThread<I, T, R>(params);
-    await worker.initAsync();
+    await worker.initAsync(params.signal);
     return worker;
   };
 }

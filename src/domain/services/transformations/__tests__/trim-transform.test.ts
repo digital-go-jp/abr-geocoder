@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 import { Readable, Writable } from 'stream';
 import { pipeline } from 'stream/promises';
-import { TrimTransform } from '../trim-transform';
+import { CommentFilterTransform } from '../comment-filter-transform';
 
 
 describe('TrimTransform', () => {
@@ -14,7 +14,7 @@ describe('TrimTransform', () => {
     ], {
       objectMode: true,
     });
-    const filter = new TrimTransform();
+    const filter = new CommentFilterTransform();
     const buffer: string[] = [];
     const dst = new Writable({
       objectMode: true,
@@ -46,7 +46,7 @@ describe('TrimTransform', () => {
     ], {
       objectMode: true,
     });
-    const filter = new TrimTransform();
+    const filter = new CommentFilterTransform();
     const buffer: string[] = [];
     const dst = new Writable({
       objectMode: true,

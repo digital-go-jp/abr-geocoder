@@ -37,11 +37,16 @@ export class CityAndWardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
     const tree = new CityAndWardTrieFinder();
     const cacheFilePath = path.join(cacheDir, `city-and-ward_${genHash}.v8`);
     const isExist = fs.existsSync(cacheFilePath);
-    if (isExist) {
-      // キャッシュがあれば、キャッシュから読み込む
-      const encoded = await fs.promises.readFile(cacheFilePath);
-      tree.import(encoded);
-      return tree;
+    try {
+      if (isExist) {
+        // キャッシュがあれば、キャッシュから読み込む
+        const encoded = await fs.promises.readFile(cacheFilePath);
+        tree.import(encoded);
+        return tree;
+      }
+    } catch (_e: unknown) {
+      // インポートエラーが発生した場合は、キャッシュを作り直すので、
+      // ここではエラーを殺すだけで良い
     }
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む

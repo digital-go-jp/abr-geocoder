@@ -24,7 +24,7 @@
 import { Transform } from 'node:stream';
 import { TransformCallback } from 'stream';
 
-export class TrimTransform extends Transform {
+export class CommentFilterTransform extends Transform {
   // 現在のキャレットの位置が、コメントアウトされているかどうか
   private isCuretInComment: boolean = false;
   private _total = 0;

@@ -25,12 +25,18 @@ import { EventEmitter } from 'node:events';
 import { DebugLogger } from '../logger/debug-logger';
 import { WorkerThread } from './worker-thread';
 import { WorkerPoolTaskInfo } from './worker-thread-pool-task-info';
+import { IWorkerThreadPool } from './iworker-thread-pool';
+import { AbrAbortController } from '@domain/models/abr-abort-controller';
 
-export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends EventEmitter {
+export class WorkerThreadPool<InitData, TransformData, ReceiveData> 
+  extends EventEmitter
+  implements IWorkerThreadPool<TransformData, ReceiveData>
+{
   private readonly kWorkerFreedEvent = Symbol('kWorkerFreedEvent');
   private readonly workers: WorkerThread<InitData, TransformData, ReceiveData>[] = [];
-  private readonly abortControl = new AbortController();
+  private readonly signal: AbortSignal | undefined;
   private readonly waitingTasks: WorkerPoolTaskInfo<TransformData, ReceiveData>[] = [];
+  private readonly abortCtrl = new AbrAbortController();
 
   constructor(params : {
     filename: string;
@@ -43,6 +49,10 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
     signal?: AbortSignal;
   }) {
     super();
+    params.signal?.addEventListener('abort', () => {
+      this.abortCtrl.abort();
+    });
+    this.signal = this.abortCtrl.signal;
 
     // タスクが挿入 or 1つタスクが完了したら、次のタスクを実行する
     this.on(this.kWorkerFreedEvent, () => {
@@ -52,11 +62,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       const task = this.waitingTasks.shift()!;
       const worker = this.workers.shift()!;
 
-      if (this.abortControl.signal.aborted) {
-        for (let i = 0; i < this.workers.length; i++) {
-          this.workers[i].terminate();
-        }
-        this.workers.length =  0;
+      if (this.signal && this.signal.aborted) {
         return;
       }
 
@@ -93,15 +99,21 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
   private async createWorker(params: {
     filename: string;
     initData?: InitData;
-    signal?: AbortSignal;
   }): Promise<WorkerThread<InitData, TransformData, ReceiveData> | undefined> {
-    if (params.signal?.aborted || this.abortControl.signal.aborted) {
+    if (this.signal?.aborted) {
       return;
     }
 
     const worker = await WorkerThread.create<InitData, TransformData, ReceiveData>(params);
-    worker.on('error', async (error: Error | string) => {
-      if (typeof error === 'string' && error === 'cancelled') {
+    if (this.signal && this.signal.aborted) {
+      worker.terminate();
+      return;
+    }
+    this.signal?.addEventListener('abort', () => {
+      worker.terminate();
+    });
+    worker.on('error', async (error: Event | string) => {
+      if (typeof error === 'string' && error === 'abort' || error instanceof Event && error.type === 'abort') {
         return;
       }
       worker.removeAllListeners();
@@ -116,7 +128,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
           task.done(error);
         }
       });
-      if (this.abortControl.signal.aborted) {
+      if (this.signal && this.signal.aborted) {
         worker.terminate();
         return;
       }
@@ -125,7 +137,6 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       const newWorker = await this.createWorker({
         filename: params.filename,
         initData: params.initData,
-        signal: this.abortControl.signal,
       });
       if (!newWorker) {
         return;
@@ -136,29 +147,25 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
       }
       worker.terminate();
     });
-    if (this.abortControl.signal.aborted) {
-      worker.terminate();
-      return;
-    }
 
     return worker;
   }
   
   async run(workerData: TransformData): Promise<ReceiveData> {
-    if (this.abortControl.signal.aborted) {
-      return Promise.reject('cancelled');
+    if (this.signal && this.signal.aborted) {
+      return Promise.reject(new Event('abort'));
     }
 
     return await new Promise((
       resolve: (value: ReceiveData) => void,
       reject: (err: Error) => void,
     ) => {
+      const taskNode = new WorkerPoolTaskInfo<TransformData, ReceiveData>(workerData);
+      taskNode.setResolver(resolve);
+      taskNode.setRejector(reject);
+    
       // タスクキューに入れる
-      this.waitingTasks.push(new WorkerPoolTaskInfo(
-        workerData,
-        resolve,
-        reject,
-      ));
+      this.waitingTasks.push(taskNode);
       
       // タスクキューから次のタスクを取り出して実行する
       this.emit(this.kWorkerFreedEvent);
@@ -166,11 +173,10 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData> extends Even
   }
 
   close() {
-    if (this.abortControl.signal.aborted) {
+    if (this.signal && this.signal.aborted) {
       return;
     }
-
-    this.abortControl.abort();
+    this.abortCtrl.abort();
 
     this.workers.forEach(worker => {
       worker.terminate();
