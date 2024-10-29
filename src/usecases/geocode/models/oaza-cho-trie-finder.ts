@@ -4,7 +4,6 @@ import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import fs from 'node:fs';
 import path from 'node:path';
-import { rimraf } from "rimraf";
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from "../services/to-hankaku-alpha-num";
@@ -12,6 +11,7 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { CharNode } from "./trie/char-node";
 import { TrieAddressFinder } from "./trie/trie-finder";
+import { removeFiles } from "@domain/services/remove-files";
 
 export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
 
@@ -107,7 +107,10 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
       // ここではエラーを殺すだけで良い
     }
     // 古いキャッシュファイルを削除
-    await rimraf(`${path.join(diContainer.cacheDir, 'oaza-cho_*.v8')}`);
+    await removeFiles({
+      dir: diContainer.cacheDir,
+      filename: 'oaza-cho_.*\.v8'
+    });
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する

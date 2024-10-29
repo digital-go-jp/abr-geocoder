@@ -7,7 +7,7 @@ import { toHankakuAlphaNum } from "../services/to-hankaku-alpha-num";
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder } from "./trie/trie-finder";
-import { rimraf } from "rimraf";
+import { removeFiles } from "@domain/services/remove-files";
 
 export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
 
@@ -49,7 +49,10 @@ export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
     }
 
     // 古いキャッシュファイルを削除
-    await rimraf(`${path.join(diContainer.cacheDir, 'ward_*.v8')}`);
+    await removeFiles({
+      dir: diContainer.cacheDir,
+      filename: 'ward_.*\.v8'
+    });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する

@@ -239,9 +239,6 @@ const geocodeCommand: CommandModule = {
 
     // 合計のリクエスト数をセット
     if (progressBar) {
-      progressBar.update(0, {
-        message: 'geocoding...',
-      });
       progressBar?.setTotal(total);
     }
 
@@ -284,7 +281,9 @@ const geocodeCommand: CommandModule = {
     const streamCounter = new StreamCounter({
       fps: 10,
       callback(current) {
-        progressBar?.update(current);
+        progressBar?.update(current, {
+          message: 'geocoding...',
+        });
       },
     });
     await streamPromises.pipeline(
