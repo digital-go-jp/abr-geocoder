@@ -57,7 +57,7 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder<TownMatchingInfo> {
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: diContainer.cacheDir,
-      filename: 'tokyo23-town_.*\.v8'
+      filename: 'tokyo23-town_.*\\.v8',
     });
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む

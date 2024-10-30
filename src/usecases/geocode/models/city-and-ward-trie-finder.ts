@@ -53,7 +53,7 @@ export class CityAndWardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: cacheDir,
-      filename: 'city-and-ward_.*\.v8'
+      filename: 'city-and-ward_.*\\.v8',
     });
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む

@@ -109,7 +109,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: diContainer.cacheDir,
-      filename: 'oaza-cho_.*\.v8'
+      filename: 'oaza-cho_.*\\.v8',
     });
 
     // キャッシュがなければ、Databaseからデータをロードして読み込む

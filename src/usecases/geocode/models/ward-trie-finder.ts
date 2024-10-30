@@ -51,7 +51,7 @@ export class WardTrieFinder extends TrieAddressFinder<WardMatchingInfo> {
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: diContainer.cacheDir,
-      filename: 'ward_.*\.v8'
+      filename: 'ward_.*\\.v8',
     });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む

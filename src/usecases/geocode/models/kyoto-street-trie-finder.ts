@@ -75,7 +75,7 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: diContainer.cacheDir,
-      filename: 'kyoto-street_.*\.v8'
+      filename: 'kyoto-street_.*\\.v8',
     });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
