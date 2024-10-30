@@ -9,7 +9,7 @@ import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder } from "./trie/trie-finder";
-import { rimraf } from "rimraf";
+import { removeFiles } from "@domain/services/remove-files";
 
 export class Tokyo23WardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
 
@@ -55,7 +55,10 @@ export class Tokyo23WardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
     }
 
     // 古いキャッシュファイルを削除
-    await rimraf(`${path.join(diContainer.cacheDir, 'tokyo23-ward_*.v8')}`);
+    await removeFiles({
+      dir: diContainer.cacheDir,
+      filename: 'tokyo23-ward_.*\.v8'
+    });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
