@@ -29,6 +29,7 @@ import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { PrefLgCode } from '@domain/types/pref-lg-code';
 import { UpdateChecker } from '@usecases/update-check/update-check-process';
 import path from 'node:path';
+import fs from 'node:fs';
 import readline from 'node:readline/promises';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 import downloadCommand from './download-command';
@@ -122,6 +123,13 @@ const updateCheckCommand: CommandModule = {
     progressBar?.stop();
     if (argv.debug) {
       console.timeEnd("update-check");
+    }
+    if (!results) {
+      // データベースが開けない
+      if (!argv.silent) {
+        console.error(AbrgMessage.toString(AbrgMessage.CANNOT_OPEN_THE_DATABASE));
+      }
+      return;
     }
     
     // アップデートがない

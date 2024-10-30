@@ -56,7 +56,7 @@ export class UpdateChecker {
     });
   }
 
-  async updateCheck(options: UpdateCheckOptions) {
+  async updateCheck(options: UpdateCheckOptions): Promise<(PackageInfo[]) | null> {
     // データベースから、対象の lgCodeを取得する
     const commonDb = await this.container.database.openCommonDb();
     const lgCodes = await commonDb.getLgCodes();

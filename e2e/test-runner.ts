@@ -79,15 +79,15 @@ const lgCodes = [
 ];
 
 $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`
-  .then(() => {
-    return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`
-  })
-  .then(() => {
-    return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`
-  })
+  // .then(() => {
+  //   return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`
+  // })
+  // .then(() => {
+  //   return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`
+  // })
   .then(() => {
     return $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`
   })
-  .then(() => {
-    $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js`
-  })
+  // .then(() => {
+  //   $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --maxWorker=25% --config ${rootDir}/jest.e2e.config.js`
+  // })

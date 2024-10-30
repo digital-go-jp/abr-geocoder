@@ -49,7 +49,8 @@ export type ExecOptions = {
 };
 
 export const runGeocoder = async (options: ExecOptions) => {
-  if (EnvProvider.isDebug) {
+  // process.env.USE_CLI は jest.e2e.config.js 内で定義する
+  if (process.env.USE_CLI !== 'true') {
     // VSCode でデバッグする場合は、geocode-command.ts と同様の処理をすることで
     // ビルドしないでもデバッグできる
     const abrgDir = options.useGlobalDB ? resolveHome(EnvProvider.DEFAULT_ABRG_DIR) : dbPath;

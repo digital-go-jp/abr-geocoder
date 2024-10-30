@@ -24,6 +24,9 @@
 import BetterSqlite3, { Statement } from "better-sqlite3";
 import { LRUCache } from "lru-cache";
 import stringHash from "string-hash";
+import fs from "node:fs";
+import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
+import { AbrgMessage } from "@domain/types/messages/abrg-message";
 
 export class Sqlite3Wrapper {
   private readonly cache = new LRUCache<number, Statement<unknown[], unknown>>({
@@ -36,6 +39,12 @@ export class Sqlite3Wrapper {
     sqliteFilePath: string;
     readonly: boolean,
   }>) {
+    if (!fs.existsSync(params.sqliteFilePath)) {
+      throw new AbrgError({
+        messageId: AbrgMessage.CANNOT_OPEN_THE_DATABASE,
+        level: AbrgErrorLevel.ERROR,
+      });
+    }
     this.driver = new BetterSqlite3(params.sqliteFilePath, {
       readonly: params.readonly,
     });

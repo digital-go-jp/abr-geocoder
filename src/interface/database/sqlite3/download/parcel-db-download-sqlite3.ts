@@ -50,7 +50,10 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
     `);
 
     this.driver.exec(`
-      CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON ${DbTableName.PARCEL}(town_key, ${DataField.PRC_ID.dbColumn});
+      CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON ${DbTableName.PARCEL}(
+        town_key,
+        ${DataField.PRC_ID.dbColumn}
+      );
     `);
   }
 
@@ -71,12 +74,10 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
       WHERE 
-        parcel_key = @parcel_key AND (
-          ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
-          ${DataField.REP_LON.dbColumn} != @rep_lon OR 
-          ${DataField.REP_LAT.dbColumn} IS NULL OR
-          ${DataField.REP_LON.dbColumn} IS NULL
-        )
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
+        ${DataField.REP_LON.dbColumn} != @rep_lon OR 
+        ${DataField.REP_LAT.dbColumn} IS NULL OR
+        ${DataField.REP_LON.dbColumn} IS NULL
     `;
     
     await this.createParcelTable();
