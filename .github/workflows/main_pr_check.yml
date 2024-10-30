@@ -19,14 +19,14 @@ jobs:
     #   group: ${{ github.workflow }}-${{ github.ref }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Setup npm cache
         id: node_modules
         with:
@@ -41,29 +41,41 @@ jobs:
           npm install --global yarn
           yarn install
 
+      - uses: actions/cache@v3
+        name: Setup npm cache
+        id: build_cache
+        with:
+          path: node_modules/
+          key: ${{ runner.os }}-src-${{ hashFiles('src/**/*.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-src-${{ hashFiles('src/**/*.ts') }}
+
       - name: Build
+        if: steps.build_cache.outputs.cache-hit != 'true'
         run: |
           npm run build
 
-      - name: git setup
-        run: |
-          git config --global user.email "no-reply@digital.go.jp"
-          git config --global user.name "github actions"
+      #- name: git setup
+      #  run: |
+      #    git config --global user.email "no-reply@digital.go.jp"
+      #    git config --global user.name "github actions"
             
       - name: create changelog.md
+        if: steps.build_cache.outputs.cache-hit != 'true'
         id: prepare
         run: |
           bash ./.github/workflows/generate_changelog.sh
-          git add .
-          git commit -m "create changelog.md"
+          # git add .
+          # git commit -m "create changelog.md"
           version=$(cat package.json | jq -r '.version')
           echo "version=$version" >> $GITHUB_OUTPUT
           tgz=$(npm pack | tail -n1 | tr -d '\n')
           echo "tgz=$tgz" >> $GITHUB_OUTPUT
 
       - name: github draft release  (trigger / workflow_dispatch)
+        if: steps.build_cache.outputs.cache-hit != 'true'
         run: |
-          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
+          # gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
           npm publish . --dry-run
         env:
           GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
