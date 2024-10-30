@@ -133,6 +133,8 @@ export class CommonDbDownloadSqlite3
 
   // Cityテーブルにデータを挿入する
   async cityCsvRows(rows: Record<string, string | number>[]) {
+    
+
     const sql = `
       INSERT INTO ${DbTableName.CITY} (
         city_key,

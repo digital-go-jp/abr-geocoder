@@ -7,7 +7,7 @@ const moduleDirectories = [
   "src",
 ];
 const tsconfig = "./tsconfig.e2e.json";
-process.env.USE_CLI = 'true';
+// process.env.USE_CLI = 'true';
 
 module.exports = {
   preset: 'ts-jest',
