@@ -39,7 +39,7 @@ export class Sqlite3Wrapper {
     sqliteFilePath: string;
     readonly: boolean,
   }>) {
-    if (!fs.existsSync(params.sqliteFilePath)) {
+    if (params.readonly && !fs.existsSync(params.sqliteFilePath)) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_OPEN_THE_DATABASE,
         level: AbrgErrorLevel.ERROR,

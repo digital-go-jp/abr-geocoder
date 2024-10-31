@@ -16,6 +16,7 @@ import {
   OutputFormat,
   SearchTarget
 } from '../../src/index';
+import { execaNode } from 'execa-cjs';
 
 const SECONDS = 1000;
 jest.setTimeout(5 * 60 * SECONDS);
@@ -23,7 +24,7 @@ jest.setTimeout(5 * 60 * SECONDS);
 const packageJsonPath = path.normalize(path.join(__dirname, '..', '..', 'package.json'));
 const rootDir = path.dirname(packageJsonPath);
 const dbPath = path.join(rootDir, 'db');
-// const cliPath = path.join(rootDir, 'build', 'interface', 'cli', 'cli.js');
+const cliPath = path.join(rootDir, 'build', 'interface', 'cli', 'cli.js');
 
 // AbrGeocoderをメインスレッドのみで動作させたいので、
 // 'test:e2e' をセットする
@@ -47,6 +48,17 @@ export type ExecOptions = {
 };
 
 export const runGeocoder = async (options: ExecOptions) => {
+
+  if (process.env.USE_CLI) {
+    // コマンドラインからテストを実行する場合は、CLIから行う
+    return execaNode(options)(cliPath, [
+      "-",
+      "-silient",
+      `--target ${options.geocode.searchTarget}`,
+      `-f ${options.geocode.outputFormat}`,
+      `-d ${dbPath}`,
+    ]);
+  }
   // VSCode でデバッグする場合は、geocode-command.ts と同様の処理をすることで
   // ビルドしないでもデバッグできる
   const abrgDir = options.useGlobalDB ? resolveHome(EnvProvider.DEFAULT_ABRG_DIR) : dbPath;
