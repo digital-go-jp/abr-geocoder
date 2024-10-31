@@ -38,6 +38,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # 過去2つのコミットを取得
     
       - name: Check if there are changes in specific paths
         id: check
