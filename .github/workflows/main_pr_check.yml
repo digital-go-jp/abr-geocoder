@@ -8,24 +8,14 @@ on:
     workflows: ["PR check"]
     types:
       - completed
-    branches:
-      - main
-      - develop
   workflow_dispatch:
 
 jobs:
   publish:
-    if: github.event.pull_request.draft == false
+    if: ${{ github.event.pull_request == null || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Exit if not triggerred by pull_request
-        run: |
-          if [ "$triggered_by" = "push" ]; then
-            echo "Triggered by push. Skipping."
-            exit 0
-          fi
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -48,7 +38,6 @@ jobs:
         run: echo "commit_id=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
       - name: create changelog.md
-        if: github.event_name != 'workflow_dispatch' 
         id: prepare
         run: |
           bash ./.github/workflows/generate_changelog.sh
@@ -65,12 +54,11 @@ jobs:
       #
       - name: npm release  (trigger / workflow_dispatch)
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
             npm publish . --dry-run
             gh release create ${{ steps.prepare.outputs.version }}-${{ env.commit_id }} ${{ steps.prepare.outputs.tgz }}
-          fi
-          
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+
+          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} 
             echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
             npm publish . --access public

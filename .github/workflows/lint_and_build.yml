@@ -33,7 +33,7 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      has_changes: ${{ steps.check.outpus.has_changes }}
+      has_changes: ${{ steps.check.outputs.has_changes }}
     
     steps:
       - name: Checkout repository
@@ -45,11 +45,11 @@ jobs:
         id: check
         run: |
           if git diff --quiet HEAD^ HEAD -- 'src/**/*.ts' 'e2e/**/*.ts' './*.json' './*.js' './*.mjs'; then
-            echo "has_changes='false'" >> $GITHUB_ENV
-            echo "has_changes='false'"
+            echo "has_changes=false" >> $GITHUB_ENV
+            echo "has_changes=false"
           else
-            echo "has_changes='true'" >> $GITHUB_ENV
-            echo "has_changes='true'"
+            echo "has_changes=true" >> $GITHUB_ENV
+            echo "has_changes=true"
           fi
   #
   # 変化があった場合のみテストを行う
