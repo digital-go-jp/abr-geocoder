@@ -138,12 +138,14 @@ jobs:
       # Jestでユニットテスト
       #
       - name: Run tests
+        timeout-minutes: 3  # 3分でタイムアウト
         run: npm run test
 
       #
       # e2eテスト (ビルドも含む)
       #
       - name: run e2e test
+        timeout-minutes: 10  # 10分でタイムアウト
         run: npm run test:e2e
       
       #
