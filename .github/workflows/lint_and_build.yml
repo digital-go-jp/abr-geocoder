@@ -125,7 +125,7 @@ jobs:
       # ESLintでコードの静的チェック
       #
       - name: Run eslint
-        uses: sibiraj-s/action-eslint@v3
+        uses: sibiraj-s/action-eslint@v4
         with:
           extensions: 'ts'
           ignore-path: .eslintignore
