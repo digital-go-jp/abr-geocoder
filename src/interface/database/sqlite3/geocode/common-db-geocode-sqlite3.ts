@@ -346,9 +346,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
   
   async getOazaChomes(): Promise<OazaChoMachingInfo[]> {
-    type TownRow = {
+
+    type Row = {
       pkey: string;
-      match_level: number;
       town_key: number;
       city_key: number;
       machiaza_id: string;
@@ -356,10 +356,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       chome: string;
       koaza: string;
       rsdt_addr_flg: number;
+      rep_lat: string;
+      rep_lon: string;
+      match_level: number;
       coordinate_level: number;
-      rep_lat?: string;
-      rep_lon?: string;
-    };
+    }
 
     const [
       prefMap,
@@ -369,77 +370,46 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       this.getCityMap(),
     ]);
 
-    const townRows = await new Promise((resolve: (rows: TownRow[]) => void) => {
+    const workTable = new Map<string, Row>();
+    const insertIntoResultTable = (rows: Row[]) => {
+      rows.forEach(row => {
+        switch (row.pkey.at(-1)) {
+          case '*': {
+            // 0か1なのか、selectした時点では分からない: 
+            workTable.set(row.pkey, row);
+            return;
+          }
+          case '0':
+          case '1': {
+            // '*' を末尾に持つkeyがあれば、0と1に分解する
+            const otherKey = row.pkey.substring(0, row.pkey.length - 1) + '*';
+            if (workTable.has(otherKey)) {
+              const prev = workTable.get(otherKey)!;
+              workTable.delete(otherKey);
+              const pkey0 = row.pkey.substring(0, row.pkey.length - 1) + '0';
+              const pkey1 = row.pkey.substring(0, row.pkey.length - 1) + '1';
+              if (prev.coordinate_level > row.coordinate_level) {
+                row.coordinate_level = prev.coordinate_level;
+                row.rep_lat = prev.rep_lat;
+                row.rep_lon = prev.rep_lon;
+              }
+              [pkey0, pkey1].forEach(pkey => {
+                workTable.set(pkey, row);
+              });
+            }
 
-      this.driver.exec('BEGIN TRANSACTION');
+            // 本来の値でセットする
+            workTable.set(row.pkey, row);
+            return;
+          }
 
-      this.driver.exec(`
-        CREATE TEMP TABLE resultTable (
-          pkey TEXT PRIMARY KEY,
-          town_key INTEGER DEFAULT null,
-          city_key INTEGER,
-          machiaza_id TEXT,
-          oaza_cho TEXT,
-          chome TEXT,
-          koaza TEXT,
-          rsdt_addr_flg INTEGER,
-          rep_lat TEXT,
-          rep_lon TEXT,
-          match_level INTEGER,
-          coordinate_level INTEGER
-        );
-      `);
+          default:
+            // Do nothing here
+        }
+      });
+    }
 
-      /*
-        * パターン： 〇〇(大字)〇〇丁目
-        *
-        * 〇〇丁目の場合、丁目までヒットするので
-        * ヒットできるならヒットさせる
-        *
-        * 霞が関一丁目 -> 35.673944,139.752558
-        * 霞が関二丁目 -> 35.675551,139.750413
-        * 霞が関三丁目 -> 35.671825,139.746988
-        */
-      // this.driver.exec(`
-      //   INSERT INTO resultTable
-      //   SELECT
-      //     (
-      //       t.city_key ||
-      //       t.${DataField.MACHIAZA_ID.dbColumn}
-      //     ) as pkey,
-      //     t.town_key,
-      //     t.city_key,
-      //     t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
-      //     t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
-      //     t.${DataField.CHOME.dbColumn} as chome,
-      //     '' as koaza,
-      //     CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} as INTEGER) as rsdt_addr_flg,
-      //     IFNULL(
-      //       t.${DataField.REP_LAT.dbColumn},
-      //       c.${DataField.REP_LAT.dbColumn}
-      //     ) as rep_lat,
-      //     IFNULL(
-      //       t.${DataField.REP_LON.dbColumn},
-      //       c.${DataField.REP_LON.dbColumn}
-      //     ) as rep_lon,
-      //     ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
-      //     IIF(
-      //       t.${DataField.REP_LAT.dbColumn} = '' OR t.${DataField.REP_LAT.dbColumn} IS NULL,
-      //       ${MatchLevel.CITY.num},
-      //       ${MatchLevel.MACHIAZA_DETAIL.num}
-      //     ) as coordinate_level
-      //   FROM
-      //     ${DbTableName.TOWN} as t
-      //     JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
-      //   WHERE
-      //     (
-      //       t.${DataField.OAZA_CHO.dbColumn} != '' AND
-      //       t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
-      //     ) AND 
-      //     substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
-      //     t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
-      // `);
-
+    {
       /*
         * パターン： 〇〇(大字)〇〇丁目
         *
@@ -452,13 +422,12 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * ↓
         * 霞が関 -> NULL, NULL
         */
-      this.driver.exec(`
-        INSERT OR IGNORE INTO resultTable
+      const sql = `
         SELECT
           (
             t.city_key ||
             substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) ||
-            '000'
+            '000*'
           ) as pkey,
           NULL as town_key,
           t.city_key,
@@ -483,7 +452,67 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
         GROUP BY
           pkey
-      `);
+      `;
+
+      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      insertIntoResultTable(rows);
+    }
+
+    {
+      /*
+        * パターン： 〇〇(大字)〇〇丁目
+        *
+        * 〇〇丁目の場合、丁目までヒットするので
+        * ヒットできるならヒットさせる
+        *
+        * 霞が関一丁目 -> 35.673944,139.752558
+        * 霞が関二丁目 -> 35.675551,139.750413
+        * 霞が関三丁目 -> 35.671825,139.746988
+        */
+      const sql = `
+        SELECT
+          (
+            t.city_key ||
+            t.${DataField.MACHIAZA_ID.dbColumn} ||
+            t.${DataField.RSDT_ADDR_FLG.dbColumn}
+          ) as pkey,
+          t.town_key,
+          t.city_key,
+          t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+          t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
+          t.${DataField.CHOME.dbColumn} as chome,
+          '' as koaza,
+          CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} as INTEGER) as rsdt_addr_flg,
+          IFNULL(
+            t.${DataField.REP_LAT.dbColumn},
+            c.${DataField.REP_LAT.dbColumn}
+          ) as rep_lat,
+          IFNULL(
+            t.${DataField.REP_LON.dbColumn},
+            c.${DataField.REP_LON.dbColumn}
+          ) as rep_lon,
+          ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
+          IIF(
+            t.${DataField.REP_LAT.dbColumn} = '' OR t.${DataField.REP_LAT.dbColumn} IS NULL,
+            ${MatchLevel.CITY.num},
+            ${MatchLevel.MACHIAZA_DETAIL.num}
+          ) as coordinate_level
+        FROM
+          ${DbTableName.TOWN} as t
+          JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
+        WHERE
+          (
+            t.${DataField.OAZA_CHO.dbColumn} != '' AND
+            t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
+          ) AND 
+          substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
+      `;
+      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      insertIntoResultTable(rows);
+    }
+
+    {
 
       /*
        * パターン： 〇〇小字 (大字が省略、小字)
@@ -495,12 +524,12 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
        * 長沢団地 -> 40.503892,141.564006
        * 寺地 -> 40.462681,141.541286
        */
-      this.driver.exec(`
-        INSERT OR IGNORE INTO resultTable
+      const sql = `
         SELECT
           (
             t.city_key ||
-            t.${DataField.MACHIAZA_ID.dbColumn}
+            t.${DataField.MACHIAZA_ID.dbColumn} ||
+            t.${DataField.RSDT_ADDR_FLG.dbColumn}
           ) as pkey,
           t.town_key,
           t.city_key,
@@ -536,17 +565,23 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           ) AND 
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
           t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
-      `);
+      `;
+
+      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      insertIntoResultTable(rows);
+    }
+
+    {
 
       /*
        * パターン： 〇〇(大字)〇〇(小字)
        */
-      this.driver.exec(`
-        INSERT OR IGNORE INTO resultTable
+      const sql = `
         SELECT
           (
             t.city_key ||
-            t.${DataField.MACHIAZA_ID.dbColumn}
+            t.${DataField.MACHIAZA_ID.dbColumn} ||
+            t.${DataField.RSDT_ADDR_FLG.dbColumn}
           ) as pkey,
           t.town_key,
           t.city_key,
@@ -579,7 +614,20 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           ) AND
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
           t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
-      `);
+      `;
+
+      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      insertIntoResultTable(rows);
+    }
+
+    type OazaRow = {
+      oaza_key: string;
+      rep_lat: string;
+      rep_lon: string;
+      coordinate_level: number;
+    };
+    const oazaTree = new TrieAddressFinder<OazaRow>();
+    {
 
       /*
         * パターン： 〇〇(大字)
@@ -593,12 +641,12 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         * ...
         *
         */
-      this.driver.exec(`
-        INSERT INTO resultTable
+      const sql = `
         SELECT
             (
               t.city_key ||
-              t.${DataField.MACHIAZA_ID.dbColumn}
+              t.${DataField.MACHIAZA_ID.dbColumn} ||
+              t.${DataField.RSDT_ADDR_FLG.dbColumn}
           ) as pkey,
           t.town_key,
           t.city_key,
@@ -631,164 +679,107 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           ) AND
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) = '000' AND
           t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
-        ON CONFLICT (pkey) DO UPDATE SET
-          town_key = excluded.town_key,
-          rep_lat = excluded.rep_lat,
-          rep_lon = excluded.rep_lon,
-          coordinate_level = excluded.coordinate_level,
-          rsdt_addr_flg = excluded.rsdt_addr_flg
-        WHERE
-          coordinate_level = ${MatchLevel.CITY.num}
-      `);
+      `;
 
-      this.driver.exec('COMMIT');
+      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      insertIntoResultTable(rows);
 
-      //--------------------------------------
-      // 大字・丁目で丁目が緯度経度を持っていないが
-      // 大字が持っている場合がある。
-      // この場合、大字の緯度経度を丁目に適用する
-      //--------------------------------------
-      type OtherRow = {
-        oaza_key: string;
-        rep_lat: string;
-        rep_lon: string;
-        coordinate_level: number;
-      };
-      const otherRows = this.prepare<unknown[], OtherRow>(`
-        SELECT
-          (
-            city_key ||
-            substr(${DataField.MACHIAZA_ID.dbColumn}, 1, 4)
-          ) as oaza_key,
-          ${DataField.REP_LAT.dbColumn} as rep_lat,
-          ${DataField.REP_LON.dbColumn} as rep_lon,
-          IIF(
-            ${DataField.REP_LAT.dbColumn} = '' OR ${DataField.REP_LAT.dbColumn} IS NULL,
-            ${MatchLevel.UNKNOWN.num},
-            ${MatchLevel.MACHIAZA.num}
-          ) as coordinate_level
-        FROM
-          ${DbTableName.TOWN}
-        WHERE
-          (
-            ${DataField.OAZA_CHO.dbColumn} != '' AND
-            ${DataField.OAZA_CHO.dbColumn} IS NOT NULL
-          ) AND
-          substr(${DataField.MACHIAZA_ID.dbColumn}, 5, 7) = '000' AND
-          ${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
-      `).all();
-      const memo = new TrieAddressFinder<OtherRow>();
-      otherRows.forEach(row => {
-        memo.append({
-          key: row.oaza_key,
-          value: row,
+      rows.forEach(row => {
+        const oaza_key = [
+          row.city_key.toString(),
+          row.machiaza_id.substring(0, 4)
+        ].join('');
+        oazaTree.append({
+          key: oaza_key,
+          value: {
+            oaza_key,
+            rep_lat: row.rep_lat,
+            rep_lon: row.rep_lon,
+            coordinate_level: row.coordinate_level,
+          },
         });
       });
+    }
 
-      let townRows = this.prepare<unknown[], TownRow>('SELECT * FROM resultTable').all();
-      townRows = townRows.map(row => {
-        if (row.coordinate_level >= MatchLevel.MACHIAZA.num || !row.oaza_cho) {
-          return row;
-        }
-      
+    //--------------------------------------
+    // 大字・丁目で丁目が緯度経度を持っていないが
+    // 大字が持っている場合がある。
+    // この場合、大字の緯度経度を丁目に適用する
+    //--------------------------------------
+    const results: OazaChoMachingInfo[] = [];
+
+    workTable.forEach((row: Row) => {
+      // 情報を補正する
+      const cityInfo = cityMap.get(row.city_key)!;
+      const prefInfo = prefMap.get(cityInfo.pref_key)!;
+
+      if (row.coordinate_level === MatchLevel.CITY.num) {
+        // 大字だけで探索して、緯度経度の更新を試みる
         const oaza_key = `${row.city_key}${row.machiaza_id.substring(0, 4)}`;
-        const results = memo.find({
+        const matched = oazaTree.find({
           target: CharNode.create(oaza_key)!,
           fuzzy: undefined,
         });
-        if (results && results.length > 0) {
+        if (matched && matched.length > 0) {
           // coordinate_level が一番高い値を採用
-          results.sort((a, b) => b.info!.coordinate_level - a.info!.coordinate_level);
-
-          row.coordinate_level = results[0].info!.coordinate_level;
-          if (results[0].info!.rep_lat && results[0].info!.rep_lon) {
-            row.rep_lat = results[0].info!.rep_lat;
-            row.rep_lon = results[0].info!.rep_lon;
-            row.coordinate_level = MatchLevel.MACHIAZA.num;
+          matched.sort((a, b) => b.info!.coordinate_level - a.info!.coordinate_level);
+  
+          row.coordinate_level = matched[0].info!.coordinate_level;
+          if (matched[0].info!.rep_lat && matched[0].info!.rep_lon) {
+            row.rep_lat = matched[0].info!.rep_lat;
+            row.rep_lon = matched[0].info!.rep_lon;
+            row.coordinate_level = matched[0].info!.coordinate_level;
           }
         }
-        return row;
-      });
-
-      this.driver.exec('DROP TABLE resultTable');
-      
-      resolve(townRows);
-    });
-
-    const skipDupKey = new Set<string>();
-    const results: OazaChoMachingInfo[] = [];
-    townRows.forEach(townRow => {
-
-      // チェック済みパターンはスキップ
-      if (skipDupKey.has(`${townRow.city_key}:${townRow.machiaza_id}`)) {
-        return;
-      }
-      skipDupKey.add(`${townRow.city_key}:${townRow.machiaza_id}`);
-      
-      // 情報を補正する
-      const city = cityMap.get(townRow.city_key)!;
-      const pref = prefMap.get(city.pref_key)!;
-
-      let coordinate_level = MatchLevel.from(townRow.coordinate_level);
-      if (coordinate_level.num === MatchLevel.UNKNOWN.num) {
-        townRow.rep_lat = city.rep_lat;
-        townRow.rep_lon = city.rep_lon;
-        coordinate_level = MatchLevel.CITY;
       }
 
-      const key = [
-        townRow.oaza_cho || '',
-        townRow.chome || '',
-        townRow.koaza || '',
-      ].join('');
-
+      // pkey 以外の値を戻す
+      const value = {
+        rep_lat: row.rep_lat,
+        rep_lon: row.rep_lon,
+        koaza: row.koaza,
+        chome: row.chome,
+        oaza_cho: row.oaza_cho,
+        machiaza_id: row.machiaza_id,
+        town_key: row.town_key,
+        rsdt_addr_flg: row.rsdt_addr_flg,
+        lg_code: cityInfo.lg_code,
+        ward: cityInfo.ward,
+        county: cityInfo.county,
+        city_key: cityInfo.city_key,
+        pref_key: cityInfo.pref_key,
+        match_level: MatchLevel.from(row.match_level),
+        coordinate_level: MatchLevel.from(row.coordinate_level),
+        pref: prefInfo.pref,
+        city: cityInfo.city,
+      };
       results.push({
-        key,
-        pref: pref.pref,
-        city: city.city,
-        county: city.county,
-        ward: city.ward,
-        chome: townRow.chome,
-        lg_code: city.lg_code,
-        oaza_cho: townRow.oaza_cho,
-        machiaza_id: townRow.machiaza_id,
-        pref_key: city.pref_key,
-        city_key: townRow.city_key,
-        koaza: townRow.koaza,
-        town_key: townRow.town_key,
-        rsdt_addr_flg: townRow.rsdt_addr_flg,
-        match_level: MatchLevel.from(townRow.match_level),
-        rep_lat: townRow.rep_lat,
-        rep_lon: townRow.rep_lon,
-        coordinate_level,
+        ...value,
+        key: [
+          row.oaza_cho || '',
+          row.chome || '',
+          row.koaza || '',
+        ].join(''),
       });
 
-      // 〇〇町の「町」が省略されているケースがあるので、「町」を削除して登録する
-      if (!townRow.oaza_cho || !townRow.oaza_cho.includes('町') || townRow.oaza_cho.includes('町田')) {
+      if (!row.oaza_cho || row.oaza_cho.at(-1) !== '町') {
         return;
       }
 
+      // 〇〇町が大字の場合、市町村合併の際に残った昔の町名が入っている可能性が高い。
+      // 「町」の部分が省略されてくることがあるので、町を取り除いたkeyを入れておく
       results.push({
-        key: key.replace('町', ''),
-        pref: pref.pref,
-        city: city.city,
-        county: city.county,
-        ward: city.ward,
-        chome: townRow.chome,
-        lg_code: city.lg_code,
-        oaza_cho: townRow.oaza_cho,
-        machiaza_id: townRow.machiaza_id,
-        pref_key: city.pref_key,
-        city_key: townRow.city_key,
-        koaza: townRow.koaza,
-        town_key: townRow.town_key,
-        rsdt_addr_flg: townRow.rsdt_addr_flg,
-        match_level: MatchLevel.from(townRow.match_level),
-        rep_lat: townRow.rep_lat,
-        rep_lon: townRow.rep_lon,
-        coordinate_level,
+        ...value,
+        key: [
+          row.oaza_cho.substring(0, row.oaza_cho.length - 1),
+          row.chome || '',
+          row.koaza || '',
+        ].join(''),
       });
+    
+      return row;
     });
+
 
     return results;
   }
