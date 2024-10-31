@@ -1,82 +1,80 @@
 ## This workflow has been disabled for now, because the CKAN API is blocking our requests.
 ## Re-enable when we can package test data inside this repository.
 
-name: "PR check for the main branch"
+name: "publish the code"
 
 on:
-  pull_request:
+  workflow_run:
+    workflows: ["PR check"]
+    types:
+      - completed
     branches:
       - main
+      - develop
   workflow_dispatch:
 
 jobs:
-  lint_and_build:
+  publish:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
 
-    # Set up concurrency so the SQLite cache can be reused between nodejs matrix versions
-    # concurrency:
-    #   group: ${{ github.workflow }}-${{ github.ref }}
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Exit if not triggerred by pull_request
+        run: |
+          if [ "$triggered_by" = "push" ]; then
+            echo "Triggered by push. Skipping."
+            exit 0
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - uses: actions/cache@v4
-        name: Setup npm cache
-        id: node_modules
+      #
+      # build/ をダウンロード
+      #
+      - name: Download build output artifact
+        uses: actions/download-artifact@v4
         with:
-          path: node_modules/
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+          name: build-output
+          path: build/
 
-      - name: Install dependencies
-        if: steps.node_modules.outputs.cache-hit != 'true'
-        run: |
-          npm install --global yarn
-          yarn install
+      - name: Get the latest commit ID
+        id: commit
+        run: echo "commit_id=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-      - uses: actions/cache@v3
-        name: Setup npm cache
-        id: build_cache
-        with:
-          path: node_modules/
-          key: ${{ runner.os }}-src-${{ hashFiles('src/**/*.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-src-${{ hashFiles('src/**/*.ts') }}
-
-      - name: Build
-        if: steps.build_cache.outputs.cache-hit != 'true'
-        run: |
-          npm run build
-
-      #- name: git setup
-      #  run: |
-      #    git config --global user.email "no-reply@digital.go.jp"
-      #    git config --global user.name "github actions"
-            
       - name: create changelog.md
-        if: steps.build_cache.outputs.cache-hit != 'true'
+        if: github.event_name != 'workflow_dispatch' 
         id: prepare
         run: |
           bash ./.github/workflows/generate_changelog.sh
-          # git add .
-          # git commit -m "create changelog.md"
+          git add .
+          git commit -m "create changelog.md"
           version=$(cat package.json | jq -r '.version')
           echo "version=$version" >> $GITHUB_OUTPUT
           tgz=$(npm pack | tail -n1 | tr -d '\n')
           echo "tgz=$tgz" >> $GITHUB_OUTPUT
-
-      - name: github draft release  (trigger / workflow_dispatch)
-        if: steps.build_cache.outputs.cache-hit != 'true'
+          
+      #
+      # pull_requestの場合は、npm publish . --dry-run
+      # workflow_dispatch(手動)の場合は、npm publish .
+      #
+      - name: npm release  (trigger / workflow_dispatch)
         run: |
-          # gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
-          npm publish . --dry-run
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npm publish . --dry-run
+            gh release create ${{ steps.prepare.outputs.version }}-${{ env.commit_id }} ${{ steps.prepare.outputs.tgz }}
+          fi
+          
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} 
+            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+            npm publish . --access public
+          fi
         env:
-          GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+          # GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
