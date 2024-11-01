@@ -707,8 +707,14 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     // この場合、大字の緯度経度を丁目に適用する
     //--------------------------------------
     const results: OazaChoMachingInfo[] = [];
+    const seen = new Set<string>();
 
     workTable.forEach((row: Row) => {
+      const key = `${row.city_key}:${row.machiaza_id}:${row.rsdt_addr_flg}`;
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
       // 情報を補正する
       const cityInfo = cityMap.get(row.city_key)!;
       const prefInfo = prefMap.get(cityInfo.pref_key)!;
@@ -762,25 +768,21 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         ].join(''),
       });
 
-      if (!row.oaza_cho || row.oaza_cho.at(-1) !== '町') {
-        return;
-      }
+      // if (!row.oaza_cho || row.oaza_cho.at(-1) !== '町') {
+      //   return;
+      // }
 
-      // 〇〇町が大字の場合、市町村合併の際に残った昔の町名が入っている可能性が高い。
-      // 「町」の部分が省略されてくることがあるので、町を取り除いたkeyを入れておく
-      results.push({
-        ...value,
-        key: [
-          row.oaza_cho.substring(0, row.oaza_cho.length - 1),
-          row.chome || '',
-          row.koaza || '',
-        ].join(''),
-      });
-    
-      return row;
+      // // 〇〇町が大字の場合、市町村合併の際に残った昔の町名が入っている可能性が高い。
+      // // 「町」の部分が省略されてくることがあるので、町を取り除いたkeyを入れておく
+      // results.push({
+      //   ...value,
+      //   key: [
+      //     row.oaza_cho.substring(0, row.oaza_cho.length - 1),
+      //     row.chome || '',
+      //     row.koaza || '',
+      //   ].join(''),
+      // });
     });
-
-
     return results;
   }
   

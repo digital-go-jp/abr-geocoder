@@ -110,17 +110,16 @@ export class TrieAddressFinder<T> {
       }
     }
 
-    const excludeKey = {
-      ...value,
-      key: undefined,
-    };
-    const itemHash = crc32Lib.fromRecord(excludeKey);
-    if (this.items.has(itemHash)) {
-      return;
+    const itemHash = this.toItemHash(value);
+    if (!this.items.has(itemHash)) {
+      this.items.set(itemHash, value);
     }
-    this.items.set(itemHash, value);
     parent.itemHashes = parent.itemHashes || new Set<string>();
     parent.itemHashes.add(itemHash);
+  }
+
+  private toItemHash(value: T): string {
+    return crc32Lib.fromString(JSON.stringify(value));
   }
 
   find({ 
