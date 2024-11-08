@@ -47,6 +47,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             # 手動でイベントを発生させた場合は true
             echo "has_changes=true" >> $GITHUB_ENV
+            echo "::set-output name=has_changes::true"
           elif git diff --quiet HEAD^ HEAD -- 'src/**/*.ts' 'e2e/**/*.ts' './*.json' './*.js' './*.mjs'; then
             # ソースコードに変化がなければ false
             echo "has_changes=false" >> $GITHUB_ENV
