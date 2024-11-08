@@ -174,7 +174,7 @@ const geocodeCommand: CommandModule = {
     // プログレスバーの作成。
     // silentの指定がなく、ファイル入力の場合のみ作成される。
     const progressBar = (argv.silent || destination === '-' || destination === undefined) ?
-      undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | {message} | ETA: {eta}');
+      undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | {message} | ETA: {eta_formatted}');
     progressBar?.start(2, 0, {
       'message': 'preparing...',
     });
