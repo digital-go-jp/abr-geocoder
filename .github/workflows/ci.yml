@@ -7,7 +7,6 @@ on:
   pull_request:
     branches:
       - main
-      - develop
     paths:
       - 'src/**/*.ts'
       - 'e2e/**/*.ts'
@@ -16,7 +15,6 @@ on:
       - '*.mjs'
   push:
     branches:
-      - main
       - develop
     paths:
       - 'src/**/*.ts'
