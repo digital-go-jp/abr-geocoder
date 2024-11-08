@@ -30,7 +30,10 @@ export const parsePackageJson = ({
   filePath: string;
 }): packageJsonMeta => {
   const packageJson = fs.readFileSync(filePath, 'utf8');
-  const { description, version } = JSON.parse(packageJson);
+  const { description, version }: {
+    description: string;
+    version: string;
+  } = JSON.parse(packageJson);
   return {
     description,
     version,

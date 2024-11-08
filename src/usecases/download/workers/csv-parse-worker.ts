@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DownloadQuery2, DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
+import { CsvLoadQueryBase, DownloadQuery2, DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
 import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
-import { ThreadJob, ThreadJobResult, ThreadMessage } from '@domain/services/thread/thread-task';
+import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
 import { Readable, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
 import { DownloadDiContainer, DownloadDiContainerParams } from '../models/download-di-container';
@@ -36,9 +36,9 @@ export type ParseWorkerInitData = {
   containerParams: DownloadDiContainerParams,
   lgCodeFilter: string[];
   semaphoreSharedMemory: SharedArrayBuffer;
-}
+};
 
-export const parseOnWorkerThread = async (params: Required<{
+export const parseOnWorkerThread = (params: Required<{
   port: MessagePort;
   initData: ParseWorkerInitData;
 }>) => {
@@ -73,7 +73,7 @@ export const parseOnWorkerThread = async (params: Required<{
   const dst = new Writable({
     objectMode: true,
     write(job: ThreadJob<DownloadQueryBase>, _, callback) {
-      const sharedMemory = toSharedMemory<ThreadJobResult<DownloadQueryBase>>({
+      const sharedMemory = toSharedMemory<ThreadJobResult<CsvLoadQueryBase>>({
         taskId: job.taskId,
         kind: 'result',
         data: job.data,
@@ -90,11 +90,28 @@ export const parseOnWorkerThread = async (params: Required<{
     .pipe(step4)
     .pipe(dst);
 
-  // メインスレッドからタスク情報を受け取ったので
-  // ダウンロード処理のストリームに投げる
+  // メインスレッドからメッセージを受け取る
   params.port.on('message', (sharedMemory: Uint8Array) => {
-    const params = fromSharedMemory<ThreadMessage<any> | ThreadJob<DownloadQuery2>>(sharedMemory);
-    reader.push(params as ThreadJob<DownloadRequest>);
+    const data = fromSharedMemory<ThreadJob<DownloadQuery2> | ThreadPing>(sharedMemory);
+    switch (data.kind) {
+      case 'ping': {
+        params.port.postMessage(toSharedMemory({
+          kind: 'pong',
+        } as ThreadPong));
+        return;
+      }
+
+      case 'task': {
+      // メインスレッドからタスク情報を受け取ったので
+      // ダウンロード処理のストリームに投げる
+        const job = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
+        reader.push(job);
+        return;
+      }
+
+      default:
+        throw 'not implemented';
+    }
   });
 };
 

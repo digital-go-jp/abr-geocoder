@@ -29,8 +29,32 @@ import { Sqlite3Wrapper } from "@interface/database/sqlite3/better-sqlite3-wrap"
 import { Statement } from "better-sqlite3";
 
 export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDbDownload {
-  async closeDb(): Promise<void> {
-    this.close();
+  
+  async close() {
+    this.driver.close();
+  }
+
+  async createParcelTable() {
+    this.driver.exec(`
+      CREATE TABLE IF NOT EXISTS "${DbTableName.PARCEL}" (
+        "parcel_key" INTEGER PRIMARY KEY,
+        "town_key" INTEGER DEFAULT null,
+        "${DataField.PRC_ID.dbColumn}" TEXT,
+        "${DataField.PRC_NUM1.dbColumn}" TEXT,
+        "${DataField.PRC_NUM2.dbColumn}" TEXT,
+        "${DataField.PRC_NUM3.dbColumn}" TEXT,
+        "crc32" TEXT,
+        "${DataField.REP_LAT.dbColumn}" TEXT,
+        "${DataField.REP_LON.dbColumn}" TEXT
+      );
+    `);
+
+    this.driver.exec(`
+      CREATE INDEX IF NOT EXISTS idx_parcel_town_key ON ${DbTableName.PARCEL}(
+        town_key,
+        ${DataField.PRC_ID.dbColumn}
+      );
+    `);
   }
 
   // Lat,Lonを テーブルにcsvのデータを溜め込む
@@ -50,13 +74,13 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
       WHERE 
-        parcel_key = @parcel_key AND (
-          ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
-          ${DataField.REP_LON.dbColumn} != @rep_lon OR 
-          ${DataField.REP_LAT.dbColumn} IS NULL OR
-          ${DataField.REP_LON.dbColumn} IS NULL
-        )
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
+        ${DataField.REP_LON.dbColumn} != @rep_lon OR 
+        ${DataField.REP_LAT.dbColumn} IS NULL OR
+        ${DataField.REP_LON.dbColumn} IS NULL
     `;
+    
+    await this.createParcelTable();
     
     return await this.upsertRows({
       upsert: this.prepare(sql),
@@ -73,23 +97,29 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
         ${DataField.PRC_ID.dbColumn},
         ${DataField.PRC_NUM1.dbColumn},
         ${DataField.PRC_NUM2.dbColumn},
-        ${DataField.PRC_NUM3.dbColumn}
+        ${DataField.PRC_NUM3.dbColumn},
+        crc32
       ) VALUES (
         @parcel_key,
         @town_key,
         @prc_id,
         @prc_num1,
         @prc_num2,
-        @prc_num3
+        @prc_num3,
+        @crc32
       ) ON CONFLICT (parcel_key) DO UPDATE SET
         ${DataField.PRC_ID.dbColumn} = @prc_id,
         ${DataField.PRC_NUM1.dbColumn} = @prc_num1,
         ${DataField.PRC_NUM2.dbColumn} = @prc_num2,
-        ${DataField.PRC_NUM3.dbColumn} = @prc_num3
+        ${DataField.PRC_NUM3.dbColumn} = @prc_num3,
+        crc32 = @crc32
       WHERE 
-        parcel_key = @parcel_key
+        crc32 != @crc32 OR
+        crc32 IS NULL
     `;
 
+    await this.createParcelTable();
+    
     return await this.upsertRows({
       upsert: this.prepare(sql),
       rows,
@@ -101,23 +131,23 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.driver.transaction((rows: Record<string, string | number>[]) => {
         const lg_code = rows[0][DataField.LG_CODE.dbColumn] as string;
 
         for (const row of rows) {
           row.town_key = TableKeyProvider.getTownKey({
             lg_code,
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn] as string,
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
           });
           row.parcel_key = TableKeyProvider.getParcelKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn],
-            prc_id: row[DataField.PRC_ID.dbColumn],
+            lg_code: row[DataField.LG_CODE.dbColumn].toString().toString(),
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
+            prc_id: row[DataField.PRC_ID.dbColumn].toString(),
           });
           params.upsert.run(row);
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 }

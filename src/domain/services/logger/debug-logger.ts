@@ -34,7 +34,7 @@ export class DebugLogger {
     }
     this.instance = new DebugLogger();
     return this.instance;
-  }
+  };
 
   private readonly logger: winston.Logger;
   
@@ -42,6 +42,10 @@ export class DebugLogger {
     const dirname = path.normalize(path.join(__dirname, '..', '..', '..', '..'));
 
     this.logger = winston.createLogger({
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json(),
+      ),
       transports: [
         new winston.transports.File({
           dirname,
@@ -59,10 +63,10 @@ export class DebugLogger {
   warn(message: string, ...meta: any[]) {
     this.logger.warn(message, ...meta);
   }
-  data(message: string, ...meta: any[]) {
-    this.logger.data(message, ...meta);
-  }
   notice(message: string, ...meta: any[]) {
     this.logger.notice(message, ...meta);
+  }
+  error(message: string, ...meta: any[]) {
+    this.logger.error(message, ...meta);
   }
 }

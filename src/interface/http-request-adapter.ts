@@ -23,7 +23,6 @@
  */
 import { StatusCodes } from 'http-status-codes';
 import http2, { ClientSessionRequestOptions, Http2Session } from 'node:http2';
-import stream from 'node:stream';
 
 export type HttpHeader = http2.IncomingHttpHeaders & http2.IncomingHttpStatusHeader;
 
@@ -59,7 +58,7 @@ export class ResponseHeader {
 export class ResponseData {
   constructor(
     public readonly header: ResponseHeader,
-    public readonly bodyData: any,
+    public readonly bodyData: unknown,
   ) { }
 }
 export class BufferResponseData extends ResponseData {
@@ -67,7 +66,7 @@ export class BufferResponseData extends ResponseData {
     header: ResponseHeader,
     body: Buffer[],
   ) {
-    super(header, Buffer.concat(body as Buffer[]));
+    super(header, Buffer.concat(body));
     Object.freeze(this);
   }
   get body(): Buffer {
@@ -95,10 +94,21 @@ export class JsonResponseData extends ResponseData {
     super(header, JSON.parse(body.join('')));
     Object.freeze(this);
   }
-  get body(): Record<string, string | number | Object | undefined> {
-    return this.bodyData as Record<string, string | number | Object | undefined>;
+  get body(): Record<string, string | number | object | undefined> {
+    return this.bodyData as Record<string, string | number | object | undefined>;
   }
 }
+
+export type HttpRequestAdapterOptions = {
+  hostname: string;
+  userAgent: string;
+  peerMaxConcurrentStreams: number;
+};
+
+export type GetJsonOptions = {
+  url: string;
+  headers?: Record<string, string>;
+};
 
 export class HttpRequestAdapter {
   private session: http2.ClientHttp2Session | undefined;
@@ -106,11 +116,7 @@ export class HttpRequestAdapter {
   private readonly windowSize: number = 2 ** 25; // 初期ウィンドウサイズを2MBに設定
   private readonly timer: NodeJS.Timeout;
 
-  constructor(public readonly options: Required<{
-    hostname: string;
-    userAgent: string;
-    peerMaxConcurrentStreams: number;
-  }>) {
+  constructor(public readonly options: Required<HttpRequestAdapterOptions>) {
     this.connect();
     this.timer = setInterval(() => this.sendPing(), 45000);
   }
@@ -119,33 +125,38 @@ export class HttpRequestAdapter {
     if (!this.session || this.session.closed) {
       return;
     }
-    this.session.ping((error: Error | null) => {
-      if (error) {
-        console.error('ping error', error);
-      }
-    })
+    try {
+      this.session.ping((error: Error | null) => {
+        if (error) {
+          console.error('ping error', error);
+        }
+      });
+    } catch (_error: unknown) {
+      // Do nothing here
+    }
   }
   private connect() {
     this.session = http2.connect(`https://${this.options.hostname}`, {
       peerMaxConcurrentStreams: this.options.peerMaxConcurrentStreams,
     });
-    this.session.setMaxListeners(this.options.peerMaxConcurrentStreams);
+    this.session.setMaxListeners(0);
     this.session.once('session', (session: Http2Session) => {
       console.log(`  ->session connect`);
       session.setLocalWindowSize(this.windowSize);
     });
     this.session.once('close', () => {
       // console.log(`--->session close`);
+      this.session?.destroy();
       this.session?.close();
       this.session = undefined;
       if (this.noLongerReconnect) {
         return;
       }
-      console.log(`  ->retry`);
+      // console.log(`  ->retry`);
       setTimeout(() => this.connect(), 1000);
     });
     this.session.once('error', () => {
-      console.log(`--->session error (${process.pid})`);
+      // console.log(`--->session error (${process.pid})`);
       this.session = undefined;
       if (this.noLongerReconnect) {
         return;
@@ -154,10 +165,7 @@ export class HttpRequestAdapter {
     });
   }
 
-  public async getJSON(params: {
-    url: string;
-    headers?: Record<string, string>;
-  }): Promise<JsonResponseData> {
+  public getJSON(params: GetJsonOptions): Promise<JsonResponseData> {
     return new Promise<JsonResponseData>((
       resolve: (result: JsonResponseData) => void,
     ) => {
@@ -165,19 +173,19 @@ export class HttpRequestAdapter {
         this.request({
           ...params,
           method: 'GET',
-          encoding: 'binary'
+          encoding: 'binary',
         })
-        .then(response => {
-          resolve(new JsonResponseData(
-            response.header,
-            response.bodyData,
-          ));
-        })
-        .catch((_: unknown) => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(response => {
+            resolve(new JsonResponseData(
+              response.header,
+              response.bodyData as string[],
+            ));
+          })
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -194,19 +202,19 @@ export class HttpRequestAdapter {
         this.request({
           ...params,
           method: 'GET',
-      encoding: 'binary'
+          encoding: 'binary',
         })
-        .then(response => {
-          resolve(new StringResponseData(
-            response.header,
-            response.bodyData,
-          ));
-        })
-        .catch((_: unknown) => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(response => {
+            resolve(new StringResponseData(
+              response.header,
+              response.bodyData as string[],
+            ));
+          })
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -224,20 +232,20 @@ export class HttpRequestAdapter {
         this.request({
           ...params,
           method: 'GET',
-      encoding: 'binary'
+          encoding: 'binary',
         })
-        .then(response => {
-          const data = (response.bodyData as string[]).join('');
-          resolve(new BufferResponseData(
-            response.header,
-            [Buffer.from(data, 'binary')]
-          ));
-        })
-        .catch((_: unknown) => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(response => {
+            const data = (response.bodyData as string[]).join('');
+            resolve(new BufferResponseData(
+              response.header,
+              [Buffer.from(data, 'binary')],
+            ));
+          })
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -261,14 +269,14 @@ export class HttpRequestAdapter {
           headers,
           encoding: 'utf-8',
         })
-        .then(response => {
-          resolve(new StringResponseData(response.header, response.bodyData));
-        })
-        .catch((_: unknown) => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(response => {
+            resolve(new StringResponseData(response.header, response.bodyData as string[]));
+          })
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -291,12 +299,12 @@ export class HttpRequestAdapter {
           headers,
           encoding: 'utf-8',
         })
-        .then(resolve)
-        .catch((_: unknown) => {
-          setTimeout(() => {
-            process();
-          }, 3000);
-        });
+          .then(resolve)
+          .catch(() => {
+            setTimeout(() => {
+              process();
+            }, 3000);
+          });
       };
       process();
     });
@@ -314,17 +322,17 @@ export class HttpRequestAdapter {
     headers?: Record<string, string | undefined>;
   }): Promise<ResponseData> {
 
-    const urlObj = new URL(url)
+    const urlObj = new URL(url);
     const reqParams = Object.assign(
       headers,
       {
         [http2.constants.HTTP2_HEADER_METHOD]: method.toUpperCase(),
         [http2.constants.HTTP2_HEADER_PATH]: [
           urlObj.pathname,
-          urlObj.search
+          urlObj.search,
         ].join(''),
         [http2.constants.HTTP2_HEADER_USER_AGENT]: this.options.userAgent,
-      }
+      },
     );
 
     await new Promise((resolve: (_?: void) => void) => {
@@ -338,13 +346,13 @@ export class HttpRequestAdapter {
       waiter();
     });
     if (!this.session) {
-      return Promise.reject();
+      return Promise.reject('Session is undefined');
     }
     const req: http2.ClientHttp2Stream = this.session.request(
       reqParams,
       {
         endStream: false,
-      }
+      },
     );
     req.setEncoding(encoding);
 
@@ -353,17 +361,17 @@ export class HttpRequestAdapter {
     ) => {
       req.once('response', (headers) => {
         const header = ResponseHeader.from(headers);
-        const buffer: any[] = [];
+        const buffer: Buffer[] = [];
 
-        req.on('data', (chunk: any) => {
+        req.on('data', (chunk: Buffer) => {
 
           // データ受信の際にウィンドウサイズを動的に調整
           const currentWindowSize = req.state.localWindowSize;
-          const receivedDataSize = chunk.length;
+          const receivedDataSize: number = chunk.length;
 
           // ウィンドウサイズが一定量以下になった場合に拡張
           if (currentWindowSize && currentWindowSize < this.windowSize / 2) {
-            const newWindowSize = this.windowSize - currentWindowSize + receivedDataSize;
+            const newWindowSize: number = this.windowSize - currentWindowSize + receivedDataSize;
             req.session?.setLocalWindowSize(newWindowSize);
             // console.log(`===>new window size: ${(newWindowSize / (1024 ** 2)).toFixed(1)}MB`);
           } 
@@ -374,23 +382,21 @@ export class HttpRequestAdapter {
           req.removeAllListeners();
           resolve(new ResponseData(header, buffer));
         });
-      })
+      });
     });
   }
 
   public async getReadableStream({
     url,
     headers = {},
-    factory,
     abortController,
   }: {
     url: string;
     headers?: Record<string, string | undefined>;
-    factory?: (headers: ResponseHeader) => stream.Writable;
     abortController?: AbortController;
   }) {
 
-    const urlObj = new URL(url)
+    const urlObj = new URL(url);
     const requestOptions: ClientSessionRequestOptions = {
       endStream: false,
       signal: abortController?.signal,
@@ -419,14 +425,15 @@ export class HttpRequestAdapter {
       {
         [http2.constants.HTTP2_HEADER_PATH]: [
           urlObj.pathname,
-          urlObj.search
+          urlObj.search,
         ].join('?'),
         [http2.constants.HTTP2_HEADER_METHOD]: 'GET',
         [http2.constants.HTTP2_HEADER_USER_AGENT]: this.options.userAgent,
-      }
+      },
     ), requestOptions);
     const onSessionClose = () => {
-      console.log(`--->req.close`)
+      // console.log(`--->req.close`);
+      req.destroy();
       req.close();
     };
     this.session.on('close', onSessionClose);
@@ -438,7 +445,7 @@ export class HttpRequestAdapter {
     req.once('end', () => {
       req.removeAllListeners();
       this.session?.removeListener('close', onSessionClose);
-    })
+    });
 
     return req;
 
@@ -461,6 +468,7 @@ export class HttpRequestAdapter {
 
   close() {
     this.noLongerReconnect = true;
+    this.session?.destroy();
     this.session?.close();
     clearInterval(this.timer);
   }

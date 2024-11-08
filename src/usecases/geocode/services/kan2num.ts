@@ -23,7 +23,8 @@
  */
 
 import { DASH, SPACE } from "@config/constant-values";
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+
 
 const kanjiNum = new Map<string, number>([
   ['壱', 1],
@@ -77,6 +78,7 @@ const kanjiNum = new Map<string, number>([
 
 const SENTINEL = '&';
 const targetPatterns = new Set<string>([
+  '軒', // 二十四軒二丁目 -> 24軒2丁目
   '通',
   '丁', // 東十二丁目 -> 東12丁目
   '町',
@@ -98,92 +100,104 @@ const targetPatterns = new Set<string>([
   '之',
   'ノ',
   '丿',
-])
+]);
 
-export const kan2num = (target: string) => {
-  const result: string[] = [];
-  const stack: string[] = [];
-
-  target = target + SENTINEL;
-  
-  // Monotonic stackを使って解く
-  const N = target.length;
-  for (let i = 0; i < N; i++) {
-    const char = target[i];
-
-    // 漢数字なら、stackに溜め込む
-    if (kanjiNum.has(char)) {
-      stack.push(char);
-      continue;
-    }
-
-    if (!targetPatterns.has(char)) {
-      // ターゲットパターンではないので、漢数字を復元する
-      result.push(...stack);
-      result.push(char);
-      stack.length = 0;
-      continue;
-    }
-
-
-    // 漢数字が現れてきて、別の文字が現れたので、連続した漢数字が終了したことを意味する。
-    // なので、stack に溜まっている漢数字を算用数字に変換する
-    let current = 0;
-    const tempResult = [];
-    const stackLen = stack.length;
-    while (stack.length > 0) {
-      let val = kanjiNum.get(stack.pop()!)!;
-
-      if (val === 0) {
-        tempResult.push(current.toString());
-        tempResult.push('0');
-        current = 0;
-        continue;
-
-      } else if (val === 10) {
-        val = 10;
-        // 十が初めて出現する場合、current = 0 なので、
-        // current = 0 + 10 = 10 となる。
-        //
-        // または「"十六"」のように漢数字だけで、最後が「十」でない場合、
-        // current = 6 となっているので
-        // current = 6 + 10 = 16 となる。 
-        if (!stack.length) {
-          current += val;
-          continue;
-        }
-        // 二十一のように、「一」の後に「十」が出てきた場合
-        // 続く「二」を取って「20」を作成した後に「1」を足す
-        const bias10 = kanjiNum.get(stack.pop()!)!;
-        current = bias10 * val + current;
-        tempResult.push(current.toString());
-        current = 0;
-        continue;
-      } else {
-        // 五四三　のように　１桁の数字が続く場合、一度リセットする
-        if (current > 0) {
-          tempResult.push(current.toString());
-        }
-        current = 0;
-      }
-      // 「十三」の場合、「三」が先に出現するので、currentにキープ。
-      current += val;
-    }
-    if (current > 0) {
-      tempResult.push(current.toString());
-    }
-    result.push(...tempResult.reverse());
-
-    // iが最後ではない or 最後の文字が漢数字ではない場合、resultに追加
-    if (!kanjiNum.has(char)) {
-      result.push(char);
-    }
+export const kan2num = <T extends string | CharNode | undefined>(target: T): T => {
+  if (target === undefined) {
+    return undefined as T;
   }
-  result.pop();
-  return result.join('');
+  if (target instanceof CharNode) {
+    return kan2numForCharNode(target) as T;
+  }
+  if (typeof target === 'string') {
+
+    const result: string[] = [];
+    const stack: string[] = [];
+
+    const target2 = target + SENTINEL;
+    
+    // Monotonic stackを使って解く
+    const N = target2.length;
+    for (let i = 0; i < N; i++) {
+      const char = target2[i];
+
+      // 漢数字なら、stackに溜め込む
+      if (kanjiNum.has(char)) {
+        stack.push(char);
+        continue;
+      }
+
+      if (!targetPatterns.has(char)) {
+        // ターゲットパターンではないので、漢数字を復元する
+        result.push(...stack);
+        result.push(char);
+        stack.length = 0;
+        continue;
+      }
+
+
+      // 漢数字が現れてきて、別の文字が現れたので、連続した漢数字が終了したことを意味する。
+      // なので、stack に溜まっている漢数字を算用数字に変換する
+      let current = 0;
+      const tempResult = [];
+      while (stack.length > 0) {
+        let val = kanjiNum.get(stack.pop()!)!;
+
+        if (val === 0) {
+          tempResult.push(current.toString());
+          if (current !== 0) {
+            tempResult.push('0');
+          }
+          current = 0;
+          continue;
+
+        } else if (val === 10) {
+          val = 10;
+          // 十が初めて出現する場合、current = 0 なので、
+          // current = 0 + 10 = 10 となる。
+          //
+          // または「"十六"」のように漢数字だけで、最後が「十」でない場合、
+          // current = 6 となっているので
+          // current = 6 + 10 = 16 となる。 
+          if (!stack.length) {
+            current += val;
+            continue;
+          }
+          // 二十一のように、「一」の後に「十」が出てきた場合
+          // 続く「二」を取って「20」を作成した後に「1」を足す
+          const bias10 = kanjiNum.get(stack.pop()!)!;
+          current = bias10 * val + current;
+          tempResult.push(current.toString());
+          current = 0;
+          continue;
+        } else {
+          // 五四三 のように １桁の数字が続く場合、一度リセットする
+          if (current > 0) {
+            tempResult.push(current.toString());
+          }
+          current = 0;
+        }
+        // 「十三」の場合、「三」が先に出現するので、currentにキープ。
+        current += val;
+      }
+      if (current > 0) {
+        tempResult.push(current.toString());
+      }
+      result.push(...tempResult.reverse());
+
+      // iが最後ではない or 最後の文字が漢数字ではない場合、resultに追加
+      if (!kanjiNum.has(char)) {
+        result.push(char);
+      }
+    }
+    result.pop();
+    return result.join('') as T;
+  }
+  
+  throw `unsupported value type`;
 };
 
-export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | undefined => {
+const kan2numForCharNode = (target: CharNode | undefined) : CharNode | undefined => {
   const result: CharNode[] = [];
   const buffer: CharNode[] = [];
   
@@ -191,10 +205,34 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
   let lastWasTen = false; // 直前の文字が「十」かどうか
 
   let head = target;
+  let headNext: CharNode | undefined;
+
   while (head && (head.ignore || head.char)) {
     if (head.ignore || !head.char) {
+      if (buffer.length > 0) {
+        // 1文字ずつに変換する
+        const tmp = currentNumber.toString().split('');
+        for (const node of buffer) {
+          if (tmp.length === 0) {
+            break;
+          }
+          node.char = tmp.shift();
+          result.push(node); 
+        }
+        while (tmp.length > 0) {
+          result.push(new CharNode({
+            originalChar: '',
+            char: tmp.shift()!,
+          }));
+        }
+        buffer.length = 0;
+        currentNumber = 0;
+        lastWasTen = false;
+      }
+      headNext = head.next;
+      head.next = undefined;
       result.push(head);
-      head = head.next;
+      head = headNext;
       continue;
     }
 
@@ -207,7 +245,7 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
         // ターゲットパターンではないときは、復元する
         result.push(...buffer);
       } else if (currentNumber > 0) {
-        //　現在の数値が 0 より大きい場合のみ追加
+        // 現在の数値が 0 より大きい場合のみ追加
 
         // 1文字ずつに変換する
         const tmp = currentNumber.toString().split('');
@@ -219,14 +257,19 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
           result.push(node); 
         }
         while (tmp.length > 0) {
-          result.push(new CharNode('', tmp.shift()));
+          result.push(new CharNode({
+            originalChar: '',
+            char: tmp.shift()!,
+          }));
         }
       }
       buffer.length = 0;
       currentNumber = 0;
-      lastWasTen = false; 
+      lastWasTen = false;
+      headNext = head.next;
+      head.next = undefined; 
       result.push(head);
-      head = head.next;
+      head = headNext;
       continue;
     }
     
@@ -247,8 +290,11 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
         currentNumber = currentNumber * 10 + num;
       }
     }
+    headNext = head.next;
+    head.next = undefined;
     buffer.push(head);
-    head = head.next;
+
+    head = headNext;
   }
 
   // 最後の数値を追加（末尾が「十」の場合の処理を修正）
@@ -261,7 +307,10 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
         result.push(node); 
       }
       while (tmp.length > 0) {
-        result.push(new CharNode('', tmp.shift()));
+        result.push(new CharNode({
+          originalChar: '',
+          char: tmp.shift()!,
+        }));
       }
     } else {
       while (buffer.length > 0) {
@@ -282,7 +331,9 @@ export const kan2numForCharNode = (target: CharNode | undefined) : CharNode | un
     // buffer.length = 0;
   }
 
-  const resultNode = new CharNode('', '');
+  const resultNode = new CharNode({
+    char: '',
+  });
   let tail = resultNode;
   for (const node of result) {
     tail.next = node;

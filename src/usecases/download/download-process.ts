@@ -23,6 +23,7 @@
  */
 import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
 import { CsvLoadResult, DownloadProcessError, DownloadRequest } from '@domain/models/download-process-query';
+import { CounterWritable } from '@domain/services/counter-writable';
 import { createPackageTree } from '@domain/services/create-package-tree';
 import { DatabaseParams } from '@domain/types/database-params';
 import { FileGroupKey } from '@domain/types/download/file-group';
@@ -30,11 +31,11 @@ import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { PrefLgCode, isPrefLgCode } from '@domain/types/pref-lg-code';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
+import { loadGeocoderTrees, removeGeocoderCaches } from '@usecases/geocode/services/load-geoder-trees';
 import { StatusCodes } from 'http-status-codes';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import timers from 'node:timers/promises';
-import { CounterWritable } from '@domain/services/counter-writable';
 import { DownloadDiContainer } from './models/download-di-container';
 import { CsvParseTransform } from './transformations/csv-parse-transform';
 import { DownloadTransform } from './transformations/download-transform';
@@ -48,11 +49,13 @@ export type DownloaderOptions = {
   downloadDir: string;
 };
 
+export type DownloadOptionsProgressCallback = (current: number, total: number) => void;
+
 export type DownloadOptions = {
   // ダウンロードするデータの対象を示す都道府県コード
   lgCodes?: string[];
   // 進み具合を示すプログレスのコールバック
-  progress?: (current: number, total: number) => void;
+  progress?: DownloadOptionsProgressCallback;
 
   //同時ダウンロード数
   concurrentDownloads: number;
@@ -98,35 +101,38 @@ export class Downloader {
     const total = requests.length;
 
     // ランダムに入れ替える（DBの書き込みを分散させるため）
-    requests.sort((_, __) => {
+    requests.sort(() => {
       return -1 + Math.random() * 3;
     });
     
     const reader = Readable.from(requests);
-    
+    const parallel = this.container.env.availableParallelism();
+
     // ダウンロード処理を行う
+    // 最大6コネクション
+    const numOfDownloadThreads = Math.min(Math.max(Math.floor(parallel / 3 * 2), 1), 6);
     const downloadTransform = new DownloadTransform({
       container: this.container,
-      maxTasksPerWorker: Math.min(params.concurrentDownloads || MAX_CONCURRENT_DOWNLOAD),
+      maxConcurrency: numOfDownloadThreads,
+      maxTasksPerWorker: Math.max(params.concurrentDownloads || 1),
     });
 
-    // ダウンロードしたzipファイルからcsvファイルを取り出して、
-    // データベースに登録する
-    const parallel = this.container.env.availableParallelism();
+    // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
+    const numOfCsvParserThreads = Math.max(parallel - numOfDownloadThreads, 1);
     const csvParseTransform = new CsvParseTransform({
-      maxConcurrency: Math.floor(parallel * 1.2),
+      maxConcurrency: numOfCsvParserThreads,
       container: this.container,
       lgCodeFilter,
     });
 
     // プログレスバーに進捗を出力する
-    const dst = new CounterWritable({
-      write: async (_: CsvLoadResult | DownloadProcessError, __, callback) => {
+    const dst = new CounterWritable<CsvLoadResult>({
+      write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
         if (params.progress) {
-          params.progress(dst.count, total);
+          params.progress(dst.count, total + 1);
         }
         callback();
-      }
+      },
     });
 
     let inputCnt = 0;
@@ -137,62 +143,71 @@ export class Downloader {
         async transform(chunk, _, callback) {
           inputCnt++;
 
-          await new Promise<void>(async (resolve: (_?: void) => void) => {
-            const waitingCnt = inputCnt - dst.count;
-            if (waitingCnt < MAX_CONCURRENT_DOWNLOAD) {
-              return resolve();
-            }
-            // Out of memory を避けるために、受け入れを一時停止
-            // 処理済みが追いつくまで、待機する
-            const half = MAX_CONCURRENT_DOWNLOAD >> 1;
-            while (inputCnt - dst.count > half) {
-              await timers.setTimeout(100);
-            }
-      
-            // 再開する
-            resolve();
-          });
+          const waitingCnt = inputCnt - dst.count;
+          if (waitingCnt < MAX_CONCURRENT_DOWNLOAD) {
+            return callback(null, chunk);
+          }
 
+          // Out of memory を避けるために、受け入れを一時停止
+          // 処理済みが追いつくまで、待機する
+          const half = MAX_CONCURRENT_DOWNLOAD >> 1;
+          while (inputCnt - dst.count > half) {
+            await timers.setTimeout(100);
+          }
+      
+          // 再開する
           callback(null, chunk);
         },
       }),
       downloadTransform,
       csvParseTransform,
       dst,
-    );
-    downloadTransform.close();
-    csvParseTransform.close();
+    ).catch((e: unknown) => {
+      console.error(e);
+    });
+    await downloadTransform.close();
+    await csvParseTransform.close();
+
+    // キャッシュの削除
+    await removeGeocoderCaches({
+      cacheDir: this.container.urlCacheMgr.cacheDir,
+    });
+    // キャッシュの作成
+    await loadGeocoderTrees({
+      cacheDir: this.container.urlCacheMgr.cacheDir,
+      database: this.container.database.connectParams,
+      debug: false,
+    });
   }
   
 
   private async createDownloadRequests(downloadTargetLgCodes: Set<string>): Promise<DownloadRequest[]> {
     // レジストリ・カタログサーバーから、パッケージの一覧を取得する
-    const response = await this.getJSON(`https://${this.container.env.hostname}/rc/api/3/action/package_list`);
+    const packageListUrl = this.container.getPackageListUrl();
+    const response = await this.getJSON(packageListUrl);
 
     if (response.header.statusCode !== StatusCodes.OK) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_GET_PACKAGE_LIST,
-        level: AbrgErrorLevel.ERROR
+        level: AbrgErrorLevel.ERROR,
       });
     }
     
-    const packageListResult = response.body as {
+    const packageListResult = response.body as unknown as {
       success: boolean;
       result: string[];
     };
     if (!packageListResult.success) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_GET_PACKAGE_LIST,
-        level: AbrgErrorLevel.ERROR
+        level: AbrgErrorLevel.ERROR,
       });
     }
 
     // 各lgCodeが何のdatasetType を持っているのかをツリー構造にする
     // lgcode -> dataset -> packageId
     const lgCodePackages = createPackageTree(packageListResult.result);
-
     const results: DownloadRequest[] = [];
-
     const targetPrefixes = new Set<string>();
     const cityPrefixes = new Set<string>();
     downloadTargetLgCodes.forEach(lgCode => {
@@ -274,7 +289,7 @@ export class Downloader {
 
     // ランダムに並び替えることで、lgCodeが分散され、DB書き込みのときに衝突を起こしにくくなる
     // (衝突すると、書き込み待ちが発生する)
-    results.sort((_, __) => Math.random() * 3 - 2);
+    results.sort(() => Math.random() * 3 - 2);
     return results;
   }
 
@@ -282,25 +297,33 @@ export class Downloader {
     if (lgCodes === undefined) {
       return new Set();
     }
-    const results = new Map<string, string>();
-
     // params.lgCodesに含まれるlgCodeが prefLgCode(都道府県を示すlgCode)なら、
-    // 市町村レベルのlgCodeは必要ないので省く。　
-    lgCodes.forEach(lgCode => {
-      if (lgCode === PrefLgCode.ALL) {
+    // 市町村レベルのlgCodeは必要ないので省く。
+
+    const results = new Set<string>();
+    const others: string[] = [];
+    lgCodes.forEach(code => {
+      if (code === PrefLgCode.ALL) {
         return;
       }
-      const prefix = lgCode.substring(0, 2);
-      if (isPrefLgCode(lgCode)) {
-        // 都道府県コードの場合、格納 or 上書き
-        results.set(prefix, `${prefix}....`);
-      } else if (!results.has(prefix)) {
-        // 市町村コードをそのまま格納
-        results.set(prefix, lgCode);
+      if (!isPrefLgCode(code)) {
+        others.push(code);
+        return;
       }
+      const prefix = code.substring(0, 2);
+      results.add(`${prefix}....`);
     });
 
-    return new Set(results.values());
+    others.forEach(code => {
+      const prefix = code.substring(0, 2);
+      if (results.has(`${prefix}....`)) {
+        return;
+      }
+      // 市町村コードをそのまま格納
+      results.add(code);
+    });
+
+    return results;
   }
 }
 

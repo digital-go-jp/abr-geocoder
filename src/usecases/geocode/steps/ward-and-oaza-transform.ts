@@ -21,84 +21,65 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DebugLogger } from '@domain/services/logger/debug-logger';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { MatchLevel } from '@domain/types/geocode/match-level';
-import { OazaChoMachingInfo } from '@domain/types/geocode/oaza-cho-info';
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../models/query';
-import { jisKanji } from '../services/jis-kanji';
-import { kan2num } from '../services/kan2num';
-import { toHiragana } from '../services/to-hiragana';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
-import timers from 'node:timers/promises';
-import { AMBIGUOUS_RSDT_ADDR_FLG, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { QuerySet } from '../models/query-set';
+import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class WardAndOazaTransform extends Transform {
 
-  private readonly wardAndOazaTrie: TrieAddressFinder<OazaChoMachingInfo>;
-  private readonly logger: DebugLogger | undefined;
-  private initialized: boolean = false;
-
-  constructor(params: Required<{
-    wardAndOazaList: OazaChoMachingInfo[];
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly wardAndOazaTrie: WardAndOazaTrieFinder,
+  ) {
     super({
       objectMode: true,
     });
-    this.logger = params.logger;
-    
-    // 〇〇市町村のトライ木
-    this.wardAndOazaTrie = new TrieAddressFinder();
-    setImmediate(() => {
-      for (const wardAndOaza of params.wardAndOazaList) {
-        this.wardAndOazaTrie.append({
-          key: this.normalizeStr(wardAndOaza.key),
-          value: wardAndOaza,
-        });
-      }
-      this.initialized = true;
-    })
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
-    next: TransformCallback
+    next: TransformCallback,
   ) {
 
-    const results: Query[] = [];
-    for (const query of queries) {
+    const results = new QuerySet();
+    for (const query of queries.values()) {
       if (!query.tempAddress) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       // 既に判明している場合はスキップ
-      if (query.match_level.num >= MatchLevel.CITY.num) {
-        results.push(query);
+      if (query.ward || query.oaza_cho) {
+        results.add(query);
         continue;
       }
 
-      if (!this.initialized) {
-        await new Promise(async (resolve: (_?: unknown[]) => void) => {
-          while (!this.initialized) {
-            await timers.setTimeout(100);
-          }
-          resolve();
-        });
+      // 京都通り名の特徴がある場合はスキップ
+      const bearingWord = query.tempAddress.match(RegExpEx.create('(?:(?:上る|下る|東入る?|西入る?)|(?:角[東西南北])|(?:[東西南北]側))'));
+      if (bearingWord) {
+        results.add(query);
+        continue;
       }
-  
+      
       // -------------------------
       // 〇〇市町村を探索する
       // -------------------------
+      const target = trimDashAndSpace(query.tempAddress);
+      if (!target) {
+        results.add(query);
+        continue;
+      }
       const trieResults = this.wardAndOazaTrie.find({
-        target: query.tempAddress,
+        target,
         extraChallenges: ['市', '町', '村'],
         partialMatches: true,
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!trieResults || trieResults.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
 
@@ -107,19 +88,20 @@ export class WardAndOazaTransform extends Transform {
 
       for (const mResult of trieResults) {
         // 都道府県が判別していない、または判別できでいて、
-        //　result.pref_key が同一でない結果はスキップする
+        // result.pref_key が同一でない結果はスキップする
         // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
         if (query.match_level.num === MatchLevel.PREFECTURE.num && 
           query.pref_key !== mResult.info?.pref_key) {
-            continue;
+          continue;
         }
         anyAmbiguous = anyAmbiguous || mResult.ambiguous;
         anyHit = true;
 
-        results.push(query.copy({
+        results.add(query.copy({
           pref: query.pref || mResult.info!.pref,
           pref_key: query.pref_key || mResult.info!.pref_key,
           city_key: mResult.info!.city_key,
+          town_key: mResult.info!.town_key || undefined,
           tempAddress: mResult.unmatched,
           city: mResult.info!.city,
           county: mResult.info!.county,
@@ -128,36 +110,19 @@ export class WardAndOazaTransform extends Transform {
           rep_lat: mResult.info!.rep_lat,
           rep_lon: mResult.info!.rep_lon,
           machiaza_id: mResult.info!.machiaza_id,
-
-          // 大字・小字に rsdt_addr_flg で 0,1 が混在する可能性があるので
-          // この時点では不明。なので AMBIGUOUS_RSDT_ADDR_FLG
-          rsdt_addr_flg: AMBIGUOUS_RSDT_ADDR_FLG,
+          rsdt_addr_flg: mResult.info!.rsdt_addr_flg,
           oaza_cho: mResult.info!.oaza_cho,
-          match_level: MatchLevel.MACHIAZA,
-          coordinate_level: MatchLevel.CITY,
+          match_level: mResult.info!.match_level,
+          coordinate_level: mResult.info!.coordinate_level,
           matchedCnt: query.matchedCnt + mResult.depth,
           ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
         }));
       }
 
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
-    this.logger?.info(`ward_and_oaza : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     next(null, results);
-  }
-
-  private normalizeStr(value: string): string {
-    // 半角カナ・全角カナ => 平仮名
-    value = toHiragana(value);
-
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    value = jisKanji(value);
-
-    // 漢数字 => 算用数字
-    value = kan2num(value);
-
-    return value;
   }
 }

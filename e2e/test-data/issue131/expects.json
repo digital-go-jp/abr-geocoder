@@ -1,0 +1,492 @@
+[
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1-3 半角ハイフン"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 半角ハイフン",
+      "others": [
+        "半角ハイフン"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1－3 全角ハイフンマイナス"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 全角ハイフンマイナス",
+      "others": [
+        "全角ハイフンマイナス"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1-3 半角ハイフンマイナス"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 半角ハイフンマイナス",
+      "others": [
+        "半角ハイフンマイナス"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1−3 全角マイナス"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 全角マイナス",
+      "others": [
+        "全角マイナス"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1‒3 フィギュアーダッシュ"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 フィギュアーダッシュ",
+      "others": [
+        "フィギュアーダッシュ"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1–3 二分ダッシュ"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 二分ダッシュ",
+      "others": [
+        "二分ダッシュ"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1—3 全角ダッシュ"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 全角ダッシュ",
+      "others": [
+        "全角ダッシュ"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1─3 罫線"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 罫線",
+      "others": [
+        "罫線"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1━3 罫線(太)"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 罫線(太)",
+      "others": [
+        "罫線(太)"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1一3 漢数字いち"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 漢数字いち",
+      "others": [
+        "漢数字いち"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1-3一番館"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 一番館",
+      "others": [
+        "一番館"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1―3 ホリゾンタルバー"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 ホリゾンタルバー",
+      "others": [
+        "ホリゾンタルバー"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1ー3 全角長音"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 全角長音",
+      "others": [
+        "全角長音"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都千代田区紀尾井町1ｰ3 半角長音"
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3 半角長音",
+      "others": [
+        "半角長音"
+      ],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.679107172,
+      "lon": 139.736394597,
+      "lg_code": "131016",
+      "machiaza_id": "0056000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "千代田区",
+      "ward": null,
+      "oaza_cho": "紀尾井町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  }
+]

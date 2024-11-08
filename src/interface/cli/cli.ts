@@ -28,31 +28,24 @@ import yargs, { Argv } from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import downloadCommand from './commands/download-command';
 import geocodeCommand from './commands/geocode-command';
+import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
-import { AbrgMessage } from '@domain/types/messages/abrg-message';
-import serveCommand from './commands/serve-command';
-
-// @ts-ignore
-if (process[Symbol.for('ts-node.register.instance')]) {
-  // ts-node で実行しているときは、 NODE_ENV = 'development' にする
-  process.env.NODE_ENV = 'development';
-}
+import { EnvProvider } from '@domain/models/env-provider';
 
 // const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 const terminalWidth = 120;
 
 export const main = async (
-  nodeEnv: string | undefined,
   ...processArgv: string[]
 ) => {
-  const { version } = await getPackageInfo();
+  const { version } = getPackageInfo();
   const parsedArgs = parseHelper(processArgv);
 
   /**
    * CLIパーサー (通常のプログラムのエントリーポイント)
    */
-  yargs(hideBin(parsedArgs))
+  return yargs(hideBin(parsedArgs))
     .version(version)
     .wrap(terminalWidth)
     .scriptName('abrg')
@@ -75,12 +68,10 @@ export const main = async (
       // Otherwise, show the error message
       console.error(`[error] ${msg || e.message}`, e);
     
-      if (process.env.NODE_ENV !== 'test') {
+      if (!EnvProvider.isDebug) {
         process.exit(1);
       }
     })
     .parse();
 };
-if (process.env.NODE_ENV !== 'test') {
-  main(process.env.NODE_ENV, ...process.argv);
-}
+main(...process.argv);

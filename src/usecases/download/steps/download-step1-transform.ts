@@ -24,7 +24,6 @@
 import { DownloadProcessError, DownloadProcessStatus, DownloadQuery1, DownloadQuery2 } from '@domain/models/download-process-query';
 import crc32 from '@domain/services/crc32-lib';
 import { getUrlHash } from '@domain/services/get-url-hash';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { ThreadJob, ThreadJobResult } from '@domain/services/thread/thread-task';
 import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { CkanPackageResponse, CkanResource } from '@domain/types/download/ckan-package';
@@ -82,7 +81,7 @@ export class DownloadStep1Transform extends Duplex {
     });
 
     // リソースが利用できない (404 Not found)
-    if (packageResponse.header.statusCode !== 200) {
+    if (packageResponse.header.statusCode !== StatusCodes.OK) {
       return {
         kind: 'result',
         taskId: job.taskId,
@@ -91,16 +90,16 @@ export class DownloadStep1Transform extends Duplex {
           status: DownloadProcessStatus.ERROR,
           dataset: job.data.dataset,
           message: `status: ${packageResponse.header.statusCode}`,
-        }
+        },
       } as ThreadJobResult<DownloadProcessError>;
     }
 
     // CSVファイルのURLを抽出する
-    const packageInfo = packageResponse.body as CkanPackageResponse;
+    const packageInfo = packageResponse.body as unknown as CkanPackageResponse;
     const csvMeta: CkanResource | undefined = packageInfo.result!.resources
-    .find(x =>
-      x.format.toLowerCase().startsWith('csv')
-    );
+      .find(x =>
+        x.format.toLowerCase().startsWith('csv'),
+      );
 
     // CSVがない (予防的なコード)
     if (!csvMeta) {
@@ -158,7 +157,7 @@ export class DownloadStep1Transform extends Duplex {
               csvFilePath: cacheFilePath,
               noUpdate: true,
               status: DownloadProcessStatus.UNSET,
-            }
+            },
           } as ThreadJobResult<DownloadQuery2>;
         }
       }
@@ -180,10 +179,10 @@ export class DownloadStep1Transform extends Duplex {
       src,
       dst,
     );
-    const fileCrc32 = await crc32.fromFile(csvFilePath);
+    const fileCrc32 = await crc32.fromFile(csvFilePath)!;
 
     // キャッシュに情報を保存する
-    this.params.urlCacheMgr.writeCache({
+    await this.params.urlCacheMgr.writeCache({
       key: urlHash,
       url: csvMeta.url,
       cache_file: csvFilename,
@@ -200,7 +199,7 @@ export class DownloadStep1Transform extends Duplex {
         csvFilePath,
         noUpdate: false,
         status: DownloadProcessStatus.UNSET,
-      }
+      },
     } as ThreadJobResult<DownloadQuery2>;
   }
 }

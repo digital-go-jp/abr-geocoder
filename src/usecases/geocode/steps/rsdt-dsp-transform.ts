@@ -22,44 +22,51 @@
  * SOFTWARE.
  */
 import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { RsdtDspInfo } from '@domain/types/geocode/rsdt-dsp-info';
 import { SearchTarget } from '@domain/types/search-target';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../models/query';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
+import { QuerySet } from '../models/query-set';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtDspTransform extends Transform {
 
-  constructor(private readonly params: Required<{
-    dbCtrl: GeocodeDbController;
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly dbCtrl: GeocodeDbController,
+  ) {
     super({
       objectMode: true,
     });
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
 
     // ------------------------
     // 住居番号で当たるものがあるか
     // ------------------------
     const trie = new TrieAddressFinder<RsdtDspInfo>();
-    for await (const query of queries) {
+    for await (const query of queries.values()) {
+      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key) {
+        continue;
+      }
+      if (query.city === '京都市') {
+        // 京都市がマッチしている場合、スキップする
+        // (京都市は住居表示を行っていない)
+        continue;
+      }
       if (query.searchTarget === SearchTarget.PARCEL) {
         // 地番検索が指定されている場合、このステップはスキップする
         continue;
       }
-      const db = await this.params.dbCtrl.openRsdtDspDb({
+      const db = await this.dbCtrl.openRsdtDspDb({
         lg_code: query.lg_code!,
         createIfNotExists: false,
       });
@@ -69,6 +76,7 @@ export class RsdtDspTransform extends Transform {
       const rows = await db.getRsdtDspRows({
         rsdtblk_key: query.rsdtblk_key!,
       });
+      db.close();
 
       for (const row of rows) {
         const key = [row.rsdt_num, row.rsdt_num2].filter(x => x !== null).join(DASH);
@@ -79,36 +87,38 @@ export class RsdtDspTransform extends Transform {
       }
     }
 
-    const results: Query[] = [];
-    for await (const query of queries) {
+    const results = new QuerySet();
+    for await (const query of queries.values()) {
 
+      if (query.city === '京都市') {
+        // 京都市がマッチしている場合、スキップする
+        // (京都市は住居表示を行っていない)
+        results.add(query);
+        continue;
+      }
+      
       if (query.searchTarget === SearchTarget.PARCEL) {
         // 地番検索が指定されている場合、このステップはスキップする
-        results.push(query);
+        results.add(query);
         continue;
       }
       // rsdtblk_key が必要なので、RESIDENTIAL_BLOCK未満はスキップ
       // もしくは 既に地番データが判明している場合もスキップ
       if (query.match_level.num < MatchLevel.RESIDENTIAL_BLOCK.num || 
         query.match_level === MatchLevel.PARCEL) {
-        results.push(query);
+        results.add(query);
         continue;
       }
-      if (!query.tempAddress) {
-        // 探索する文字がなければスキップ
-        results.push(query);
+
+      const target = trimDashAndSpace(query.tempAddress);
+      if (!target) {
+        results.add(query);
         continue;
       }
 
       // rest_abr_flg = 0のものは地番を検索する
-      if (query.rsdt_addr_flg === 0) {
-        results.push(query);
-        continue;
-      }
-
-      const target = this.normalizeCharNode(query.tempAddress);
-      if (!query.rsdtblk_key || !target) {
-        results.push(query);
+      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key) {
+        results.add(query);
         continue;
       }
       const findResults = trie.find({
@@ -116,7 +126,7 @@ export class RsdtDspTransform extends Transform {
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (findResults === undefined || findResults.length === 0) {
-        results.push(query);
+        results.add(query);
         continue;
       }
       
@@ -129,7 +139,7 @@ export class RsdtDspTransform extends Transform {
         // 結果を使用しない
         if (findResult.unmatched?.char &&
           RegExpEx.create('^[0-9]$').test(findResult.unmatched.char)) {
-          results.push(query);
+          results.add(query);
           continue;
         }
         anyHit = true;
@@ -137,46 +147,33 @@ export class RsdtDspTransform extends Transform {
         // 番地がヒットした
         const info = findResult.info! as RsdtDspInfo;
         anyAmbiguous = anyAmbiguous || findResult.ambiguous;
-
-        results.push(query.copy({
+        const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
           rsdtdsp_key: info.rsdtdsp_key,
           rsdtblk_key: info.rsdtblk_key,
           rsdt_num: info.rsdt_num,
           rsdt_id: info.rsdt_id,
           rsdt_num2: info.rsdt_num2,
           rsdt2_id: info.rsdt2_id,
-          rep_lat: info.rep_lat,
-          rep_lon: info.rep_lon,
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.RESIDENTIAL_DETAIL,
-          coordinate_level: MatchLevel.RESIDENTIAL_DETAIL,
           matchedCnt: query.matchedCnt + findResult.depth,
           ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
-        }));
+          rsdt_addr_flg: 1,
+        };
+        if (info.rep_lat && info.rep_lon) {
+          params.coordinate_level = MatchLevel.RESIDENTIAL_DETAIL;
+          params.rep_lat = info.rep_lat;
+          params.rep_lon = info.rep_lon;
+        }
+        const copied = query.copy(params);
+        results.add(copied);
       }
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
     }
 
-    this.params.logger?.info(`rsdt-dsp : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    // this.params.logger?.info(`rsdt-dsp : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
-  }
-
-  private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
-    // 先頭にDashがある場合、削除する
-    address = address?.replace(RegExpEx.create(`^${DASH}+`), '');
-    
-    // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
-    address = address?.replaceAll(RegExpEx.create('(\d+)[番(?:番地)号の]', 'g'), `$1${DASH}`);
-
-    // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
-    // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('の', 'g'), DASH);
-
-    // 末尾のDASHがある場合、削除する
-    address = address?.replace(RegExpEx.create(`${DASH}+$`), '');
-
-    return address;
   }
 }

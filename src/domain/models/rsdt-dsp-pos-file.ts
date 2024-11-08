@@ -44,9 +44,6 @@ export class RsdtDspPosFile
   }
 
   async process(params: Omit<ProcessOptions, 'db'> & {db : IRsdtDspDbDownload}) {
-    if (params.noUpdate) {
-      return;
-    }
     const parsedRows = params.lines.map(row => this.parseCsv(row));
     await params.db.rsdtDspPosCsvRows(parsedRows);
   }

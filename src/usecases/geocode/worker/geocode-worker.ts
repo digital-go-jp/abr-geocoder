@@ -23,23 +23,34 @@
  */
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
-import { ThreadJob, ThreadJobResult } from '@domain/services/thread/thread-task';
+import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
 import { ICommonDbGeocode } from '@interface/database/common-db';
-import { MessagePort } from 'node:worker_threads';
+import { GeocodeDbController } from '@interface/database/geocode-db-controller';
+import { Duplex } from 'node:stream';
+import { isMainThread, MessagePort, parentPort, workerData } from "node:worker_threads";
 import { Readable, Writable } from "stream";
-import { isMainThread, parentPort, workerData } from "worker_threads";
 import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from '../models/abr-geocoder-di-container';
+import { AbrGeocoderInput } from '../models/abrg-input-data';
+import { CityAndWardTrieFinder } from '../models/city-and-ward-trie-finder';
+import { CountyAndCityTrieFinder } from '../models/county-and-city-trie-finder';
+import { KyotoStreetTrieFinder } from '../models/kyoto-street-trie-finder';
+import { OazaChoTrieFinder } from '../models/oaza-cho-trie-finder';
+import { PrefTrieFinder } from '../models/pref-trie-finder';
 import { Query, QueryInput } from '../models/query';
-import { ChomeTranform } from '../steps/chome-transform';
+import { Tokyo23TownTrieFinder } from '../models/tokyo23-town-finder';
+import { Tokyo23WardTrieFinder } from '../models/tokyo23-ward-trie-finder';
+import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
+import { WardTrieFinder } from '../models/ward-trie-finder';
+import { loadGeocoderTrees } from '../services/load-geoder-trees';
 import { CityAndWardTransform } from '../steps/city-and-ward-transform';
 import { CountyAndCityTransform } from '../steps/county-and-city-transform';
 import { GeocodeResultTransform } from '../steps/geocode-result-transform';
-import { KoazaTransform } from '../steps/koaza-transform';
+import { KyotoStreetTransform } from '../steps/kyoto-street-transform';
+import { NormalizeBanchomeTransform } from '../steps/normalize-banchome-transform';
 import { NormalizeTransform } from '../steps/normalize-transform';
 import { OazaChomeTransform } from '../steps/oaza-chome-transform';
 import { ParcelTransform } from '../steps/parcel-transform';
 import { PrefTransform } from '../steps/pref-transform';
-import { RegExTransform } from '../steps/regex-transform';
 import { RsdtBlkTransform } from '../steps/rsdt-blk-transform';
 import { RsdtDspTransform } from '../steps/rsdt-dsp-transform';
 import { Tokyo23TownTranform } from '../steps/tokyo23town-transform';
@@ -47,207 +58,143 @@ import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
 import { WardTransform } from '../steps/ward-transform';
 
-export type GeocodeWorkerInitData = {
-  containerParams: AbrGeocoderDiContainerParams,
-}
+export class GeocodeTransform extends Duplex {
 
-export const geocodeOnWorkerThread = async (params: Required<{
-  port: MessagePort;
-  initData: GeocodeWorkerInitData;
-}>) => {
-  const container = new AbrGeocoderDiContainer(params.initData.containerParams);
-  const dbCtrl = container.database;
-  const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
-  const logger: DebugLogger | undefined = container.logger;
-
-  const start = Date.now();
-  const [
-    prefTransform,
-    countyAndCityTransform,
-    cityAndWardTransform,
-    wardAndOazaTransform,
-    oazaChomeTransform,
-    tokyo23TownTransform,
-    tokyo23WardTransform,
-    wardTransform,
-  ]: [
-    PrefTransform,
-    CountyAndCityTransform,
-    CityAndWardTransform,
-    WardAndOazaTransform,
-    OazaChomeTransform,
-    Tokyo23TownTranform,
-    Tokyo23WardTranform,
-    WardTransform,
-  ] = await Promise.all([
-    // 都道府県を試す
-    new Promise(async (resolve: (result: PrefTransform) => void) => {
-      const prefList = await commonDb.getPrefList();
-      resolve(new PrefTransform({
-        prefList,
-        logger,
-      }));
-    }),
-
-    // 〇〇郡〇〇市を試す
-    new Promise(async (resolve: (result: CountyAndCityTransform) => void) => {
-      const countyAndCityList = await commonDb.getCountyAndCityList();
-      resolve(new CountyAndCityTransform({
-        countyAndCityList,
-        logger,
-      }));
-    }),
-
-    // 〇〇市〇〇区を試す
-    new Promise(async (resolve: (result: CityAndWardTransform) => void) => {
-      const cityAndWardList = await commonDb.getCityAndWardList();
-      resolve(new CityAndWardTransform({
-        cityAndWardList,
-        logger,
-      }));
-    }),
-    // 〇〇市 (〇〇郡が省略された場合）を試す
-    new Promise(async (resolve: (result: WardAndOazaTransform) => void) => {
-      const wardAndOazaList = await commonDb.getWardAndOazaChoList();
-      resolve(new WardAndOazaTransform({
-        wardAndOazaList,
-        logger,
-      }));
-    }),
-    // 大字を試す
-    new Promise(async (resolve: (result: OazaChomeTransform) => void) => {
-      const oazaChomes = await commonDb.getOazaChomes();
-      resolve(new OazaChomeTransform({
-        oazaChomes,
-        logger,
-      }));
-    }),
-
-    // 東京23区を試す
-    // 〇〇区＋大字の組み合わせで探す
-    new Promise(async (resolve: (result: Tokyo23TownTranform) => void) => {
-      const tokyo23towns = await commonDb.getTokyo23Towns();
-      resolve(new Tokyo23TownTranform({
-        tokyo23towns,
-        logger,
-      }));
-    }),
-
-    // 東京23区を試す
-    new Promise(async (resolve: (result: Tokyo23WardTranform) => void) => {
-      const tokyo23wards = await commonDb.getTokyo23Wards();
-      resolve(new Tokyo23WardTranform({
-        tokyo23wards,
-        logger,
-      }));
-    }),
-  
-    // 〇〇区で始まるパターン(東京23区以外)
-    new Promise(async (resolve: (result: WardTransform) => void) => {
-      const wards = await commonDb.getWards();
-      resolve(new WardTransform({
-        db: commonDb,
-        wards,
-        logger,
-      }));
-    }),
-  ]);
-
-  // 住所の正規化処理
-  //
-  // 例：
-  //
-  // 東京都千代田区紀尾井町1ー3 東京ガーデンテラス紀尾井町 19階、20階
-  //  ↓
-  // 東京都千代田区紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階
-  //
-  const normalizeTransform = new NormalizeTransform({
-    logger,
-  });
-
-  // 丁目を試す
-  const chomeTransform = new ChomeTranform({
-    db: commonDb,
-    logger,
-  });
-
-  // 小字を試す
-  const koazaTransform = new KoazaTransform({
-    db: commonDb,
-    logger,
-  });
-  
-  // 地番の特定を試みる
-  const parcelTransform = new ParcelTransform({
-    dbCtrl,
-    logger,
-  });
-
-  // 街区符号の特定を試みる
-  const rsdtBlkTransform = new RsdtBlkTransform({
-    dbCtrl,
-    logger,
-  });
-
-  // 住居番号の特定を試みる
-  const rsdtDspTransform = new RsdtDspTransform({
-    dbCtrl,
-    logger,
-  });
-
-  // 正規表現での特定を試みる
-  const regexTranfrorm = new RegExTransform({
-    logger,
-  });
-
-  // 最終的な結果にまとめる
-  const geocodeResultTransform = new GeocodeResultTransform();
-
-  const reader = new Readable({
+  private readonly reader = new Readable({
     objectMode: true,
     read() {},
   });
 
-  // メインスレッドに結果を送信する
-  const dst = new Writable({
-    objectMode: true,
-    write(query: Query, _, callback) {
-      const data = query.toJSON();
-      const sharedMemory = toSharedMemory<ThreadJobResult<any>>({
-        taskId: query.input.taskId,
-        data,
-        kind: 'result',
-      });
-      params.port.postMessage(sharedMemory);
-      callback();
-    },
-  });
+  private constructor(params: {
+    dbCtrl: GeocodeDbController;
+    commonDb: ICommonDbGeocode;
+    logger?: DebugLogger;
+    prefTrie: PrefTrieFinder;
+    countyAndCityTrie: CountyAndCityTrieFinder;
+    oazaChoTrie: OazaChoTrieFinder;
+    kyotoStreetTrie: KyotoStreetTrieFinder;
+    cityAndWardTrie: CityAndWardTrieFinder;
+    wardAndOazaTrie: WardAndOazaTrieFinder;
+    wardTrie: WardTrieFinder;
+    tokyo23WardTrie: Tokyo23WardTrieFinder;
+    tokyo23TownTrie: Tokyo23TownTrieFinder;
+  }) {
+    super({
+      objectMode: true,
+      read() {},
+      allowHalfOpen: true,
+    });
+    
+    // 都道府県を試す
+    const prefTransform = new PrefTransform(params.prefTrie);
+    
+    // 〇〇郡〇〇市を試す
+    const countyAndCityTransform = new CountyAndCityTransform(params.countyAndCityTrie);
 
-  logger?.info(`init: ${Date.now() - start}`);
-  reader.pipe(normalizeTransform)
-    .pipe(prefTransform)
-    .pipe(countyAndCityTransform)
-    .pipe(cityAndWardTransform)
-    .pipe(wardAndOazaTransform)
-    .pipe(wardTransform)
-    .pipe(tokyo23TownTransform)
-    .pipe(tokyo23WardTransform)
-    .pipe(oazaChomeTransform)
-    .pipe(chomeTransform)
-    .pipe(koazaTransform)
-    .pipe(rsdtBlkTransform)
-    .pipe(rsdtDspTransform)
-    .pipe(parcelTransform)
-    .pipe(regexTranfrorm)
-    .pipe(geocodeResultTransform)
-    .pipe(dst);
+    // 〇〇市〇〇区を試す
+    const cityAndWardTransform = new CityAndWardTransform(params.cityAndWardTrie);
 
-  // メインスレッドからメッセージを受け取る
-  params.port.on('message', async (task: Uint8Array) => {
-    const data = fromSharedMemory<ThreadJob<QueryInput>>(task);
-    reader.push(data);
-  });
-};
+    // 〇〇市 (〇〇郡が省略された場合）を試す
+    const wardAndOazaTransform = new WardAndOazaTransform(params.wardAndOazaTrie);
+
+    // 大字を試す
+    const oazaChomeTransform = new OazaChomeTransform(params.oazaChoTrie);
+
+    // 京都の通り名を試す
+    const kyotoStreetTransform = new KyotoStreetTransform(params.kyotoStreetTrie);
+
+    // 東京23区を試す
+    // 〇〇区＋大字の組み合わせで探す
+    const tokyo23TownTransform = new Tokyo23TownTranform(params.tokyo23TownTrie);
+
+    // 東京23区を試す
+    const tokyo23WardTransform = new Tokyo23WardTranform(params.tokyo23WardTrie);
+
+    // 〇〇区で始まるパターン(東京23区以外)
+    const wardTransform = new WardTransform(params.wardTrie);
+
+    // 住所の正規化処理
+    //
+    // 例：
+    //
+    // 東京都千代田区紀尾井町1ー3 東京ガーデンテラス紀尾井町 19階、20階
+    //  ↓
+    // 東京都千代田区紀尾井町1{DASH}3{SPACE}東京ガーデンテラス紀尾井町{SPACE}19階、20階
+    //
+    const normalizeTransform = new NormalizeTransform();
+
+    // 地番の特定を試みる
+    const parcelTransform = new ParcelTransform(params.dbCtrl);
+
+    // 街区符号の特定を試みる
+    const rsdtBlkTransform = new RsdtBlkTransform(params.dbCtrl);
+
+    // 住居番号の特定を試みる
+    const rsdtDspTransform = new RsdtDspTransform(params.dbCtrl);
+
+    // 正規表現で番地を試みる
+    const normalizeBanchomeTransform = new NormalizeBanchomeTransform();
+
+    // 最終的な結果にまとめる
+    const geocodeResultTransform = new GeocodeResultTransform();
+
+    // 
+    const dst = new Writable({
+      objectMode: true,
+      write: (query: Query, _, callback) => {
+        this.push(query);
+        callback();
+      },
+    });
+
+    this.reader.pipe(normalizeTransform)
+      .pipe(normalizeBanchomeTransform)
+      .pipe(prefTransform)
+      .pipe(countyAndCityTransform)
+      .pipe(cityAndWardTransform)
+      .pipe(wardAndOazaTransform)
+      .pipe(wardTransform)
+      .pipe(tokyo23TownTransform)
+      .pipe(tokyo23WardTransform)
+
+      .pipe(kyotoStreetTransform)
+      .pipe(oazaChomeTransform)
+      .pipe(rsdtBlkTransform)
+      .pipe(rsdtDspTransform)
+      .pipe(parcelTransform)
+      .pipe(geocodeResultTransform)
+      .pipe(dst);
+  }
+
+  _write(chunk: AbrGeocoderInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
+    callback();
+    this.reader.push(chunk);
+  }
+
+  _final(callback: (error?: Error | null) => void): void {
+    this.reader.push(null);
+    callback();
+  }
+ 
+  static readonly create = async (params: Required<AbrGeocoderDiContainerParams>) => {
+    const container = new AbrGeocoderDiContainer(params);
+    const dbCtrl = container.database;
+    const logger: DebugLogger | undefined = container.logger;
+    const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
+
+    const trees = await loadGeocoderTrees(params);
+    
+    const result = new GeocodeTransform({
+      dbCtrl,
+      commonDb,
+      logger,
+      ...trees,
+    });
+
+    return result;
+  };
+}
+
 
 // 作業スレッド
 if (!isMainThread && parentPort) {
@@ -256,8 +203,57 @@ if (!isMainThread && parentPort) {
   //   inspector.open(port);
   //   inspector.waitForDebugger();
   // }
-  geocodeOnWorkerThread({
-    port: parentPort,
-    initData: workerData as GeocodeWorkerInitData,
-  });
+
+
+  (async (parentPort: MessagePort) => {
+    const reader = new Readable({
+      objectMode: true,
+      read() {},
+    });
+
+    workerData.debug = true;
+    const geocodeTransform = await GeocodeTransform.create(workerData);
+
+    // メインスレッドからメッセージを受け取る
+    parentPort.on('message', (task: Uint8Array) => {
+      const received = fromSharedMemory<ThreadJob<QueryInput> | ThreadPing>(task);
+      switch (received.kind) {
+        case 'ping': {
+          parentPort.postMessage(toSharedMemory<ThreadPong>({
+            kind: 'pong',
+          }));
+          return;
+        }
+
+        case 'task': {
+          // abr-geocoder.ts でメインスレッドでの処理とバックグラウンドでの処理を
+          // 両方しようしているため、QueryInputが2重になってしまう。
+          // ここでQueryInputの正しい形に直す
+          reader.push(received);
+          return;
+        }
+
+        default:
+          throw 'not implemented';
+      }
+    });
+
+    // geocodeTransform からの出力を
+    // メインスレッドに送る
+    const dst = new Writable({
+      objectMode: true,
+      write: (query: Query, _, callback) => {
+        const data = query.toJSON();
+        const sharedMemory = toSharedMemory<ThreadJobResult<unknown>>({
+          taskId: query.input.taskId,
+          data,
+          kind: 'result',
+        });
+        parentPort.postMessage(sharedMemory);
+        callback();
+      },
+    });
+    reader.pipe(geocodeTransform).pipe(dst);
+
+  })(parentPort);
 }

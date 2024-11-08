@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */;
-import { DownloadProcessError, DownloadQueryBase, DownloadRequest, isDownloadProcessError } from '@domain/models/download-process-query';
+import { DownloadQueryBase, DownloadRequest, isDownloadProcessError } from '@domain/models/download-process-query';
 import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
 import { DownloadWorkerInitData } from '@usecases/download/workers/download-worker';
@@ -32,17 +32,18 @@ import timers from 'node:timers/promises';
 export class DownloadTransform extends Duplex {
 
   private receivedFinal: boolean = false;
-
   private runningTasks = 0;
+  private abortCtrl = new AbortController();
 
   // ダウンロードを担当するワーカースレッド
-  private downloader: WorkerThreadPool<
+  private downloader?: WorkerThreadPool<
     DownloadWorkerInitData, 
     DownloadRequest,
     DownloadQueryBase
   >;
 
   constructor(params : Required<{
+    maxConcurrency: number;
     maxTasksPerWorker: number;
     container: DownloadDiContainer;
   }>) {
@@ -52,7 +53,11 @@ export class DownloadTransform extends Duplex {
       read() {},
     });
 
-    this.downloader = new WorkerThreadPool({
+    this.downloader = new WorkerThreadPool<
+      DownloadWorkerInitData, 
+      DownloadRequest,
+      DownloadQueryBase
+    >({
       // download-worker へのパス
       filename: path.join(__dirname, '..', 'workers', 'download-worker'),
 
@@ -63,17 +68,19 @@ export class DownloadTransform extends Duplex {
         maxTasksPerWorker: params.maxTasksPerWorker,
       },
 
-      // ダウンローダーのスレッドは1つだけにする
-      // HTTP2.0で接続するので、TCPコネクションは1つだけで良い
-      maxConcurrency: 1,
+      // ダウンローダーのスレッド
+      maxConcurrency: params.maxConcurrency,
 
       // 同時ダウンロード数
       maxTasksPerWorker: params.maxTasksPerWorker,
     });
   }
 
-  async close() {
-    await this.downloader.close();
+  close() {
+    if (!this.abortCtrl.signal.aborted) {
+      this.abortCtrl.abort();
+    }
+    this.downloader?.close();
   }
 
   // 前のstreamからデータが渡されてくる
@@ -83,6 +90,10 @@ export class DownloadTransform extends Duplex {
     // callback: (error?: Error | null | undefined) => void,
     callback: TransformCallback,
   ) {
+    while (!this.downloader) {
+      await timers.setTimeout(100);
+    }
+    
     this.runningTasks++;
 
     // 次のタスクをもらうために、callbackを呼び出す
@@ -99,7 +110,7 @@ export class DownloadTransform extends Duplex {
         this.runningTasks--;
 
         if (isDownloadProcessError(downloadResult)) {
-          this.push(downloadResult as DownloadProcessError);
+          this.push(downloadResult);
           if (this.runningTasks === 0 && this.receivedFinal) {
             this.push(null);
           }
@@ -123,6 +134,9 @@ export class DownloadTransform extends Duplex {
         params.useCache = false;
       }
     }
+
+    this.abortCtrl.abort(`Can not download the file: ${params.packageId}`);
+    this.close();
   }
 
   _final(callback: (error?: Error | null) => void): void {

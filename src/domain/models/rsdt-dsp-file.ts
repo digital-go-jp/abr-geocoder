@@ -44,20 +44,10 @@ export class RsdtDspFile
   }
   
   async process(params: Omit<ProcessOptions, 'db'> & {db : IRsdtDspDbDownload}) {
-    let parsedRows = params.lines.map(row => this.parseCsv(row));
-
-    // 続けて処理をする必要がるため、lgCodeを返す
-    const lgCodes = new Set<string>();
-    const lgCode = parsedRows[0][DataField.LG_CODE.dbColumn] as string
-    lgCodes.add(lgCode);
-  
-    // DBに取り込む
-    if (!params.noUpdate) {
-      await params.db.rsdtDspCsvRows(parsedRows);
-    }
-    
-    return lgCodes;
+    const parsedRows = params.lines.map(row => this.parseCsv(row));
+    await params.db.rsdtDspCsvRows(parsedRows);
   }
+
   // 住居表示-住居マスター データセット
   static readonly CKAN_PACKAGE_ID = '000005';
 }

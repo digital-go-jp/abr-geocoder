@@ -22,15 +22,14 @@
  * SOFTWARE.
  */
 
-import { CharNode } from "./trie/char-node";
-
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 const hiraganaMap = new Map<string, string>([
-  ['ｶﾞ', 'が'],
-  ['ｷﾞ', 'ぎ'],
-  ['ｸﾞ', 'ぐ'],
-  ['ｹﾞ', 'げ'],
-  ['ｺﾞ', 'ご'],
+  ["ｶﾞ", 'け'], // 龍ケ崎市,龍ｶﾞ崎市 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
+  ["ｷﾞ", 'ぎ'],
+  ["ｸﾞ", 'ぐ'],
+  ["ｹﾞ", 'け'], // 龍ケ崎市,龍ｹ崎市 のように「ケ」を「ｹ」で表現する場合がある。「け」に統一する
+  ["ｺﾞ", 'ご'],
   ['ｻﾞ', 'ざ'],
   ['ｼﾞ', 'じ'],
   ['ｽﾞ', 'ず'],
@@ -59,7 +58,7 @@ const hiraganaMap = new Map<string, string>([
   ['ｳ', 'う'],
   ['ｴ', 'え'],
   ['ｵ', 'お'],
-  ['ｶ', 'か'],
+  ['ｶ', 'け'], // 龍ケ崎市,龍ｶ崎市 のように「ケ」を「ｶ」で表現する場合がある。「け」に統一する
   ['ｷ', 'き'],
   ['ｸ', 'く'],
   ['ｹ', 'け'],
@@ -109,10 +108,12 @@ const hiraganaMap = new Map<string, string>([
   ['ｬ', 'や'],
   ['ｭ', 'ゆ'],
   ['ｮ', 'よ'],
-  ['ガ', 'が'],
+  ['ガ', 'け'], // 龍ケ崎市,龍ガ崎市 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
+  ['が', 'け'], // 霞ヶ関,霞が関 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
   ['ギ', 'ぎ'],
   ['グ', 'ぐ'],
-  ['ゲ', 'げ'],
+  ['ゲ', 'け'], // 龍ケ崎市,龍ゲ崎市 のように「ケ」を「ゲ」で表現する場合がある。「け」に統一する
+  ['げ', 'け'], // 霞ヶ関,霞が関 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
   ['ゴ', 'ご'],
   ['ザ', 'ざ'],
   ['ジ', 'じ'],
@@ -155,15 +156,15 @@ const hiraganaMap = new Map<string, string>([
   ['オ', 'お'],
   ['ぉ', 'お'],  // 捨て仮名
   ['ォ', 'お'],  // 捨て仮名
-  ['ゕ', 'か'],  // 捨て仮名
-  ['ヵ', 'か'],  // 捨て仮名
-  ['カ', 'か'],
+  ['ゕ', 'け'],  // 龍ケ崎市,龍ゕ崎市 のように「ケ」を「ゕ」で表現する場合がある。「け」に統一する
+  ['ヵ', 'け'],  // 龍ケ崎市,龍ガ崎市 のように「ケ」を「ガ」で表現する場合がある。「け」に統一する
+  ['カ', 'け'],  // 龍ケ崎市,龍カ崎市 のように「ケ」を「カ」で表現する場合がある。「け」に統一する
   ['キ', 'き'],
   ['ク', 'く'],
   ['ㇰ', 'く'],  // 捨て仮名
-  ['ケ', 'が'],
-  ['ヶ', 'が'],  // 捨て仮名
-  ['ゖ', 'が'],  // 捨て仮名
+  ['ケ', 'け'],
+  ['ヶ', 'け'],  // 龍ケ崎市,龍ヶ崎市 のように「ケ」を「ヶ」で表現する場合がある。「け」に統一する
+  ['ゖ', 'け'],  // 龍ケ崎市,龍ゖ崎市 のように「ケ」を「ゖ」で表現する場合がある。「け」に統一する
   ['コ', 'こ'],
   ['サ', 'さ'],
   ['シ', 'し'],
@@ -227,23 +228,38 @@ const hiraganaMap = new Map<string, string>([
   ['ヮ', 'わ'],  // 捨て仮名
   ['ヲ', 'を'],
   ['ン', 'ん'],
-  ['之', 'の'],  // 堀之内 →　堀の内
+  ['之', 'の'],  // 堀之内 → 堀の内
 ]);
 
-export const toHiragana = (target: string) => {
-  const buffer: string[] = [];
-  for (const char of target) {
-    buffer.push(hiraganaMap.get(char) || char);
+export const toHiragana = <T extends string | CharNode | undefined>(target: T): T => {
+  if (target === undefined) {
+    return undefined as T;
   }
-  
-  return buffer.join('');
+  if (typeof target === 'string') {
+    const buffer: string[] = [];
+    // Unicode正規化を行う
+    // https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/String/normalize
+    //
+    // NFKCは、濁音付きの半角カタカナを全角カタカナに変換する
+    for (const char of target.normalize('NFKC')) {
+      buffer.push(hiraganaMap.get(char) || char);
+    }
+    
+    return buffer.join('') as T;
+  }
+  if (target instanceof CharNode) {
+    return toHiraganaForCharNode(target) as T;
+  }
+  throw `unsupported value type`;
 };
 
-export const toHiraganaForCharNode = (target: CharNode | undefined): CharNode | undefined => {
+const toHiraganaForCharNode = (target: CharNode | undefined): CharNode | undefined => {
   let head = target;
   const root = target;
   while (head && head.char) {
-    head.char = hiraganaMap.get(head.char) || head.char;
+    if (!head.ignore) {
+      head.char = hiraganaMap.get(head.char) || head.char;
+    }
     head = head.next;
   }
   return root;

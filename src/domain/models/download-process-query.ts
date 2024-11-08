@@ -46,12 +46,12 @@ export enum DownloadProcessStatus {
 
 export type DownloadProcessBase = {
   status: DownloadProcessStatus
-}
+};
 
 export type DownloadRequest = {
   kind: 'download';
   lgCode: string;
-  dataset: FileGroupKey | 'search';
+  dataset: FileGroupKey;
   useCache?: boolean;
   packageId: string;
 };
@@ -81,10 +81,10 @@ export type DownloadResult = {
 
 export const isDownloadProcessError = (target: DownloadProcessBase): target is DownloadProcessError => {
   return target.status === DownloadProcessStatus.ERROR;
-}
+};
 
 export type CsvLoadRequest = {
-  dataset: 'search' | FileGroupKey;
+  dataset: FileGroupKey;
 };
 
 export type CsvLoadQueryBase = DownloadProcessBase & CsvLoadRequest;
@@ -99,5 +99,4 @@ export type CsvLoadQuery2 = {
 
 export type CsvLoadResult = {
   kind: 'result';
-  lgCodes: Set<string> | undefined;
 } & CsvLoadQueryBase;

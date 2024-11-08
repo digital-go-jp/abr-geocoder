@@ -26,18 +26,17 @@ import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
 import path from 'node:path';
 import { Duplex, TransformCallback } from 'node:stream';
-import { ParseWorkerInitData } from '../workers/csv-parse-worker';
 import timers from 'node:timers/promises';
-import { ThreadMessage } from '@domain/services/thread/thread-task';
+import { ParseWorkerInitData } from '../workers/csv-parse-worker';
 
 export class CsvParseTransform extends Duplex {
 
   private receivedFinal: boolean = false;
-
   private runningTasks = 0;
+  private abortCtrl = new AbortController();
 
   // ダウンロードされた zip ファイルを展開して、データベースに登録するワーカースレッド
-  private readonly csvParsers: WorkerThreadPool<
+  private csvParsers: WorkerThreadPool<
     Required<ParseWorkerInitData>,
     DownloadQuery2,
     DownloadResult | DownloadProcessError
@@ -82,12 +81,17 @@ export class CsvParseTransform extends Duplex {
         containerParams: params.container.toJSON(),
         semaphoreSharedMemory,
         lgCodeFilter: Array.from(params.lgCodeFilter),
-      }
+      },
+
+      signal: this.abortCtrl.signal,
     });
   }
 
-  async close() {
-    await this.csvParsers.close();
+  close() {
+    if (!this.abortCtrl.signal.aborted) {
+      this.abortCtrl.abort();
+    }
+    this.csvParsers?.close();
   }
 
   // 前のstreamからデータが渡されてくる
@@ -98,21 +102,30 @@ export class CsvParseTransform extends Duplex {
     callback: TransformCallback,
   ) {
 
+    while (!this.csvParsers) {
+      await timers.setTimeout(100);
+    }
+    
     // 次のタスクをもらうために、先にCallbackを呼ぶ
     callback();
     this.runningTasks++;
 
     // CSVファイルを分析して、データベースに登録する
-    const parseResult = await this.csvParsers.run(downloadResult as DownloadQuery2);
-    this.push(parseResult);
-    this.runningTasks--;
+    this.csvParsers.run(downloadResult).then((parseResult) => {
+      this.push(parseResult);
+      this.runningTasks--;
+      
+      // 全てタスクが完了したかをチェック
+      if (this.runningTasks === 0 && this.receivedFinal) {
+        if (!this.closed) {
+          this.push(null);
+        }
+      }
+    }).catch((_) => {
 
-    // console.log(`--> ${downloadResult.csvFilePath}`);
-    
-    // 全てタスクが完了したかをチェック
-    if (this.runningTasks === 0 && this.receivedFinal) {
-      this.push(null);
-    }
+      this.abortCtrl.abort(`Can not parse the file: ${[downloadResult.csvFilePath]}`);
+      this.close();
+    });
   }
 
   _final(callback: (error?: Error | null) => void): void {

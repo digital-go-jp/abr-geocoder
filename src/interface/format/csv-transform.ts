@@ -25,6 +25,7 @@
 import { Query } from '@usecases/geocode/models/query';
 import { Stream, TransformCallback } from 'node:stream';
 import { IFormatTransform } from './iformat-transform';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class CsvTransform extends Stream.Transform implements IFormatTransform {
   mimetype: string = 'text/x-csv';
@@ -37,7 +38,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
       columns: string[];
       skipHeader: boolean;
       debug?: boolean;
-    }
+    },
   ) {
     super({
       // Data format coming from the previous stream is object mode.
@@ -69,7 +70,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
   _transform(
     result: Query,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ): void {
     // デバッグ
     // if (result.formatted.score > 0.6) {
@@ -81,8 +82,11 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
           case 'id':
             return result.input.taskId;
 
-          case 'input':
-            return `"${result.input.data.address}"`;
+          case 'input': {
+            // ダブルクォートを含む場合は、ダブルクォートは2つ並べて（""）エスケープする。
+            const input = result.input.data.address.replaceAll(RegExpEx.create('"{1,2}', 'g'), '""');
+            return `"${input}"`;
+          }
 
           case 'output':
             return `"${result.formatted.address}"`;
@@ -94,10 +98,10 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.match_level.str;
 
           case 'lat':
-            return result.rep_lat?.toString() || '';
+            return result.rep_lat || '';
 
           case 'lon':
-            return result.rep_lon?.toString() || '';
+            return result.rep_lon || '';
 
           case 'pref':
             return result.pref || '';
@@ -106,19 +110,16 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.city || '';
 
           case 'lg_code':
-            return result.lg_code || '';
+            return `"${result.lg_code || ''}"`;
 
           case 'county':
             return result.county || '';
-
-          case 'city':
-            return result.city || '';
 
           case 'ward':
             return result.ward || '';
 
           case 'machiaza_id':
-            return result.machiaza_id || '';
+            return `"${result.machiaza_id || ''}"`;
 
           case 'oaza_cho':
             return result.oaza_cho || '';
@@ -132,11 +133,14 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
           case 'rsdt_addr_flg':
             return result.rsdt_addr_flg;
 
-          case 'other':
-            if (!result.tempAddress) {
+          case 'others':
+            if (!result.tempAddress && result.unmatched.length === 0) {
               return '';
             }
-            return `"${result.tempAddress.toOriginalString()}"`;
+            if (result.tempAddress) {
+              result.unmatched.push(result.tempAddress.toOriginalString().trim());
+            }
+            return `"${result.unmatched.join(',')}"`;
 
           case 'blk_num':
             return result.block?.toString() || '';
@@ -172,22 +176,22 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
             return result.coordinate_level.str;
 
           case 'pref_key':
-            return result.pref_key;
+            return result.pref_key || '';
 
           case 'city_key':
-            return result.city_key;
+            return result.city_key || '';
 
           case 'town_key':
-            return result.town_key;
+            return result.town_key || '';
 
           case 'parcel_key':
-            return result.parcel_key;
+            return result.parcel_key || '';
 
           case 'rsdtblk_key':
-            return result.rsdtblk_key;
+            return result.rsdtblk_key || '';
 
           case 'rsdtdsp_key':
-            return result.rsdtdsp_key;
+            return result.rsdtdsp_key || '';
 
           case 'spend_time':
             return ((Date.now() - result.startTime) / 1000).toFixed(2);
@@ -215,7 +219,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
     // 出力するCSVカラムの順番
     'input',
     'output',
-    'other',
+    'others',
     'score',
     'match_level',
     'coordinate_level',

@@ -21,25 +21,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { SINGLE_DASH_ALTERNATIVE } from '@config/constant-values';
+import { DEFAULT_FUZZY_CHAR, STDIN_FILEPATH } from '@config/constant-values';
 import { EnvProvider } from '@domain/models/env-provider';
+import { countRequests } from '@domain/services/count-requests';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
 import { resolveHome } from '@domain/services/resolve-home';
+import { CommentFilterTransform } from '@domain/services/transformations/comment-filter-transform';
+import { LineByLineTransform } from '@domain/services/transformations/line-by-line-transform';
+import { StreamCounter } from '@domain/services/transformations/stream-counter';
 import { upwardFileSearch } from '@domain/services/upward-file-search';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { OutputFormat } from '@domain/types/output-format';
 import { SearchTarget } from '@domain/types/search-target';
 import { FormatterProvider } from '@interface/format/formatter-provider';
-import { AbrGeocodeStream } from '@usecases/geocode/abr-geocode-stream';
+import { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
+import { AbrGeocoderStream } from '@usecases/geocode/abr-geocoder-stream';
+import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
 import { getReadStreamFromSource } from '@usecases/geocode/services/get-read-stream-from-source';
-import { LineStream } from 'byline';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Writable } from 'node:stream';
 import streamPromises from 'node:stream/promises';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
-
 
 /**
  * abrg geocode
@@ -62,7 +66,7 @@ export type GeocodeCommandArgv = {
 
   inputFile?: string; // 'inputFile' は必須
   outputFile?: string; // 'outputFile' はオプショナル
-}
+};
 
 const geocodeCommand: CommandModule = {
   command: '$0 <inputFile> [outputFile] [options]',
@@ -75,26 +79,26 @@ const geocodeCommand: CommandModule = {
         type: 'string',
         default: EnvProvider.DEFAULT_ABRG_DIR,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
       })
       .option('target', {
         type: 'string',
         default: SearchTarget.ALL,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_GEOCODE_TARGET_OPTION
+          AbrgMessage.CLI_GEOCODE_TARGET_OPTION,
         ),
         choices: [SearchTarget.ALL, SearchTarget.RESIDENTIAL, SearchTarget.PARCEL],
       })
       .option('fuzzy', {
         type: 'string',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_GEOCODE_FUZZY_OPTION
+          AbrgMessage.CLI_GEOCODE_FUZZY_OPTION,
         ),
         coerce: fuzzy => {
           if (fuzzy.length !== 1) {
             console.error(
-              AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR)
+              AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_FUZZY_CHAR_ERROR),
             );
             process.exit(1);
           }
@@ -106,7 +110,7 @@ const geocodeCommand: CommandModule = {
         type: 'string',
         default: OutputFormat.JSON,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_GEOCODE_FORMAT_OPTION
+          AbrgMessage.CLI_GEOCODE_FORMAT_OPTION,
         ),
         choices: [
           OutputFormat.CSV,
@@ -121,7 +125,7 @@ const geocodeCommand: CommandModule = {
         describe: AbrgMessage.toString(AbrgMessage.CLI_GEOCODE_INPUT_FILE),
         type: 'string',
         coerce: (inputFile: string) => {
-          if (inputFile === SINGLE_DASH_ALTERNATIVE) {
+          if (inputFile === STDIN_FILEPATH) {
             return inputFile;
           }
 
@@ -142,13 +146,13 @@ const geocodeCommand: CommandModule = {
       .option('debug', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DEBUG_OPTION
+          AbrgMessage.CLI_COMMON_DEBUG_OPTION,
         ),
       })
       .option('silent', {
         type: 'boolean',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_SILENT_OPTION
+          AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
       });
   },
@@ -170,14 +174,19 @@ const geocodeCommand: CommandModule = {
     // プログレスバーの作成。
     // silentの指定がなく、ファイル入力の場合のみ作成される。
     const progressBar = (argv.silent || destination === '-' || destination === undefined) ?
-      undefined : createSingleProgressBar();
-    progressBar?.start(1, 0);
+      undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | {message}');
+    progressBar?.start(2, 0, {
+      'message': 'preparing...',
+    });
 
     // ワークスペース
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
-
+    // デバッグフラグ
     const debug = argv.debug === true;
-
+    // ワイルドカードマッチングとして取り扱う１文字
+    const fuzzy = argv.fuzzy || DEFAULT_FUZZY_CHAR;
+    // 検索モード
+    const searchTarget = argv.target || SearchTarget.ALL;
     // 入力元の選択
     const srcStream = getReadStreamFromSource(source);
     // Geocoding結果を出力するフォーマッタ
@@ -189,7 +198,7 @@ const geocodeCommand: CommandModule = {
     // 出力先（ファイル or stdout）の選択
     const outputStream: Writable = (destination => {
       if (destination === '' || destination === undefined) {
-        // ThreadGeocodeTransformで　各スレッドがstdout を使用しようとして、
+        // ThreadGeocodeTransformで、各スレッドがstdoutを使用しようとして、
         // イベントリスナーを取り合いになるため、以下の警告が発生する模様。
         // 動作的には問題ないので、 process.stdout.setMaxListeners(0) として警告を殺す。
         //
@@ -210,7 +219,7 @@ const geocodeCommand: CommandModule = {
     })(destination);
 
     // ルートディレクトリを探す
-    const rootDir = await upwardFileSearch(__dirname, 'build');
+    const rootDir = upwardFileSearch(__dirname, 'build');
     if (!rootDir) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_FIND_THE_ROOT_DIR,
@@ -218,31 +227,81 @@ const geocodeCommand: CommandModule = {
       });
     }
 
-    // ジオコーディングを行う
-    const geocoder = new AbrGeocodeStream({
-      fuzzy: argv.fuzzy,
-      searchTarget: argv.target || SearchTarget.ALL,
+    // ジオコーダーの作成と、ファイルからリクエスト数のカウントを並行して行う
+    const total = await (() => {
+      if (source !== STDIN_FILEPATH) {
+        // ファイルの場合は、先に合計数を数えておく
+        return countRequests(source);
+      } else {
+        return Promise.resolve(Number.POSITIVE_INFINITY);
+      }
+    })();
+
+    // 合計のリクエスト数をセット
+    if (progressBar) {
+      progressBar?.setTotal(total);
+    }
+
+    // DIコンテナをセットアップする
+    // 初期設定値を DIコンテナに全て詰め込む
+    const container = new AbrGeocoderDiContainer({
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
-        schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
       debug,
-      progress(current: number, total: number, isPaused: boolean) {
-        progressBar?.setTotal(total);
-        progressBar?.update(current);
+      cacheDir: path.join(abrgDir, 'cache'),
+    });
+    
+    const numOfThreads = (() => {
+      if (total < 500) {
+        // メインスレッドで処理を行う
+        return 1;
       }
+      // バックグラウンドスレッドを用いる
+      return Math.max(container.env.availableParallelism() - 1, 1);
+    })();
+
+    // ジオコーダの作成
+    const geocoder = await AbrGeocoder.create({
+      container,
+      numOfThreads,
     });
 
-    const lineByLine = new LineStream();
-
-    await streamPromises.pipeline(
-      srcStream,
-      lineByLine,
+    // ジオコーディング・ストリーマの作成
+    const abrGeocoderStream = new AbrGeocoderStream({
       geocoder,
+      fuzzy,
+      searchTarget,
+    });
+    
+    // ジオコーディングを行う
+    const lineByLine = new LineByLineTransform();
+    const commentFilter = new CommentFilterTransform();
+    const streamCounter = new StreamCounter({
+      fps: 10,
+      callback(current) {
+        progressBar?.update(current, {
+          message: 'geocoding...',
+        });
+      },
+    });
+    await streamPromises.pipeline(
+      // 入力ソースからデータの読み込み
+      srcStream,
+      // 1行単位に分解する
+      lineByLine,
+      // コメントを取り除く
+      commentFilter,
+      // ジオコーディングを行う
+      abrGeocoderStream,
+      // プログレスバーをアップデート
+      streamCounter,
+      // 出力を整形する
       formatter,
+      // 出力先に書き込む
       outputStream,
-    )
+    );
 
     progressBar?.stop();
 
@@ -250,7 +309,7 @@ const geocodeCommand: CommandModule = {
     if (argv.debug) {
       console.timeEnd("geocoding");
     }
-  }
+  },
 };
 
 export default geocodeCommand;

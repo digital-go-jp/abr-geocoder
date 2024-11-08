@@ -45,14 +45,13 @@ export type DatasetParams = {
   fileMeta: IDatasetFileMeta;
   csvFile: ICsvFile;
   lgCodeFilter?: Set<string>;
-}
+};
 
 export type CsvLine = { [key: string]: string };
 
 export type ProcessOptions = {
   lines: CsvLine[];
   db: ICommonDbDownload | IRsdtBlkDbDownload | IRsdtDspDbDownload | IParcelDbDownload;
-  noUpdate: boolean;
 };
 
 export abstract class DatasetFile implements IDatasetFileMeta {
@@ -79,7 +78,7 @@ export abstract class DatasetFile implements IDatasetFileMeta {
   }
 
   // CSVファイルの1行のデータを分析して、データベースに反映させる
-  abstract process(params: ProcessOptions): Promise<Set<string> | undefined | void>;
+  abstract process(params: ProcessOptions): Promise<void>;
 
   // CSVファイルを1行のデータを、必要な項目だけ読み込んで返す
   protected parseCsv(
@@ -87,16 +86,15 @@ export abstract class DatasetFile implements IDatasetFileMeta {
   ): Record<string, string | number>  {
     const result: Record<string, string | number> = {};
     this.fields.forEach(field => {
-      result[field.dbColumn] = line[field.csv] as string;
+      result[field.dbColumn] = line[field.csv];
     });
+
+    // 与えられたデータからパラメータのcrc32 を計算する
+    result.crc32 = crc32.fromRecord(result);
     return result;
   }
-
-  // 与えられたデータからパラメータのcrc32 を計算する
-  protected getParamsCrc32(params: Record<string, string | number>): number {
-    return crc32.fromString(JSON.stringify(params));
-  }
 }
+
 export abstract class DataWithDateFile
   extends DatasetFile
   implements IDatasetFileMeta
@@ -119,14 +117,14 @@ export abstract class DataForPosFile
     const lon = parseFloat(parsedRow[DataField.REP_LON.dbColumn] as string);
 
     if (!parsedRow[DataField.REP_SRID.csv]) {
-      throw `${parsedRow[DataField.REP_SRID.csv]} is required`;
+      throw new Error(`${parsedRow[DataField.REP_SRID.csv]} is required`);
     }
 
     // 代表点_座標参照系
     const extra = parsedRow[DataField.REP_SRID.csv].toString();
     const [longitude, latitude] = proj4(
       extra, // from
-      'WGS84' // to
+      'WGS84', // to
     ).forward([lon, lat]);
 
     parsedRow[DataField.REP_LON.dbColumn] = longitude;

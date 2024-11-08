@@ -21,23 +21,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
+import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import path from 'node:path';
 import { IDatasetFileMeta } from '../models/dataset-file';
-import { RegExpEx } from './reg-exp-ex';
-import { isFileGroupKey, FileGroup2Key } from '../types/download/file-group';
+import { FileGroup2Key, isFileGroupKey } from '../types/download/file-group';
 import { PrefLgCode } from '../types/pref-lg-code';
+import { RegExpEx } from './reg-exp-ex';
 
 /**
  * リソースCSVファイルから、情報を読取る
  *
- * mt_rsdtdsp_blk_pref01.zip というファイル名から
+ * foo/bar/mt_rsdtdsp_blk_pref01.zip というファイル名から
  * 以下のように変換する
  *
  * {
- *   type: 'rsdtdsp_blk',
- *   fileArea: '01'
- *   path: (path to file),
- *   filename: 'mt_rsdtdsp_blk_pref01.csv',
+ *   type: "rsdtdsp_blk",
+ *   type2: "pref",
+ *   lgCode : "01",
+ *   prefLgCode: "010006",
+ *   path: "foo/bar/mt_rsdtdsp_blk_pref01.zip",
+ *   filename: "mt_rsdtdsp_blk_pref01.zip",
  * }
  *
  * @param filename
@@ -49,7 +53,7 @@ export const parseFilename = (params: {
   const filename = path.basename(params.filepath);
 
   const fileMatch = filename.match(
-    /^mt_((?:city|pref|town|parcel|rsdtdsp_(?:rsdt|blk))(?:_pos)?)_(all|pref\d{2}|city\d{6})/
+    /^mt_((?:city|pref|town|parcel|rsdtdsp_(?:rsdt|blk))(?:_pos)?)_(all|pref\d{2}|city\d{6})/,
   );
   if (!fileMatch || !isFileGroupKey(fileMatch[1])) {
     return null;
@@ -58,17 +62,23 @@ export const parseFilename = (params: {
   
   const prefLgCode = ((rawValue: string) => {
     switch (true) {
-      case rawValue === 'all':
+      case rawValue === 'all': {
         return PrefLgCode.ALL; // mt_pref_all.csv と mt_town_all.csvのために返すが、使わない
+      }
 
       case rawValue.startsWith('pref'):
-      case rawValue.startsWith('city'):
+      case rawValue.startsWith('city'): {
         const prefXX = rawValue.substring(4, 6);
         return Object.values(PrefLgCode)
           .find(prefCode => prefCode.startsWith(prefXX));
+      }
       
-      default:
-        throw `unexpected case (${rawValue})`;
+      default: {
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
+      }
     }
   })(fileMatch[2]);
 

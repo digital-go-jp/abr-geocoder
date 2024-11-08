@@ -35,8 +35,9 @@ export type TownInfo = {
   chome: string;
   koaza: string;
   rsdt_addr_flg: number;
-  rep_lat: number;
-  rep_lon: number;
+  koaza_aka_code: number;
+  rep_lat: string;
+  rep_lon: string;
 };
 
 export type TownMatchingInfo = {

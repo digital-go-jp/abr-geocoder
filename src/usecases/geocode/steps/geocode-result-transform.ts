@@ -21,12 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Transform, TransformCallback } from 'node:stream';
-import { DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, SPACE, SPACE_SYMBOLS, VIRTUAL_SPACE } from '@config/constant-values';
+import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, OAZA_BANCHO, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
+import { SearchTarget } from '@domain/types/search-target';
+import { Transform, TransformCallback } from 'node:stream';
 import { Query } from '../models/query';
-import { CharNode } from '../services/trie/char-node';
+import { QuerySet } from '../models/query-set';
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 export class GeocodeResultTransform extends Transform {
 
@@ -37,113 +39,226 @@ export class GeocodeResultTransform extends Transform {
   }
   
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
-    setImmediate(() => {
-      const orgInput = queries[0].input;
-      const N = orgInput.data.address.length;
-  
-      queries = queries.map(query => {
-        // 処理のために置き換えた文字列を元に戻す
-        return this.restoreCharNode(query);
-      });
-  
-      // 信頼度の低い結果を取り除く
-      queries = queries.filter(query => {
-        if (query === undefined) {
-          return false;
-        }
-        // inputの文字列に対して30％以上の割合でマッチしている or
-        // 市区町村が判明している
-        return (query.formatted.score >= 0.5 ||
-          (query.matchedCnt / N) >= 0.3 || 
-          query.match_level.num >= MatchLevel.CITY.num);
-      });
-  
-      queries.sort((a, b) => {
-        // いくつかの項目を比較して、合計値の高い方を優先する
-        let totalScoreA = 0;
-        let totalScoreB = 0;
-  
-        const aLv = a.match_level.num;
-        const bLv = b.match_level.num;
-        const isArsdt = aLv === MatchLevel.RESIDENTIAL_BLOCK.num || aLv === MatchLevel.RESIDENTIAL_DETAIL.num;
-        const isBrsdt = bLv === MatchLevel.RESIDENTIAL_BLOCK.num || bLv === MatchLevel.RESIDENTIAL_DETAIL.num;
-        const isAprcl = aLv === MatchLevel.PARCEL.num;
-        const isBprcl = bLv === MatchLevel.PARCEL.num;
+    let queryList = Array.from(queries.values());
+    const orgInput = queryList[0].input;
+    const addressLen = orgInput.data.address.length;
 
-        switch (true) {
-          // Aが住居表示、Bが地番の場合、住居表示を優先
-          case isArsdt && isBprcl:
-            totalScoreA += 1;
-            break
-          
-          // Aが地番、Bが住居表示の場合、住居表示を優先
-          case isAprcl && isBrsdt:
-            totalScoreB += 1;
-            break;
-          
-          default:
-            if (a.match_level.num > b.match_level.num) {
-              totalScoreA += 1;
-            } else if (a.match_level.num < b.match_level.num) {
-              totalScoreB += 1;
-            }
-            break;
-        }
-        
-  
-        // 元の文字と類似度が高い方に+1
-        if (a.formatted.score > b.formatted.score) {
-          totalScoreA += 1;
-        } else if (a.formatted.score < b.formatted.score) {
-          totalScoreB += 1;
-        }
-        
-        // マッチングした文字列が多い方に+1
-        const aMatchedCnt = a.matchedCnt - a.ambiguousCnt;
-        const bMatchedCnt = b.matchedCnt - b.ambiguousCnt;
-        if (aMatchedCnt > bMatchedCnt) {
-          totalScoreA += 1;
-        } else if (aMatchedCnt < bMatchedCnt) {
-          totalScoreB += 1;
-        }
-  
-        // 残り文字数が少ないほうに+1
-        const restA = a.tempAddress?.toString().length || 0;
-        const restB = b.tempAddress?.toString().length || 0;
-        if (restA < restB) {
-          totalScoreA += 1;
-        } else if (restA > restB) {
-          totalScoreB += 1;
-        }
-        
-        // マッチレベルが高いほうが優先
-        if (totalScoreB - totalScoreA !== 0) {
-          return totalScoreB - totalScoreA;
-        }
-
-        // どうしても同じなら、ambiguousCnt が少ない方を優先
-        if (a.ambiguousCnt < b.ambiguousCnt) {
-          return -1;
-        } else if (a.ambiguousCnt > b.ambiguousCnt) {
-          return 1;
-        }
-        return 0;
-      });
-      
-      if (queries.length === 0) {
-        queries.push(Query.create(orgInput));
-      }
-  
-      callback(null, queries[0]);
+    queryList = queryList.map(query => {
+      // 処理のために置き換えた文字列を元に戻す
+      return this.restoreCharNode(query);
     });
+
+    if (queryList.length === 1) {
+      callback(null, queryList[0]);
+      return;
+    }
+
+    // 信頼度の低い結果を取り除く
+    queryList = queryList.filter(query => {
+      if (query === undefined) {
+        return false;
+      }
+      // console.error(query.formatted.score, query.formatted.address);
+      // inputの文字列に対して30％以上の割合でマッチしている or
+      // 市区町村が判明している
+      return (query.formatted.score >= 0.5 ||
+        (query.matchedCnt / addressLen) >= 0.3 || 
+        query.match_level.num >= MatchLevel.CITY.num);
+    });
+
+    queryList = queryList.map(query => {
+      if (query.city === '京都市') {
+        if (query.rsdt_addr_flg !== 0) {
+          query = query.copy({
+            rsdt_addr_flg: 0,
+          });
+        }
+        return query;
+      }
+      return query;
+    });
+
+    const matchLevelToScroe = new Map<string, number>([
+      [`${SearchTarget.ALL}:${MatchLevel.UNKNOWN}`, -2],
+      [`${SearchTarget.ALL}:${MatchLevel.PREFECTURE}`, 1],
+      [`${SearchTarget.ALL}:${MatchLevel.CITY}`, 2],
+      [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA}`, 3],
+      [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+      [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
+      [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+      
+      // rsdt_addr_flgが間違えている可能性もあるので、MACHIAZA_DETAILより僅かに上の価値、というスコアにしておく
+      [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, 4.5],
+
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN}`, -2],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE}`, 1],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.CITY}`, 2],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA}`, 3],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PARCEL}`, -1],
+
+      [`${SearchTarget.PARCEL}:${MatchLevel.UNKNOWN}`, -2],
+      [`${SearchTarget.PARCEL}:${MatchLevel.PREFECTURE}`, 1],
+      [`${SearchTarget.PARCEL}:${MatchLevel.CITY}`, 2],
+      [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA}`, 3],
+      [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+      [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_BLOCK}`, -1],
+      [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_DETAIL}`, -1],
+      [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL}`, 6],
+    ]);
+
+    const withScore: {
+      query: Query;
+      score: number;
+      debug: string[];
+    }[] = queryList.map(query => {
+      const debug: string[] = [];
+      let score = 0;
+      
+      // match_level をスコアにする
+      let key = `${query.searchTarget}:${query.match_level.str}`;
+      if (query.koaza_aka_code === 2) {
+        // 京都通り名で Parcelになっているときは Parcelを参照
+        key = `${SearchTarget.PARCEL}:${query.match_level.str}`;
+      }
+      score = matchLevelToScroe.get(key)!;
+      debug.push(`match_level: ${key} -> ${score}`);
+
+      // coordinate_leve をスコアにする
+      key = `${query.searchTarget}:${query.coordinate_level.str}`;
+      if (query.koaza_aka_code === 2) {
+        // 京都通り名で Parcelになっているときは Parcelを参照
+        key = `${SearchTarget.PARCEL}:${query.coordinate_level.str}`;
+      }
+      score += matchLevelToScroe.get(key)!;
+      debug.push(`coordinate_level: ${key} -> ${matchLevelToScroe.get(key)!}`);
+
+      // matched_cnt (多いほど良い)
+      score += query.matchedCnt;
+      debug.push(`matchedCnt: ${query.matchedCnt}`);
+
+      // unmatched_cnt (少ないほど良い)
+      const unmatchedCnt = query.unmatched.reduce((total, word) => total + word.length, 0);
+      score += orgInput.data.address.length - unmatchedCnt;
+      debug.push(`unmatchedCnt: ${orgInput.data.address.length - unmatchedCnt}`);
+
+      // 残り文字数 (少ないほど良い)
+      const remainLen = query.tempAddress?.toOriginalString().length || 0;
+      score -= remainLen;
+      debug.push(`remainLen: -${remainLen}`);
+
+      // 不明瞭な文字 (少ないほど良い)
+      score -= query.ambiguousCnt;
+      debug.push(`ambiguousCnt: -${query.ambiguousCnt}`);
+
+      // 類似度 (1.0になるほど良い)
+      score += query.formatted.score;
+      debug.push(`formatted.score: ${query.formatted.score}`);
+
+      // match_level と coordinate_level の差
+      // (差が少ないほど良い)
+      const diff = query.match_level.num - query.coordinate_level.num;
+      score -= diff * 2;
+      debug.push(`diff of two levels: -${diff * 2}`);
+
+      return {
+        score,
+        query,
+        debug,
+      };
+    });
+
+    // スコアを降順にソート
+    withScore.sort((a, b) => b.score - a.score);
+
+    // targetオプションの期待に沿うように結果を返す
+    // ただしallの場合、rsdt_addr_flg が間違えている可能性もあるので
+    // スコアも加味する
+    const {
+      topRSDT,
+      topParcel,
+    } = (() => {
+      let topRSDT;
+      let topParcel;
+
+      for (const result of withScore) {
+        if (!topRSDT && result.query.rsdt_addr_flg === 1) {
+          topRSDT = result;
+        }
+        if (!topParcel && result.query.rsdt_addr_flg === 0) {
+          topParcel = result;
+        }
+        if (topParcel && topRSDT) {
+          break;
+        }
+      }
+      return {
+        topParcel,
+        topRSDT,
+      };
+    })();
+    if (!topParcel && !topRSDT) {
+      callback(null, withScore[0].query);
+      return;
+    }
+
+    if (!topParcel) {
+      callback(null, topRSDT!.query);
+      return;
+    }
+    if (!topRSDT) {
+      callback(null, topParcel!.query);
+      return;
+    }
+
+    const searchTarget = queryList[0].searchTarget;
+    switch (true) {
+      case searchTarget === SearchTarget.ALL: {
+        if (
+          // RSDTのがスコアが高ければRSDTを返す
+          topRSDT.score >= topParcel.score ||
+
+          // Parcelのがスコアが高くても RSDTと差が少なければRSDTを返す
+          topParcel.score - topRSDT.score <= 5
+        ) {
+          callback(null, topRSDT.query);
+          return;
+        }
+        // parcelを返す
+        callback(null, topParcel.query);
+        return;
+      }
+      
+      case searchTarget === SearchTarget.RESIDENTIAL: {
+        // 強制的にRSDTを返す
+        callback(null, topRSDT.query);
+        return;
+      }
+      
+      case searchTarget === SearchTarget.PARCEL: {
+        // 強制的にPARCELを返す
+        callback(null, topParcel.query);
+        return;
+      }
+      
+      default:
+        throw `unexpected case`;
+    }
   }
 
   private restoreCharNode(query: Query): Query {
-    let result: string = (query.tempAddress?.toOriginalString() || '');
+
+    let tempAddress: CharNode | undefined = query.tempAddress;
+    tempAddress = tempAddress?.replace(RegExpEx.create(MUBANCHI), '無番地');
+    tempAddress = tempAddress?.replace(RegExpEx.create(BANGAICHI), '番外地');
+    tempAddress = tempAddress?.replace(RegExpEx.create(OAZA_BANCHO), '番町');
+    let result: string = (tempAddress?.toOriginalString() || '');
 
     // 最初の空白文字、または末尾までの間に
     // result = result.replace(RegExpEx.create(`^([^${SPACE_SYMBOLS}]+)`, 'g'), (match: string) => {
@@ -158,17 +273,27 @@ export class GeocodeResultTransform extends Transform {
       result = result.replaceAll(DEFAULT_FUZZY_CHAR, query.fuzzy);
     }
     
-      // 末尾が(DASH)+(空白)なら削除
+    // 末尾が(DASH)+(空白)なら削除
     result = result.replace(RegExpEx.create(`[${DASH}${SPACE_SYMBOLS}]+$`), '');
 
-    // 末尾が省略可能な記号”だけ”なら削除
-    result = result.replace(RegExpEx.create('^(号|番|番地|地番)$'), '');
+    // 末尾が省略可能な記号なら削除
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番|地割)$'), '');
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番|地割) '), '');
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)([0-9])', 'g'), `${DASH}$1`);
+    if (query.koaza?.endsWith('地割') && result.startsWith('地割')) {
+      result = result.substring(2);
+    }
+    
+    // 先頭が省略可能な記号ならハイフンにする
+    result = result.replace(RegExpEx.create('^(?:番地の?|地番|番の?|の|之|丿|ノ|-)([0-9])'), `${DASH}$1`);
+    result = result.replace(RegExpEx.create('^(?:号|番地|地番|番)(?![室棟区館階]|外地)'), '');
       
+    // 末尾が省略可能な記号”だけ”なら削除
+    result = result.replace(RegExpEx.create('([0-9])(?:号|番地|地番|地割|番|の|之|丿|ノ|-)([0-9])'), `$1${DASH}$2`);
+
     // もとに戻す
-    result = result.replaceAll(RegExpEx.create(VIRTUAL_SPACE, 'g'), '');
     result = result.replaceAll(RegExpEx.create(DASH, 'g'), '-');
     result = result.replaceAll(RegExpEx.create(SPACE, 'g'), ' ');
-    result = result.replace(RegExpEx.create(MUBANCHI), '無番地');
 
     // ダッシュ記号は、半角ハイフンに統一
     // ただし「トーヨーハイツ」のように建物名にハイフンが含まれる場合もあるので、

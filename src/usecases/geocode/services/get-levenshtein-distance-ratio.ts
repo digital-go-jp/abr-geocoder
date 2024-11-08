@@ -25,14 +25,13 @@
 /*
  * 文字列の類似度を計算するレーベンシュタイン距離。
  * 1.0 に近いほど strA と strB は類似度が高い。
- * 将来的に使えそうなので、置いておく。
  */
 export const getLevenshteinDistanceRatio = (strA: string, strB: string): number => {
   const N = strA.length;
   const M = strB.length;
-  const dp: number[][] = new Array(N + 1)
+  const dp: number[][] = new Array<number[] | null>(N + 1)
     .fill(null)
-    .map(() => new Array(M + 1).fill(0));
+    .map(() => new Array<number>(M + 1).fill(0));
 
   for (let i = 0; i <= N; i++) {
     for (let j = 0; j <= M; j++) {
@@ -54,14 +53,19 @@ export const getLevenshteinDistanceRatio = (strA: string, strB: string): number 
         dp[i][j] = Math.min(
           dp[i][j - 1] + 1, // 1文字挿入
           dp[i - 1][j] + 1, // 1文字削除
-          dp[i - 1][j - 1] + (strA[i - 1] !== strB[j - 1] ? 1 : 0)
+          dp[i - 1][j - 1] + (strA[i - 1] !== strB[j - 1] ? 1 : 0),
         );
       }
     }
   }
 
   // 文字列長で正規化する
-  return dp[N][M] / Math.max(N, M);
+  const invertScore = dp[N][M] / Math.max(N, M);
+
+  // 浮動小数点の計算で 1 - 0.33 = 0.69999.. になるのを防ぐために
+  // (100 - 33) / 100 = 0.67 としている
+  const score = (100 - Math.floor(invertScore * 100)) / 100;
+  return score;
 };
 
 /*

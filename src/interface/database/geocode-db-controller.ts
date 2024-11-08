@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 import { DatabaseParams } from "@domain/types/database-params";
+import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
+import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import path from "node:path";
 import { ICommonDbGeocode, IParcelDbGeocode, IRsdtBlkDbGeocode, IRsdtDspDbGeocode } from "./common-db";
 import { CommonDbGeocodeSqlite3 } from "./sqlite3/geocode/common-db-geocode-sqlite3";
@@ -30,39 +32,47 @@ import { RsdtBlkGeocodeSqlite3 } from "./sqlite3/geocode/rsdt-blk-db-geocode-sql
 import { RsdtDspGeocodeSqlite3 } from "./sqlite3/geocode/rsdt-dsp-db-geocode-sqlite3";
 import { Sqlite3Util } from "./sqlite3/sqlite3-util";
 
+export type GeocodeDbControllerOptions = {
+  connectParams: DatabaseParams,
+};
+
 export class GeocodeDbController {
   private readonly sqlite3Util?: Sqlite3Util;
   public readonly connectParams: DatabaseParams;
 
-  constructor(params: Required<{
-    connectParams: DatabaseParams,
-  }>) {
+  constructor(params: Required<GeocodeDbControllerOptions>) {
     this.connectParams = params.connectParams;
 
     switch (this.connectParams.type) {
-      case 'sqlite3':
+      case 'sqlite3': {
         this.sqlite3Util = new Sqlite3Util({
           dataDir: this.connectParams.dataDir,
         });
         break;
+      }
 
       default:
-        // Do nothing here
-        break;
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
     }
   }
 
-  async openCommonDb(): Promise<ICommonDbGeocode> {
+  openCommonDb(): Promise<ICommonDbGeocode> {
     switch(this.connectParams.type) {
-      case 'sqlite3':
-        return new CommonDbGeocodeSqlite3({
+      case 'sqlite3': {
+        return Promise.resolve(new CommonDbGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, 'common.sqlite'),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-common.sql'),
           readonly: true,
-        });
+        }));
+      }
       
       default:
-        throw 'Not implemented';
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
     }
   }
 
@@ -71,7 +81,7 @@ export class GeocodeDbController {
     createIfNotExists: boolean;
   }>): Promise<IRsdtBlkDbGeocode | null> {
     switch(this.connectParams.type) {
-      case 'sqlite3':
+      case 'sqlite3': {
         const hasTheDbFile = this.sqlite3Util?.hasExtraDb({
           lg_code: params.lg_code,
         });
@@ -79,14 +89,24 @@ export class GeocodeDbController {
           return null;
         }
 
-        return new RsdtBlkGeocodeSqlite3({
+        const db = new RsdtBlkGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: true,
         });
 
+        const tableExists = await db.hasTable();
+        if (tableExists) {
+          return db;
+        }
+        db.close();
+        return null;
+      }
+
       default:
-        throw 'Not implemented';
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
     }
   }
 
@@ -95,7 +115,7 @@ export class GeocodeDbController {
     createIfNotExists: boolean;
   }>): Promise<IRsdtDspDbGeocode | null> {
     switch (this.connectParams.type) {
-      case 'sqlite3':
+      case 'sqlite3': {
         const hasTheDbFile = this.sqlite3Util?.hasExtraDb({
           lg_code: params.lg_code,
         });
@@ -103,14 +123,24 @@ export class GeocodeDbController {
           return null;
         }
 
-        return new RsdtDspGeocodeSqlite3({
+        const db = new RsdtDspGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: true,
         });
+        const tableExists = await db.hasTable();
+        if (tableExists) {
+          return db;
+        }
+        db.close();
+        return null;
+      }
 
-      default:
-        throw 'Not implemented';
+      default: {
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
+      }
     }
   }
 
@@ -119,7 +149,7 @@ export class GeocodeDbController {
     createIfNotExists: boolean;
   }>): Promise<IParcelDbGeocode | null> {
     switch (this.connectParams.type) {
-      case 'sqlite3':
+      case 'sqlite3': {
         const hasTheDbFile = this.sqlite3Util?.hasExtraDb({
           lg_code: params.lg_code,
         });
@@ -127,14 +157,23 @@ export class GeocodeDbController {
           return null;
         }
 
-        return new ParcelDbGeocodeSqlite3({
+        const db = new ParcelDbGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, `abrg-${params.lg_code}.sqlite`),
-          schemaFilePath: path.join(this.connectParams.schemaDir, 'schema-lgcode.sql'),
           readonly: true,
         });
+        const tableExists = await db.hasTable();
+        if (tableExists) {
+          return db;
+        }
+        db.close();
+        return null;
+      }
 
       default:
-        throw 'Not implemented';
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
     }
   }
 }

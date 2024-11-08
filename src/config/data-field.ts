@@ -24,7 +24,7 @@
 export class DataField {
   private constructor(
     public csv: string,
-    public dbColumn: string
+    public dbColumn: string,
   ) {
     this.csv = this.csv.toLocaleLowerCase();
     this.dbColumn = this.dbColumn.toLocaleLowerCase();
@@ -75,19 +75,19 @@ export class DataField {
   /** @readonly 町字区分コード */
   static readonly MACHIAZA_TYPE = new DataField(
     'machiaza_type',
-    'machiaza_type'
+    'machiaza_type',
   );
   /** @readonly 大字・町名 */
   static readonly OAZA_CHO = new DataField('oaza_cho', 'oaza_cho');
   /** @readonly 大字・町名_カナ */
   static readonly OAZA_CHO_KANA = new DataField(
     'oaza_cho_kana',
-    'oaza_cho_kana'
+    'oaza_cho_kana',
   );
   /** @readonly 大字・町名_英字 */
   static readonly OAZA_CHO_ROMA = new DataField(
     'oaza_cho_roma',
-    'oaza_cho_roma'
+    'oaza_cho_roma',
   );
   /** @readonly 丁目名 */
   static readonly CHOME = new DataField('chome', 'chome');
@@ -104,37 +104,37 @@ export class DataField {
   /** @readonly 同一町字識別情報 */
   static readonly MACHIAZA_DIST = new DataField(
     'machiaza_dist',
-    'machiaza_dist'
+    'machiaza_dist',
   );
   /** @readonly 住居表示フラグ */
   static readonly RSDT_ADDR_FLG = new DataField(
     'rsdt_addr_flg',
-    'rsdt_addr_flg'
+    'rsdt_addr_flg',
   );
   /** @readonly 住居表示方式コード */
   static readonly RSDT_ADDR_MTD_CODE = new DataField(
     'rsdt_addr_mtd_code',
-    'rsdt_addr_mtd_code'
+    'rsdt_addr_mtd_code',
   );
   /** @readonly 大字・町名_通称フラグ */
   static readonly OAZA_CHO_AKA_FLG = new DataField(
     'oaza_cho_aka_flg',
-    'oaza_cho_aka_flg'
+    'oaza_cho_aka_flg',
   );
   /** @readonly 小字名_通称コード */
   static readonly KOAZA_AKA_CODE = new DataField(
     'koaza_aka_code',
-    'koaza_aka_code'
+    'koaza_aka_code',
   );
   /** @readonly 大字・町名_電子国土基本図外字 */
   static readonly OAZA_CHO_GSI_UNCMN = new DataField(
     'oaza_cho_gsi_uncmn',
-    'oaza_cho_gsi_uncmn'
+    'oaza_cho_gsi_uncmn',
   );
   /** @readonly 小字名_電子国土基本図外字 */
   static readonly KOAZA_GSI_UNCMN = new DataField(
     'koaza_gsi_uncmn',
-    'koaza_gsi_uncmn'
+    'koaza_gsi_uncmn',
   );
   /** @readonly 状態フラグ */
   static readonly STATUS_FLG = new DataField('status_flg', 'status_flg');
@@ -159,12 +159,12 @@ export class DataField {
   /** @readonly 地番区域コード */
   static readonly PRC_AREA_CODE = new DataField(
     'prc_area_code',
-    'prc_area_code'
+    'prc_area_code',
   );
   /** @readonly 不動産番号 */
   static readonly REAL_PROP_NUM = new DataField(
     'real_prop_num',
-    'real_prop_num'
+    'real_prop_num',
   );
 
   // 住居表示-街区
@@ -185,7 +185,7 @@ export class DataField {
   /** @readonly 基礎番号・住居番号区分 */
   static readonly BASIC_RSDT_DIV = new DataField(
     'basic_rsdt_div',
-    'basic_rsdt_div'
+    'basic_rsdt_div',
   );
 
   // 位置参照
@@ -204,7 +204,7 @@ export class DataField {
   /** @readonly データサイズ */
   static readonly CONTENT_LENGTH = new DataField(
     'content_length',
-    'content_length'
+    'content_length',
   );
   /** 最終更新日時 */
   static readonly LAST_MODIFY = new DataField('last_modified', 'last_modified');

@@ -27,6 +27,7 @@ import { upwardFileSearch } from '@domain/services/upward-file-search';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { AbrgApiServer } from '@interface/api-server';
+import { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
 import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
 import path from 'node:path';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
@@ -39,7 +40,7 @@ export type ServeCommandArgv = {
   abrgDir?: string; // 'abrgDir' または 'd' はオプショナル
   d?: string; // alias 'd' もオプショナル
   port?: number; // HTTPサーバーのポート
-}
+};
 
 const serveCommand: CommandModule = {
   command: 'serve [options]',
@@ -52,20 +53,20 @@ const serveCommand: CommandModule = {
         type: 'string',
         default: EnvProvider.DEFAULT_ABRG_DIR,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_COMMON_DATADIR_OPTION
+          AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
       })
       .option('port', {
         type: 'number',
         default: 3000,
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_SERVE_PORT_OPTION
+          AbrgMessage.CLI_SERVE_PORT_OPTION,
         ),
         
       })
       .coerce('port', (port: number) => {
         if (port < 1 || port > 65535 || !Number.isInteger(port)) {
-          throw new Error(`port : ${port} is invalid`)
+          throw new Error(`port : ${port} is invalid`);
         }
         return port;
       });
@@ -75,7 +76,7 @@ const serveCommand: CommandModule = {
     
     const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
 
-    // ThreadGeocodeTransformで　各スレッドがstdout を使用しようとして、
+    // ThreadGeocodeTransformで 各スレッドがstdout を使用しようとして、
     // イベントリスナーを取り合いになるため、以下の警告が発生する模様。
     // 動作的には問題ないので、 process.stdout.setMaxListeners(0) として警告を殺す。
     //
@@ -83,31 +84,37 @@ const serveCommand: CommandModule = {
     // 11 unpipe listeners added to [WriteStream]. Use emitter.setMaxListeners() to increase limit
     process.stdout.setMaxListeners(0);
 
-    const rootDir = await upwardFileSearch(__dirname, 'build');
+    const rootDir = upwardFileSearch(__dirname, 'build');
     if (!rootDir) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_FIND_THE_ROOT_DIR,
         level: AbrgErrorLevel.ERROR,
       });
     }
-
+    
     // ジオコーダ作成のためのパラメータ
     const container = new AbrGeocoderDiContainer({
       database: {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
-        schemaDir: path.join(rootDir, 'schemas', 'sqlite3'),
       },
-      debug: process.env.NODE_ENV === 'development',
+      cacheDir: path.join(abrgDir, 'cache'),
+      debug: EnvProvider.isDebug,
     });
 
+    // ジオコーダ
+    const geocoder = await AbrGeocoder.create({
+      container,
+      numOfThreads: 5,
+    });
+    
     // APIサーバー
-    const server = new AbrgApiServer(container);
+    const server = new AbrgApiServer(geocoder);
     const port = argv.port || 3000;
     const host = '0.0.0.0';
     await server.listen(port, host);
-    console.log(`server start at ${host}:${port}`)
-  }
+    console.log(`server start at ${host}:${port}`);
+  },
 };
 
 export default serveCommand;

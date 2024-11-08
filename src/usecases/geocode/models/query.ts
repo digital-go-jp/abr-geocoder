@@ -21,13 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DASH_SYMBOLS, NUMRIC_SYMBOLS, SPACE_SYMBOLS } from '@config/constant-values';
+import { DASH, DASH_SYMBOLS, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
+import { SearchTarget } from '@domain/types/search-target';
 import { getLevenshteinDistanceRatio } from '../services/get-levenshtein-distance-ratio';
 import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
-import { CharNode } from '../services/trie/char-node';
-import { SearchTarget } from '@domain/types/search-target';
+import { CharNode } from './trie/char-node';
 import { AbrGeocoderInput } from './abrg-input-data';
 
 export interface IQuery {
@@ -43,6 +43,7 @@ export interface IQuery {
   startTime: number;
   fuzzy?: string;
   searchTarget: SearchTarget;
+  unmatched: string[];
 
   pref?: string;
   pref_key?: number;
@@ -52,6 +53,7 @@ export interface IQuery {
   rsdtblk_key?: number;
   rsdtdsp_key?: number;
   rsdt_addr_flg?: number;
+  koaza_aka_code?: number;
 
   county?: string;
   city?: string;
@@ -62,8 +64,8 @@ export interface IQuery {
   koaza?: string;
 
   lg_code?: string;
-  rep_lat: number | null;
-  rep_lon: number | null;
+  rep_lat?: string;
+  rep_lon?: string;
 
   block?: string;
   block_id?: string;
@@ -73,9 +75,9 @@ export interface IQuery {
   rsdt_num2?: number;
   rsdt2_id?: string;
   
-  prc_num1?: number;
-  prc_num2?: number;
-  prc_num3?: number;
+  prc_num1?: string;
+  prc_num2?: string;
+  prc_num3?: string;
   prc_id?: string;
   parcel_key?: number;
 
@@ -91,9 +93,6 @@ export type QueryInput = {
   data: AbrGeocoderInput;
   // worker-thread-poolのtaskId
   taskId: number;
-
-  // geocoderの順番を制御するためのID
-  lineId: number;
 };
 
 export type FormattedAddres = {
@@ -107,7 +106,7 @@ export class Query implements IQuery {
   public readonly tempAddress?: CharNode;
   public readonly searchTarget: SearchTarget;
   public readonly fuzzy?: string;
-  public readonly other?: string;
+  public readonly unmatched: string[];
   public readonly pref?: string;
   public readonly pref_key?: number;
   public readonly county?: string;
@@ -122,8 +121,8 @@ export class Query implements IQuery {
   public readonly rsdtdsp_key?: number;
   public readonly parcel_key?: number;
   public readonly lg_code?: string;
-  public readonly rep_lat: number | null;
-  public readonly rep_lon: number | null;
+  public readonly rep_lat?: string;
+  public readonly rep_lon?: string;
   public readonly block?: string;
   public readonly block_id?: string;
   public readonly machiaza_id?: string;
@@ -131,11 +130,12 @@ export class Query implements IQuery {
   public readonly rsdt_id?: string;
   public readonly rsdt_num2?: number;
   public readonly rsdt2_id?: string;
-  public readonly prc_num1?: number;
-  public readonly prc_num2?: number;
-  public readonly prc_num3?: number;
+  public readonly prc_num1?: string;
+  public readonly prc_num2?: string;
+  public readonly prc_num3?: string;
   public readonly prc_id?: string;
   public readonly rsdt_addr_flg?: number;
+  public readonly koaza_aka_code?: number;
   public readonly match_level: MatchLevel;
   public readonly coordinate_level: MatchLevel;
   public readonly matchedCnt: number = 0;
@@ -160,6 +160,7 @@ export class Query implements IQuery {
     this.matchedCnt = params.matchedCnt;
     this.ambiguousCnt = params.ambiguousCnt;
     this.startTime = params.startTime;
+    this.unmatched = [...params.unmatched];
 
     this.input = params.input;
     this.tempAddress = params.tempAddress;
@@ -178,6 +179,7 @@ export class Query implements IQuery {
     this.rep_lat = params.rep_lat;
     this.rep_lon = params.rep_lon;
     this.rsdt_addr_flg = params.rsdt_addr_flg;
+    this.koaza_aka_code = params.koaza_aka_code;
     this.rsdt_num = params.rsdt_num;
     this.rsdt_id = params.rsdt_id;
     this.rsdt_num2 = params.rsdt_num2;
@@ -190,7 +192,7 @@ export class Query implements IQuery {
     this.machiaza_id = params.machiaza_id;
     this.debug = {
       original: this.tempAddress?.toOriginalString(),
-      processed: this.tempAddress?.toProcessedString()
+      processed: this.tempAddress?.toProcessedString(),
     };
 
     this.formatted = this.getFormattedAddress();
@@ -202,15 +204,16 @@ export class Query implements IQuery {
       ambiguousCnt: this.ambiguousCnt,
       fuzzy: this.fuzzy,
       searchTarget: this.searchTarget,
-      city_key: this.city_key as number || undefined,
-      pref_key: this.pref_key as number || undefined,
-      town_key: this.town_key as number || undefined,
+      city_key: this.city_key || undefined,
+      pref_key: this.pref_key || undefined,
+      town_key: this.town_key || undefined,
       rsdtblk_key: this.rsdtblk_key,
       rsdtdsp_key: this.rsdtdsp_key,
       matchedCnt: this.matchedCnt,
       startTime: this.startTime,
       input: this.input,
       tempAddress: this.tempAddress?.toString(),
+      unmatched: this.unmatched,
       pref: this.pref as string || undefined,
       county: this.county as string || undefined,
       city: this.city as string || undefined,
@@ -219,9 +222,10 @@ export class Query implements IQuery {
       chome: this.chome,
       koaza: this.koaza,
       lg_code: this.lg_code as string || undefined,
-      rep_lat: this.rep_lat as number || null,
-      rep_lon: this.rep_lon as number || null,
+      rep_lat: this.rep_lat,
+      rep_lon: this.rep_lon,
       rsdt_addr_flg: this.rsdt_addr_flg,
+      koaza_aka_code: this.koaza_aka_code,
       machiaza_id: this.machiaza_id as string,
       block: this.block,
       block_id: this.block_id,
@@ -270,6 +274,7 @@ export class Query implements IQuery {
           startTime: this.startTime,
           matchedCnt: this.matchedCnt,
           tempAddress : this.tempAddress,
+          unmatched: this.unmatched,
           pref : this.pref,
           county : this.county,
           city : this.city,
@@ -287,6 +292,7 @@ export class Query implements IQuery {
           rep_lat : this.rep_lat,
           rep_lon : this.rep_lon,
           rsdt_addr_flg : this.rsdt_addr_flg,
+          koaza_aka_code : this.koaza_aka_code,
           machiaza_id : this.machiaza_id,
           prc_num1 : this.prc_num1,
           prc_num2 : this.prc_num2,
@@ -298,29 +304,46 @@ export class Query implements IQuery {
         newValues || {},
         {
           input : this.input,
-        }
-      )
+        },
+      ),
     );
   }
 
+  private eliminateEmptyElement(strList: (string | undefined)[]): string[] {
+    return strList.filter(value => value !== undefined && value !== '') as string[];
+  }
 
   //
   // formatted_address を生成する
   //
   private getFormattedAddress(): FormattedAddres {
     const formatted_address: string[] = [];
-    const addressComponents = [
+    const addressComponents = this.eliminateEmptyElement([
       this.pref?.trim(),
       this.county?.trim(),
       this.city?.trim(),
       this.ward?.trim(),
-      this.oaza_cho?.trim(),
-      this.chome?.trim(),
-      this.koaza?.trim(),
-    ]
-    .filter(value => value !== undefined && value !== '')
-    .join('');
+    ]).join('');
     formatted_address.push(addressComponents);
+
+    if (this.koaza_aka_code === 2) {
+      // 京都の通り名の場合、(小字 = 通り名)(大字) になっている
+      formatted_address.push(
+        this.eliminateEmptyElement([
+          this.koaza?.trim(),
+          this.oaza_cho?.trim(),
+        ]).join(''),
+      );
+    } else {
+      // 通常は (大字)(丁目)(小字) の順になっている
+      formatted_address.push(
+        this.eliminateEmptyElement([
+          this.oaza_cho?.trim(),
+          this.chome?.trim(),
+          this.koaza?.trim(),
+        ]).join(''),
+      );
+    }
 
     if (this.match_level.num === MatchLevel.PARCEL.num) {
       // 地番表記
@@ -338,46 +361,55 @@ export class Query implements IQuery {
       formatted_address.push(parcelNums.join('-'));
     } else {
       // 住居番号の街区・番地
-      const residentialNums = [
+      const residentialNums = this.eliminateEmptyElement([
         this.block?.toString().trim(),
         this.rsdt_num?.toString().trim(),
         this.rsdt_num2?.toString().trim(),
-      ]
-      .filter(value => value !== undefined && value !== '')
-      .join('-');
+      ]).join('-');
       formatted_address.push(residentialNums);
     }
 
     if (this.tempAddress) {
-      const other = this.tempAddress?.
-        replace(RegExpEx.create(`[${DASH}${SPACE_SYMBOLS}]+$`), '')?.
-        toOriginalString() || '';
-      if (
-        (
-          this.match_level.num === MatchLevel.RESIDENTIAL_DETAIL.num ||
-          this.match_level.num === MatchLevel.PARCEL.num
-        ) &&
-        (!RegExpEx.create(`^[${NUMRIC_SYMBOLS}]`).test(other)) &&
-        (!other.match(RegExpEx.create(`^[${DASH_SYMBOLS}0-9]`)))
-      ) {
-        formatted_address.push(' ');
+      const other = this.tempAddress?.toOriginalString()?.trim() || undefined;
+      if (other) {
+        if (!RegExpEx.create(`[号番通条町街丁階線F${DASH}${SPACE}]`).test(formatted_address.at(-1) || '')) {
+          const isTailDigit = RegExpEx.create('[0-9]').test(formatted_address.at(-1) || '');
+          const isHeadDigit = RegExpEx.create('[0-9]').test(other[0]);
+          const isHeadDash = RegExpEx.create(`[${DASH_SYMBOLS}]`).test(other[0]);
+          if (
+            // 末尾が数字 で otherの始まりも数字の場合、 1 234号室などなので、スペースを入れる
+            (isTailDigit && isHeadDigit) ||
+            // 末尾が数字 で otherの始まりはDASHではない場合、 1 234号室などなので、スペースを入れる
+            (isTailDigit && !isHeadDash)
+          ) {
+            // formatted_address.push('✅');
+            formatted_address.push(' ');
+          }
+        }
+
+        // "123どこかのビル” のようになっているとき、"123" と "どこかのビル"の間にスペースを入れる
+        // if (RegExpEx.create(`^([0-9]+)(?![号番通条町街丁階線F \-])`).test(other)) {
+        //   other = other.replace(RegExpEx.create(`^([0-9]+)((?![号番通条町街丁階線F \-]))`, 'g'), '$1 $2');
+        // }
+        if (other) {
+          formatted_address.push(other);
+        }
       }
-      formatted_address.push(other);
     }
 
     // 最終的な文字列を作成
     const result = formatted_address.join('')
-      .replaceAll(RegExpEx.create(' +', 'g'), ' ').trim();
+      .replaceAll(RegExpEx.create(' +', 'g'), ' ')
+      .replace(RegExpEx.create('丁目-([0-9])', 'g'), '丁目$1')  
+      .trim();
     
     // 最終的な文字列と一番最初のクエリ文字列の類似度を計算する
-    const invertScore = getLevenshteinDistanceRatio(
+    const originalInput = this.input.data.address.replaceAll(RegExpEx.create('[ 　]+', 'g'), ' ');
+    const score = getLevenshteinDistanceRatio(
       toHankakuAlphaNum(result),
-      toHankakuAlphaNum(this.input.data.address.replaceAll(RegExpEx.create(' +', 'g'), ' ')),
+      toHankakuAlphaNum(originalInput),
     );
 
-    // 浮動小数点の計算で 1 - 0.33 = 0.69999.. になるのを防ぐために
-    // (100 - 33) / 100 = 0.67 としている
-    const score = (100 - Math.floor(invertScore * 100)) / 100;
     return {
       address: result,
       score,
@@ -385,6 +417,9 @@ export class Query implements IQuery {
   }
 
   static readonly from = (params: Omit<IQuery, 'tempAddress'> & { tempAddress: string | undefined; } ): Query => {
+    if (params.match_level === undefined) {
+      params.match_level = MatchLevel.UNKNOWN;
+    }
     if (params.tempAddress) {
       const tempAddress = params.tempAddress;
       delete params.tempAddress;
@@ -395,7 +430,7 @@ export class Query implements IQuery {
     } else {
       return new Query(params as Omit<IQuery, 'tempAddress'> & { tempAddress: undefined });
     }
-  }
+  };
 
   static readonly create = (input: QueryInput): Query => {
     input.data.address = input.data.address.trim();
@@ -408,8 +443,6 @@ export class Query implements IQuery {
     return new Query({
       input,
       tempAddress,
-      rep_lat: null,
-      rep_lon: null,
       matchedCnt: 0,
       match_level: MatchLevel.UNKNOWN,
       coordinate_level: MatchLevel.UNKNOWN,
@@ -417,6 +450,7 @@ export class Query implements IQuery {
       fuzzy: input.data.fuzzy,
       searchTarget: input.data.searchTarget,
       ambiguousCnt: 0,
+      unmatched: [],
     });
   };
 }

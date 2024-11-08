@@ -30,10 +30,37 @@ import { Statement } from "better-sqlite3";
 
 export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbDownload {
   
-  async closeDb(): Promise<void> {
-    this.close();
+  async close() {
+    this.driver.close();
   }
 
+  async createRsdtBlkTable() {
+    this.driver.exec(`
+      CREATE TABLE IF NOT EXISTS "${DbTableName.RSDT_BLK}" (
+        "rsdtblk_key" INTEGER PRIMARY KEY,
+        "town_key" INTEGER,
+        "${DataField.BLK_ID.dbColumn}" TEXT,
+        "${DataField.BLK_NUM.dbColumn}" TEXT,
+        "crc32" TEXT,
+
+        "${DataField.REP_LAT.dbColumn}" TEXT,
+        "${DataField.REP_LON.dbColumn}" TEXT
+      );
+    `);
+
+    this.driver.exec(`
+      CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key" ON "${DbTableName.RSDT_BLK}" (
+        "town_key"
+      );
+    `);
+    this.driver.exec(`
+      CREATE INDEX IF NOT EXISTS "idx_rsdt_blk_town_key_and_blk_num" ON "${DbTableName.RSDT_BLK}" (
+        "town_key",
+        "${DataField.BLK_NUM.dbColumn}"
+      );
+    `);
+  }
+  
   // rep_lat, rep_lon を rsdt_blkテーブルに挿入/更新する
   async rsdtBlkPosCsvRows(rows: Record<string, string | number>[]): Promise<void> {
     const sql = `
@@ -51,14 +78,13 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
       WHERE 
-        rsdtblk_key = @rsdtblk_key AND (
-          ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
-          ${DataField.REP_LON.dbColumn} != @rep_lon OR 
-          ${DataField.REP_LAT.dbColumn} IS NULL OR
-          ${DataField.REP_LON.dbColumn} IS NULL
-        )
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
+        ${DataField.REP_LON.dbColumn} != @rep_lon OR 
+        ${DataField.REP_LAT.dbColumn} IS NULL OR
+        ${DataField.REP_LON.dbColumn} IS NULL
     `;
 
+    await this.createRsdtBlkTable();
     return await this.upsertRows({
       upsert: this.prepare(sql),
       rows,
@@ -72,20 +98,24 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
         rsdtblk_key,
         town_key,
         ${DataField.BLK_ID.dbColumn},
-        ${DataField.BLK_NUM.dbColumn}
+        ${DataField.BLK_NUM.dbColumn},
+        crc32
       ) VALUES (
         @rsdtblk_key,
         @town_key,
         @blk_id,
-        @blk_num
+        @blk_num,
+        @crc32
       ) ON CONFLICT (rsdtblk_key) DO UPDATE SET
         ${DataField.BLK_ID.dbColumn} = @blk_id,
-        ${DataField.BLK_NUM.dbColumn} = @blk_num
+        ${DataField.BLK_NUM.dbColumn} = @blk_num,
+        crc32 = @crc32
       WHERE 
-        rsdtblk_key = @rsdtblk_key
+        crc32 != @crc32 OR
+        crc32 IS NULL
     `;
 
-    
+    await this.createRsdtBlkTable();
     return await this.upsertRows({
       upsert: this.prepare(sql),
       rows,
@@ -97,24 +127,27 @@ export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlk
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
-      this.transaction((rows) => {
+      this.driver.transaction((rows: Record<string, string | number>[]) => {
         const lg_code = rows[0][DataField.LG_CODE.dbColumn].toString();
 
         for (const row of rows) {
+          if (row.rsdt_addr_flg === 0) {
+            continue;
+          }
           row.town_key = TableKeyProvider.getTownKey({
             lg_code,
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
           })!;
           
           row.rsdtblk_key = TableKeyProvider.getRsdtBlkKey({
-            lg_code: row[DataField.LG_CODE.dbColumn],
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn],
-            blk_id: row[DataField.BLK_ID.dbColumn],
-          })
+            lg_code: row[DataField.LG_CODE.dbColumn].toString(),
+            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
+            blk_id: row[DataField.BLK_ID.dbColumn].toString(),
+          });
           params.upsert.run(row);
         }
         resolve();
       })(params.rows);
-    })
+    });
   }
 }

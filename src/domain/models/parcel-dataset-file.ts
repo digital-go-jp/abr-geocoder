@@ -42,17 +42,8 @@ export class ParcelDatasetFile
   }
   
   async process(params: Omit<ProcessOptions, 'db'> & {db : IParcelDbDownload}) {
-    let parsedRows = params.lines.map(row => this.parseCsv(row));
-
-    // 続けて処理をする必要がるため、lgCodeを返す
-    const lgCodes = new Set<string>();
-    const lgCode = parsedRows[0][DataField.LG_CODE.dbColumn] as string
-    lgCodes.add(lgCode);
-  
-    if (!params.noUpdate) {
-      await params.db.parcelCsvRows(parsedRows);
-    }
-    return lgCodes;
+    const parsedRows = params.lines.map(row => this.parseCsv(row));
+    await params.db.parcelCsvRows(parsedRows);
   }
 
   // 地番マスター データセット

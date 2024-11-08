@@ -22,10 +22,18 @@
  * SOFTWARE.
  */
 
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "../models/trie/trie-finder";
 
-/* JIS 第2水準 => 第1水準 及び 旧字体 => 新字体 */
-const jisKanjiMap = new Map<string, string>([
+/*
+ * JIS 第2水準 => 第1水準 及び 旧字体 => 新字体、及び
+ * 間違えやすい漢字（例：川崎と川﨑）を変換する。
+ * トライ木の検索キーと、クエリの住所文字列の両方が
+ * 同じ漢字になっていればマッチする。
+ * トライ木には本来の漢字表記が入っているので、
+ * このシステムでは問題ない。
+ */
+const kanji_table: string[][] = [
   ['淵', '渕'],
   ['曾', '会'],
   ['亞', '亜'],
@@ -164,7 +172,7 @@ const jisKanjiMap = new Map<string, string>([
   ['寢', '寝'],
   ['圖', '図'],
   ['穗', '穂'],
-  ['樞', '枢'],
+  ['樞', '枢'], // 樞ヶ谷
   ['齊', '斉'],
   ['攝', '摂'],
   ['戰', '戦'],
@@ -226,12 +234,13 @@ const jisKanjiMap = new Map<string, string>([
   ['勳', '勲'],
   ['惠', '恵'],
   ['螢', '蛍'],
-  ['鷄', '鶏'],
+  ['鷄', '鶏'], // 鬪雞神社
+  ['雞', '鶏'], // 鬪雞神社
   ['縣', '県'],
   ['險', '険'],
   ['獻', '献'],
   ['驗', '験'],
-  ['效', '効'],
+  ['效', '効'], // 效範町一丁目
   ['號', '号'],
   ['濟', '済'],
   ['册', '冊'],
@@ -243,7 +252,7 @@ const jisKanjiMap = new Map<string, string>([
   ['收', '収'],
   ['獸', '獣'],
   ['處', '処'],
-  ['稱', '称'],
+  ['稱', '称'], // 桜井総稱鬼泪山
   ['奬', '奨'],
   ['淨', '浄'],
   ['繩', '縄'],
@@ -317,23 +326,216 @@ const jisKanjiMap = new Map<string, string>([
   ['籠', '篭'],
   ['彌', '弥'],
   ['萩', '荻'],
-]);
+  ['蘒', '荻'], // 蘒之瀬
+  ['磐', '盤'],
+  ['秦', '奏'],
+  ['﨑', '崎'],
+  ['埴', '植'],
+  ['塚', '塚'],
+  ['糀', '麹'],  // 糀町
+  ['麴', '麹'],  // 麹町
+  ['都', '都'],  // 宇都宮
+  ['神', '神'],
+  ['侮', '侮'],
+  ['靖', '靖'],
+  ['﨣', '啓'],
+  ['羽', '羽'],
+  ['海', '海'],
+  ['渚', '渚'],
+  ['﨔', '奄'],
+  ['祉', '祉'],
+  ['祖', '祖'],
+  ['祝', '祝'],
+  ['嘆', '嘆'],
+  ['琢', '琢'],
+  ['碑', '碑'],
+  ['社', '社'],
+  ['祈', '祈'],
+  ['祐', '祐'],
+  ['穀', '穀'],
+  ['椴', '椵'], // 椵川町
+  ['犹', '犾'], // 犾森
+  ['炮', '砲'], // 鉄砲
+  ['脵', '又'], // 長山北ノ又沢
+  ['㯃', '漆'], // 漆野
+  ['椊', '枠'], // 字二本枠
+  ['犹', '犾'], // 犾森
+  ['繫', '繋'], // 中繫
+  ['霳', '豊'], // 豊隆
+  ['霻', '豊'], // 豊隆
+  ['冝', '宜'], // 祢宜沢
+  ['桵', 'たら'], // 桵葉沢
+  ['挼', 'たら'], // 桵葉沢
+  ['疇', '畴'], // 十五畴
+  ['荕', '莇'], // 莇沢
+  ['貒', '猯'], // 字猯
+  ['丒', '丑'], // 丑ヶ沢
+  ['椧', '掵'], // 字掵ノ上
+  ['鏥', '錆'], // 
+  ['㚑', '霊'], // 霊堂
+  ['廹', '迫'], // 小木迫
+  ['㫪', '春'], // 
+  ['舂', '春'], // 
+  ['𣇃', '春'], // 
+  ['莄', '萸'], // 茱莄平
+  ['頥', '頤'], // 字宗頤町
+  ['鵃', '鶚'], // 字鶚沢
+  ['槶', '椢'], // 椢内
+  ['龗', '龍'], // 
+  ['靇', '龍'], // 
+  ['𠀋', '丈'], // 大𠀋蔵
+  ['圡', '土'], // 空𡈽
+  ['圡', '土'], // 空圡
+  ['坫', '岾'], // 小坫
+  ['桑', '桒'], // 北大桒
+  ['桒', '桒'], // 桒原
+  ['靏', '鶴'], // 靏見埜
+  ['靎', '鶴'], // 靏見埜
+  ['靍', '鶴'], // 靏見埜
+  ['𠝏', '剣'], // 𠝏沢
+  ['𢭏', '擣'], // 𢭏衣
+  ['孁', '霎'], // 大日孁社
+  ['朳', '杁'], // 朳差岳
+  ['湫', '畔'], // 高田町長湫
+  ['嶌', '島'], // 向嶌
+  ['湏', '須'], // 須波阿湏疑神社
+  ['貒', '猯'], // 西下貒穴
+  ['𩿇', '鸕'], // 
+  ['鷀', '鸕'], // 
+  ['盧', '戸'], // 
+  ['櫨', '枦'], // 
+  ['𣳾', '泰'], // 𣳾原
+  ['䦰', '鬮'], // 䦰本
+  ['茰', '萸'], // 茱茰ノ木平
+  ['扚', '杓'], // 扚子
+  ['莓', '苺'], // 於莓
+  ['𥔎', '碕'], // 柿𥔎町
+  ['蘓', '蘇'], // 蘓生々々
+  ['逹', '達'], // 逹摩
+  ['䟽', '疏'], // 溲䟽原
+  ['溲', '疏'], // 溲䟽原
+  ['㫖', '旨'], // 長㫖
+  ['忰', '悴'], // 忰谷
+  ['芧', '茅'], // 
+  ['﨟', '臈'], // 京ノ上﨟
+  ['漥', '窪'], // 大漥
+  ['𨺉', '採'], // 成相𨺉
+  ['㞍', '尻'], // 見掛ノ㞍
+  ['崕', '崖'], // 浜崕
+  ['鸙', '雲雀'], // 鸙野
+  ['楠木', '楠'],
+  ['樟', '楠'],
+  ['冶', '治'], // 鍛治
+];
 
+const tree = new TrieAddressFinder<string>();
+for (const oldAndNew of kanji_table) {
+  tree.append({
+    key: oldAndNew[0],
+    value: oldAndNew[1],
+  });
+}
 
-export const jisKanji = (target: string): string => {
-  const buffer: string[] = [];
-  for (const char of target) {
-    buffer.push(jisKanjiMap.get(char) || char);
+export const jisKanji = <T extends string | CharNode | undefined>(target: T): T => {
+  if (target === undefined) {
+    return undefined as T;
   }
-  return buffer.join('');
+  if (target instanceof CharNode) {
+    return jisKanjiForCharNode(target) as T;
+  }
+  if (typeof target === 'string') {
+    let head = CharNode.create(target);
+    const buffer: string[] = [];
+
+    while (head) {
+      const matches = tree.find({
+        target: head,
+        fuzzy: undefined,
+      });
+      if (!matches || matches.length === 0) {
+        buffer.push(head.char!);
+        head = head.next;
+        continue;
+      }
+      buffer.push(matches[0].info!);
+      head = matches[0].unmatched;
+    }
+
+    return buffer.join('') as T;
+  }
+
+  throw `unsupported value type`;
 };
 
-export const jisKanjiForCharNode = (target: CharNode | undefined): CharNode | undefined => {
+const jisKanjiForCharNode = (target: CharNode | undefined): CharNode | undefined => {
   let head = target;
-  const root = target;
-  while (head && head.char) {
-    head.char = jisKanjiMap.get(head.char) || head.char;
-    head = head.next;
+  const buffer: CharNode[] = [];
+
+  while (head) {
+    if (head.ignore) {
+      const headNext = head.next;
+      const charNode = head;
+      charNode.next = undefined;
+      buffer.push(charNode);
+
+      head = headNext;
+      continue;
+    }
+
+    const matches = tree.find({
+      target: head,
+      fuzzy: undefined,
+    });
+    if (!matches || matches.length === 0) {
+      const headNext = head.next;
+      const charNode = head;
+      charNode.next = undefined;
+      buffer.push(charNode);
+      head = headNext;
+      continue;
+    }
+
+    const cnt = matches[0].depth;
+    let i = 0;
+    while (head && i < cnt) {
+      if (head.ignore) {
+        const headNext: CharNode | undefined = head.next;
+        const charNode = head;
+        charNode.next = undefined;
+        buffer.push(charNode);
+  
+        head = headNext;
+        continue;
+      }
+      const ignore = i >= matches[0].info!.length;
+      const char = ignore ? '' : matches[0].info![i];
+      buffer.push(new CharNode({
+        originalChar: head.originalChar,
+        char,
+        ignore,
+      }));
+      i++;
+      head = head.next;
+    }
+    
+    while (i < cnt) {
+      const char = i < matches[0].info!.length ? matches[0].info![i] : '';
+      buffer.push(new CharNode({
+        originalChar: '',
+        char,
+        ignore: true,
+      }));
+      i++;
+    }
+
+    head = matches[0].unmatched;
   }
-  return root;
+  let tail: CharNode | undefined = undefined;
+  while (buffer.length > 0) {
+    const charNode = buffer.pop()!;
+    charNode.next = tail;
+    tail = charNode;
+  }
+
+  return tail;
 };

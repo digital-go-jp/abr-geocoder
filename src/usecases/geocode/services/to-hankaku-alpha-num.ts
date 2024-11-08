@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import { CharNode } from "./trie/char-node";
+import { CharNode } from "../models/trie/char-node";
 
 const zenkakuHankakuMap = new Map<string, string>([
   ['Ａ', 'A'],
@@ -88,15 +88,25 @@ const zenkakuHankakuMap = new Map<string, string>([
   ['８', '8'],
   ['９', '9'],
 ]);
-export const toHankakuAlphaNum = (str: string): string => {
-  const buffer: string[] = [];
-  for (const char of str) {
-    buffer.push(zenkakuHankakuMap.get(char) || char);
+
+export const toHankakuAlphaNum = <T extends string | CharNode | undefined>(target: T): T => {
+  if (target === undefined) {
+    return undefined as T;
   }
-  return buffer.join('');
+  if (typeof target === 'string') {
+    const buffer: string[] = [];
+    for (const char of target) {
+      buffer.push(zenkakuHankakuMap.get(char) || char);
+    }
+    return buffer.join('') as T;
+  }
+  if (target instanceof CharNode) {
+    return toHankakuAlphaNumForCharNode(target) as T;
+  }
+  throw `unsupported value type`;
 };
 
-export const toHankakuAlphaNumForCharNode = (root: CharNode | undefined): CharNode | undefined => {
+const toHankakuAlphaNumForCharNode = (root: CharNode | undefined): CharNode | undefined => {
   let head = root;
   while (head) {
     head.char = zenkakuHankakuMap.get(head.char!) || head.char;

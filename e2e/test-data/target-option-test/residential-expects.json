@@ -1,0 +1,289 @@
+[
+  {
+    "query": {
+      "input": "千葉県浦安市舞浜2-11 # all:住居表示, rsdt:住居表示, parcel:地番"
+    },
+    "result": {
+      "output": "千葉県浦安市舞浜二丁目11 # all:住居表示, rsdt:住居表示, parcel:地番",
+      "others": [
+        "# all:住居表示, rsdt:住居表示, parcel:地番"
+      ],
+      "match_level": "residential_block",
+      "coordinate_level": "residential_block",
+      "lat": 35.641178,
+      "lon": 139.880872,
+      "lg_code": "122271",
+      "machiaza_id": "0018002",
+      "rsdt_addr_flg": 1,
+      "blk_id": "011",
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "千葉県",
+      "county": null,
+      "city": "浦安市",
+      "ward": null,
+      "oaza_cho": "舞浜",
+      "chome": "二丁目",
+      "koaza": null,
+      "blk_num": "11",
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+    },
+    "result": {
+      "output": "東京都港区芝浦三丁目1-1 # all:住居表示, rsdt:住居表示, parcel:地番",
+      "others": [
+        "-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+      ],
+      "score": 0.94,
+      "match_level": "residential_block",
+      "coordinate_level": "residential_block",
+      "lat": 35.644986,
+      "lon": 139.748888,
+      "lg_code": "131032",
+      "machiaza_id": "0005003",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "港区",
+      "ward": null,
+      "oaza_cho": "芝浦",
+      "chome": "三丁目",
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "愛知県豊田市西町3-60 # all:地番, rsdt:地番, parcel:地番"
+    },
+    "result": {
+      "output": "愛知県豊田市西町三丁目60 # all:地番, rsdt:地番, parcel:地番",
+      "others": [
+        "60 # all:地番, rsdt:地番, parcel:地番"
+      ],
+      "score": 0.93,
+      "match_level": "machiaza_detail",
+      "coordinate_level": "machiaza_detail",
+      "lat": 35.083793,
+      "lon": 137.156654,
+      "lg_code": "232114",
+      "machiaza_id": "0344003",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "愛知県",
+      "county": null,
+      "city": "豊田市",
+      "ward": null,
+      "oaza_cho": "西町",
+      "chome": "三丁目",
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都港区芝公園4-407-6 # all:地番, rsdt:地番, parcel:地番"
+    },
+    "result": {
+      "output": "東京都港区芝公園四丁目407-6 # all:地番, rsdt:地番, parcel:地番",
+      "others": [
+        "407-6 # all:地番, rsdt:地番, parcel:地番"
+      ],
+      "score": 0.94,
+      "match_level": "machiaza_detail",
+      "coordinate_level": "machiaza_detail",
+      "lat": 35.656459,
+      "lon": 139.74764,
+      "lg_code": "131032",
+      "machiaza_id": "0002004",
+      "rsdt_addr_flg": 1,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "港区",
+      "ward": null,
+      "oaza_cho": "芝公園",
+      "chome": "四丁目",
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都港区芝公園4-2-8 # all:住居表示, rsdt:住居表示, parcel:地番"
+    },
+    "result": {
+      "output": "東京都港区芝公園四丁目2-8 # all:住居表示, rsdt:住居表示, parcel:地番",
+      "others": [
+        "-8 # all:住居表示, rsdt:住居表示, parcel:地番"
+      ],
+      "score": 0.94,
+      "match_level": "residential_block",
+      "coordinate_level": "residential_block",
+      "lat": 35.658648,
+      "lon": 139.745467,
+      "lg_code": "131032",
+      "machiaza_id": "0002004",
+      "rsdt_addr_flg": 1,
+      "blk_id": "002",
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "港区",
+      "ward": null,
+      "oaza_cho": "芝公園",
+      "chome": "四丁目",
+      "koaza": null,
+      "blk_num": "2",
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "東京都渋谷区神宮前6-1-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+    },
+    "result": {
+      "output": "東京都渋谷区神宮前六丁目1-1 # all:住居表示, rsdt:住居表示, parcel:地番",
+      "others": [
+        "# all:住居表示, rsdt:住居表示, parcel:地番"
+      ],
+      "score": 0.94,
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.667621142,
+      "lon": 139.706704925,
+      "lg_code": "131130",
+      "machiaza_id": "0001006",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "001",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "東京都",
+      "county": null,
+      "city": "渋谷区",
+      "ward": null,
+      "oaza_cho": "神宮前",
+      "chome": "六丁目",
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "1",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "福岡県福岡市博多区博多駅前4-1-2 # all:住居表示, rsdt:住居表示, parcel:地番"
+    },
+    "result": {
+      "output": "福岡県福岡市博多区博多駅前四丁目1-2 # all:住居表示, rsdt:住居表示, parcel:地番",
+      "others": [
+        "# all:住居表示, rsdt:住居表示, parcel:地番"
+      ],
+      "score": 0.95,
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 33.587337043,
+      "lon": 130.419100853,
+      "lg_code": "401323",
+      "machiaza_id": "0061004",
+      "rsdt_addr_flg": 1,
+      "blk_id": "001",
+      "rsdt_id": "002",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "福岡県",
+      "county": null,
+      "city": "福岡市",
+      "ward": "博多区",
+      "oaza_cho": "博多駅前",
+      "chome": "四丁目",
+      "koaza": null,
+      "blk_num": "1",
+      "rsdt_num": "2",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "愛知県名古屋市中区栄3-2-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+    },
+    "result": {
+      "output": "愛知県名古屋市中区栄三丁目2-1 # all:住居表示, rsdt:住居表示, parcel:地番",
+      "others": [
+        "# all:住居表示, rsdt:住居表示, parcel:地番"
+      ],
+      "score": 0.94,
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.168508694,
+      "lon": 136.903504344,
+      "lg_code": "231061",
+      "machiaza_id": "0008003",
+      "rsdt_addr_flg": 1,
+      "blk_id": "002",
+      "rsdt_id": "001",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "愛知県",
+      "county": null,
+      "city": "名古屋市",
+      "ward": "中区",
+      "oaza_cho": "栄",
+      "chome": "三丁目",
+      "koaza": null,
+      "blk_num": "2",
+      "rsdt_num": "1",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  }
+]

@@ -3,6 +3,10 @@
 
 - [日本語版](./README.ja.md)
 
+## 🚨 Upgrade to version 2.1 from v2.0
+
+- Due to the significant changes for the database structure, removes `the database directory` (default: `~/.abr-geocoder`), then runs the `abrg download` command.
+
 ## Description
 
 A geocoder that matches input address strings with the [Address Base Registry](https://catalog.registries.digital.go.jp/rc/dataset/) maintained by the Digital Agency, Government of Japan, outputting normalized address strings, town IDs, latitude and longitude, etc. It analyzes Japanese domestic address notation, absorbs variations, and outputs normalized results according to the hierarchy.
@@ -26,14 +30,13 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 - Usable as a REST server.
 - Usable as a Node.js library:
   - Supports individual requests and streams.
+- Limited support for searches by Kyoto street names.
 
 ## Limitations
 
 - Cannot search by landmarks (e.g., famous facility names).
 - Cannot search by postal codes.
 - Cannot search by alphabet (English notation).
-- Limited support for searches by Kyoto street names.
-- Cannot search by incomplete address notation.
 
 ## Installation
 
@@ -273,12 +276,30 @@ $ abrg <inputFile> [<outputFile>] [options]
   ```
   </details>
 
+- <details>
+  <summary>Change geocoding target</summary>
+  
+  You can change the geocoding target with the `--target` option. The default is `all`.
+
+  | format      | Description                                                                                                          |
+  |-------------|----------------------------------------------------------------------------------------------------------------------|
+  | all         | Searches both residential address and parcel number data. The result for the residential address takes precedence.   |
+  | residential | Searches only the residential address data.                                                                          |
+  | parcel      | Searches only the parcel number data.                                                                                |
+  </details>
+
 ## `abrg serve` command
 
 Starts the geocoder as a REST API server.
 
 ```sh
 abrg serve [options]
+```
+
+Example:
+
+```sh
+curl http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3
 ```
 
 - <details>
@@ -299,4 +320,17 @@ abrg serve [options]
   ```sh
   abrg serve  -d (path to directory to save data)
   ```
+</details>
+
+- <details>
+  <summary>Request parameters</summary>
+
+  The request is made via HTTP/GET. The following parameters can be specified:
+
+  | Parameter   | Required | Description                                            |
+  |-------------|-------------------------------------------------------------------|
+  | address     |     Y    | The address string to be geocoded. Required parameter. |
+  | target      |          | Search target (all, residential, parcel)               |
+  | format      |          | Output format for the result.                          |
+  | fuzzy       |          | A single character used as a wildcard.                 |
 </details>

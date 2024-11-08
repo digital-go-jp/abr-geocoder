@@ -23,8 +23,10 @@
  */
 import { CsvLine, DatasetFile } from "@domain/models/dataset-file";
 import { SemaphoreManager } from "@domain/services/thread/semaphore-manager";
+import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
+import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import { DownloadDbController } from "@interface/database/download-db-controller";
-import { ConsolidateTransform } from "@usecases/geocode/transformations/consolidate-trnasform";
+import { StreamLimiter } from "@domain/services/transformations/stream-limitter";
 import csvParser from "csv-parser";
 import fs from 'node:fs';
 import { Writable } from 'node:stream';
@@ -37,8 +39,8 @@ const getSemaphoreIdx = (datasetFile: DatasetFile, size: number): number => {
     datasetFile.type === 'city_pos' ||
     datasetFile.type === 'town' ||
     datasetFile.type === 'town_pos') {
-      return 0;
-    }
+    return 0;
+  }
 
   return (parseInt(datasetFile.lgCode) % (size / 4 - 1)) + 1;
 };
@@ -46,21 +48,12 @@ const getSemaphoreIdx = (datasetFile: DatasetFile, size: number): number => {
 export const loadCsvToDatabase = async (params : Required<{
   semaphore: SemaphoreManager;
   datasetFile: DatasetFile;
-  noUpdate: boolean;
   databaseCtrl: DownloadDbController;
-}>): Promise<Set<string> | undefined> => {
-  // console.log(`     > ${datasetFile.filename}`);
-  const lgCodeSets: Set<string>[] = [];
+}>): Promise<void> => {
+  // console.log(`     > ${params.datasetFile.filename}`);
 
   const semaphoreIdx = getSemaphoreIdx(params.datasetFile, params.semaphore.size);
 
-  const db = await openDb({
-    dbCtrl: params.databaseCtrl,
-    datasetFile: params.datasetFile,
-  });
-  if (!db) {
-    return new Set();
-  }
 
   await pipeline(
     fs.createReadStream(params.datasetFile.csvFile.path, {
@@ -73,43 +66,40 @@ export const loadCsvToDatabase = async (params : Required<{
 
     // OutOfMemoryを避けつつ、パフォーマンスを確保するため、10000件ごとデータベースに登録していく
     // (10000件毎 and 最後に flushが実行される)
-    new ConsolidateTransform(10000),
+    new StreamLimiter(10000),
 
     new Writable({
       objectMode: true,
       async write(csvLines: CsvLine[], _, next) {
-        if (!db) {
-          return next();
-        }
-
         // セマフォで同時書き込みの排除
         await params.semaphore.enterAwait(semaphoreIdx);
 
-        // データを一時テーブルに読み込む
-        const lgCodes = await params.datasetFile.process({
-          lines: csvLines,
-          db,
-          noUpdate: params.noUpdate,
+        // DBを開く
+        const db = await openDb({
+          dbCtrl: params.databaseCtrl,
+          datasetFile: params.datasetFile,
         });
+        
+        if (db) {
+          // データを一時テーブルに読み込む
+          await params.datasetFile.process({
+            lines: csvLines,
+            db,
+          }).catch((e) => {
+            console.error(`error: ${e}`);
+          });
+        }
 
         // 書き込みロックを解除
         params.semaphore.leave(semaphoreIdx);
         
         next();
-        if (!lgCodes) {
-          return;
-        }
-        lgCodeSets.push(lgCodes);
       },
-    })
+    }),
   );
-
-  await db.closeDb();
-
-  return new Set<string>(...lgCodeSets.map(set => Array.from(set)));
 };
 
-const openDb = async (params: {
+const openDb = (params: {
   dbCtrl: DownloadDbController,
   datasetFile: DatasetFile,
 }) => {
@@ -120,30 +110,33 @@ const openDb = async (params: {
     case 'city_pos':
     case 'town':
     case 'town_pos':
-      return await params.dbCtrl.openCommonDb();
+      return params.dbCtrl.openCommonDb();
     
     case 'rsdtdsp_blk_pos':
     case 'rsdtdsp_blk':
-      return await params.dbCtrl.openRsdtBlkDb({
+      return params.dbCtrl.openRsdtBlkDb({
         lg_code: params.datasetFile.lgCode,
         createIfNotExists: true,
       });
     
     case 'rsdtdsp_rsdt':
     case 'rsdtdsp_rsdt_pos':
-      return await params.dbCtrl.openRsdtDspDb({
+      return params.dbCtrl.openRsdtDspDb({
         lg_code: params.datasetFile.lgCode,
         createIfNotExists: true,
       });
     
     case 'parcel':
     case 'parcel_pos':
-      return await params.dbCtrl.openParcelDb({
+      return params.dbCtrl.openParcelDb({
         lg_code: params.datasetFile.lgCode,
         createIfNotExists: true,
       });
     
     default:
-      throw `unimplemented ${params.datasetFile.type}`;
+      throw new AbrgError({
+        messageId: AbrgMessage.NOT_IMPLEMENTED,
+        level: AbrgErrorLevel.ERROR,
+      });
   }
-}
+};

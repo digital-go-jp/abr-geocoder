@@ -1,54 +1,42 @@
 ## This workflow has been disabled for now, because the CKAN API is blocking our requests.
 ## Re-enable when we can package test data inside this repository.
 
-name: "PR check for the main branch"
+name: "publish the code"
 
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["PR check"]
+    types:
+      - completed
   workflow_dispatch:
 
 jobs:
-  lint_and_build:
+  publish:
+    if: ${{ github.event.pull_request == null || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
 
-    # Set up concurrency so the SQLite cache can be reused between nodejs matrix versions
-    # concurrency:
-    #   group: ${{ github.workflow }}-${{ github.ref }}
-
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - uses: actions/cache@v3
-        name: Setup npm cache
-        id: node_modules
+      #
+      # build/ をダウンロード
+      #
+      - name: Download build output artifact
+        uses: actions/download-artifact@v4
         with:
-          path: node_modules/
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+          name: build-output
+          path: build/
 
-      - name: Install dependencies
-        if: steps.node_modules.outputs.cache-hit != 'true'
-        run: |
-          npm install --global yarn
-          yarn install
+      - name: Get the latest commit ID
+        id: commit
+        run: echo "commit_id=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-      - name: Build
-        run: |
-          npm run build
-
-      - name: git setup
-        run: |
-          git config --global user.email "no-reply@digital.go.jp"
-          git config --global user.name "github actions"
-            
       - name: create changelog.md
         id: prepare
         run: |
@@ -59,11 +47,22 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
           tgz=$(npm pack | tail -n1 | tr -d '\n')
           echo "tgz=$tgz" >> $GITHUB_OUTPUT
-
-      - name: github draft release  (trigger / workflow_dispatch)
+          
+      #
+      # pull_requestの場合は、npm publish . --dry-run
+      # workflow_dispatch(手動)の場合は、npm publish .
+      #
+      - name: npm release  (trigger / workflow_dispatch)
         run: |
-          gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} --notes-file change_notes/${{ steps.prepare.outputs.version }}.md
-          npm publish . --dry-run
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            npm publish . --dry-run
+            gh release create ${{ steps.prepare.outputs.version }}-${{ env.commit_id }} ${{ steps.prepare.outputs.tgz }}
+
+          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} 
+            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+            npm publish . --access public
+          fi
         env:
-          GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+          # GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}

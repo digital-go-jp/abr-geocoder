@@ -1,5 +1,3 @@
-// Refer:
-// https://www.totaltypescript.com/tsconfig-cheat-sheet
 {
   "compilerOptions": {
     "outDir": "./build",
@@ -12,8 +10,7 @@
     "esModuleInterop": true,
     "sourceMap": true,
     "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/@jest"
+      "./node_modules/@types"
     ],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
@@ -28,16 +25,7 @@
       "@interface/*": ["src/interface/*"],
       "@usecases/*": ["src/usecases/*"],
       "@config/*": ["src/config/*"],
-      // "@mock/*": ["__mocks__/*"],
-      // "@cli/*": ["src/cli/*"],
-      // "@domain/*": ["src/domain/*"],
-      // "@controller/*": ["src/controller/*"],
-      // "@interface-adapter/*": ["src/interface-adapter/*"],
-      // "@usecase/*": ["src/usecase/*"],
-      // "@settings/*": ["src/config/*"],
-      // "@process/*": ["src/controller/download/process/*"],
-      // "@abrg-message/*": ["src/core/domain/abrg-message/*"],
-      // "@abrg-error/*": ["src/core/domain/abrg-error/*"]
+      "@mock/*": ["__mocks__/*"]
     },
     "removeComments": true,
     "moduleDetection": "force",
@@ -62,6 +50,6 @@
   "exclude": [
     "node_modules",
     "**/__skips__/",
-    "**/__skip__/",
+    "**/__skip__/"
   ]
 }

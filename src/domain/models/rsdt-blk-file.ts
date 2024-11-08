@@ -39,18 +39,9 @@ export class RsdtdspBlkFile
   }
   
   async process(params: Omit<ProcessOptions, 'db'> & {db : IRsdtBlkDbDownload}) {
-    let parsedRows = params.lines.map(row => this.parseCsv(row));
-
-    // 続けて処理をする必要がるため、lgCodeを返す
-    const lgCodes = new Set<string>();
-    const lgCode = parsedRows[0][DataField.LG_CODE.dbColumn] as string
-    lgCodes.add(lgCode);
-  
+    const parsedRows = params.lines.map(row => this.parseCsv(row));
     // DBに取り込む
-    if (!params.noUpdate) {
-      await params.db.rsdtBlkCsvRows(parsedRows);
-    }
-    return lgCodes;
+    await params.db.rsdtBlkCsvRows(parsedRows);
   }
 
   // 住居表示-街区マスター データセット

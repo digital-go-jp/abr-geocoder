@@ -1,0 +1,38 @@
+[
+  {
+    "query": {
+      "input": "北海道空知郡上砂川町下鶉南二条1-3-2"
+    },
+    "result": {
+      "output": "北海道空知郡上砂川町下鶉南二条1-3-2",
+      "others": [
+        "南二条1-3-2"
+      ],
+      "score": 1,
+      "match_level": "machiaza_detail",
+      "coordinate_level": "machiaza_detail",
+      "lat": 43.478589,
+      "lon": 141.952469,
+      "lg_code": "014257",
+      "machiaza_id": "0000101",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "北海道",
+      "county": "空知郡",
+      "city": "上砂川町",
+      "ward": null,
+      "oaza_cho": null,
+      "chome": null,
+      "koaza": "下鶉",
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  }
+]

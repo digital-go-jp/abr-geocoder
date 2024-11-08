@@ -1,0 +1,184 @@
+## This workflow has been disabled for now, because the CKAN API is blocking our requests.
+## Re-enable when we can package test data inside this repository.
+
+name: "PR check"
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**/*.ts'
+      - 'e2e/**/*.ts'
+      - '*.json'
+      - '*.js'
+      - '*.mjs'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**/*.ts'
+      - 'e2e/**/*.ts'
+      - '*.json'
+      - '*.js'
+      - '*.mjs'
+  workflow_dispatch:
+
+jobs:
+
+  #
+  # 監視対象のファイルに変化があるかチェック
+  #
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # 過去2つのコミットを取得
+    
+      - name: Check if there are changes in specific paths
+        id: check
+        run: |
+          if git diff --quiet HEAD^ HEAD -- 'src/**/*.ts' 'e2e/**/*.ts' './*.json' './*.js' './*.mjs'; then
+            echo "has_changes=false" >> $GITHUB_ENV
+            echo "::set-output name=has_changes::false"
+            echo "has_changes=false"
+          else
+            echo "has_changes=true" >> $GITHUB_ENV
+            echo "::set-output name=has_changes::true"
+            echo "has_changes=true"
+          fi
+  #
+  # 変化があった場合のみテストを行う
+  #
+  tests:
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.has_changes == 'true' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      #
+      # src以下のファイルが変化していなければ、buildをrestoreする
+      #
+      - uses: actions/cache@v4
+        name: build_cache
+        id: build_cache
+        with:
+          path: |
+            build/
+          key: ${{ github.head_ref }}-build-${{ hashFiles('src/**/*.ts') }}
+          restore-keys: |
+            ${{ github.head_ref }}-build-${{ hashFiles('src/**/*.ts') }}
+
+      #
+      # e2e/test-runner.ts に変化がなければ、db/downloadディレクトリのキャッシュをrestoreする
+      # jobが終了すると自動的にキャッシュされる
+      #
+      - uses: actions/cache@v4
+        name: e2e Download cache
+        id: e2e_download
+        with:
+          path: |
+            db/download
+          key: ${{ github.head_ref }}-e2e-${{ hashFiles('e2e/test-runner.ts') }}
+          restore-keys: |
+            ${{ github.head_ref }}-e2e-${{ hashFiles('e2e/test-runner.ts') }}
+
+      #
+      # package.json に変化がなければ、node_modulesのキャッシュをrestoreする。
+      # jobが終了すると自動的にキャッシュされる
+      #
+      - uses: actions/cache@v4
+        name: Setup npm cache
+        id: node_modules
+        with:
+          path: |
+            node_modules/
+          key: ${{ github.head_ref }}-npm-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ github.head_ref }}-npm-${{ hashFiles('**/package.json') }}
+
+      #
+      # node_modules のキャッシュキーがヒットしていなければ
+      # package.json に従ってインストールする
+      #
+      - name: Install dependencies
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: |
+          npm install --global yarn
+          yarn install
+
+      #
+      # ESLintでコードの静的チェック
+      #
+      - name: Run eslint
+        uses: sibiraj-s/action-eslint@v3
+        with:
+          extensions: 'ts'
+          ignore-path: .eslintignore
+          ignore-patterns: |
+            build/
+            node_modules/
+          token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+
+      #
+      # Jestでユニットテスト
+      #
+      - name: Run tests
+        timeout-minutes: 3  # 3分でタイムアウト
+        run: npm run test
+
+      #
+      # e2eテスト (ビルドも含む)
+      #
+      - name: run e2e test
+        timeout-minutes: 10  # 10分でタイムアウト
+        run: npm run test:e2e
+      
+      #
+      # コードカバレッジのレポートを作成
+      #
+      - name: create test report
+        uses: MishaKav/jest-coverage-comment@main
+        with:
+          github-token: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+          summary-title: Coverage Summary
+          badge-title: Coverage
+          hide-comment: false
+          create-new-comment: false
+          hide-summary: false
+          coverage-summary-path: ./coverage/coverage-summary.json
+          junitxml-title: JUnit
+          junitxml-path: ./coverage/junit.xml
+          coverage-title: Coverage Details
+          coverage-path: ./coverage/coverage.txt
+          coverage-path-prefix: './src/'
+
+      #
+      # 後続のworkflowのために、event_nameを変数に設定する
+      #
+      - name: store the event_name
+        run: echo "triggered_by=${{ github.event_name }}" >> $GITHUB_ENV
+
+      #
+      # build をuploadする
+      #
+      - name: Upload artifact
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: build/

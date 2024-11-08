@@ -32,7 +32,7 @@ export type UrlCache = {
   cache_file: string;
   last_modified?: string;
   content_length: number;
-  crc32: number;
+  crc32: string;
 };
 
 export class UrlCacheManager {
@@ -50,7 +50,7 @@ export class UrlCacheManager {
     try {
       const encoded = await fs.promises.readFile(cacheFilePath);
       return deserialize(encoded) as UrlCache | undefined;
-    } catch (e: unknown) {
+    } catch (_: unknown) {
       // Do nothing here
       return undefined;
     }

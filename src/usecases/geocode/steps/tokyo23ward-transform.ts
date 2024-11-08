@@ -21,83 +21,52 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
-import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
-import { CityMatchingInfo } from '@domain/types/geocode/city-info';
+import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { PrefLgCode } from '@domain/types/pref-lg-code';
 import { Transform, TransformCallback } from 'node:stream';
-import { Query } from '../models/query';
-import { jisKanji, jisKanjiForCharNode } from '../services/jis-kanji';
-import { kan2num, kan2numForCharNode } from '../services/kan2num';
-import { toHiragana, toHiraganaForCharNode } from '../services/to-hiragana';
-import { CharNode } from '../services/trie/char-node';
-import { TrieAddressFinder } from '../services/trie/trie-finder';
-import timers from 'node:timers/promises';
+import { QuerySet } from '../models/query-set';
+import { Tokyo23WardTrieFinder } from '../models/tokyo23-ward-trie-finder';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class Tokyo23WardTranform extends Transform {
-
-  private readonly tokyo23WardTrie: TrieAddressFinder<CityMatchingInfo>;
-  private readonly logger: DebugLogger | undefined;
-  private initialized: boolean = false;
 
   private readonly needsCopy = new Set([
     '北区',
     '中央区',
     '港区',
     '大田区',
-    '板橋区'
+    '板橋区',
   ]);
   
-  constructor(params: Required<{
-    tokyo23wards: CityMatchingInfo[];
-    logger: DebugLogger | undefined;
-  }>) {
+  constructor(
+    private readonly tokyo23WardTrie: Tokyo23WardTrieFinder,
+  ) {
     super({
       objectMode: true,
-    });
-    this.logger = params.logger;
-
-    // 東京23区を探すためのトライ木
-    this.tokyo23WardTrie = new TrieAddressFinder<CityMatchingInfo>();
-    setImmediate(() => {
-      params.tokyo23wards.forEach(ward => {
-        const key = this.normalizeStr(ward.key);
-        this.tokyo23WardTrie.append({
-          key,
-          value: ward,
-        });
-      });
-      this.initialized = true;
     });
   }
 
   async _transform(
-    queries: Query[],
+    queries: QuerySet,
     _: BufferEncoding,
-    callback: TransformCallback
+    callback: TransformCallback,
   ) {
-    const results: Query[] = [];
-    for (const query of queries) {
+    const results = new QuerySet();
+    Array.from(queries.values()).forEach(query => {
       // 行政区が判明している場合はスキップ
       if (!query.tempAddress || 
         query.match_level.num >= MatchLevel.CITY.num) {
-        results.push(query);
-        continue;
-      }
-      
-      if (!this.initialized) {
-        await new Promise(async (resolve: (_?: unknown[]) => void) => {
-          while (!this.initialized) {
-            await timers.setTimeout(100);
-          }
-          resolve();
-        });
+        results.add(query);
+        return;
       }
 
-      //　東京都〇〇区〇〇パターンを探索する
-      const target = this.normalizeCharNode(query.tempAddress)!;
+      // 東京都〇〇区〇〇パターンを探索する
+      const target = trimDashAndSpace(query.tempAddress);
+      if (!target) {
+        results.add(query);
+        return;
+      }
       const searchResults = this.tokyo23WardTrie.find({
         target,
         extraChallenges: ['区'],
@@ -105,8 +74,8 @@ export class Tokyo23WardTranform extends Transform {
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (!searchResults || searchResults.length === 0) {
-        results.push(query);
-        continue;
+        results.add(query);
+        return;
       }
 
       let anyAmbiguous = false;
@@ -125,7 +94,7 @@ export class Tokyo23WardTranform extends Transform {
         anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
         anyHit = true;
 
-        results.push(query.copy({
+        results.add(query.copy({
           pref_key: searchResult.info.pref_key,
           city_key: searchResult.info.city_key,
           tempAddress: searchResult.unmatched,
@@ -141,44 +110,9 @@ export class Tokyo23WardTranform extends Transform {
         }));
       });
       if (!anyHit || anyAmbiguous) {
-        results.push(query);
+        results.add(query);
       }
-    }
-
-    this.logger?.info(`tokyo23ward : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    });
     callback(null, results);
-  }
-
-  private normalizeStr(address: string): string {
-    // 片仮名を平仮名に変換する
-    address = toHiragana(address);
-
-    // 漢数字を半角数字に変換する
-    address = kan2num(address);
-    
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanji(address);
-
-    // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
-    address = address?.replaceAll(RegExpEx.create(`(\\d+)${DASH}?[番号町地丁目]+の?`, 'g'), `$1${DASH}`);
-
-    return address;
-  }
-
-  private normalizeCharNode(address: CharNode | undefined): CharNode | undefined {
-
-    // 〇〇番地[〇〇番ー〇〇号]、の [〇〇番ー〇〇号] だけを取る
-    address = address?.replaceAll(RegExpEx.create(`(\\d+)${DASH}?[番号町地丁目]+の?`, 'g'), `$1${DASH}`);
-
-    // 片仮名を平仮名に変換する
-    address = toHiraganaForCharNode(address);
-
-    // 漢数字を半角数字に変換する
-    address = kan2numForCharNode(address);
-
-    // JIS 第2水準 => 第1水準 及び 旧字体 => 新字体
-    address = jisKanjiForCharNode(address);
-    
-    return address;
   }
 }

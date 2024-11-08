@@ -27,18 +27,40 @@ import { RsdtDspInfo } from "@domain/types/geocode/rsdt-dsp-info";
 import { IRsdtDspDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 
+export type GetRsdtDspRows = {
+  rsdtblk_key: number;
+};
+
 export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbGeocode {
 
-  async closeDb(): Promise<void> {
-    this.close();
+  async close() {
+    this.driver.close();
   }
 
-  async getRsdtDspRows(where: Required<{
-    rsdtblk_key: number;
-  }>): Promise<RsdtDspInfo[]> {
+  async hasTable(): Promise<boolean> {
+    const rows = this.prepare<{ name: string; }, { name: string; }>(`
+      SELECT
+        name
+      FROM
+        sqlite_master
+      WHERE
+        type = 'table' AND
+        name = @name
+    `).all({
+      name: DbTableName.RSDT_DSP,
+    });
+    return rows.length === 1;
+  }
+
+  async getRsdtDspRows(where: Required<GetRsdtDspRows>): Promise<RsdtDspInfo[]> {
+    const existTable = await this.hasTable();
+    if (!existTable) {
+      return [];
+    }
+
     return new Promise((resolve: (rows: RsdtDspInfo[]) => void) => {
 
-      const rows = this.prepare<any, RsdtDspInfo>(`
+      const rows = this.prepare<GetRsdtDspRows, RsdtDspInfo>(`
         SELECT
           rsdtdsp_key,
           rsdtblk_key,

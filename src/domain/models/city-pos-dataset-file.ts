@@ -23,7 +23,6 @@
  */
 import { DataField } from '@config/data-field';
 import { ICommonDbDownload } from '@interface/database/common-db';
-import { PrefLgCode } from '../types/pref-lg-code';
 import { DataForPosFile, IDatasetFileMeta, ProcessOptions } from './dataset-file';
 
 export class CityPosDatasetFile
@@ -59,20 +58,9 @@ export class CityPosDatasetFile
         return result;
       });
     }
-    const lgCodes = new Set<string>();
-    if (parsedRows.length === 0) {
-      return lgCodes;
-    }
-    
-    parsedRows.forEach(row => {
-      lgCodes.add(row[DataField.LG_CODE.dbColumn] as string);
-    })
     
     // DBに取り込む
-    if (!params.noUpdate) {
-      await params.db.cityPosCsvRows(parsedRows);
-    }
-    return lgCodes;
+    await params.db.cityPosCsvRows(parsedRows);
   }
 
   // 市区町村マスター位置参照拡張 データセット

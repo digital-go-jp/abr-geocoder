@@ -1,0 +1,37 @@
+[
+  {
+    "query": {
+      "input": "札幌市中央区南２条西１ー５ー２F"
+    },
+    "result": {
+      "output": "北海道札幌市中央区南二条西一丁目5 2F",
+      "others": [
+        "2F"
+      ],
+      "match_level": "parcel",
+      "coordinate_level": "parcel",
+      "lat": 43.058730899,
+      "lon": 141.356421455,
+      "lg_code": "011011",
+      "machiaza_id": "0060001",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": "000050000000000",
+      "pref": "北海道",
+      "county": null,
+      "city": "札幌市",
+      "ward": "中央区",
+      "oaza_cho": "南二条西",
+      "chome": "一丁目",
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": "5",
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  }
+]

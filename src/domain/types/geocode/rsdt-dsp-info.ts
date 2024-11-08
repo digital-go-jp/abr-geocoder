@@ -26,8 +26,8 @@ export type RsdtDspInfo = {
   rsdtdsp_key: number;
   rsdt_id: string;
   rsdt2_id: string;
-  rsdt_num: number;
-  rsdt_num2: number;
-  rep_lat: number;
-  rep_lon: number;
-}
+  rsdt_num: string;
+  rsdt_num2: string;
+  rep_lat: string;
+  rep_lon: string;
+};
