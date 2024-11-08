@@ -1,7 +1,7 @@
 ## This workflow has been disabled for now, because the CKAN API is blocking our requests.
 ## Re-enable when we can package test data inside this repository.
 
-name: "PR check"
+name: "tests"
 
 on:
   pull_request:
@@ -45,10 +45,12 @@ jobs:
         id: check
         run: |
           if git diff --quiet HEAD^ HEAD -- 'src/**/*.ts' 'e2e/**/*.ts' './*.json' './*.js' './*.mjs'; then
+            # ソースコードに変化がなければ false
             echo "has_changes=false" >> $GITHUB_ENV
             echo "::set-output name=has_changes::false"
             echo "has_changes=false"
           else
+            # ソースコードに変化があれば true
             echo "has_changes=true" >> $GITHUB_ENV
             echo "::set-output name=has_changes::true"
             echo "has_changes=true"
@@ -166,19 +168,3 @@ jobs:
           coverage-title: Coverage Details
           coverage-path: ./coverage/coverage.txt
           coverage-path-prefix: './src/'
-
-      #
-      # 後続のworkflowのために、event_nameを変数に設定する
-      #
-      - name: store the event_name
-        run: echo "triggered_by=${{ github.event_name }}" >> $GITHUB_ENV
-
-      #
-      # build をuploadする
-      #
-      - name: Upload artifact
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: build/
