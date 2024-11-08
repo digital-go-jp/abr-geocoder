@@ -28,7 +28,7 @@
     "abrg": "build/interface/cli/cli.js"
   },
   "scripts": {
-    "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build && copyfiles -u 1 schemas/**/*.sql build/schemas/",
+    "build": "npx rimraf build/ && npx tspc -p tsconfig.build.json && ts-add-js-extension --dir=build",
     "test": "npx jest",
     "test:e2e": "npx ts-node ./e2e/test-runner.ts",
     "lint": "npx eslint",
@@ -50,7 +50,6 @@
     "@types/unzipper": "^0.10.10",
     "@types/yargs": "^17.0.33",
     "@typescript-eslint/parser": "^8.7.0",
-    "copyfiles": "^2.4.1",
     "core-js": "^3.38.1",
     "eslint": "^9.11.1",
     "execa-cjs": "^9.1.1",
