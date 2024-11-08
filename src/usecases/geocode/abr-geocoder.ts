@@ -127,7 +127,7 @@ export class AbrGeocoder {
 
       // 1スレッドあたり、いくつのタスクを同時並行させるか
       // (増減させても大差はないので、固定値にする)
-      maxTasksPerWorker: 10,
+      maxTasksPerWorker: 100,
 
       // geocode-worker.ts へのパス
       filename: path.join(__dirname, 'worker', 'geocode-worker'),

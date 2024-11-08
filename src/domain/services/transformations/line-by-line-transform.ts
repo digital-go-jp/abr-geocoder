@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Duplex } from "stream";
+import { Transform } from "stream";
 
-export class LineByLineTransform extends Duplex {
+export class LineByLineTransform extends Transform {
   private prevBuffer: Buffer | null = null;
   private bomCheck: boolean;
 
@@ -36,12 +36,10 @@ export class LineByLineTransform extends Duplex {
   }) {
     super({
       allowHalfOpen: true,
-      read() {},
     });
-
     this.bomCheck = !this.options.skipBomCheck;
   }
-  _write(chunk: string | Buffer, _encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
+  _transform(chunk: string | Buffer, _encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
     if (typeof chunk === 'string') {
       chunk = Buffer.from(chunk);
     }

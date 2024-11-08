@@ -69,12 +69,16 @@ export class AbrGeocoderStream extends Duplex {
     // Out of memory を避けるために、受け入れを一時停止
     // 処理済みが追いつくまで、待機する
     const waitingCnt = this.writeIdx - this.nextIdx;
-    if (waitingCnt < 100) {
+    if (waitingCnt < 5000 || this.isPaused()) {
       return;
     }
 
-    while (this.writeIdx - this.nextIdx > 50) {
-      await timers.setTimeout(10);
+    this.pause();
+    while (this.writeIdx - this.nextIdx > 500) {
+      await timers.setTimeout(5);
+    }
+    if (this.isPaused()) {
+      this.resume();
     }
   }
 
