@@ -84,7 +84,7 @@ const lgCodes = [
   await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
   // // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
   // // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
-  // await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
 
   $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --maxWorker=25% --config ${rootDir}/jest.e2e.config.js`
 
