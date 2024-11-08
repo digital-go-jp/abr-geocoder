@@ -108,9 +108,11 @@ export class NormalizeTransform extends Transform {
 
     // 数字＋ダッシュ または ダッシュ+数字 の組み合わせのとき、ダッシュを DASHにする
     // (ダッシュの記号は類似するものが多いので、統一する)
+    //
+    // 「センター１丁目」などのカタカナ＋ハイフンのケースがあるので、その場合はDASHにしない
     address = address?.replaceAll(
       RegExpEx.create(
-        `([${NUMRIC_AND_KANJI_SYMBOLS}][${DASH_SYMBOLS}])|([${DASH_SYMBOLS}][${NUMRIC_AND_KANJI_SYMBOLS}])`,
+        `([${NUMRIC_AND_KANJI_SYMBOLS}][${DASH_SYMBOLS}])|([^ア-ン][${DASH_SYMBOLS}][${NUMRIC_AND_KANJI_SYMBOLS}])`,
         'g',
       ),
       (match: string) => {

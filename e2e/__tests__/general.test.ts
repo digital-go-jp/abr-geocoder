@@ -48,6 +48,10 @@ describe('General cases', () => {
   test('北海道札幌市のテスト', async () => {
     await jsonTestRunner('sapporo-schools');
   });
+
+  test('特殊なケースのテスト', async () => {
+    await jsonTestRunner('special-test-cases');
+  });
   test('標準入力からのテスト', async () => {
     const input = '東京都千代田区紀尾井町1-3　デジタル庁';
     const { stdout } = await runGeocoder({
