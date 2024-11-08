@@ -17,6 +17,7 @@ on:
   push:
     branches:
       - main
+      - develop
     paths:
       - 'src/**/*.ts'
       - 'e2e/**/*.ts'
