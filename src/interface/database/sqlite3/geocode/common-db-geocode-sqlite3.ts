@@ -360,7 +360,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       rep_lon: string;
       match_level: number;
       coordinate_level: number;
-    }
+    };
 
     const [
       prefMap,
@@ -407,7 +407,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
             // Do nothing here
         }
       });
-    }
+    };
 
     {
       /*
@@ -687,7 +687,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       rows.forEach(row => {
         const oaza_key = [
           row.city_key.toString(),
-          row.machiaza_id.substring(0, 4)
+          row.machiaza_id.substring(0, 4),
         ].join('');
         oazaTree.append({
           key: oaza_key,
