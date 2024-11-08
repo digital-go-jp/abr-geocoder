@@ -81,7 +81,7 @@ const lgCodes = [
 ];
 
 (async () => {
-  // await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
   // // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
   // // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
   // await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
