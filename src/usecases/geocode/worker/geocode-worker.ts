@@ -152,7 +152,6 @@ export class GeocodeTransform extends Duplex {
       .pipe(prefTransform)
       .pipe(countyAndCityTransform)
       .pipe(cityAndWardTransform)
-      // .pipe(wardAndOazaTransform)
       .pipe(wardTransform)
       .pipe(tokyo23TownTransform)
       .pipe(tokyo23WardTransform)

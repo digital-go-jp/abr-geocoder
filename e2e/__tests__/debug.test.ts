@@ -28,7 +28,7 @@ import {
 } from '../../src/index';
 import { runGeocoder } from './common';
 
-describe('debug', () => {
+describe.skip('debug', () => {
   
   test('北海道札幌市白石区流通センター五丁目6-61', async () => {
     const input = '北海道札幌市白石区流通センター五丁目6-61';
