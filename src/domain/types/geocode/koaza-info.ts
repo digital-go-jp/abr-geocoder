@@ -25,7 +25,6 @@
 import { MatchLevel } from "./match-level";
 
 export type KoazaMachingInfo = {
-  key: string;
   oaza_cho: string;
   chome: string;
   pref: string;
@@ -34,6 +33,7 @@ export type KoazaMachingInfo = {
   ward: string;
   koaza: string;
   rsdt_addr_flg: number;
+  koaza_aka_code: number;
   machiaza_id: string;
   lg_code: string;
   rep_lat: string;

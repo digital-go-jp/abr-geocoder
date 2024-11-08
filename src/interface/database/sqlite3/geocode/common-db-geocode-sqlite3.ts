@@ -68,7 +68,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     type Row = Omit<KoazaMachingInfo, 'coordinate_level' | 'match_level'> & {
       coordinate_level: number;
     };
-    const rows = this.prepare<{}, Row>(`
+    const sql =`
       SELECT
         c.city_key,
         t.town_key,
@@ -82,27 +82,15 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         c.${DataField.LG_CODE.dbColumn} AS lg_code,
         t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
         CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
-
-        -- koaza_aka_code = 2 のときは、京都の通り名
-        -- koaza に通り名が格納されている
-        IIF(
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} = '2', 
-
-          -- (通り名)(大字) になっているので、keyに大字を含める
-          t.${DataField.KOAZA.dbColumn}||
-          t.${DataField.OAZA_CHO.dbColumn},
-
-          -- 大字だけでも検索をしたいので、京都市内の大字をリストアップする
-          t.${DataField.OAZA_CHO.dbColumn}
-        ) as key,
+        CAST(t.${DataField.KOAZA_AKA_CODE.dbColumn} AS INTEGER) as koaza_aka_code,
         t.${DataField.KOAZA.dbColumn} as koaza,
         t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
         t.${DataField.REP_LAT.dbColumn} as rep_lat,
         t.${DataField.REP_LON.dbColumn} as rep_lon,
         IIF(
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} = '2', 
-          ${MatchLevel.MACHIAZA_DETAIL.num},
-          ${MatchLevel.MACHIAZA.num}
+          substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) = '000', 
+          ${MatchLevel.MACHIAZA.num},
+          ${MatchLevel.MACHIAZA_DETAIL.num}
         ) as coordinate_level
       FROM
         ${DbTableName.PREF} p
@@ -112,7 +100,8 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         -- 京都市に係るLG_Codeは"261"から始まる
         substr(c.${DataField.LG_CODE.dbColumn}, 1, 3) = '261' AND
         t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
-    `).all({});
+    `;
+    const rows: Row[] = this.prepare<{}, Row>(sql).all({});
 
     const results = rows.map(row => {
       const match_level = row.coordinate_level === MatchLevel.MACHIAZA.num ? MatchLevel.MACHIAZA : MatchLevel.MACHIAZA_DETAIL;
@@ -681,7 +670,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
       `;
 
-      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      const rows: Row[] = this.driver.prepare<unknown[], Row>(sql).all();
       insertIntoResultTable(rows);
 
       rows.forEach(row => {
@@ -738,6 +727,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           }
         }
       }
+      // if (cityInfo.lg_code !== '011011' || row.machiaza_id !== '0040012') {
+      //   return;
+      // }
 
       // pkey 以外の値を戻す
       const value = {
@@ -759,30 +751,11 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         pref: prefInfo.pref,
         city: cityInfo.city,
       };
-      results.push({
-        ...value,
-        key: [
-          row.oaza_cho || '',
-          row.chome || '',
-          row.koaza || '',
-        ].join(''),
-      });
 
-      // if (!row.oaza_cho || row.oaza_cho.at(-1) !== '町') {
-      //   return;
-      // }
+      results.push(value);
 
-      // // 〇〇町が大字の場合、市町村合併の際に残った昔の町名が入っている可能性が高い。
-      // // 「町」の部分が省略されてくることがあるので、町を取り除いたkeyを入れておく
-      // results.push({
-      //   ...value,
-      //   key: [
-      //     row.oaza_cho.substring(0, row.oaza_cho.length - 1),
-      //     row.chome || '',
-      //     row.koaza || '',
-      //   ].join(''),
-      // });
     });
+
     return results;
   }
   
@@ -901,12 +874,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
 
     return new Promise((resolve: (rows: WardAndOazaRow[]) => void) => {
 
-      this.driver.exec('BEGIN TRANSACTION');
-
       this.driver.exec(`
         CREATE TEMP TABLE WardAndOazaChoTmpTable (
           pkey TEXT PRIMARY KEY,
-          key TEXT,
           pref_key INTEGER,
           city_key INTEGER,
           town_key INTEGER,
@@ -931,10 +901,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
             c.city_key ||
             (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000')
           ) as pkey,
-          (
-            c.${DataField.WARD.dbColumn} ||
-            t.${DataField.OAZA_CHO.dbColumn}
-          ) as key,
           p.pref_key,
           c.city_key,
           NULL AS town_key,
@@ -978,10 +944,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
             c.city_key ||
             t.${DataField.MACHIAZA_ID.dbColumn}
           ) as pkey,
-          (
-            c.${DataField.WARD.dbColumn} ||
-            t.${DataField.OAZA_CHO.dbColumn}
-          ) as key,
           p.pref_key,
           c.city_key,
           t.town_key,
@@ -1029,15 +991,41 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       resolve(rows);
     })
       .then((rows: WardAndOazaRow[]) => {
-        const results: WardAndOazaMatchingInfo[] = rows
-          .filter(result => result.key !== null)
-          .map(row => {
-            return {
-              ...row,
-              match_level: MatchLevel.MACHIAZA,
-              coordinate_level: row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA,
-            };
+        const results: WardAndOazaMatchingInfo[] = [];
+        rows.forEach(row => {
+          if (row.city_key !== 3587982500 || !row.oaza_cho.includes("御陵大枝山")) {
+            return;
+          }
+          const key = row.ward + row.oaza_cho;
+          const coordinate_level = row.coordinate_level === MatchLevel.CITY.num ? MatchLevel.CITY : MatchLevel.MACHIAZA;
+          results.push({
+            ...row,
+            key,
+            match_level: MatchLevel.MACHIAZA,
+            coordinate_level,
           });
+          if (!row.oaza_cho || row.oaza_cho === "番町" || row.oaza_cho.length < 3) {
+            return;
+          }
+
+          if (row.oaza_cho.endsWith("番町")) {
+            results.push({
+              ...row,
+              key: key.replace("番町", ""),
+              match_level: MatchLevel.MACHIAZA,
+              coordinate_level,
+            });
+            return;
+          }
+          if (row.oaza_cho.endsWith("町")) {
+            results.push({
+              ...row,
+              key: key.replace("町", ""),
+              match_level: MatchLevel.MACHIAZA,
+              coordinate_level,
+            });
+          }
+        });
 
         return Promise.resolve(results);
       });
@@ -1063,6 +1051,14 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         key: [(city.city || ''), (city.ward || '')].join(''),
         ...city,
       });
+
+      // 〇〇区からいきなり始まる可能性
+      if (city.ward) {
+        results.push({
+          key: city.ward,
+          ...city,
+        });
+      }
     }
     return results;
   }
@@ -1074,7 +1070,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   async getWards(): Promise<WardMatchingInfo[]> {
     type WardRow = Omit<WardMatchingInfo, 'coordinate_level'>;
     
-    const results = this.prepare<unknown[], WardRow>(`
+    const results: WardRow[] = this.prepare<unknown[], WardRow>(`
       SELECT
         p.pref_key,
         c.city_key,

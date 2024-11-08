@@ -29,8 +29,8 @@ import { Transform, TransformCallback } from 'node:stream';
 import { OazaChoTrieFinder } from '../models/oaza-cho-trie-finder';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
-import { trimDashAndSpace } from '../services/trim-dash-and-space';
 import { isDigit } from '../services/is-number';
+import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class OazaChomeTransform extends Transform {
 
@@ -51,7 +51,7 @@ export class OazaChomeTransform extends Transform {
     // 大字・丁目・小字で当たるものがあるか
     // ------------------------
     const results = new QuerySet();
-    Array.from(queries.values()).forEach(query => {
+    for (const query of queries.values()) {
       // if (query.match_level.num >= MatchLevel.MACHIAZA.num) {
       //   // 大字が既に判明している場合はスキップ
       //   results.add(query);
@@ -60,28 +60,27 @@ export class OazaChomeTransform extends Transform {
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
         results.add(query);
-        return;
+        continue;
       }
       if (query.koaza_aka_code === 2) {
         // 通り名が当たっている場合はスキップ
         results.add(query);
-        return;
+        continue;
       }
       
       const bearingWord = query.tempAddress.match(RegExpEx.create('(?:(?:上る|下る|東入る?|西入る?)|(?:角[東西南北])|(?:[東西南北]側))'));
       if (bearingWord) {
         // 京都通り名の特徴がある場合はスキップ
         results.add(query);
-        return;
+        continue;
       }
 
       // ------------------------------------
       // トライ木を使って探索
       // ------------------------------------
       const copiedQuery = this.normalizeQuery(query);
-      const targets = [
-        copiedQuery,
-      ];
+      const targets = new QuerySet();
+      targets.add(copiedQuery);
 
       // 大字が中途半端に当たっている場合がある。大字を含めて探索する
       // input: "藤野一条", oaza_cho: "藤野"
@@ -95,7 +94,7 @@ export class OazaChomeTransform extends Transform {
           }
         }
         if (prefix) {
-          targets.push(copiedQuery.copy({
+          targets.add(copiedQuery.copy({
             oaza_cho: '',
             matchedCnt: copiedQuery.matchedCnt - prefix.toOriginalString().length,
             tempAddress: prefix.concat(copiedQuery.tempAddress),
@@ -103,9 +102,23 @@ export class OazaChomeTransform extends Transform {
         }
       }
 
-      targets.forEach(targetQuery => {
+      // 〇〇番町の「番町」が省略されている可能性
+      if (copiedQuery.tempAddress?.includes(RegExpEx.create('([0-9])番町', 'g'))) {
+        targets.add(copiedQuery.copy({
+          tempAddress: copiedQuery.tempAddress.replace(RegExpEx.create('([0-9])番町', 'g'), '$1'),
+        }));
+      }
+
+      // 〇〇町の「町」が省略されている可能性
+      if (copiedQuery.tempAddress?.includes('町')) {
+        targets.add(copiedQuery.copy({
+          tempAddress: copiedQuery.tempAddress.replace('町', ''),
+        }));
+      }
+
+      for (const targetQuery of targets.values()) {
         if (!targetQuery || !targetQuery.tempAddress) {
-          return;
+          continue;
         }
         // 小字に数字が含まれていて、それが番地にヒットする場合がある。
         // この場合は、マッチしすぎているので、中間結果を返す必要がある。
@@ -117,10 +130,6 @@ export class OazaChomeTransform extends Transform {
         const findResults = this.trie.find({
           target: targetQuery.tempAddress,
           partialMatches: true,
-
-          // マッチしなかったときに、unmatchAttemptsに入っている文字列を試す。
-          // 「〇〇町」の「町」が省略された入力の場合を想定
-          extraChallenges: ['町'],
           fuzzy: DEFAULT_FUZZY_CHAR,
         }) || [];
         
@@ -165,14 +174,23 @@ export class OazaChomeTransform extends Transform {
             return;
           }
 
+          const info = result.info!;
           let unmatched = result.unmatched;
-          if ((result.info?.chome.includes('丁目') || result.info?.oaza_cho.includes('丁目')) &&
+
+          if ((info.chome.includes('丁目') || info.oaza_cho.includes('丁目')) &&
             result.unmatched?.char === DASH) {
             matchedCnt += 1;
             unmatched = trimDashAndSpace(result.unmatched);
           }
+          if (info.oaza_cho.endsWith('町') && unmatched?.char === '町') {
+            unmatched = unmatched.next?.moveToNext();
+            matchedCnt += 1;
+          }
+          if (info.chome.endsWith('町') && unmatched?.char === '町') {
+            unmatched = unmatched.next?.moveToNext();
+            matchedCnt += 1;
+          }
 
-          const info = result.info!;
           anyHit = true;
           const params: Record<string, CharNode | number | string | MatchLevel | null | undefined> = {
             pref_key: info.pref_key,
@@ -204,8 +222,9 @@ export class OazaChomeTransform extends Transform {
         if (!anyHit || anyAmbiguous) {
           results.add(targetQuery);
         }
-      });
-    });
+      }
+    }
+
     callback(null, results);
   }
 

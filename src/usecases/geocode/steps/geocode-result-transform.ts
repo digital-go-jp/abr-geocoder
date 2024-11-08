@@ -119,7 +119,6 @@ export class GeocodeResultTransform extends Transform {
       debug: string[];
     }[] = queryList.map(query => {
       const debug: string[] = [];
-      let score = 0;
       
       // match_level をスコアにする
       let key = `${query.searchTarget}:${query.match_level.str}`;
@@ -127,8 +126,8 @@ export class GeocodeResultTransform extends Transform {
         // 京都通り名で Parcelになっているときは Parcelを参照
         key = `${SearchTarget.PARCEL}:${query.match_level.str}`;
       }
-      score = matchLevelToScroe.get(key)!;
-      debug.push(`match_level: ${key} -> ${score}`);
+      const matchScore = matchLevelToScroe.get(key)!;
+      debug.push(`match_level: ${key} -> ${matchScore}`);
 
       // coordinate_leve をスコアにする
       key = `${query.searchTarget}:${query.coordinate_level.str}`;
@@ -136,36 +135,44 @@ export class GeocodeResultTransform extends Transform {
         // 京都通り名で Parcelになっているときは Parcelを参照
         key = `${SearchTarget.PARCEL}:${query.coordinate_level.str}`;
       }
-      score += matchLevelToScroe.get(key)!;
-      debug.push(`coordinate_level: ${key} -> ${matchLevelToScroe.get(key)!}`);
+      const coordinateScore = matchLevelToScroe.get(key)!;
+      debug.push(`coordinate_level: ${key} -> ${coordinateScore}`);
 
       // matched_cnt (多いほど良い)
-      score += query.matchedCnt;
-      debug.push(`matchedCnt: ${query.matchedCnt}`);
+      const matchedCntScore = query.matchedCnt;
+      debug.push(`matchedCnt: ${matchedCntScore}`);
 
       // unmatched_cnt (少ないほど良い)
       const unmatchedCnt = query.unmatched.reduce((total, word) => total + word.length, 0);
-      score += orgInput.data.address.length - unmatchedCnt;
-      debug.push(`unmatchedCnt: ${orgInput.data.address.length - unmatchedCnt}`);
+      const unmatchedCntScore = orgInput.data.address.length - unmatchedCnt;
+      debug.push(`unmatchedCnt: ${unmatchedCntScore}`);
 
       // 残り文字数 (少ないほど良い)
       const remainLen = query.tempAddress?.toOriginalString().length || 0;
-      score -= remainLen;
-      debug.push(`remainLen: -${remainLen}`);
+      const remainScore = -remainLen;
+      debug.push(`remainLen: ${remainScore}`);
 
       // 不明瞭な文字 (少ないほど良い)
-      score -= query.ambiguousCnt;
-      debug.push(`ambiguousCnt: -${query.ambiguousCnt}`);
+      const ambiguousScore = -query.ambiguousCnt;
+      debug.push(`ambiguousCnt: ${ambiguousScore}`);
 
       // 類似度 (1.0になるほど良い)
-      score += query.formatted.score;
-      debug.push(`formatted.score: ${query.formatted.score}`);
+      const similarScore = query.formatted.score;
+      debug.push(`formatted.score: ${similarScore}`);
 
       // match_level と coordinate_level の差
       // (差が少ないほど良い)
-      const diff = query.match_level.num - query.coordinate_level.num;
-      score -= diff * 2;
-      debug.push(`diff of two levels: -${diff * 2}`);
+      const diffScore = -Math.abs(matchScore - coordinateScore) * 2;
+      debug.push(`diff of two levels: -${diffScore}`);
+
+      const score = matchScore +
+        coordinateScore +
+        matchedCntScore + 
+        unmatchedCntScore +
+        remainScore +
+        ambiguousScore +
+        similarScore +
+        diffScore;
 
       return {
         score,

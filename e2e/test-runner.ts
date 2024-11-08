@@ -1,4 +1,4 @@
-import { $ } from 'execa-cjs';
+import { $, execaNode } from 'execa-cjs';
 import path from 'node:path';
 const packageJsonPath = path.normalize(path.join(__dirname, '..', 'package.json'));
 const rootDir = path.dirname(packageJsonPath);
@@ -38,6 +38,8 @@ const lgCodes = [
   '262013', // 京都府福知山市
   '012068', // 北海道釧路市
   '013048', // 北海道石狩郡新篠津村
+  '242080', // 三重県名張市
+  '022063', // 青森県十和田市
 
   // issue #166
   '122246', // 千葉県鎌ケ谷市
@@ -78,16 +80,13 @@ const lgCodes = [
   '231061', // 愛知県名古屋市中区
 ];
 
-$({ stdout: 'inherit', stderr: 'inherit' })`npm run build`
-  .then(() => {
-    return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`
-  })
-  .then(() => {
-    return $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`
-  })
-  .then(() => {
-    return $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`
-  })
-  .then(() => {
-    $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --maxWorker=25% --config ${rootDir}/jest.e2e.config.js`
-  })
+(async () => {
+  await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
+  // // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
+  // // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
+
+  $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --maxWorker=25% --config ${rootDir}/jest.e2e.config.js`
+
+  
+})();

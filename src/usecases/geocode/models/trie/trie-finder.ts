@@ -50,8 +50,8 @@ export class TrieFinderResult<T> {
   }
 }
 
-type InternalResult = {
-  itemHash: string | undefined;
+type InternalResult<T> = {
+  info: T | undefined;
   unmatched: CharNode | undefined;
   depth: number;
   
@@ -110,7 +110,10 @@ export class TrieAddressFinder<T> {
       }
     }
 
-    const itemHash = this.toItemHash(value);
+    const itemHash = this.toItemHash({
+      ...value,
+      key: undefined,
+    });
     if (!this.items.has(itemHash)) {
       this.items.set(itemHash, value);
     }
@@ -158,14 +161,13 @@ export class TrieAddressFinder<T> {
 
     const results: TrieFinderResult<T>[] = [];
 
-    for (const [itemHash, internalResult] of searchResults.entries()) {
-      const item = this.items.get(itemHash);
+    for (const internalResult of searchResults.values()) {
       if (internalResult.depth === 0) {
         continue;
       }
       results.push(
         new TrieFinderResult<T>({
-          info: item,
+          info: internalResult.info,
           unmatched: internalResult.unmatched,
           depth: internalResult.depth,
           ambiguous: internalResult.ambiguous,
@@ -190,7 +192,7 @@ export class TrieAddressFinder<T> {
     partialMatches: boolean;
     extraChallenges?: string[];
     depth: number;
-  }): Map<string, InternalResult> | undefined {
+  }): Map<string, InternalResult<T>> | undefined {
 
     // ignoreフラグが指定されている場合、スキップする
     if (node && node.ignore) {
@@ -220,10 +222,10 @@ export class TrieAddressFinder<T> {
         partialMatches,
         extraChallenges,
         depth: depth + 1,
-      });
+      }) || new Map();
 
       // 中間結果を含まない場合は、情報を返す
-      if (!partialMatches || !others) {
+      if (!partialMatches) {
         return others;
       }
 
@@ -235,7 +237,7 @@ export class TrieAddressFinder<T> {
           return;
         }
         others.set(itemHash, {
-          itemHash,
+          info: this.items.get(itemHash),
           unmatched: node,
           depth,
           ambiguous: false,
@@ -246,7 +248,7 @@ export class TrieAddressFinder<T> {
 
     // fuzzyが来た場合、全ての可能性を探索する
     if (node && node.char === fuzzy) {
-      const results: Map<string, InternalResult> = new Map();
+      const results: Map<string, InternalResult<T>> = new Map();
       for (const child of parent.children.values()) {
         const others = this.traverse({
           fuzzy,
@@ -256,8 +258,8 @@ export class TrieAddressFinder<T> {
           extraChallenges,
           depth: depth + 1,
         });
-        others?.forEach(other => {
-          if (!other.itemHash || results.has(other.itemHash)) {
+        others?.forEach((other: InternalResult<T>, itemHash: string) => {
+          if (results.has(itemHash)) {
             return;
           }
           // extraChallengeをした結果
@@ -266,7 +268,7 @@ export class TrieAddressFinder<T> {
             other.unmatched = other.unmatched.next!;
           }
           other.ambiguous = true;
-          results.set(other.itemHash, other);
+          results.set(itemHash, other);
         });
       }
     
@@ -277,7 +279,7 @@ export class TrieAddressFinder<T> {
             return;
           }
           results.set(itemHash, {
-            itemHash,
+            info: this.items.get(itemHash),
             unmatched: node,
             depth,
             ambiguous: false,
@@ -289,13 +291,13 @@ export class TrieAddressFinder<T> {
 
 
     // これ以上、探索する文字がない場合は、現時点の情報を返す
-    const results: Map<string, InternalResult> = new Map();
+    const results: Map<string, InternalResult<T>> = new Map();
 
     // 現在のノードに情報がある場合は extraChallenge をしない
     if (parent.itemHashes) {
       parent.itemHashes.forEach(itemHash => {
         results.set(itemHash, {
-          itemHash,
+          info: this.items.get(itemHash),
           unmatched: node,
           depth,
           ambiguous: false,
@@ -307,7 +309,7 @@ export class TrieAddressFinder<T> {
     // extraChallenges が指定されている場合、もう１文字を試してみる
     if (depth > 0 && extraChallenges && extraChallenges.length > 0) {
       for (const extraWord of extraChallenges) {
-        if (!parent.children.has(extraWord.at(0) || '')) {
+        if (!parent.children.has(extraWord.at(0) || '') || extraWord.at(0) === node?.char) {
           continue;
         }
 
@@ -325,12 +327,12 @@ export class TrieAddressFinder<T> {
           depth: depth + 1,
         });
 
-        others?.forEach(other => {
-          if (!other.itemHash || results.has(other.itemHash)) {
+        others?.forEach((other, itemHash) => {
+          if (results.has(itemHash)) {
             return;
           }
           other.ambiguous = true;
-          results.set(other.itemHash, other);
+          results.set(itemHash, other);
         });
       }
     }

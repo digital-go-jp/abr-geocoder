@@ -97,12 +97,21 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
 
         case MatchLevel.MACHIAZA_DETAIL: {
           row.koaza = toHankakuAlphaNum(row.koaza);
+          if (row.koaza_aka_code === 2) {
+            // (通り名)+(大字)
+            tree.append({
+              key: KyotoStreetTrieFinder.normalizeStr(row.koaza + row.oaza_cho),
+              value: row,
+            });
+          } else {
+            // (大字)+(丁目)
+            const key = KyotoStreetTrieFinder.normalizeStr(row.oaza_cho + row.chome);
+            tree.append({
+              key,
+              value: row,
+            });
+          }
   
-          // (通り名)+(大字)
-          tree.append({
-            key: KyotoStreetTrieFinder.normalizeStr(row.key),
-            value: row,
-          });
           break;
         }
 

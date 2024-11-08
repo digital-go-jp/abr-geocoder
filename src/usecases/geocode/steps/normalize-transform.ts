@@ -146,7 +146,7 @@ export class NormalizeTransform extends Transform {
     address = kan2num(address);
 
     // 大字が「番町」の場合があるので、置換する
-    // address = address?.replace(RegExpEx.create('(高松市|岡山市北区|北区)番町', 'g'), `$1${OAZA_BANCHO}`);
+    address = address?.replace(RegExpEx.create('([0-9])番町', 'g'), `$1${DASH}`);
     address = address?.replace(RegExpEx.create('番町', 'g'), OAZA_BANCHO);
 
     // カッコで括られている範囲は住所にならないので無視する

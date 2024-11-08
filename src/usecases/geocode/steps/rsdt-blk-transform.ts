@@ -86,8 +86,7 @@ export class RsdtBlkTransform extends Transform {
         results.add(query);
         continue;
       }
-      const target = trimDashAndSpace(query.tempAddress);
-      if (!target || !query.lg_code) {
+      if (!query.lg_code) {
         results.add(query);
         continue;
       }
@@ -151,7 +150,7 @@ export class RsdtBlkTransform extends Transform {
   // fuzzyが含まれる可能性があるので、'_' に置換する
   // ('_'は、SQLiteにおいて、任意の一文字を示す)
   private getBlockNum(query: Query) {
-    let p : CharNode | undefined = query.tempAddress;
+    let p : CharNode | undefined = trimDashAndSpace(query.tempAddress);
     const buffer: string[] = [];
     // マッチした文字数
     let matchedCnt = 0;

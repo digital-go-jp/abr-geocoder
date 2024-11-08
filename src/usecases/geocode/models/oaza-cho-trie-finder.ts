@@ -42,6 +42,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     address = address?.replace(RegExpEx.create('番外地'), BANGAICHI) as T;
     
     // 大字が「番町」の場合があるので、置換する
+    address = address?.replace(RegExpEx.create('([0-9])番町', 'g'), `$1${DASH}`) as T;
     address = address?.replace(RegExpEx.create('番町', 'g'), OAZA_BANCHO) as T;
 
     // 「番地」「番丁」「番街」「番」「番地の」をDASHにする
@@ -120,12 +121,55 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
       oazaInfo.oaza_cho = toHankakuAlphaNum(oazaInfo.oaza_cho);
       oazaInfo.chome = toHankakuAlphaNum(oazaInfo.chome);
       oazaInfo.koaza = toHankakuAlphaNum(oazaInfo.koaza);
-      const key = OazaChoTrieFinder.normalize(oazaInfo.key);
+
       tree.append({
-        key,
+        key: OazaChoTrieFinder.normalize([
+          oazaInfo.oaza_cho || '',
+          oazaInfo.chome || '',
+          oazaInfo.koaza || '',
+        ].join('')),
         value: oazaInfo,
       });
+      
+      let oaza_cho = oazaInfo.oaza_cho;
+      if (oaza_cho && oaza_cho.length > 2) {
+        if (oaza_cho.endsWith('番町')) {
+          oaza_cho = oaza_cho.replace('番町', '');
+        }
+        if (oaza_cho.endsWith('町')) {
+          oaza_cho = oaza_cho.replace('町', '');
+        }
+
+        tree.append({
+          key: OazaChoTrieFinder.normalize([
+            oaza_cho || '',
+            oazaInfo.chome || '',
+            oazaInfo.koaza || '',
+          ].join('')),
+          value: oazaInfo,
+        });
+      }
+
+      let chome = oazaInfo.chome;
+      if (chome && chome.length > 2) {
+        if (chome.endsWith('番町')) {
+          chome = chome.replace('番町', '');
+        }
+        if (chome.endsWith('町')) {
+          chome = chome.replace('町', '');
+        }
+
+        tree.append({
+          key: OazaChoTrieFinder.normalize([
+            oazaInfo.oaza_cho || '',
+            chome || '',
+            oazaInfo.koaza || '',
+          ].join('')),
+          value: oazaInfo,
+        });
+      }
     }
+    // console.log(debug_keys);
 
     // キャッシュファイルに保存
     const encoded = tree.export();

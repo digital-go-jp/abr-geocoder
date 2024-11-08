@@ -56,6 +56,7 @@ export class CityAndWardTransform extends Transform {
         results.add(query);
         continue;
       }
+      
       // -----------------------------
       // 〇〇市 or 〇〇市〇〇区 を探索する
       // -----------------------------
@@ -104,6 +105,15 @@ export class CityAndWardTransform extends Transform {
         results.add(query);
       }
     }
+
+    // const possibilities = Array.from(results.values());
+    // possibilities.sort((a, b) => b.formatted.score - a.formatted.score);
+    // const finalResults = new QuerySet();
+    // let i = 0;
+    // while (finalResults.size() < 5 && i < possibilities.length) {
+    //   finalResults.add(possibilities[i]);
+    //   i++;
+    // }
     next(null, results);
   }
 }
