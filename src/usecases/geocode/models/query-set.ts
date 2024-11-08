@@ -28,7 +28,7 @@ export class QuerySet {
 
   private memory: Map<number, Query> = new Map();
 
-  static toKey(query: Query) {
+  private toKey(query: Query) {
     const values: (string | number | undefined)[] = [
       query.pref_key,
       query.city_key,
@@ -44,8 +44,9 @@ export class QuerySet {
       .join(':');
     return stringHash(keyStr);
   }
+
   add(query: Query) {
-    const key = QuerySet.toKey(query);
+    const key = this.toKey(query);
     if (this.memory.has(key)) {
       return;
     }
@@ -57,7 +58,7 @@ export class QuerySet {
   }
 
   delete(query: Query) {
-    const key = QuerySet.toKey(query);
+    const key = this.toKey(query);
     if (!this.memory.has(key)) {
       return;
     }

@@ -1,6 +1,6 @@
 {
   "name": "@digital-go-jp/abr-geocoder",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "デジタル庁：アドレス・ベース・レジストリを用いたジオコーダー",
   "author": "Japan Digital Agency (デジタル庁)",
   "keywords": [

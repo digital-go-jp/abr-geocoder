@@ -55,7 +55,7 @@ import { RsdtBlkTransform } from '../steps/rsdt-blk-transform';
 import { RsdtDspTransform } from '../steps/rsdt-dsp-transform';
 import { Tokyo23TownTranform } from '../steps/tokyo23town-transform';
 import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
-import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
+// import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
 import { WardTransform } from '../steps/ward-transform';
 
 export class GeocodeTransform extends Duplex {
@@ -95,7 +95,7 @@ export class GeocodeTransform extends Duplex {
     const cityAndWardTransform = new CityAndWardTransform(params.cityAndWardTrie);
 
     // 〇〇市 (〇〇郡が省略された場合）を試す
-    const wardAndOazaTransform = new WardAndOazaTransform(params.wardAndOazaTrie);
+    // const wardAndOazaTransform = new WardAndOazaTransform(params.wardAndOazaTrie);
 
     // 大字を試す
     const oazaChomeTransform = new OazaChomeTransform(params.oazaChoTrie);
@@ -152,7 +152,7 @@ export class GeocodeTransform extends Duplex {
       .pipe(prefTransform)
       .pipe(countyAndCityTransform)
       .pipe(cityAndWardTransform)
-      .pipe(wardAndOazaTransform)
+      // .pipe(wardAndOazaTransform)
       .pipe(wardTransform)
       .pipe(tokyo23TownTransform)
       .pipe(tokyo23WardTransform)

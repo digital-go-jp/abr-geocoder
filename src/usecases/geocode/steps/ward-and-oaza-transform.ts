@@ -22,12 +22,12 @@
  * SOFTWARE.
  */
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
+import { CharNode } from '../models/trie/char-node';
 import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
-import { trimDashAndSpace } from '../services/trim-dash-and-space';
-import { RegExpEx } from '@domain/services/reg-exp-ex';
 
 export class WardAndOazaTransform extends Transform {
 
@@ -52,7 +52,7 @@ export class WardAndOazaTransform extends Transform {
         continue;
       }
       // 既に判明している場合はスキップ
-      if (query.ward || query.oaza_cho) {
+      if (query.ward && query.oaza_cho) {
         results.add(query);
         continue;
       }
@@ -67,57 +67,65 @@ export class WardAndOazaTransform extends Transform {
       // -------------------------
       // 〇〇市町村を探索する
       // -------------------------
-      const target = trimDashAndSpace(query.tempAddress);
-      if (!target) {
-        results.add(query);
-        continue;
-      }
-      const trieResults = this.wardAndOazaTrie.find({
-        target,
-        extraChallenges: ['市', '町', '村'],
-        partialMatches: true,
-        fuzzy: DEFAULT_FUZZY_CHAR,
-      });
-      if (!trieResults || trieResults.length === 0) {
-        results.add(query);
-        continue;
+      const targets = [
+        query,
+      ];
+      if (query.ward) {
+        const prefix = CharNode.create(query.ward)!;
+        targets.push(query.copy({
+          ward: '',
+          matchedCnt: query.matchedCnt - query.ward.length,
+          tempAddress: prefix.concat(query.tempAddress),
+        }));
       }
 
       let anyAmbiguous = false;
       let anyHit = false;
+      targets.forEach(targetQuery => {
 
-      for (const mResult of trieResults) {
-        // 都道府県が判別していない、または判別できでいて、
-        // result.pref_key が同一でない結果はスキップする
-        // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
-        if (query.match_level.num === MatchLevel.PREFECTURE.num && 
-          query.pref_key !== mResult.info?.pref_key) {
-          continue;
+        const trieResults = this.wardAndOazaTrie.find({
+          target: targetQuery.tempAddress!,
+          extraChallenges: ['市', '町', '村'],
+          partialMatches: true,
+          fuzzy: DEFAULT_FUZZY_CHAR,
+        });
+        if (!trieResults || trieResults.length === 0) {
+          return;
         }
-        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
-        anyHit = true;
-
-        results.add(query.copy({
-          pref: query.pref || mResult.info!.pref,
-          pref_key: query.pref_key || mResult.info!.pref_key,
-          city_key: mResult.info!.city_key,
-          town_key: mResult.info!.town_key || undefined,
-          tempAddress: mResult.unmatched,
-          city: mResult.info!.city,
-          county: mResult.info!.county,
-          lg_code: mResult.info!.lg_code,
-          ward: mResult.info!.ward,
-          rep_lat: mResult.info!.rep_lat,
-          rep_lon: mResult.info!.rep_lon,
-          machiaza_id: mResult.info!.machiaza_id,
-          rsdt_addr_flg: mResult.info!.rsdt_addr_flg,
-          oaza_cho: mResult.info!.oaza_cho,
-          match_level: mResult.info!.match_level,
-          coordinate_level: mResult.info!.coordinate_level,
-          matchedCnt: query.matchedCnt + mResult.depth,
-          ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
-        }));
-      }
+  
+        for (const mResult of trieResults) {
+          // 都道府県が判別していない、または判別できでいて、
+          // result.pref_key が同一でない結果はスキップする
+          // (伊達市のように同じ市町村名でも異なる都道府県の場合がある)
+          if (query.match_level.num === MatchLevel.PREFECTURE.num && 
+            query.pref_key !== mResult.info?.pref_key) {
+            continue;
+          }
+          anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+          anyHit = true;
+  
+          results.add(targetQuery.copy({
+            pref: mResult.info!.pref,
+            pref_key: mResult.info!.pref_key,
+            city_key: mResult.info!.city_key,
+            town_key: mResult.info!.town_key || undefined,
+            tempAddress: mResult.unmatched,
+            city: mResult.info!.city,
+            county: mResult.info!.county,
+            lg_code: mResult.info!.lg_code,
+            ward: mResult.info!.ward,
+            rep_lat: mResult.info!.rep_lat,
+            rep_lon: mResult.info!.rep_lon,
+            machiaza_id: mResult.info!.machiaza_id,
+            rsdt_addr_flg: mResult.info!.rsdt_addr_flg,
+            oaza_cho: mResult.info!.oaza_cho,
+            match_level: mResult.info!.match_level,
+            coordinate_level: mResult.info!.coordinate_level,
+            matchedCnt: targetQuery.matchedCnt + mResult.depth,
+            ambiguousCnt: targetQuery.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
+          }));
+        }
+      });
 
       if (!anyHit || anyAmbiguous) {
         results.add(query);

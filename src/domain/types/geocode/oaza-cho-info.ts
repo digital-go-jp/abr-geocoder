@@ -25,7 +25,6 @@
 import { MatchLevel } from "./match-level";
 
 export type OazaChoMachingInfo = {
-  key: string;
   pref: string;
   city: string;
   county: string;

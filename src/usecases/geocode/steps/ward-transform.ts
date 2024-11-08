@@ -57,6 +57,7 @@ export class WardTransform extends Transform {
         results.add(query);
         continue;
       }
+
       const matched = this.wardTrie.find({
         target,
         extraChallenges: ['市', '区'],
