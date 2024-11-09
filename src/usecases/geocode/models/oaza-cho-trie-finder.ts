@@ -1,6 +1,7 @@
-import { BANGAICHI, DASH, MUBANCHI, OAZA_BANCHO, SPACE } from "@config/constant-values";
+import { BANGAICHI, DASH, DASH_SYMBOLS, MUBANCHI, OAZA_BANCHO, OAZA_CENTER, SPACE } from "@config/constant-values";
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
+import { removeFiles } from "@domain/services/remove-files";
 import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,7 +12,6 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { CharNode } from "./trie/char-node";
 import { TrieAddressFinder } from "./trie/trie-finder";
-import { removeFiles } from "@domain/services/remove-files";
 
 export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
 
@@ -35,6 +35,9 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     // 漢数字を半角数字に変換する
     address = kan2num(address);
 
+    // 「センター」を「OAZA_CENTER」に置き換える
+    address = address?.replace(RegExpEx.create(`せんた[${DASH_SYMBOLS}]`), OAZA_CENTER) as T;
+    
     // 「無番地」を「MUBANCHI」にする
     address = address?.replace(RegExpEx.create('無番地'), MUBANCHI) as T;
     

@@ -727,7 +727,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           }
         }
       }
-      // if (cityInfo.lg_code !== '011011' || row.machiaza_id !== '0040012') {
+      // if (cityInfo.lg_code !== '011045' || row.machiaza_id.substring(0, 4) !== '0207') {
       //   return;
       // }
 

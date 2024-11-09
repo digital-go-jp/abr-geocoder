@@ -174,7 +174,7 @@ const geocodeCommand: CommandModule = {
     // プログレスバーの作成。
     // silentの指定がなく、ファイル入力の場合のみ作成される。
     const progressBar = (argv.silent || destination === '-' || destination === undefined) ?
-      undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | {message}');
+      undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | {message} | ETA: {eta_formatted}');
     progressBar?.start(2, 0, {
       'message': 'preparing...',
     });
@@ -209,11 +209,9 @@ const geocodeCommand: CommandModule = {
       }
 
       // メモリを節約するため、あまり溜め込まないようにする
-      // ReadableStream において objectMode = true のときの highWaterMark が 16 なので
-      // 固定値で16にする
       const result = fs.createWriteStream(path.normalize(destination), {
         encoding: 'utf8',
-        highWaterMark: 16,
+        highWaterMark: 64 * 1024 * 1024,
       });
       return result;
     })(destination);
@@ -259,7 +257,7 @@ const geocodeCommand: CommandModule = {
         return 1;
       }
       // バックグラウンドスレッドを用いる
-      return Math.max(container.env.availableParallelism() - 1, 1);
+      return container.env.availableParallelism();
     })();
 
     // ジオコーダの作成
@@ -282,10 +280,17 @@ const geocodeCommand: CommandModule = {
       fps: 10,
       callback(current) {
         progressBar?.update(current, {
-          message: 'geocoding...',
+          message: `geocoding...`,
         });
       },
     });
+    abrGeocoderStream.on('pause', () => {
+      srcStream.pause();
+    });
+    abrGeocoderStream.on('resume', () => {
+      srcStream.resume();
+    });
+
     await streamPromises.pipeline(
       // 入力ソースからデータの読み込み
       srcStream,

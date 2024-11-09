@@ -23,7 +23,6 @@
  */
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { fromSharedMemory, toSharedMemory } from './shared-memory';
 import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from './thread-task';
 import { WorkerPoolTaskInfo } from './worker-thread-pool-task-info';
 
@@ -57,8 +56,8 @@ export class WorkerThread<I, T, R> extends Worker {
       stderr: false,  // Sets false to pass the output to the parent thread.
     });
 
-    this.on('message', (shareMemory: Uint8Array) => {
-      const received = fromSharedMemory<ThreadJobResult<R> | ThreadPong>(shareMemory);
+    this.on('message', (msg: string) => {
+      const received = JSON.parse(msg) as ThreadJobResult<R> | ThreadPong;
 
       if (received.kind !== 'result') {
         return;
@@ -90,16 +89,19 @@ export class WorkerThread<I, T, R> extends Worker {
         once: true,
       });
 
-      this.once('message', (shareMemory: Uint8Array) => {
-        const received = fromSharedMemory<ThreadPong>(shareMemory);
+      this.once('message', (msg: string) => {
+        const received = JSON.parse(msg) as ThreadPong;
         if (received.kind !== 'pong') {
           return;
         }
         resolve();
       });
-      this.postMessage(toSharedMemory<ThreadPing>({
+      this.postMessage(JSON.stringify(<ThreadPing>{
         kind: 'ping',
       }));
+      // this.postMessage(toSharedMemory<ThreadPing>({
+      //   kind: 'ping',
+      // }));
     });
   }
 
@@ -119,11 +121,16 @@ export class WorkerThread<I, T, R> extends Worker {
       //   kind: 'task',
       //   data: task.data,
       // }, null, 2));
-      this.postMessage(toSharedMemory<ThreadJob<T>>({
+      this.postMessage(JSON.stringify(<ThreadJob<T>>{
         taskId,
         kind: 'task',
         data: task.data,
       }));
+      // this.postMessage(toSharedMemory<ThreadJob<T>>({
+      //   taskId,
+      //   kind: 'task',
+      //   data: task.data,
+      // }));
 
       this.resolvers.set(taskId, resolve);
     });

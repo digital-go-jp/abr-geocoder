@@ -2,7 +2,7 @@ import { expect, jest } from '@jest/globals';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Readable, Writable } from 'node:stream';
+import { Readable, Transform, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
   AbrGeocoder,
@@ -49,18 +49,100 @@ export type ExecOptions = {
 
 export const runGeocoder = async (options: ExecOptions) => {
 
-  if (process.env.USE_CLI) {
-    // コマンドラインからテストを実行する場合は、CLIから行う
-    return execaNode(options)(cliPath, [
-      "-",
-      "-silient",
-      `--target ${options.geocode.searchTarget}`,
-      `-f ${options.geocode.outputFormat}`,
-      `-d ${dbPath}`,
-    ]);
+  // 読み込みストリーム
+  const reader = (() => {
+    if (options.input) {
+      return Readable.from([options.input]);
+    } else if (options.inputFile) {
+      return fs.createReadStream(options.inputFile);
+    } else {
+      throw 'unknown input';
+    }
+  })();
+
+  // 1行ずつに分解するストリーム
+  const lineByLine = new LineStream();
+
+  // コメントを取り除くストリーム
+  const commentFilter = new CommentFilterTransform();
+
+  if (process.env.USE_HTTP) {
+    // ===========================================
+    // E2Eテスト時は、HTTPリクエストで処理を行う
+    // ===========================================
+    const format = ((): OutputFormat => {
+      switch (options.geocode.outputFormat) {
+        case OutputFormat.JSON: {
+          return OutputFormat.NDJSON;
+        }
+        case OutputFormat.GEOJSON: {
+          return OutputFormat.NDGEOJSON;
+        }
+        default: {
+          return options.geocode.outputFormat;
+        }
+      }
+    })();
+
+    const chunks: string[] = [];
+    const requester = new Writable({
+      objectMode: true,
+      async write(
+        address: string, 
+        _: BufferEncoding,
+        callback: (error?: Error | null | undefined) => void,
+      ) {
+
+        const query_params = new URLSearchParams({
+          // 検索対象の住所文字列
+          address,
+
+          // 検索対象
+          target: options.geocode.searchTarget,
+
+          // 出力書式
+          format,
+        });
+        const response = await fetch(`http://localhost:3000/geocode?${query_params}`, {
+          keepalive: true,
+        });
+
+        if (!response.ok) {
+          callback(new Error(`${response.status}: ${response.statusText}`));
+          return;
+        }
+        if (format === OutputFormat.CSV || format === OutputFormat.SIMPLIFIED) {
+          chunks.push(await response.text());
+          return;
+        }
+        chunks.push(JSON.stringify(await response.json()));
+        callback();
+      },
+    })
+
+    await pipeline(
+      reader,
+      lineByLine,
+      commentFilter,
+      requester,
+    )
+
+    if (format === OutputFormat.JSON || format === OutputFormat.GEOJSON) {
+      return {
+        stdout: `[${chunks.join(",")}]`,
+      }
+    }
+    return {
+      stdout: chunks.join("\n")
+    };
   }
-  // VSCode でデバッグする場合は、geocode-command.ts と同様の処理をすることで
+
+  // ===================================================
+  // VSCodeでデバッグする場合は、同じプロセス上で処理を行う。
+  //
+  // geocode-command.ts と同様の処理をすることで
   // ビルドしないでもデバッグできる
+  // ===================================================
   const abrgDir = options.useGlobalDB ? resolveHome(EnvProvider.DEFAULT_ABRG_DIR) : dbPath;
   
   const container = new AbrGeocoderDiContainer({
@@ -84,21 +166,12 @@ export const runGeocoder = async (options: ExecOptions) => {
     searchTarget: options.geocode.searchTarget,
   });
 
-  const reader = (() => {
-    if (options.input) {
-      return Readable.from([options.input]);
-    } else if (options.inputFile) {
-      return fs.createReadStream(options.inputFile);
-    } else {
-      throw 'unknown input';
-    }
-  })();
-
   const formatter = FormatterProvider.get({
     type: options.geocode.outputFormat,
     debug: false,
   });
 
+  // 書き込みストリーム
   const chunks: Buffer[] = [];
   const dst = new Writable({
     write(chunk, _, callback) {
@@ -106,9 +179,6 @@ export const runGeocoder = async (options: ExecOptions) => {
       callback();
     },
   });
-
-  const lineByLine = new LineStream();
-  const commentFilter = new CommentFilterTransform();
 
   await pipeline(
     reader,

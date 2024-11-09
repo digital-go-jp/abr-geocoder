@@ -22,9 +22,7 @@
  * SOFTWARE.
  */
 import { DebugLogger } from '@domain/services/logger/debug-logger';
-import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
-import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
-import { ICommonDbGeocode } from '@interface/database/common-db';
+import { ThreadJob, ThreadPing } from '@domain/services/thread/thread-task';
 import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { Duplex } from 'node:stream';
 import { isMainThread, MessagePort, parentPort, workerData } from "node:worker_threads";
@@ -56,6 +54,8 @@ import { RsdtDspTransform } from '../steps/rsdt-dsp-transform';
 import { Tokyo23TownTranform } from '../steps/tokyo23town-transform';
 import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 // import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
+import { setFlagsFromString } from 'v8';
+import { runInNewContext } from 'vm';
 import { WardTransform } from '../steps/ward-transform';
 
 export class GeocodeTransform extends Duplex {
@@ -67,7 +67,6 @@ export class GeocodeTransform extends Duplex {
 
   private constructor(params: {
     dbCtrl: GeocodeDbController;
-    commonDb: ICommonDbGeocode;
     logger?: DebugLogger;
     prefTrie: PrefTrieFinder;
     countyAndCityTrie: CountyAndCityTrieFinder;
@@ -152,7 +151,6 @@ export class GeocodeTransform extends Duplex {
       .pipe(prefTransform)
       .pipe(countyAndCityTransform)
       .pipe(cityAndWardTransform)
-      // .pipe(wardAndOazaTransform)
       .pipe(wardTransform)
       .pipe(tokyo23TownTransform)
       .pipe(tokyo23WardTransform)
@@ -180,13 +178,11 @@ export class GeocodeTransform extends Duplex {
     const container = new AbrGeocoderDiContainer(params);
     const dbCtrl = container.database;
     const logger: DebugLogger | undefined = container.logger;
-    const commonDb: ICommonDbGeocode = await dbCtrl.openCommonDb();
 
     const trees = await loadGeocoderTrees(params);
     
     const result = new GeocodeTransform({
       dbCtrl,
-      commonDb,
       logger,
       ...trees,
     });
@@ -203,7 +199,11 @@ if (!isMainThread && parentPort) {
   //   inspector.open(port);
   //   inspector.waitForDebugger();
   // }
+    
+  setFlagsFromString('--expose_gc');
+  const gc = runInNewContext('gc'); // nocommit
 
+  setInterval(() => gc(), 5000);
 
   (async (parentPort: MessagePort) => {
     const reader = new Readable({
@@ -215,11 +215,12 @@ if (!isMainThread && parentPort) {
     const geocodeTransform = await GeocodeTransform.create(workerData);
 
     // メインスレッドからメッセージを受け取る
-    parentPort.on('message', (task: Uint8Array) => {
-      const received = fromSharedMemory<ThreadJob<QueryInput> | ThreadPing>(task);
+    parentPort.on('message', (task: string) => {
+      const received = JSON.parse(task) as ThreadJob<QueryInput> | ThreadPing;
+      (task as unknown) = null;
       switch (received.kind) {
         case 'ping': {
-          parentPort.postMessage(toSharedMemory<ThreadPong>({
+          parentPort.postMessage(JSON.stringify({
             kind: 'pong',
           }));
           return;
@@ -244,12 +245,11 @@ if (!isMainThread && parentPort) {
       objectMode: true,
       write: (query: Query, _, callback) => {
         const data = query.toJSON();
-        const sharedMemory = toSharedMemory<ThreadJobResult<unknown>>({
+        parentPort.postMessage(JSON.stringify({
           taskId: query.input.taskId,
           data,
           kind: 'result',
-        });
-        parentPort.postMessage(sharedMemory);
+        }));
         callback();
       },
     });

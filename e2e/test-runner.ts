@@ -82,11 +82,33 @@ const lgCodes = [
 
 (async () => {
   await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
-  // // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
-  // // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
+  // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
+  // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
   await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
+  
+  const controller = new AbortController();
 
-  $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --maxWorker=25% --config ${rootDir}/jest.e2e.config.js`
+  try {
+    const serverTaskPromise = $({
+      stdout: 'inherit',
+      stderr: 'inherit',
+      cancelSignal: controller.signal,
+      detached: true,
+      env: {
+        USE_HTTP: 'true',
+      }
+    })`node ${cliPath} serve -d ${dbPath}`;
 
+    await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --maxWorker=25% --config ${rootDir}/jest.e2e.config.js`
+    controller.abort();
+
+    await serverTaskPromise;
+
+  } catch (error) {
+    if (controller.signal.aborted) {
+      return;
+    }
+    throw error;
+  }
   
 })();

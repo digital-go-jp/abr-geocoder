@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, OAZA_BANCHO, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
+import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, MUBANCHI, OAZA_BANCHO, OAZA_CENTER, SPACE, SPACE_SYMBOLS } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
@@ -265,6 +265,7 @@ export class GeocodeResultTransform extends Transform {
     tempAddress = tempAddress?.replace(RegExpEx.create(MUBANCHI), '無番地');
     tempAddress = tempAddress?.replace(RegExpEx.create(BANGAICHI), '番外地');
     tempAddress = tempAddress?.replace(RegExpEx.create(OAZA_BANCHO), '番町');
+    tempAddress = tempAddress?.replace(RegExpEx.create(OAZA_CENTER), 'センター');
     let result: string = (tempAddress?.toOriginalString() || '');
 
     // 最初の空白文字、または末尾までの間に

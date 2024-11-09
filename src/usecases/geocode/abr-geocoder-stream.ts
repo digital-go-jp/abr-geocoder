@@ -24,7 +24,6 @@
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { SearchTarget } from '@domain/types/search-target';
 import { Duplex } from 'node:stream';
-import timers from 'node:timers/promises';
 import { AbrGeocoder } from './abr-geocoder';
 import { Query } from './models/query';
 // import inspector from "node:inspector";
@@ -36,6 +35,7 @@ export class AbrGeocoderStream extends Duplex {
   private geocoder: AbrGeocoder;
   private searchTarget: SearchTarget;
   private fuzzy: string | undefined;
+  private pausing: boolean = false;
 
   constructor(params: Required<{
     geocoder: AbrGeocoder,
@@ -58,7 +58,12 @@ export class AbrGeocoderStream extends Duplex {
   _read(): void {}
 
   private closer() {
-    if (!this.receivedFinal || this.isPaused() || this.nextIdx <= this.writeIdx) {
+    if (this.pausing && this.writeIdx - this.nextIdx < 1024) {
+      this.emit('resume');
+      this.pausing = false;
+    }
+
+    if (!this.receivedFinal || this.pausing || this.nextIdx <= this.writeIdx) {
       return;
     }
     // 全タスクが処理したので終了
@@ -69,12 +74,13 @@ export class AbrGeocoderStream extends Duplex {
     // Out of memory を避けるために、受け入れを一時停止
     // 処理済みが追いつくまで、待機する
     const waitingCnt = this.writeIdx - this.nextIdx;
-    if (waitingCnt < 100) {
+    if (waitingCnt < 8192 || this.pausing) {
       return;
     }
 
-    while (this.writeIdx - this.nextIdx > 50) {
-      await timers.setTimeout(10);
+    if (!this.pausing) {
+      this.pausing = true;
+      this.emit('pause');
     }
   }
 
