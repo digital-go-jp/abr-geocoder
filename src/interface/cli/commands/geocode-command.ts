@@ -257,7 +257,7 @@ const geocodeCommand: CommandModule = {
         return 1;
       }
       // バックグラウンドスレッドを用いる
-      return Math.floor(container.env.availableParallelism() * 1.5);
+      return container.env.availableParallelism();
     })();
 
     // ジオコーダの作成
