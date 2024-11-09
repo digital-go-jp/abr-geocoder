@@ -28,7 +28,7 @@ import {
 } from '../../src/index';
 import { runGeocoder } from './common';
 
-describe.skip('debug', () => {
+describe('debug', () => {
   
   test('北海道札幌市白石区流通センター五丁目6-61', async () => {
     const input = '北海道札幌市白石区流通センター五丁目6-61';
@@ -38,7 +38,7 @@ describe.skip('debug', () => {
         outputFormat: OutputFormat.NDJSON,
         searchTarget: SearchTarget.ALL,
       },
-      useGlobalDB: true,
+      useGlobalDB: false,
     });
 
     expect(JSON.parse(stdout)).toMatchObject({
@@ -47,29 +47,28 @@ describe.skip('debug', () => {
       },
       "result": {
         "output": "北海道札幌市白石区流通センター五丁目6-61",
-        "others": [
-          "流通センター五丁目6-61"
-        ],
-        "score": 0.96,
-        "match_level": "city",
-        "coordinate_level": "city",
-        "lat": 43.045637,
-        "lon": 141.396521,
+        "others": [],
+        "score": 1,
+        "match_level": "residential_detail",
+        "coordinate_level": "residential_detail",
+        "lat": 43.032202568,
+        "lon": 141.44805378,
         "lg_code": "011045",
-        "machiaza_id": null,
-        "blk_id": null,
-        "rsdt_id": null,
+        "machiaza_id": "0207005",
+        "rsdt_addr_flg": 1,
+        "blk_id": "006",
+        "rsdt_id": "061",
         "rsdt2_id": null,
         "prc_id": null,
         "pref": "北海道",
         "county": null,
         "city": "札幌市",
         "ward": "白石区",
-        "oaza_cho": null,
-        "chome": null,
+        "oaza_cho": "流通センター",
+        "chome": "五丁目",
         "koaza": null,
-        "blk_num": null,
-        "rsdt_num": null,
+        "blk_num": "6",
+        "rsdt_num": "61",
         "rsdt_num2": null,
         "prc_num1": null,
         "prc_num2": null,

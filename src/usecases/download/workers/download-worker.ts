@@ -22,8 +22,7 @@
  * SOFTWARE.
  */
 import { DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
-import { fromSharedMemory, toSharedMemory } from '@domain/services/thread/shared-memory';
-import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
+import { ThreadJob, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
 import { Readable, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
@@ -66,12 +65,11 @@ export const downloadOnWorkerThread = async (params: Required<{
   const dst = new Writable({
     objectMode: true,
     write(job: ThreadJob<DownloadQueryBase>, _, callback) {
-      const sharedMemory = toSharedMemory<ThreadJobResult<DownloadQueryBase>>({
+      params.port.postMessage(JSON.stringify({
         taskId: job.taskId,
         kind: 'result',
         data: job.data,
-      });
-      params.port.postMessage(sharedMemory);
+      }));
 
       callback();
     },
@@ -82,11 +80,11 @@ export const downloadOnWorkerThread = async (params: Required<{
     .pipe(dst);
 
   // メインスレッドからメッセージを受け取る
-  params.port.on('message', (sharedMemory: Uint8Array) => {
-    const data = fromSharedMemory<ThreadJob<DownloadRequest> | ThreadPing>(sharedMemory);
+  params.port.on('message', (msg: string) => {
+    const data = JSON.parse(msg) as ThreadJob<DownloadRequest> | ThreadPing;
     switch (data.kind) {
       case 'ping': {
-        params.port.postMessage(toSharedMemory({
+        params.port.postMessage(JSON.stringify({
           kind: 'pong',
         } as ThreadPong));
         return;
@@ -95,8 +93,7 @@ export const downloadOnWorkerThread = async (params: Required<{
       case 'task': {
       // メインスレッドからタスク情報を受け取ったので
       // ダウンロード処理のストリームに投げる
-        const data = fromSharedMemory<ThreadJob<DownloadRequest>>(sharedMemory);
-        reader.push(data);
+        reader.push(data as ThreadJob<DownloadRequest>);
         return;
       }
 

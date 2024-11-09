@@ -257,7 +257,7 @@ const geocodeCommand: CommandModule = {
         return 1;
       }
       // バックグラウンドスレッドを用いる
-      return ~~Math.max(container.env.availableParallelism() * 2, 1);
+      return Math.floor(container.env.availableParallelism() * 1.5);
     })();
 
     // ジオコーダの作成
@@ -280,7 +280,7 @@ const geocodeCommand: CommandModule = {
       fps: 10,
       callback(current) {
         progressBar?.update(current, {
-          message: 'geocoding...',
+          message: `geocoding...`,
         });
       },
     });

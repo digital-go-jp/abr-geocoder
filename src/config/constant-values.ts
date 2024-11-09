@@ -85,6 +85,10 @@ export const MUBANCHI: string = `${BEGIN_SPECIAL}MB${END_SPECIAL}`;
 // 別の文字列に置き換える
 export const OAZA_BANCHO: string = `${BEGIN_SPECIAL}OB${END_SPECIAL}`;
 
+// 流通センターの「ー」が正しく処理できないので、
+// 別の文字列に置き換える
+export const OAZA_CENTER: string = `${BEGIN_SPECIAL}OC${END_SPECIAL}`;
+
 // 半角数字と漢数字が連続する（例：〇〇町1-2-3三田マンション）と
 // 検索に失敗してしまうので、仮想の空白を挿入する。
 // 基本的に住所には含まれていなはず

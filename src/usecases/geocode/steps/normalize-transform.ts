@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, J_DASH, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, OAZA_BANCHO, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS } from '@config/constant-values';
+import { BANGAICHI, DASH, DASH_SYMBOLS, DEFAULT_FUZZY_CHAR, DOUBLE_QUOTATION, J_DASH, MUBANCHI, NUMRIC_AND_KANJI_SYMBOLS, OAZA_BANCHO, OAZA_CENTER, SINGLE_QUOTATION, SPACE, SPACE_CHARS, SPACE_SYMBOLS } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
@@ -106,11 +106,14 @@ export class NormalizeTransform extends Transform {
     // 英数字を半角にする
     address = toHankakuAlphaNum<CharNode | undefined>(address);
 
+    // 「センター」を「OAZA_CENTER」に置き換える
+    address = address?.replace(RegExpEx.create(`センタ[${DASH_SYMBOLS}]`), OAZA_CENTER);
+
     // 数字＋ダッシュ または ダッシュ+数字 の組み合わせのとき、ダッシュを DASHにする
     // (ダッシュの記号は類似するものが多いので、統一する)
     address = address?.replaceAll(
       RegExpEx.create(
-        `([${NUMRIC_AND_KANJI_SYMBOLS}][${DASH_SYMBOLS}])|((?!センタ)[${DASH_SYMBOLS}][${NUMRIC_AND_KANJI_SYMBOLS}])`,
+        `([${NUMRIC_AND_KANJI_SYMBOLS}][${DASH_SYMBOLS}])|([${DASH_SYMBOLS}][${NUMRIC_AND_KANJI_SYMBOLS}])`,
         'g',
       ),
       (match: string) => {

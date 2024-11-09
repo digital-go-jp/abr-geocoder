@@ -45,6 +45,7 @@ export class AbrGeocoderStream extends Duplex {
     super({
       objectMode: true,
       allowHalfOpen: true,
+      highWaterMark: 1024,
     });
     this.geocoder = params.geocoder;
     this.fuzzy = params.fuzzy || DEFAULT_FUZZY_CHAR;
@@ -69,16 +70,12 @@ export class AbrGeocoderStream extends Duplex {
     // Out of memory を避けるために、受け入れを一時停止
     // 処理済みが追いつくまで、待機する
     const waitingCnt = this.writeIdx - this.nextIdx;
-    if (waitingCnt < 5000 || this.isPaused()) {
+    if (waitingCnt < 1024) {
       return;
     }
 
-    this.pause();
-    while (this.writeIdx - this.nextIdx > 500) {
-      await timers.setTimeout(5);
-    }
-    if (this.isPaused()) {
-      this.resume();
+    while (this.writeIdx - this.nextIdx > 256) {
+      await timers.setTimeout(10);
     }
   }
 

@@ -4,17 +4,18 @@
 name: "tests"
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'src/**/*.ts'
-      - 'e2e/**/*.ts'
-      - '*.json'
-      - '*.js'
-      - '*.mjs'
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'src/**/*.ts'
+  #     - 'e2e/**/*.ts'
+  #     - '*.json'
+  #     - '*.js'
+  #     - '*.mjs'
   push:
     branches:
+      - main
       - develop
     paths:
       - 'src/**/*.ts'
