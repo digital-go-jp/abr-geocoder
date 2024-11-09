@@ -284,6 +284,12 @@ const geocodeCommand: CommandModule = {
         });
       },
     });
+    abrGeocoderStream.on('pause', () => {
+      srcStream.pause();
+    });
+    abrGeocoderStream.on('resume', () => {
+      srcStream.resume();
+    });
 
     await streamPromises.pipeline(
       // 入力ソースからデータの読み込み
