@@ -727,9 +727,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           }
         }
       }
-      if (cityInfo.lg_code !== '011045' || row.machiaza_id.substring(0, 4) !== '0207') {
-        return;
-      }
+      // if (cityInfo.lg_code !== '011045' || row.machiaza_id.substring(0, 4) !== '0207') {
+      //   return;
+      // }
 
       // pkey 以外の値を戻す
       const value = {
