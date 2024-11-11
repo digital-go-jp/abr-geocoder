@@ -297,6 +297,10 @@ const geocodeCommand: CommandModule = {
     abrGeocoderStream.on('resume', onResume);
     formatter.on('pause', onPause);
     formatter.on('resume', onResume);
+    outputStream.on('pause', onPause);
+    outputStream.on('resume', onResume);
+    lineByLine.on('pause', onPause);
+    lineByLine.on('resume', onResume);
 
     await streamPromises.pipeline(
       // 入力ソースからデータの読み込み
