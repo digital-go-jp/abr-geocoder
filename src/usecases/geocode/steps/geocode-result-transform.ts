@@ -32,6 +32,37 @@ import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
 export class GeocodeResultTransform extends Transform {
 
+  private readonly matchLevelToScroe = new Map<string, number>([
+    [`${SearchTarget.ALL}:${MatchLevel.UNKNOWN}`, -2],
+    [`${SearchTarget.ALL}:${MatchLevel.PREFECTURE}`, 1],
+    [`${SearchTarget.ALL}:${MatchLevel.CITY}`, 2],
+    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA}`, 3],
+    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
+    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+    
+    // rsdt_addr_flgが間違えている可能性もあるので、MACHIAZA_DETAILより僅かに上の価値、というスコアにしておく
+    [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, 4.5],
+
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN}`, -2],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE}`, 1],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.CITY}`, 2],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA}`, 3],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PARCEL}`, -1],
+
+    [`${SearchTarget.PARCEL}:${MatchLevel.UNKNOWN}`, -2],
+    [`${SearchTarget.PARCEL}:${MatchLevel.PREFECTURE}`, 1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.CITY}`, 2],
+    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA}`, 3],
+    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
+    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_BLOCK}`, -1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_DETAIL}`, -1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL}`, 6],
+  ]);
+
   constructor() {
     super({
       objectMode: true,
@@ -54,6 +85,7 @@ export class GeocodeResultTransform extends Transform {
 
     if (queryList.length === 1) {
       callback(null, queryList[0]);
+      queries.clear();
       return;
     }
 
@@ -65,53 +97,24 @@ export class GeocodeResultTransform extends Transform {
       // console.error(query.formatted.score, query.formatted.address);
       // inputの文字列に対して30％以上の割合でマッチしている or
       // 市区町村が判明している
-      return (query.formatted.score >= 0.5 ||
+      const result = (query.formatted.score >= 0.5 ||
         (query.matchedCnt / addressLen) >= 0.3 || 
         query.match_level.num >= MatchLevel.CITY.num);
+      if (!result) {
+        queries.delete(query);
+        query.release();
+      }
+      return result;
     });
 
     queryList = queryList.map(query => {
-      if (query.city === '京都市') {
-        if (query.rsdt_addr_flg !== 0) {
-          query = query.copy({
-            rsdt_addr_flg: 0,
-          });
-        }
-        return query;
+      if (query.city === '京都市' && query.rsdt_addr_flg !== 0) {
+        query = query.copy({
+          rsdt_addr_flg: 0,
+        });
       }
       return query;
     });
-
-    const matchLevelToScroe = new Map<string, number>([
-      [`${SearchTarget.ALL}:${MatchLevel.UNKNOWN}`, -2],
-      [`${SearchTarget.ALL}:${MatchLevel.PREFECTURE}`, 1],
-      [`${SearchTarget.ALL}:${MatchLevel.CITY}`, 2],
-      [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA}`, 3],
-      [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-      [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
-      [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
-      
-      // rsdt_addr_flgが間違えている可能性もあるので、MACHIAZA_DETAILより僅かに上の価値、というスコアにしておく
-      [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, 4.5],
-
-      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN}`, -2],
-      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE}`, 1],
-      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.CITY}`, 2],
-      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA}`, 3],
-      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
-      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
-      [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PARCEL}`, -1],
-
-      [`${SearchTarget.PARCEL}:${MatchLevel.UNKNOWN}`, -2],
-      [`${SearchTarget.PARCEL}:${MatchLevel.PREFECTURE}`, 1],
-      [`${SearchTarget.PARCEL}:${MatchLevel.CITY}`, 2],
-      [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA}`, 3],
-      [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-      [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_BLOCK}`, -1],
-      [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_DETAIL}`, -1],
-      [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL}`, 6],
-    ]);
 
     const withScore: {
       query: Query;
@@ -126,7 +129,7 @@ export class GeocodeResultTransform extends Transform {
         // 京都通り名で Parcelになっているときは Parcelを参照
         key = `${SearchTarget.PARCEL}:${query.match_level.str}`;
       }
-      const matchScore = matchLevelToScroe.get(key)!;
+      const matchScore = this.matchLevelToScroe.get(key)!;
       debug.push(`match_level: ${key} -> ${matchScore}`);
 
       // coordinate_leve をスコアにする
@@ -135,7 +138,7 @@ export class GeocodeResultTransform extends Transform {
         // 京都通り名で Parcelになっているときは Parcelを参照
         key = `${SearchTarget.PARCEL}:${query.coordinate_level.str}`;
       }
-      const coordinateScore = matchLevelToScroe.get(key)!;
+      const coordinateScore = this.matchLevelToScroe.get(key)!;
       debug.push(`coordinate_level: ${key} -> ${coordinateScore}`);
 
       // matched_cnt (多いほど良い)
@@ -217,10 +220,12 @@ export class GeocodeResultTransform extends Transform {
 
     if (!topParcel) {
       callback(null, topRSDT!.query);
+      queries.clear();
       return;
     }
     if (!topRSDT) {
-      callback(null, topParcel!.query);
+      callback(null, topParcel.query);
+      queries.clear();
       return;
     }
 
@@ -235,22 +240,26 @@ export class GeocodeResultTransform extends Transform {
           topParcel.score - topRSDT.score <= 5
         ) {
           callback(null, topRSDT.query);
+          queries.clear();
           return;
         }
         // parcelを返す
         callback(null, topParcel.query);
+        queries.clear();
         return;
       }
       
       case searchTarget === SearchTarget.RESIDENTIAL: {
         // 強制的にRSDTを返す
         callback(null, topRSDT.query);
+        queries.clear();
         return;
       }
       
       case searchTarget === SearchTarget.PARCEL: {
         // 強制的にPARCELを返す
         callback(null, topParcel.query);
+        queries.clear();
         return;
       }
       

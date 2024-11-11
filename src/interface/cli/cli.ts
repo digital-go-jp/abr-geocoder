@@ -32,6 +32,7 @@ import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
 import { EnvProvider } from '@domain/models/env-provider';
+import testCommand from './commands/test-command';
 
 // const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 const terminalWidth = 120;

@@ -63,6 +63,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
       const worker = this.workers.shift()!;
 
       if (this.signal && this.signal.aborted) {
+        task.done(new Error('canceled'));
         return;
       }
 

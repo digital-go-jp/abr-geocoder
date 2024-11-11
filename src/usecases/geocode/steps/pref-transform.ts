@@ -91,6 +91,9 @@ export class PrefTransform extends Transform {
         results.add(query);
       }
     }
+
+    queries.clear();
+
     next(null, results);
   }
 }

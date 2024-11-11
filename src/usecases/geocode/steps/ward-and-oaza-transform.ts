@@ -131,6 +131,9 @@ export class WardAndOazaTransform extends Transform {
         results.add(query);
       }
     }
+
+    queries.clear();
+
     next(null, results);
   }
 }

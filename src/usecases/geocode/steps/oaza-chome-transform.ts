@@ -225,6 +225,8 @@ export class OazaChomeTransform extends Transform {
       }
     }
 
+    queries.clear();
+
     callback(null, results);
   }
 

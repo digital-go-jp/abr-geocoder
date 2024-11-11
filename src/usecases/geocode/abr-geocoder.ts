@@ -34,7 +34,7 @@ import { FakeWorkerThreadPool } from "./fake-worker-thread-pool";
 export class AbrGeocoder {
   private taskHead: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
   private taskTail: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
-  private readonly taskToNodeMap: Map<number, WorkerPoolTaskInfo<AbrGeocoderInput, Query>> = new Map();
+  private readonly taskIDs: Set<number> = new Set();
   private flushing: boolean = false;
 
   private constructor(
@@ -66,12 +66,12 @@ export class AbrGeocoder {
   geocode(input: AbrGeocoderInput): Promise<Query> {
 
     let taskId = Math.floor(performance.now() + Math.random() * performance.now());
-    while (this.taskToNodeMap.has(taskId)) {
+    while (this.taskIDs.has(taskId)) {
       taskId = Math.floor(performance.now() + Math.random() * performance.now());
     }
     // resolver, rejector をキープする
     const taskNode = new WorkerPoolTaskInfo<AbrGeocoderInput, Query>(input);
-    this.taskToNodeMap.set(taskId, taskNode);
+    this.taskIDs.add(taskId);
 
     // 順番を維持するために、連結リストで追加する
     if (this.taskHead) {
@@ -97,7 +97,10 @@ export class AbrGeocoder {
         .catch((error: Error) => {
           taskNode.setResult(error);
         })
-        .finally(() => this.flushResults());
+        .finally(() => {
+          this.taskIDs.delete(taskId);
+          this.flushResults();
+        });
     });
   }
   

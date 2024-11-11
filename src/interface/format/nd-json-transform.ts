@@ -85,9 +85,23 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
       // Data format to the next stream is non-object mode.
       // Because we output string as Buffer.
       readableObjectMode: false,
+
+      highWaterMark: 3000,
     });
   }
 
+  private toCoordinate(result: Query): { lat: number; lon: number; } | { lat: null; lon: null; } {
+    if (!result.rep_lat || !result.rep_lon) {
+      return {
+        lon: null,
+        lat: null,
+      };
+    }
+    return {
+      lon: parseFloat(result.rep_lon),
+      lat: parseFloat(result.rep_lat),
+    }
+  }
   _transform(
     result: Query,
     _: BufferEncoding,
@@ -97,6 +111,8 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
     if (result.tempAddress) {
       unmatched.push(result.tempAddress?.toOriginalString()?.trim());
     }
+
+    const coordinates = this.toCoordinate(result);
 
     const output: NDJsonOutputType = {
       query: {
@@ -108,8 +124,8 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
         score: result.formatted.score,
         match_level: result.match_level.str,
         coordinate_level: result.coordinate_level.str,
-        lat: result.rep_lat && parseFloat(result.rep_lat) || null,
-        lon: result.rep_lon && parseFloat(result.rep_lon) || null,
+        lat: coordinates.lat,
+        lon: coordinates.lon,
         lg_code: result.lg_code ? result.lg_code : BLANK_CHAR,
         machiaza_id: result.machiaza_id || BLANK_CHAR,
         rsdt_addr_flg: result.rsdt_addr_flg,
@@ -142,12 +158,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
         rsdtdsp_key: result.rsdtdsp_key,
       };
     }
-    const jsonStr = JSON.stringify(output);
-    callback(null, `${jsonStr}\n`);
-  }
-
-  _final(callback: (error?: Error | null | undefined) => void): void {
-    // this.emit('data', BREAK_AT_EOF); // _transform で改行を付けているので、改行を入れない
-    callback();
+    result.release();
+    callback(null, `${JSON.stringify(output)}\n`);
   }
 }

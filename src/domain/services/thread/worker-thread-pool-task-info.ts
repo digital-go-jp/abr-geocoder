@@ -86,6 +86,12 @@ export class WorkerPoolTaskInfo<DataType, ResultType> extends AsyncResource {
       this.setResult(null, result);
     }
     this.emit();
+
+    this.resolve = undefined;
+    this.reject = undefined;
+    this.error = undefined;
+    this.result = undefined;
+    this.next = undefined;
     this.emitDestroy();
   }
 }

@@ -74,7 +74,6 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
 
   mimetype: string = 'application/json';
 
-  private buffer: string = '';
   private lineNum: number = 0;
 
   constructor(private readonly options: {
@@ -88,7 +87,22 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
       // Data format to the next stream is non-object mode.
       // Because we output string as Buffer.
       readableObjectMode: false,
+
+      highWaterMark: 3000,
     });
+  }
+
+  private toCoordinate(result: Query): { lat: number; lon: number; } | { lat: null; lon: null; } {
+    if (!result.rep_lat || !result.rep_lon) {
+      return {
+        lon: null,
+        lat: null,
+      };
+    }
+    return {
+      lon: parseFloat(result.rep_lon),
+      lat: parseFloat(result.rep_lat),
+    }
   }
 
   _transform(
@@ -96,12 +110,12 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
     _: BufferEncoding,
     callback: TransformCallback,
   ): void {
-    const out = this.buffer;
 
+    let out = '';
     if (this.lineNum > 0) {
-      this.buffer = ',';
+      out = ',';
     } else {
-      this.buffer = '{"type":"FeatureCollection", "features":[';
+      out = '{"type":"FeatureCollection", "features":[';
     }
     this.lineNum++;
     const unmatched: string[] = [...result.unmatched];
@@ -109,18 +123,8 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
       unmatched.push(result.tempAddress?.toOriginalString()?.trim());
     }
 
-    const coordinates = (() => {
-      if (!result.rep_lat || !result.rep_lon) {
-        return {
-          lon: null,
-          lat: null,
-        };
-      }
-      return {
-        lon: parseFloat(result.rep_lon),
-        lat: parseFloat(result.rep_lat),
-      };
-    })();
+    const coordinates = this.toCoordinate(result);
+    
     const output: GeoJsonOutput = {
       type: 'Feature',
       geometry: {
@@ -166,12 +170,11 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
       output.properties.debug_rsdtblk_key = result.rsdtblk_key;
       output.properties.debug_rsdtdsp_key = result.rsdtdsp_key;
     }
-    this.buffer += JSON.stringify(output);
-    callback(null, out);
+    callback(null, `${out}${JSON.stringify(output)}`);
+    result.release();
   }
 
   _final(callback: (error?: Error | null | undefined) => void): void {
-    this.emit('data', this.buffer);
     this.emit('data', ']}');
     this.emit('data', BREAK_AT_EOF); // ファイルの最後に改行を入れる
     callback();

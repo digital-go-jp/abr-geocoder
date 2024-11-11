@@ -104,6 +104,8 @@ export class CountyAndCityTransform extends Transform {
         results.add(query);
       }
     }
+
+    queries.clear();
     next(null, results);
   }
 }

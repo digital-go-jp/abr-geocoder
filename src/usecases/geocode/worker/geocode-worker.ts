@@ -250,6 +250,7 @@ if (!isMainThread && parentPort) {
           data,
           kind: 'result',
         }));
+        query.release();
         callback();
       },
     });

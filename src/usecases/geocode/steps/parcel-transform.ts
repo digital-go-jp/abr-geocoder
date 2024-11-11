@@ -214,6 +214,8 @@ export class ParcelTransform extends Transform {
       }
     }
 
+    queries.clear();
+
     // this.params.logger?.info(`parcel : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
     callback(null, results);
   }

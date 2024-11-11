@@ -113,6 +113,9 @@ export class Tokyo23TownTranform extends Transform {
         results.add(query);
       }
     }
+
+    queries.clear();
+
     callback(null, results);
   }
 }

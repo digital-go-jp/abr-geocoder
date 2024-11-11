@@ -620,6 +620,12 @@ export class CharNode {
     }
     return pointer;
   }
+
+  release() {
+    const nextChar = this.next;
+    this.next = undefined;
+    nextChar?.release();
+  }
   
   static readonly fromString = (value: string): CharNode | undefined => {
     try {

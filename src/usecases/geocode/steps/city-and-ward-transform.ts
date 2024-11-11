@@ -103,17 +103,11 @@ export class CityAndWardTransform extends Transform {
       }
       if (!anyHit || anyAmbiguous) {
         results.add(query);
+        queries.delete(query);
       }
     }
 
-    // const possibilities = Array.from(results.values());
-    // possibilities.sort((a, b) => b.formatted.score - a.formatted.score);
-    // const finalResults = new QuerySet();
-    // let i = 0;
-    // while (finalResults.size() < 5 && i < possibilities.length) {
-    //   finalResults.add(possibilities[i]);
-    //   i++;
-    // }
+    queries.clear();
     next(null, results);
   }
 }

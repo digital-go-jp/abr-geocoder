@@ -173,7 +173,8 @@ export class RsdtDspTransform extends Transform {
       }
     }
 
-    // this.params.logger?.info(`rsdt-dsp : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    queries.clear();
+
     callback(null, results);
   }
 }

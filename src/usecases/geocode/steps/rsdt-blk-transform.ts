@@ -141,7 +141,8 @@ export class RsdtBlkTransform extends Transform {
       });
     }
 
-    // this.params.logger?.info(`rsdt-blk : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    queries.clear();
+
     callback(null, results);
   }
 

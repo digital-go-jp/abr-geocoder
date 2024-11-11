@@ -30,7 +30,7 @@ import { RegExpEx } from '@domain/services/reg-exp-ex';
 export class CsvTransform extends Stream.Transform implements IFormatTransform {
   mimetype: string = 'text/x-csv';
 
-  private readonly rows: string[] = [];
+  private buffer: string = '';
   private readonly columns: string[];
 
   constructor(
@@ -48,6 +48,8 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
       // Data format to the next stream is non-object mode.
       // Because we output string as Buffer.
       readableObjectMode: false,
+
+      highWaterMark: 1000,
     });
     this.columns = Array.from(options.columns);
 
@@ -64,7 +66,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
     if (options.skipHeader) {
       return;
     }
-    this.rows.push(this.columns.map(column => column.toString()).join(','));
+    this.buffer = this.columns.map(column => column.toString()).join(',') + "\n";
   }
 
   _transform(
@@ -72,11 +74,11 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
     _: BufferEncoding,
     callback: TransformCallback,
   ): void {
-    // デバッグ
-    // if (result.formatted.score > 0.6) {
-    //   return callback();
-    // }
-    const line = this.columns
+    if (this.buffer) {
+      this.push(this.buffer);
+    }
+
+    this.buffer = this.columns
       .map(column => {
         switch (column) {
           case 'id':
@@ -202,17 +204,10 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
       })
       .join(',');
 
-    this.rows.push(line);
-    this.rows.push('');
-    const csvLines: string = this.rows.join('\n');
-    this.rows.length = 0;
 
-    callback(null, csvLines);
-  }
-
-  _final(callback: (error?: Error | null | undefined) => void): void {
-    // this.emit('data', BREAK_AT_EOF); // _transform で改行を付けているので、改行を入れない
-    callback();
+    result.release();
+    callback(null, `${this.buffer}\n`);
+    this.buffer = '';
   }
 
   static readonly DEFAULT_COLUMNS = [

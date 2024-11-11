@@ -276,6 +276,15 @@ const geocodeCommand: CommandModule = {
     // ジオコーディングを行う
     const lineByLine = new LineByLineTransform();
     const commentFilter = new CommentFilterTransform();
+    let pauseCount = 0;
+    const onPause = () => {
+      pauseCount++;
+      !srcStream.isPaused() && srcStream.pause();
+    };
+    const onResume = () => {
+      pauseCount--;
+      srcStream.isPaused() && pauseCount === 0 && srcStream.resume();
+    };
     const streamCounter = new StreamCounter({
       fps: 10,
       callback(current) {
@@ -284,12 +293,10 @@ const geocodeCommand: CommandModule = {
         });
       },
     });
-    abrGeocoderStream.on('pause', () => {
-      srcStream.pause();
-    });
-    abrGeocoderStream.on('resume', () => {
-      srcStream.resume();
-    });
+    abrGeocoderStream.on('pause', onPause);
+    abrGeocoderStream.on('resume', onResume);
+    formatter.on('pause', onPause);
+    formatter.on('resume', onResume);
 
     await streamPromises.pipeline(
       // 入力ソースからデータの読み込み
