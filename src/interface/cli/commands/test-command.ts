@@ -164,29 +164,22 @@ const testCommand: CommandModule = {
     // プログレスバーの作成。
     // silentの指定がなく、ファイル入力の場合のみ作成される。
     const progressBar = (argv.silen) ?
-      undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} ({readIdx}:{writeIdx}) | {message} | ETA: {eta_formatted}');
+      undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} ({totalPause}) | ETA: {eta_formatted}');
     progressBar?.start(22500835, 0, {
       'message': 'preparing...',
       readIdx,
       writeIdx,
     });
     
+    let totalPause = 0;
     const streamCounter = new StreamCounter({
       fps: 10,
       callback(current) {
         progressBar?.update(current, {
-          message: `pause: ${srcStream.isPaused()}`,
-          readIdx,
-          writeIdx,
+          totalPause,
         });
       },
     });
-    // const workerPool = new WorkerThreadPool<null, string, QueryJson>({
-    //   filename: path.join(__dirname, 'test-worker'),
-    //   initData: null,
-    //   maxConcurrency: 10,
-    //   maxTasksPerWorker: 10,
-    // });
 
     const source = argv['inputFile'] as string;
     const srcStream = getReadStreamFromSource(source);
@@ -209,6 +202,15 @@ const testCommand: CommandModule = {
       fuzzy: argv.fuzzy || DEFAULT_FUZZY_CHAR,
       searchTarget: argv.target || SearchTarget.ALL,
     })
+
+
+
+    // const workerPool = new WorkerThreadPool<null, string, QueryJson>({
+    //   filename: path.join(__dirname, '..', '..','..', 'usecases', 'geocode', 'worker',  'test-worker'),
+    //   initData: null,
+    //   maxConcurrency: 10,
+    //   maxTasksPerWorker: 10,
+    // });
     // const geocoder = new Transform({
     //   objectMode: true,
     //   allowHalfOpen: true,
@@ -222,10 +224,7 @@ const testCommand: CommandModule = {
 
     //     workerPool.run(chunk.toString()).then(resultJSON => {
     //       const result = Query.from(resultJSON);
-
-    //       if (chunk.toString() !== result.tempAddress?.toProcessedString()) {
-    //         throw `${chunk} !== ${result}`;
-    //       }
+          
     //       writeIdx++;
     //       if (srcStream.isPaused() && readIdx - writeIdx < 500) {
     //         srcStream.resume();
@@ -236,19 +235,24 @@ const testCommand: CommandModule = {
     // })
 
 
-    const outputStream = fs.createWriteStream(argv.outputFile || '/dev/null');
+    const outputStream = fs.createWriteStream(argv.outputFile || '/dev/null', {
+      highWaterMark: 64 * 1024 * 1024
+    });
     const commentFilter = new CommentFilterTransform();
     const format = OutputFormat.JSON;
     const formatter = FormatterProvider.get({
       type: format,
       debug: false,
     });
-    formatter.on('pause', () => {
-      srcStream.pause();
-    })
-    formatter.on('resume', () => {
-      srcStream.resume();
-    })
+    const onPause = () => {
+      totalPause++;
+      !srcStream.isPaused() && srcStream.pause();
+    };
+    const onResume = () => {
+      srcStream.isPaused() && srcStream.resume();
+    };
+    geocoderStream.on('pause', onPause);
+    geocoderStream.on('resume', onResume);
    
     await streamPromises.pipeline(
       srcStream,
@@ -260,6 +264,7 @@ const testCommand: CommandModule = {
       outputStream,
     );
 
+    // workerPool.close();
     geocoder.close();
     progressBar?.stop();
   },

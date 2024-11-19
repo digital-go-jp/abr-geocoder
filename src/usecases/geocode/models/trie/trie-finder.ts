@@ -25,6 +25,7 @@ import crc32Lib from "@domain/services/crc32-lib";
 import { deserialize, serialize } from "node:v8";
 import { CharNode } from "./char-node";
 
+
 export interface ITrieNode<T> {
   itemHashes: Set<string> | undefined;
   children: Map<string, ITrieNode<T>>;
@@ -73,6 +74,7 @@ export class TrieAddressFinder<T> {
   protected items: Map<string, T> = new Map();
 
   export(): Buffer {
+    
     return serialize({
       tree: this.root,
       items: this.items,

@@ -35,7 +35,7 @@ export class PrefTrieFinder extends TrieAddressFinder<PrefInfo> {
     const genHash = commonDb.getPrefListGeneratorHash();
 
     const tree = new PrefTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, `pref_${genHash}.v8`);
+    const cacheFilePath = path.join(diContainer.cacheDir, `pref_${genHash}.abrg`);
     const isExist = fs.existsSync(cacheFilePath);
     try {
       if (isExist) {

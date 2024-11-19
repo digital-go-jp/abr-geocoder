@@ -53,6 +53,7 @@ export const main = async (
     .command(updateCheckCommand)
     .command(downloadCommand)
     .command(geocodeCommand)
+    .command(testCommand)
     .command(serveCommand)
     .fail((msg: string, e: Error, yargs: Argv<{}>): void => {
       if (parsedArgs.length <= 2) {

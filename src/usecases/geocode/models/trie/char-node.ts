@@ -707,4 +707,5 @@ export class CharNode {
     }
     return head;
   }
+  
 }

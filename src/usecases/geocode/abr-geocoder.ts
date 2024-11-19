@@ -133,7 +133,7 @@ export class AbrGeocoder {
       maxTasksPerWorker: 50,
 
       // geocode-worker.ts へのパス
-      filename: path.join(__dirname, 'worker', 'geocode-worker'),
+      filename: path.join(__dirname, 'worker', 'test-worker'),
 
       // geocode-worker.ts の初期化に必要なデータ
       initData: params.container.toJSON(),
