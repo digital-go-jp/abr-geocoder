@@ -2,7 +2,7 @@ import { expect, jest } from '@jest/globals';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Readable, Transform, Writable } from 'node:stream';
+import { Readable, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
   AbrGeocoder,
@@ -16,7 +16,6 @@ import {
   OutputFormat,
   SearchTarget
 } from '../../src/index';
-import { execaNode } from 'execa-cjs';
 
 const SECONDS = 1000;
 jest.setTimeout(5 * 60 * SECONDS);

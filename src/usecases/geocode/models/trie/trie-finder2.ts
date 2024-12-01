@@ -1,33 +1,90 @@
-import fs from 'node:fs';
-import { CharNode } from './char-node';
+/*!
+ * MIT License
+ *
+ * Copyright (c) 2024 デジタル庁
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import {
+  ABRG_FILE_HEADER_SIZE,
+  ABRG_FILE_MAGIC,
+  AbrgDictHeader,
+  DATA_NODE_ENTRY_POINT,
+  DATA_NODE_HASH_VALUE,
+  DATA_NODE_NEXT_OFFSET,
+  DATA_NODE_SIZE_FIELD,
+  HASH_LINK_NODE_NEXT_OFFSET,
+  HASH_LINK_NODE_OFFSET_VALUE,
+  ReadTrieNode,
+  TRIE_NODE_CHILD_OFFSET,
+  TRIE_NODE_ENTRY_POINT,
+  TRIE_NODE_HASH_LINKED_LIST_OFFSET,
+  TRIE_NODE_SIBLING_OFFSET,
+  TRIE_NODE_SIZE_FIELD,
+  TrieHashListNode,
+  VERSION_BYTES,
+} from './abrg-file-structure';
+import { CharNode } from './char-node';
+import { TrieFinderResult } from './common';
 
-export interface ITraverse {
-  next: ITraverse | undefined;
+export type TraverseQuery = {
+  next: TraverseQuery | undefined;
   target: CharNode | undefined;
   matchedCnt: number;
-  ambigousCnt: number;
-  currentOffset?: number;
-  hashValue?: number | undefined;
-  lastPartialMatch?: ITraverse;
+  ambiguousCnt: number;
+  offset?: number;
+  hashValueList?: TrieHashListNode | undefined;
+  partialMatches?: TraverseQuery[];
   path: string;
-  bounce: number;
   allowExtraChallenge?: boolean;
-}
+};
 
 class FileTrieResults {
-  private readonly holder: Map<number, ITraverse> = new Map();
+  private readonly holder: Map<number, TraverseQuery> = new Map();
 
-  add(value: ITraverse) {
-    if (!value.hashValue) {
-      console.log(value);
-      throw `value.hashValue must not be a zero`;
+  add(value: TraverseQuery) {
+    if (!value.hashValueList) {
+      throw `value.hashValueList must not be a zero`;
     }
     // 過去のマッチした結果よりも良い結果なら保存する
-    const hashValue = value.hashValue;
-    const before = this.holder.get(hashValue);
-    if (!before || before.matchedCnt - before.ambigousCnt < value.matchedCnt - value.ambigousCnt) {
-      this.holder.set(hashValue, value);
+    let hashOffset: number;
+    let head: TrieHashListNode | undefined = value.hashValueList;
+    let before: TraverseQuery | undefined;
+    while (head) {
+      hashOffset = head.hashValueOffset;
+      before = this.holder.get(hashOffset);
+      if (!before || before.matchedCnt - before.ambiguousCnt < value.matchedCnt - value.ambiguousCnt) {
+        this.holder.set(hashOffset, {
+          target: value.target,
+          matchedCnt: value.matchedCnt,
+          ambiguousCnt: value.ambiguousCnt,
+          offset: value.offset,
+          hashValueList: {
+            hashValueOffset: hashOffset,
+            offset: value.offset!,
+          },
+          path: value.path,
+          next: undefined,
+        });
+      }
+      head = head.next;
     }
   }
 
@@ -36,21 +93,17 @@ class FileTrieResults {
   }
 }
 
-class FileTrieReader {
-  // ヘッダー領域のサイズ
-  private readonly headerSize: number;
-
-  // データ領域のオフセット
-  private readonly dataRegionOffset: number;
+export class TrieAddressFinder2<T> {
+  // ヘッダー
+  private readonly header: AbrgDictHeader;
 
   constructor(private readonly buffer: Buffer) {
-    const header = this.readHeader();
-    this.headerSize = header.headerSize;
-    this.dataRegionOffset = header.dataRegionOffset;
+    this.header = this.readHeader();
 
-    // console.log(`headerSize: ${header.headerSize} bytes`);
-    // console.log(`version: ${header.version.major}.${header.version.minor}`);
-    // console.log(`dataOffset: 0x${header.dataRegionOffset.toString(16)}`);
+    // console.log(`headerSize: ${this.header.headerSize} bytes`);
+    // console.log(`version: ${this.header.version.major}.${this.header.version.minor}`);
+    // console.log(`trieNodeOffset: ${this.header.trieNodeOffset}`);
+    // console.log(`dataOffset: ${this.header.dataNodeOffset}`);
     // console.log("");
   }
 
@@ -58,78 +111,175 @@ class FileTrieReader {
     let offset = 0;
 
     // ファイルマジックの確認
-    const magic = this.buffer.toString('utf8', offset, 4);
+    const magic = this.buffer.toString('utf8', offset, ABRG_FILE_MAGIC.size);
     if (magic !== 'abrg') {
-      throw new Error('Invalid file format');
+      throw new Error(`Invalid file format: ${magic}`);
     }
-    offset += 4;
+    offset += ABRG_FILE_MAGIC.size;
 
     // ヘッダーサイズを取得
-    const headerSize = this.buffer.readUInt16BE(offset);
-    offset += 2;
+    const headerSize = this.buffer.readUInt16BE(ABRG_FILE_HEADER_SIZE.offset);
+    offset += ABRG_FILE_HEADER_SIZE.size;
 
     // 書き込んだバージョンを確認
     // (将来的にバージョンの互換性をチェックするために使用する)
-    const majorVersion = this.buffer.readUInt8(offset);
-    offset += 1;
-    const minorVersion = this.buffer.readUInt8(offset);
-    offset += 1;
+    const majorVersion = this.buffer.readUInt8(VERSION_BYTES.offset);
+    const minorVersion = this.buffer.readUInt8(VERSION_BYTES.offset + 1);
+    offset += VERSION_BYTES.size;
 
-    // データ領域のオフセット値を取得
-    const dataRegionOffset = this.buffer.readUInt32BE(offset);
-    offset += 4;
+    // トライ木のオフセット値を取得
+    const trieNodeOffset = this.buffer.readUInt32BE(TRIE_NODE_ENTRY_POINT.offset);
+    offset += TRIE_NODE_ENTRY_POINT.size;
+
+    // データノードへのオフセット値
+    const dataNodeOffset = this.buffer.readUInt32BE(DATA_NODE_ENTRY_POINT.offset);
+    offset += DATA_NODE_ENTRY_POINT.size;
 
     return {
       version: {
         major: majorVersion,
         minor: minorVersion,
       },
-      dataRegionOffset,
+      trieNodeOffset,
+      dataNodeOffset,
       headerSize,
     };
   }
 
 
   // ノード情報を読み込む
-  private readNode(offset: number) {
-    const nodeSize = this.buffer.readUInt32BE(offset); // 4バイトでノードサイズを読み取る
-    offset += 4;
+  private readTrieNode(nodeOffset: number): ReadTrieNode {
+    let offset = 0;
 
-    // ノード名の長さ
-    const nameLength = this.buffer.readUInt8(offset);
-    offset += 1;
+    // ノードサイズ
+    const nodeSize = this.buffer.readUInt8(nodeOffset + TRIE_NODE_SIZE_FIELD.offset);
+    offset += TRIE_NODE_SIZE_FIELD.size;
+
+    // 兄弟ノードへのオフセット値
+    const siblingOffset = this.buffer.readUInt32BE(nodeOffset + TRIE_NODE_SIBLING_OFFSET.offset);
+    offset += TRIE_NODE_SIBLING_OFFSET.size;
+
+    // 子ノードへのオフセット値
+    const childOffset = this.buffer.readUInt32BE(nodeOffset + TRIE_NODE_CHILD_OFFSET.offset);
+    offset += TRIE_NODE_CHILD_OFFSET.size;
+
+
+    // データノードへのオフセット値の連結リスト
+    const headValueList: TrieHashListNode = {
+      offset: 0,
+      hashValueOffset: 0,
+      next: undefined,
+    };
+    let tailHashValueList: TrieHashListNode = headValueList;
+    let storedHashValueOffset: number = 0;
+    let currentOffset = this.buffer.readUInt32BE(nodeOffset + TRIE_NODE_HASH_LINKED_LIST_OFFSET.offset);
+    let nextOffset: number = 0;
+    while (currentOffset) {
+      // 保存されているハッシュ値へのオフセット値
+      storedHashValueOffset = this.buffer.readUInt32BE(HASH_LINK_NODE_OFFSET_VALUE.offset + currentOffset);
+      // 次のハッシュオフセットノードへのオフセット値
+      nextOffset = this.buffer.readUInt32BE(HASH_LINK_NODE_NEXT_OFFSET.offset + currentOffset);
+      
+      tailHashValueList.next = {
+        offset: currentOffset,
+        hashValueOffset: storedHashValueOffset,
+        next: undefined,
+      };
+      tailHashValueList = tailHashValueList.next;
+      currentOffset = nextOffset;
+    }
+    offset += TRIE_NODE_HASH_LINKED_LIST_OFFSET.size;
 
     // ノード名
-    const name = this.buffer.toString('utf8', offset, offset + nameLength);
-    offset += nameLength;
-
-    // 子要素数
-    const childCount = this.buffer.readUInt8(offset);
-    offset += 1;
-
-    // ハッシュ値の有無
-    const existHashValue = this.buffer.readUInt8(offset);
-    offset += 1;
-
-    // ハッシュ値
-    let hashValue = undefined;
-    if (existHashValue === 1) {
-      hashValue = this.buffer.readUInt32BE(offset);
-      offset += 4;
+    let name = '';
+    if (offset < nodeSize) {
+      const start = offset + nodeOffset;
+      const end = start + (nodeSize - offset);
+      name = this.buffer.toString('utf8', start, end);
+      offset += nodeSize - offset;
     }
 
-    return { name, childCount, offset, nodeSize, hashValue };
+    return {
+      name,
+      nodeSize,
+      offset: nodeOffset,
+      siblingOffset,
+      childOffset,
+      hashValueList: headValueList.next,
+    };
   }
 
-  traverseToLeaf({
+  find({ 
+    // 検索対象の文字列
     target,
-    partialMatch = false,
+
+    // ワイルドカードマッチの1文字
+    fuzzy,
+
+    // trueのとき、中間でマッチした結果も含めて返す
+    partialMatches = false,
+
+    // マッチしなかったときに、もう1文字を試してみる
+    extraChallenges = [],
+  }: {
+    fuzzy?: string | undefined;
+    target: CharNode | undefined;
+    partialMatches?: boolean;
+    extraChallenges?: string[];
+  }): TrieFinderResult<T>[] {
+    if (!target) {
+      return [];
+    }
+
+    const leafNodes = this.traverseToLeaf({
+      target,
+      partialMatches,
+      extraChallenges,
+      fuzzy,
+    });
+
+    if (!leafNodes || leafNodes.length == 0) {
+      return [];
+    }
+    const results: TrieFinderResult<T>[] = [];
+    leafNodes.forEach(node => {
+      if (!node.hashValueList) {
+        return;
+      }
+      let dataNodeHead: TrieHashListNode | undefined = node.hashValueList;
+      while (dataNodeHead) {
+        const dataNode = this.readDataNode(dataNodeHead.hashValueOffset);
+        results.push({
+          info: dataNode.data,
+          unmatched: node.target,
+          depth: node.matchedCnt,
+          ambiguousCnt: node.ambiguousCnt,
+        });
+        dataNodeHead = dataNodeHead.next;
+      }
+      
+      // const originalData = convertToOriginalFields(data, reverseFieldMapping);
+      // console.log({
+      //   ...originalData,
+      //   node,
+      // });
+    });
+    return results;
+  }
+  private traverseToLeaf({
+    target,
+    partialMatches = false,
     extraChallenges,
+    fuzzy,
   }: {
     target: CharNode;
-    partialMatch: boolean;
+    partialMatches: boolean;
     extraChallenges: string[];
+    fuzzy: string | undefined;
   }) {
+    if (!this.header.dataNodeOffset) {
+      return [];
+    }
 
     // ルートノードは空文字なので、それにヒットさせるためのDummyHead
     const dummyHead = new CharNode({
@@ -142,28 +292,24 @@ class FileTrieReader {
     const results = new FileTrieResults();
 
     // 探索キュー
-    let head: ITraverse | undefined = {
-      // 正確にマッチした文字数
-      matchedCnt: 0,
+    let head: TraverseQuery | undefined = {
+      // 正確にマッチした文字数 (最初が空文字からマッチするので-1)
+      matchedCnt: -1,
 
       // ?やextraChallengeでマッチした文字数
-      ambigousCnt: 0,
+      ambiguousCnt: 0,
 
       // 検索する文字列
       target: dummyHead,
 
       // ファイルヘッダーの直後から探索を始める
-      currentOffset: this.headerSize,
+      offset: this.header.trieNodeOffset,
 
-      // マッチしすぎるときがあるので、partialMatch = trueのときは
-      // 最後にマッチしたノードの1つ前にマッチしたノードを含めて返す
-      lastPartialMatch: undefined,
+      // 途中マッチした結果をキープしておく
+      partialMatches: [],
 
       // マッチした文字のパス（デバッグ用）
       path: "",
-
-      // 探索条件が検索するべきノード領域の範囲
-      bounce: this.dataRegionOffset,
 
       // extraChallengeをするか（一度したら、二回目はない)
       allowExtraChallenge: extraChallenges.length > 0,
@@ -175,185 +321,197 @@ class FileTrieReader {
     let tail = head;
 
     // キューが空になるまで探索を行う
+    let nextTask: TraverseQuery | undefined;
     while (head) {
-      // オフセット値が適切にセットされていなければスキップ (コードとしては起こり得ないが、予防策)
-      let currentOffset = head.currentOffset;
-      if (!currentOffset) {
-        head = head.next;
-        continue
+      if (!head.offset) {
+        const taskNext: TraverseQuery | undefined = head.next;
+        head.next = undefined;
+        head = taskNext;
+        continue;
       }
-      let target = head.target;
-      let ambigousCnt = head.ambigousCnt;
-      let matchedCnt = head.matchedCnt;
-      let path = head.path;
-      let dataBounce = head.bounce;
-      let allowExtraChallenge = head.allowExtraChallenge;
-      while (target && currentOffset < dataBounce) {
+      
+      let target: CharNode | undefined = head.target;
+      let ambiguousCnt: number = head.ambiguousCnt;
+      let matchedCnt: number = head.matchedCnt;
+      let path: string = head.path;
+      const allowExtraChallenge: boolean | undefined = head.allowExtraChallenge;
+      let node: ReadTrieNode;
+      let offset: number | undefined = head.offset;
+      const matches: TraverseQuery[] = head.partialMatches || [];
+      while (head && target && offset) {
         // 現在のノード（currentOffset）の情報を読取る
-        const { name, offset, nodeSize, hashValue } = this.readNode(currentOffset);
+        node = this.readTrieNode(offset);
         
-        if (target?.char !== DEFAULT_FUZZY_CHAR && target?.char !== name) {
+        if (target?.char !== fuzzy && target?.char !== node.name) {
+          if (node.siblingOffset) {
+            // 次の兄弟ノードをチェックする
+            offset = node.siblingOffset;
+            continue;
+          }
           // allowExtraChallengeがある場合は、その文字にマッチするものがあればキューに追加する
           if (allowExtraChallenge) {
             for (const extraWord of extraChallenges) {
-              if (extraWord[0] !== name) {
+              // 1文字目がマッチしない extraChallengeは行わない
+              if (extraWord[0] !== node.name) {
                 continue;
               }
 
+              // extraWordの後ろにtargetをつなげる
               const extraNode = CharNode.create(extraWord);
-              let extraTail = extraNode?.next;
-              while (extraTail!.next) {
+              let extraTail = extraNode;
+              while (extraTail?.next) {
                 extraTail = extraTail!.next;
               }
               extraTail!.next = target.clone();
 
-              const notMatched = {
-                ambigousCnt: ambigousCnt + extraWord.length,
+              // extraWord + target で検索を行うタスクを追加する
+              const challenge = {
+                ambiguousCnt: ambiguousCnt + extraWord.length,
                 matchedCnt,
                 target: extraNode,
-                currentOffset: currentOffset,
-                partialMatches: head.lastPartialMatch,
+                offset,
+                partialMatches: Array.from(matches),
                 path,
-                bounce: dataBounce,
                 allowExtraChallenge: false,
                 next: undefined,
               };
-              tail.next = notMatched;
+              tail.next = challenge;
               tail = tail.next;
             }
-
           }
-          // 文字がマッチしない場合は、ノードのサイズ分だけスキップして次のノードに進む
-          currentOffset += nodeSize;
-          continue;
+          break;
         }
 
         // ワイルドカードだった場合はマッチしなかった場合と、マッチした場合の2つに分岐する
-        if (target?.char === DEFAULT_FUZZY_CHAR) {
-          const notMatched = {
-            ambigousCnt,
+        if (target?.char === DEFAULT_FUZZY_CHAR && node.siblingOffset) {
+          // 兄弟ノードを追加する
+          const moveToSiblingNode = {
+            ambiguousCnt,
             matchedCnt,
             target: target.clone(),
-            currentOffset: currentOffset + nodeSize,
-            partialMatches: head.lastPartialMatch,
+            offset: node.siblingOffset,
+            partialMatches: Array.from(matches),
             path,
-            bounce: dataBounce,
             allowExtraChallenge,
             next: undefined,
           };
-          tail.next = notMatched;
+          tail.next = moveToSiblingNode;
           tail = tail.next;
-          ambigousCnt++;
+          ambiguousCnt++;
         }
         path += target.char;
 
         // マッチした文字数のインクリメント
         matchedCnt++;
 
-        // リーフノードに到達
-        if (!target.next) {
-          if (!hashValue) {
+        // ターゲットノードに到達
+        if (!target.next || !node.childOffset) {
+          if (!node.hashValueList) {
             break;
           }
 
           // 保存する
           results.add({
             matchedCnt,
-            ambigousCnt,
-            hashValue,
-            target: target.next,
-            currentOffset: currentOffset!,
+            ambiguousCnt: ambiguousCnt,
+            hashValueList: node.hashValueList,
+            target: target.next?.moveToNext(),
+            offset,
             path,
-            bounce: dataBounce,
             next: undefined,
           });
-          if (partialMatch && head.lastPartialMatch) {
-            results.add(head.lastPartialMatch);
+          if (partialMatches && matches?.length) {
+            matches.forEach(match => results.add(match));
           }
           break;
         }
 
-        // partialMatch = trueのときは、途中結果も保存する
-        if (partialMatch && hashValue) {
-          head.lastPartialMatch = {
+        // 途中結果も保存する
+        if (node.hashValueList && matchedCnt > 0) {
+          matches.push({
             matchedCnt,
-            ambigousCnt,
-            hashValue,
-            target: target.next,
-            currentOffset,
+            ambiguousCnt: ambiguousCnt,
+            hashValueList: node.hashValueList,
+            target: target.next.moveToNext(),
+            offset,
             path,
-            bounce: dataBounce,
             next: undefined,
-          };
+          });
         }
         
         // 文字ポインターを移動させる
-        target = target.next;
+        target = target.next.moveToNext();
 
-        // 探索の範囲を狭めていく
-        dataBounce = currentOffset + nodeSize;
- 
-        // 一致するノードが見つかった場合、そのノードのオフセットに移動して次の階層へ
-        currentOffset = offset;
+        offset = node.childOffset;
       }
-      head = head.next;
+
+      // リーフには到達しないが部分的にマッチした場合は結果に含める
+      if (partialMatches && target && matches.length > 0) {
+        matches.forEach(match => results.add(match));
+      }
+      
+      // 前ノードとの関係を分離しておく
+      nextTask = head.next;
+      head.next = undefined;
+      head = nextTask;
     }
-    return Array.from(results.values()).filter(x => x.hashValue);
+    return Array.from(results.values()).filter(x => x.hashValueList && x.path);
   }
 
-  getDataByHash(hashValue: number) {
-    // データ領域の正確な開始オフセット
-    let offset = this.dataRegionOffset;
+  readDataNode(hashValueOffset: number) {
+    let offset = hashValueOffset;
+    const nextDataNodeOffset = this.buffer.readUInt32BE(hashValueOffset);
+    offset += DATA_NODE_NEXT_OFFSET.size;
 
-    while (offset < this.buffer.length) {
-      const currentHash = this.buffer.readUInt32BE(offset);
-      offset += 4;
+    let nodeSize = this.buffer.readUint16BE(offset);
+    offset += DATA_NODE_SIZE_FIELD.size;
+    nodeSize -= DATA_NODE_NEXT_OFFSET.offset;
+    nodeSize -= DATA_NODE_SIZE_FIELD.offset;
 
-      const dictLength = this.buffer.readUInt32BE(offset);
-      offset += 4;
+    const hashValue = this.buffer.readUInt32BE(offset);
+    offset += DATA_NODE_HASH_VALUE.size;
+    nodeSize -= DATA_NODE_HASH_VALUE.offset;
 
-      const dictString = this.buffer.toString('utf8', offset, offset + dictLength);
-      offset += dictLength;
-
-      // 現在のハッシュが探索しているハッシュ値に一致するかをチェック
-      if (currentHash === hashValue) {
-        return JSON.parse(dictString);
-      }
+    let data = undefined;
+    if (nodeSize > 0) {
+      const dataStr = this.buffer.toString('utf8', offset, nodeSize + offset);
+      data = JSON.parse(dataStr);
     }
-    return null; // ハッシュ値が見つからない場合
+     
+    return {
+      data,
+      nodeSize,
+      hashValue,
+      offset: hashValueOffset,
+      nextDataNodeOffset,
+    };
   }
 }
 
 // ファイル読み込みと探索実行
-fs.readFile(`src/usecases/geocode/models/trie/test-with-paging.bin`, (err, data) => {
-  if (err) throw err;
+// fs.readFile(`test-with-paging.bin`, (err, data) => {
+//   if (err) throw err;
 
-  const fileTrieReader = new FileTrieReader(data);
-  const target = "静岡県沼津市岡485-6";
-  const leafNodes = fileTrieReader.traverseToLeaf({
-    target: CharNode.create(target)!,
-    partialMatch: true,
-    extraChallenges: ['市', '一色']
-  });
-
-  if (leafNodes && leafNodes.length > 0) {
-    console.log('---')
-    leafNodes.forEach(node => {
-      if (!node.hashValue) {
-        return;
-      }
-      const data = fileTrieReader.getDataByHash(node.hashValue);
-      console.log({
-        ...data,
-        node,
-      })
-      // const originalData = convertToOriginalFields(data, reverseFieldMapping);
-      // console.log({
-      //   ...originalData,
-      //   node,
-      // });
-    })
-  } else {
-    console.log('Leaf node not found');
-  }
-});
+//   const finder = new TrieAddressFinder2(data);
+//   [
+//     "中央区",
+//     "静岡県沼津市",
+//     "静岡県沼津市岡一色",
+//     "静岡県沼津市岡一色485-6",
+//     "静岡県沼津市岡一色485-3",
+//     "静岡県沼津市岡宮",
+//     "静岡県沼津市岡宮421",
+//     "静岡県三島市加茂川町",
+//     "静岡県三島市加茂川町123",
+//     "東京都千代田区紀尾井町1-3",
+//     "東京都千代田区紀尾井町1",
+//     "東京都調布市国領町3-8-15",
+//     "東京都調布市国領町",
+//   ].forEach(addr => {
+//     const results = finder.find({
+//       target: CharNode.create(addr),
+//       partialMatches: false,
+//     });
+//     console.log(results);
+//   })
+// });

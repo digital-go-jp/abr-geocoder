@@ -75,7 +75,7 @@ export class Tokyo23TownTranform extends Transform {
         if (!searchResult.info) {
           throw new Error('searchResult.info is empty');
         }
-        anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
+        anyAmbiguous = anyAmbiguous || searchResult.ambiguousCnt > 0;
         anyHit = true;
 
         const params: Record<string, CharNode | number | string | MatchLevel | undefined | null> = {
@@ -94,7 +94,7 @@ export class Tokyo23TownTranform extends Transform {
           oaza_cho: searchResult.info.oaza_cho,
           machiaza_id: searchResult.info.machiaza_id,
           chome: searchResult.info.chome,
-          ambiguousCnt: query.ambiguousCnt + (searchResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + searchResult.ambiguousCnt, 
         };
         if (searchResult.info.machiaza_id.endsWith('000')) {
           params.match_level = MatchLevel.MACHIAZA;

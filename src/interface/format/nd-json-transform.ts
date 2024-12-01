@@ -100,7 +100,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
     return {
       lon: parseFloat(result.rep_lon),
       lat: parseFloat(result.rep_lat),
-    }
+    };
   }
   _transform(
     result: Query,

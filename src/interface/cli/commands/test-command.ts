@@ -24,25 +24,21 @@
 import { DEFAULT_FUZZY_CHAR, STDIN_FILEPATH } from '@config/constant-values';
 import { EnvProvider } from '@domain/models/env-provider';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
-import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
+import { CommentFilterTransform } from '@domain/services/transformations/comment-filter-transform';
+import { LineByLineTransform } from '@domain/services/transformations/line-by-line-transform';
 import { StreamCounter } from '@domain/services/transformations/stream-counter';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { OutputFormat } from '@domain/types/output-format';
 import { SearchTarget } from '@domain/types/search-target';
-import { Query, QueryJson } from '@usecases/geocode/models/query';
-import path from 'node:path';
+import { FormatterProvider } from '@interface/format/formatter-provider';
+import { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
+import { AbrGeocoderStream } from '@usecases/geocode/abr-geocoder-stream';
+import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
+import { getReadStreamFromSource } from '@usecases/geocode/services/get-read-stream-from-source';
 import fs from 'node:fs';
-import { Readable, Transform, Writable } from 'node:stream';
 import streamPromises from 'node:stream/promises';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
-import { getReadStreamFromSource } from '@usecases/geocode/services/get-read-stream-from-source';
-import { LineByLineTransform } from '@domain/services/transformations/line-by-line-transform';
-import { CommentFilterTransform } from '@domain/services/transformations/comment-filter-transform';
-import { AbrGeocoderStream } from '@usecases/geocode/abr-geocoder-stream';
-import { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
-import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
-import { FormatterProvider } from '@interface/format/formatter-provider';
 
 
 export type TestCommandArgv = {
@@ -159,8 +155,8 @@ const testCommand: CommandModule = {
 
   handler: async (argv: ArgumentsCamelCase<TestCommandArgv>) => {
 
-    let readIdx = 0;
-    let writeIdx = 0;
+    const readIdx = 0;
+    const writeIdx = 0;
     // プログレスバーの作成。
     // silentの指定がなく、ファイル入力の場合のみ作成される。
     const progressBar = (argv.silen) ?
@@ -189,19 +185,19 @@ const testCommand: CommandModule = {
       cacheDir: `./db/cache`,
       database: {
         type: 'sqlite3',
-        dataDir: './db/database'
+        dataDir: './db/database',
       },
       debug: true,
     });
     const geocoder = await AbrGeocoder.create({
       container,
-      numOfThreads: 10
-    })
+      numOfThreads: 10,
+    });
     const geocoderStream = new AbrGeocoderStream({
       geocoder,
       fuzzy: argv.fuzzy || DEFAULT_FUZZY_CHAR,
       searchTarget: argv.target || SearchTarget.ALL,
-    })
+    });
 
 
 
@@ -236,7 +232,7 @@ const testCommand: CommandModule = {
 
 
     const outputStream = fs.createWriteStream(argv.outputFile || '/dev/null', {
-      highWaterMark: 64 * 1024 * 1024
+      highWaterMark: 64 * 1024 * 1024,
     });
     const commentFilter = new CommentFilterTransform();
     const format = OutputFormat.JSON;
@@ -246,10 +242,10 @@ const testCommand: CommandModule = {
     });
     const onPause = () => {
       totalPause++;
-      !srcStream.isPaused() && srcStream.pause();
+      return !srcStream.isPaused() && srcStream.pause();
     };
     const onResume = () => {
-      srcStream.isPaused() && srcStream.resume();
+      return srcStream.isPaused() && srcStream.resume();
     };
     geocoderStream.on('pause', onPause);
     geocoderStream.on('resume', onResume);

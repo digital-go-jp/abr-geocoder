@@ -6,16 +6,13 @@ import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
-import { TrieAddressFinder } from "./trie/trie-finder";
 import { removeFiles } from "@domain/services/remove-files";
+import { TrieAddressFinder2 } from "./trie/trie-finder2";
+import { FileTrieWriter } from "./trie/file-trie-writer";
 
-export class PrefTrieFinder extends TrieAddressFinder<PrefInfo> {
+export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
 
-  private constructor() {
-    super();
-  }
-
-  private static normalizeStr(value: string): string {
+  private static normalize(value: string): string {
     // 半角カナ・全角カナ => 平仮名
     value = toHiragana(value);
 
@@ -28,45 +25,61 @@ export class PrefTrieFinder extends TrieAddressFinder<PrefInfo> {
     return value;
   }
 
-  static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
+  private static readonly getCacheFilePath = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
-
     const commonDb = await diContainer.database.openCommonDb();
     const genHash = commonDb.getPrefListGeneratorHash();
 
-    const tree = new PrefTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, `pref_${genHash}.abrg`);
+    return path.join(diContainer.cacheDir, `pref_${genHash}.abrg2`);
+  };
+
+  static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
+    const cacheFilePath = await PrefTrieFinder.getCacheFilePath(diContainer);
     const isExist = fs.existsSync(cacheFilePath);
-    try {
-      if (isExist) {
-        // キャッシュがあれば、キャッシュから読み込む
-        const encoded = await fs.promises.readFile(cacheFilePath);
-        tree.import(encoded);
-        return tree;
-      }
-    } catch (_e: unknown) {
-      // インポートエラーが発生した場合は、キャッシュを作り直すので、
-      // ここではエラーを殺すだけで良い
+    if (isExist) {
+      return;
     }
 
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: diContainer.cacheDir,
-      filename: 'pref_.*\\.v8',
+      filename: 'pref_.*\\.abrg2',
     });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const prefList = await commonDb.getPrefList();
-    for (const prefInfo of prefList) {
-      tree.append({
-        key: PrefTrieFinder.normalizeStr(prefInfo.pref),
-        value: prefInfo,
+    const commonDb = await diContainer.database.openCommonDb();
+    const rows = await commonDb.getPrefList();
+    const writer = await FileTrieWriter.openFile(cacheFilePath);
+    for (const row of rows) {
+      await writer.addNode({
+        key: PrefTrieFinder.normalize(row.pref),
+        value: row,
       });
     }
-    const encoded = tree.export();
-    await fs.promises.writeFile(cacheFilePath, encoded);
+    await writer.close();
+  };
 
-    return tree;
+  static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
+    const cacheFilePath = await PrefTrieFinder.getCacheFilePath(diContainer);
+    const isExist = fs.existsSync(cacheFilePath);
+    if (!isExist) {
+      await PrefTrieFinder.createDictionaryFile(diContainer);
+    }
+    
+    try {
+      // TrieFinderが作成できればOK
+      const data = await fs.promises.readFile(cacheFilePath);
+      const first100bytes = data.subarray(0, 100);
+      new PrefTrieFinder(first100bytes);
+      return data;
+    } catch (_e: unknown) {
+      // エラーが発生する場合は、再作成する
+      await fs.promises.unlink(cacheFilePath);
+      await PrefTrieFinder.createDictionaryFile(diContainer);
+      const data = await fs.promises.readFile(cacheFilePath);
+      return data;
+    }
+
   };
 }

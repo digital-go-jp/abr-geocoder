@@ -1,4 +1,5 @@
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
+import { removeFiles } from "@domain/services/remove-files";
 import { CityMatchingInfo } from "@domain/types/geocode/city-info";
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,16 +7,12 @@ import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
-import { TrieAddressFinder } from "./trie/trie-finder";
-import { removeFiles } from "@domain/services/remove-files";
+import { TrieAddressFinder2 } from "./trie/trie-finder2";
+import { FileTrieWriter } from "./trie/file-trie-writer";
 
-export class CityAndWardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
+export class CityAndWardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> {
 
-  private constructor() {
-    super();
-  }
-
-  private static normalizeStr(value: string): string {
+  static normalize(value: string): string {
     // 半角カナ・全角カナ => 平仮名
     value = toHiragana(value);
 
@@ -28,49 +25,60 @@ export class CityAndWardTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
     return value;
   }
 
-  static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheDir = path.join(diContainer.cacheDir);
-    makeDirIfNotExists(cacheDir);
-
+  private static readonly getCacheFilePath = async (diContainer: AbrGeocoderDiContainer) => {
+    makeDirIfNotExists(diContainer.cacheDir);
     const commonDb = await diContainer.database.openCommonDb();
     const genHash = commonDb.getCityAndWardListGeneratorHash();
-    
-    const tree = new CityAndWardTrieFinder();
-    const cacheFilePath = path.join(cacheDir, `city-and-ward_${genHash}.v8`);
+
+    return path.join(diContainer.cacheDir, `city-and-ward_${genHash}.abrg2`);
+  };
+
+  static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
+    const cacheFilePath = await CityAndWardTrieFinder.getCacheFilePath(diContainer);
     const isExist = fs.existsSync(cacheFilePath);
-    try {
-      if (isExist) {
-        // キャッシュがあれば、キャッシュから読み込む
-        const encoded = await fs.promises.readFile(cacheFilePath);
-        tree.import(encoded);
-        return tree;
-      }
-    } catch (_e: unknown) {
-      // インポートエラーが発生した場合は、キャッシュを作り直すので、
-      // ここではエラーを殺すだけで良い
+    if (isExist) {
+      return;
     }
 
     // 古いキャッシュファイルを削除
     await removeFiles({
-      dir: cacheDir,
-      filename: 'city-and-ward_.*\\.v8',
+      dir: diContainer.cacheDir,
+      filename: 'city-and-ward_.*\\.abrg2',
     });
-
+    
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
+    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getCityAndWardList();
-
+    const writer = await FileTrieWriter.openFile(cacheFilePath);
     for (const row of rows) {
-      tree.append({
-        key: CityAndWardTrieFinder.normalizeStr(row.key),
+      await writer.addNode({
+        key: CityAndWardTrieFinder.normalize(row.key),
         value: row,
       });
     }
-
-    // キャッシュファイルに保存
-    const encoded = tree.export();
-    await fs.promises.writeFile(cacheFilePath, encoded);
-
-    return tree;
+    await writer.close();
+  };
+  
+  static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
+    const cacheFilePath = await CityAndWardTrieFinder.getCacheFilePath(diContainer);
+    const isExist = fs.existsSync(cacheFilePath);
+    if (!isExist) {
+      await CityAndWardTrieFinder.createDictionaryFile(diContainer);
+    }
+    
+    try {
+      // TrieFinderが作成できればOK
+      const data = await fs.promises.readFile(cacheFilePath);
+      const first100bytes = data.subarray(0, 100);
+      new CityAndWardTrieFinder(first100bytes);
+      return data;
+    } catch (_e: unknown) {
+      // エラーが発生する場合は、再作成する
+      await fs.promises.unlink(cacheFilePath);
+      await CityAndWardTrieFinder.createDictionaryFile(diContainer);
+      const data = await fs.promises.readFile(cacheFilePath);
+      return data;
+    }
   };
 }

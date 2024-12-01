@@ -101,7 +101,7 @@ export class WardAndOazaTransform extends Transform {
             query.pref_key !== mResult.info?.pref_key) {
             continue;
           }
-          anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+          anyAmbiguous = anyAmbiguous || mResult.ambiguousCnt > 0;
           anyHit = true;
   
           results.add(targetQuery.copy({
@@ -122,7 +122,7 @@ export class WardAndOazaTransform extends Transform {
             match_level: mResult.info!.match_level,
             coordinate_level: mResult.info!.coordinate_level,
             matchedCnt: targetQuery.matchedCnt + mResult.depth,
-            ambiguousCnt: targetQuery.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
+            ambiguousCnt: targetQuery.ambiguousCnt + mResult.ambiguousCnt, 
           }));
         }
       });

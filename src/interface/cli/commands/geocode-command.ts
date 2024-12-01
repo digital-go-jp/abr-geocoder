@@ -279,11 +279,11 @@ const geocodeCommand: CommandModule = {
     let pauseCount = 0;
     const onPause = () => {
       pauseCount++;
-      !srcStream.isPaused() && srcStream.pause();
+      return !srcStream.isPaused() && srcStream.pause();
     };
     const onResume = () => {
       pauseCount--;
-      srcStream.isPaused() && pauseCount === 0 && srcStream.resume();
+      return srcStream.isPaused() && pauseCount === 0 && srcStream.resume();
     };
     const streamCounter = new StreamCounter({
       fps: 10,

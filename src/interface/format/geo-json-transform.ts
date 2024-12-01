@@ -102,7 +102,7 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
     return {
       lon: parseFloat(result.rep_lon),
       lat: parseFloat(result.rep_lat),
-    }
+    };
   }
 
   _transform(

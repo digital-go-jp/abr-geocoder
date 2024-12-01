@@ -146,7 +146,7 @@ export class RsdtDspTransform extends Transform {
       
         // 番地がヒットした
         const info = findResult.info! as RsdtDspInfo;
-        anyAmbiguous = anyAmbiguous || findResult.ambiguous;
+        anyAmbiguous = anyAmbiguous || findResult.ambiguousCnt > 0;
         const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
           rsdtdsp_key: info.rsdtdsp_key,
           rsdtblk_key: info.rsdtblk_key,
@@ -157,7 +157,7 @@ export class RsdtDspTransform extends Transform {
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.RESIDENTIAL_DETAIL,
           matchedCnt: query.matchedCnt + findResult.depth,
-          ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + findResult.ambiguousCnt, 
           rsdt_addr_flg: 1,
         };
         if (info.rep_lat && info.rep_lon) {

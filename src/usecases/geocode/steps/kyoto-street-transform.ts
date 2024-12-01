@@ -202,7 +202,7 @@ export class KyotoStreetTransform extends Transform {
             koaza_aka_code: result.info?.koaza_aka_code,
             machiaza_id: result.info!.machiaza_id,
             matchedCnt,
-            ambiguousCnt: query.ambiguousCnt + (result.ambiguous ? 1 : 0) + search.ambiguous,
+            ambiguousCnt: query.ambiguousCnt + result.ambiguousCnt + search.ambiguous,
           };
           if (result.info!.rep_lat && result.info!.rep_lon) {
             params.coordinate_level = result.info?.coordinate_level;

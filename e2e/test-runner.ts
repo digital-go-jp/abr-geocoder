@@ -82,8 +82,8 @@ const lgCodes = [
 
 (async () => {
   await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
-  // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
-  // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
   await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
   
   const controller = new AbortController();
@@ -99,7 +99,7 @@ const lgCodes = [
       }
     })`node ${cliPath} serve -d ${dbPath}`;
 
-    await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --maxWorker=25% --config ${rootDir}/jest.e2e.config.js`
+    await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js`
     controller.abort();
 
     await serverTaskPromise;

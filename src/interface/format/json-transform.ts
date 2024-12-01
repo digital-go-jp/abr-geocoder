@@ -100,7 +100,7 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
     return {
       lon: parseFloat(result.rep_lon),
       lat: parseFloat(result.rep_lat),
-    }
+    };
   }
 
   _transform(

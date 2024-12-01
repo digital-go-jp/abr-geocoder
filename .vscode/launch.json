@@ -7,6 +7,36 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "write.ts",
+      "program": "${workspaceFolder}/src/usecases/geocode/models/trie/write.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeArgs": [
+        "--trace-warnings",
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "trie-finder2",
+      "program": "${workspaceFolder}/src/usecases/geocode/models/trie/trie-finder2.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeArgs": [
+        "--trace-warnings",
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "geocoding | column",
       "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",

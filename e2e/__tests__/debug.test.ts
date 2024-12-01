@@ -30,6 +30,53 @@ import { runGeocoder } from './common';
 
 describe('debug', () => {
   
+  test('千葉県山武郡横芝光町横芝字真砂４８２番地の２', async () => {
+    const input = '千葉県山武郡横芝光町横芝字真砂４８２番地の２';
+    const { stdout } = await runGeocoder({
+      input,
+      geocode: {
+        outputFormat: OutputFormat.NDJSON,
+        searchTarget: SearchTarget.ALL,
+      },
+      useGlobalDB: false,
+    });
+
+    expect(JSON.parse(stdout)).toMatchObject({
+      "query": {
+        "input": "千葉県山武郡横芝光町横芝字真砂４８２番地の２"
+      },
+      "result": {
+        "output": "千葉県山武郡横芝光町横芝真砂482-2",
+        "others": [
+          "真砂482-2"
+        ],
+        "match_level": "machiaza",
+        "coordinate_level": "machiaza",
+        "lat": 35.66006,
+        "lon": 140.487422,
+        "lg_code": "124109",
+        "machiaza_id": "0049000",
+        "rsdt_addr_flg": 0,
+        "blk_id": null,
+        "rsdt_id": null,
+        "rsdt2_id": null,
+        "prc_id": null,
+        "pref": "千葉県",
+        "county": "山武郡",
+        "city": "横芝光町",
+        "ward": null,
+        "oaza_cho": "横芝",
+        "chome": null,
+        "koaza": null,
+        "blk_num": null,
+        "rsdt_num": null,
+        "rsdt_num2": null,
+        "prc_num1": null,
+        "prc_num2": null,
+        "prc_num3": null
+      }
+    });
+  });
   test('北海道札幌市白石区流通センター五丁目6-61', async () => {
     const input = '北海道札幌市白石区流通センター五丁目6-61';
     const { stdout } = await runGeocoder({

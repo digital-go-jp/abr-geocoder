@@ -55,7 +55,7 @@ if (!isMainThread && parentPort) {
               address: received.data.toString(),
               searchTarget: SearchTarget.ALL,
               fuzzy: undefined,
-              tag: undefined
+              tag: undefined,
             },
             taskId: received.taskId,
           });

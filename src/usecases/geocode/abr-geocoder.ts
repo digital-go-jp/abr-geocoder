@@ -22,14 +22,25 @@
  * SOFTWARE.
  */
 import { IWorkerThreadPool } from "@domain/services/thread/iworker-thread-pool";
+import { toSharedMemory } from "@domain/services/thread/shared-memory";
 import { WorkerThreadPool } from "@domain/services/thread/worker-thread-pool";
 import { WorkerPoolTaskInfo } from "@domain/services/thread/worker-thread-pool-task-info";
 import { GeocodeTransform } from '@usecases/geocode/worker/geocode-worker';
 import path from 'node:path';
-import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from "./models/abr-geocoder-di-container";
-import { AbrGeocoderInput } from "./models/abrg-input-data";
-import { Query, QueryJson } from "./models/query";
 import { FakeWorkerThreadPool } from "./fake-worker-thread-pool";
+import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
+import { AbrGeocoderInput } from "./models/abrg-input-data";
+import { CityAndWardTrieFinder } from "./models/city-and-ward-trie-finder";
+import { CountyAndCityTrieFinder } from "./models/county-and-city-trie-finder";
+import { KyotoStreetTrieFinder } from "./models/kyoto-street-trie-finder";
+import { OazaChoTrieFinder } from "./models/oaza-cho-trie-finder";
+import { PrefTrieFinder } from "./models/pref-trie-finder";
+import { Query, QueryJson } from "./models/query";
+import { Tokyo23TownTrieFinder } from "./models/tokyo23-town-finder";
+import { Tokyo23WardTrieFinder } from "./models/tokyo23-ward-trie-finder";
+import { WardAndOazaTrieFinder } from "./models/ward-and-oaza-trie-finder";
+import { WardTrieFinder } from "./models/ward-trie-finder";
+import { GeocodeWorkerInitData } from "./worker/geocode-worker-init-data";
 
 export class AbrGeocoder {
   private taskHead: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
@@ -113,9 +124,36 @@ export class AbrGeocoder {
     numOfThreads: number;
     signal?: AbortSignal;
   }) => {
+    // トライ木を作成するために必要な辞書データの読み込み
+    const pref = toSharedMemory(await PrefTrieFinder.loadDataFile(params.container));
+    const countyAndCity = toSharedMemory(await CountyAndCityTrieFinder.loadDataFile(params.container));
+    const cityAndWard = toSharedMemory(await CityAndWardTrieFinder.loadDataFile(params.container));
+    const kyotoStreet = toSharedMemory(await KyotoStreetTrieFinder.loadDataFile(params.container));
+    const oazaCho = toSharedMemory(await OazaChoTrieFinder.loadDataFile(params.container));
+    const wardAndOaza = toSharedMemory(await WardAndOazaTrieFinder.loadDataFile(params.container));
+    const ward = toSharedMemory(await WardTrieFinder.loadDataFile(params.container));
+    const tokyo23Ward = toSharedMemory(await Tokyo23WardTrieFinder.loadDataFile(params.container));
+    const tokyo23Town = toSharedMemory(await Tokyo23TownTrieFinder.loadDataFile(params.container));
+
+    const initData: GeocodeWorkerInitData = {
+      diContainer: params.container.toJSON(),
+      trieData: {
+        pref,
+        countyAndCity,
+        cityAndWard,
+        kyotoStreet,
+        oazaCho,
+        wardAndOaza,
+        ward,
+        tokyo23Ward,
+        tokyo23Town,
+      },
+      debug: false,
+    };
+
     // スレッド数が2未満、もしくは、jest で動かしている場合は、メインスレッドで処理する
     if (params.numOfThreads < 2 || process.env.JEST_WORKER_ID !== undefined) {
-      const geocodeTransform = await GeocodeTransform.create(params.container.toJSON());
+      const geocodeTransform = await GeocodeTransform.create(initData);
       const fakePool = new FakeWorkerThreadPool(geocodeTransform);
 
       return new AbrGeocoder(
@@ -124,7 +162,7 @@ export class AbrGeocoder {
       );
     }
 
-    const workerPool = new WorkerThreadPool<AbrGeocoderDiContainerParams, AbrGeocoderInput, QueryJson>({
+    const workerPool = new WorkerThreadPool<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
       // 最大何スレッド生成するか
       maxConcurrency: Math.max(1, params.numOfThreads),
 
@@ -133,10 +171,10 @@ export class AbrGeocoder {
       maxTasksPerWorker: 50,
 
       // geocode-worker.ts へのパス
-      filename: path.join(__dirname, 'worker', 'test-worker'),
+      filename: path.join(__dirname, 'worker', 'geocode-worker'),
 
       // geocode-worker.ts の初期化に必要なデータ
-      initData: params.container.toJSON(),
+      initData,
 
       signal: params.signal,
     });

@@ -27,7 +27,7 @@ import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { Duplex } from 'node:stream';
 import { isMainThread, MessagePort, parentPort, workerData } from "node:worker_threads";
 import { Readable, Writable } from "stream";
-import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from '../models/abr-geocoder-di-container';
+import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
 import { AbrGeocoderInput } from '../models/abrg-input-data';
 import { CityAndWardTrieFinder } from '../models/city-and-ward-trie-finder';
 import { CountyAndCityTrieFinder } from '../models/county-and-city-trie-finder';
@@ -39,7 +39,6 @@ import { Tokyo23TownTrieFinder } from '../models/tokyo23-town-finder';
 import { Tokyo23WardTrieFinder } from '../models/tokyo23-ward-trie-finder';
 import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
 import { WardTrieFinder } from '../models/ward-trie-finder';
-import { loadGeocoderTrees } from '../services/load-geoder-trees';
 import { CityAndWardTransform } from '../steps/city-and-ward-transform';
 import { CountyAndCityTransform } from '../steps/county-and-city-transform';
 import { GeocodeResultTransform } from '../steps/geocode-result-transform';
@@ -54,9 +53,11 @@ import { RsdtDspTransform } from '../steps/rsdt-dsp-transform';
 import { Tokyo23TownTranform } from '../steps/tokyo23town-transform';
 import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 // import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
-import { setFlagsFromString } from 'v8';
-import { runInNewContext } from 'vm';
+// import { setFlagsFromString } from 'v8';
+// import { runInNewContext } from 'vm';
 import { WardTransform } from '../steps/ward-transform';
+import { GeocodeWorkerInitData } from './geocode-worker-init-data';
+import { fromSharedMemory } from '@domain/services/thread/shared-memory';
 
 export class GeocodeTransform extends Duplex {
 
@@ -174,17 +175,23 @@ export class GeocodeTransform extends Duplex {
     callback();
   }
  
-  static readonly create = async (params: Required<AbrGeocoderDiContainerParams>) => {
-    const container = new AbrGeocoderDiContainer(params);
+  static readonly create = async (params: Required<GeocodeWorkerInitData>) => {
+    const container = new AbrGeocoderDiContainer(params.diContainer);
     const dbCtrl = container.database;
     const logger: DebugLogger | undefined = container.logger;
 
-    const trees = await loadGeocoderTrees(params);
-    
     const result = new GeocodeTransform({
       dbCtrl,
       logger,
-      ...trees,
+      prefTrie: new PrefTrieFinder(fromSharedMemory(params.trieData.pref)),
+      countyAndCityTrie: new CountyAndCityTrieFinder(fromSharedMemory(params.trieData.countyAndCity)),
+      cityAndWardTrie: new CityAndWardTrieFinder(fromSharedMemory(params.trieData.cityAndWard)),
+      kyotoStreetTrie: new KyotoStreetTrieFinder(fromSharedMemory(params.trieData.kyotoStreet)),
+      oazaChoTrie: new OazaChoTrieFinder(fromSharedMemory(params.trieData.oazaCho)),
+      wardAndOazaTrie: new WardAndOazaTrieFinder(fromSharedMemory(params.trieData.wardAndOaza)),
+      wardTrie: new WardTrieFinder(fromSharedMemory(params.trieData.ward)),
+      tokyo23WardTrie: new Tokyo23WardTrieFinder(fromSharedMemory(params.trieData.tokyo23Ward)),
+      tokyo23TownTrie: new Tokyo23TownTrieFinder(fromSharedMemory(params.trieData.tokyo23Town)),
     });
 
     return result;
@@ -200,10 +207,10 @@ if (!isMainThread && parentPort) {
   //   inspector.waitForDebugger();
   // }
     
-  setFlagsFromString('--expose_gc');
-  const gc = runInNewContext('gc'); // nocommit
+  // setFlagsFromString('--expose_gc');
+  // const gc = runInNewContext('gc'); // nocommit
 
-  setInterval(() => gc(), 5000);
+  // setInterval(() => gc(), 5000);
 
   (async (parentPort: MessagePort) => {
     const reader = new Readable({
@@ -211,8 +218,9 @@ if (!isMainThread && parentPort) {
       read() {},
     });
 
-    workerData.debug = true;
-    const geocodeTransform = await GeocodeTransform.create(workerData);
+    const initData = workerData as GeocodeWorkerInitData;
+    initData.debug = true;
+    const geocodeTransform = await GeocodeTransform.create(initData);
 
     // メインスレッドからメッセージを受け取る
     parentPort.on('message', (task: string) => {

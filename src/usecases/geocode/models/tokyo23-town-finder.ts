@@ -1,6 +1,7 @@
 import { DASH } from "@config/constant-values";
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
+import { removeFiles } from "@domain/services/remove-files";
 import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,16 +9,12 @@ import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
-import { TrieAddressFinder } from "./trie/trie-finder";
-import { removeFiles } from "@domain/services/remove-files";
+import { TrieAddressFinder2 } from "./trie/trie-finder2";
+import { FileTrieWriter } from "./trie/file-trie-writer";
 
-export class Tokyo23TownTrieFinder extends TrieAddressFinder<TownMatchingInfo> {
+export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
 
-  private constructor() {
-    super();
-  }
-
-  private static normalizeStr(address: string): string {
+  static normalize(address: string): string {
     // 片仮名を平仮名に変換する
     address = toHiragana(address);
 
@@ -33,48 +30,60 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder<TownMatchingInfo> {
     return address;
   }
 
-  static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
+  private static readonly getCacheFilePath = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
-
     const commonDb = await diContainer.database.openCommonDb();
     const genHash = commonDb.getTokyo23TownsGeneratorHash();
 
-    const tree = new Tokyo23TownTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, `tokyo23-town_${genHash}.v8`);
+    return path.join(diContainer.cacheDir, `tokyo23-town_${genHash}.abrg2`);
+  };
+
+  static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
+    const cacheFilePath = await Tokyo23TownTrieFinder.getCacheFilePath(diContainer);
     const isExist = fs.existsSync(cacheFilePath);
-    try {
-      if (isExist) {
-        // キャッシュがあれば、キャッシュから読み込む
-        const encoded = await fs.promises.readFile(cacheFilePath);
-        tree.import(encoded);
-        return tree;
-      }
-    } catch (_e: unknown) {
-      // インポートエラーが発生した場合は、キャッシュを作り直すので、
-      // ここではエラーを殺すだけで良い
+    if (isExist) {
+      return;
     }
 
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: diContainer.cacheDir,
-      filename: 'tokyo23-town_.*\\.v8',
+      filename: 'tokyo23-town_.*\\.abrg2',
     });
-
+    
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
+    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getTokyo23Towns();
-
+    const writer = await FileTrieWriter.openFile(cacheFilePath);
     for (const row of rows) {
-      tree.append({
-        key: Tokyo23TownTrieFinder.normalizeStr(row.key),
+      await writer.addNode({
+        key: Tokyo23TownTrieFinder.normalize(row.key),
         value: row,
       });
     }
+    await writer.close();
+  };
 
-    // キャッシュファイルに保存
-    const encoded = tree.export();
-    await fs.promises.writeFile(cacheFilePath, encoded);
-
-    return tree;
+  static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
+    const cacheFilePath = await Tokyo23TownTrieFinder.getCacheFilePath(diContainer);
+    const isExist = fs.existsSync(cacheFilePath);
+    if (!isExist) {
+      await Tokyo23TownTrieFinder.createDictionaryFile(diContainer);
+    }
+    
+    try {
+      // TrieFinderが作成できればOK
+      const data = await fs.promises.readFile(cacheFilePath);
+      const first100bytes = data.subarray(0, 100);
+      new Tokyo23TownTrieFinder(first100bytes);
+      return data;
+    } catch (_e: unknown) {
+      // エラーが発生する場合は、再作成する
+      await fs.promises.unlink(cacheFilePath);
+      await Tokyo23TownTrieFinder.createDictionaryFile(diContainer);
+      const data = await fs.promises.readFile(cacheFilePath);
+      return data;
+    }
   };
 }

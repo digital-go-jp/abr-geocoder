@@ -165,8 +165,7 @@ export class OazaChomeTransform extends Transform {
         let anyAmbiguous = false;
         // 複数都道府県にヒットする可能性があるので、全て試す
         filteredResult?.forEach(result => {
-          anyAmbiguous = anyAmbiguous || result.ambiguous;
-          let ambiguousCnt = targetQuery.ambiguousCnt + (result.ambiguous ? 1 : 0);
+          let ambiguousCnt = targetQuery.ambiguousCnt + result.ambiguousCnt;
           let matchedCnt = targetQuery.matchedCnt + result.depth;
           if (targetQuery.oaza_cho && targetQuery.oaza_cho !== result.info?.oaza_cho) {
             anyAmbiguous = true;

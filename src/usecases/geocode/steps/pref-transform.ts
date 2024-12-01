@@ -72,7 +72,7 @@ export class PrefTransform extends Transform {
         if (!mResult.info) {
           continue;
         }
-        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+        anyAmbiguous = anyAmbiguous || mResult.ambiguousCnt > 0;
         anyHit = true;
         results.add(query.copy({
           pref_key: mResult.info.pref_key,
@@ -84,7 +84,7 @@ export class PrefTransform extends Transform {
           match_level: MatchLevel.PREFECTURE,
           coordinate_level: MatchLevel.PREFECTURE,
           matchedCnt: mResult.depth,
-          ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + mResult.ambiguousCnt, 
         }));
       }
       if (!anyHit || anyAmbiguous) {

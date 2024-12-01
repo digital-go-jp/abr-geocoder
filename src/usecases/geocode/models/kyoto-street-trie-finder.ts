@@ -1,7 +1,9 @@
 import { DASH, SPACE } from "@config/constant-values";
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
+import { removeFiles } from "@domain/services/remove-files";
 import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
+import { MatchLevel } from "@domain/types/geocode/match-level";
 import fs from 'node:fs';
 import path from 'node:path';
 import { jisKanji } from '../services/jis-kanji';
@@ -9,17 +11,12 @@ import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from "../services/to-hankaku-alpha-num";
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
-import { TrieAddressFinder } from "./trie/trie-finder";
-import { MatchLevel } from "@domain/types/geocode/match-level";
-import { removeFiles } from "@domain/services/remove-files";
+import { TrieAddressFinder2 } from "./trie/trie-finder2";
+import { FileTrieWriter } from "./trie/file-trie-writer";
 
-export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
+export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> {
 
-  private constructor() {
-    super();
-  }
-
-  private static normalizeStr(address: string): string {
+  static normalize(address: string): string {
     // 漢数字を半角数字に変換する
     address = kan2num(address);
 
@@ -51,36 +48,32 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
     return address;
   }
 
-  static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
+  private static readonly getCacheFilePath = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
-
     const commonDb = await diContainer.database.openCommonDb();
     const genHash = commonDb.getKyotoStreetGeneratorHash();
 
-    const tree = new KyotoStreetTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, `kyoto-street_${genHash}.v8`);
+    return path.join(diContainer.cacheDir, `kyoto-street_${genHash}.abrg2`);
+  };
+
+  static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
+    const cacheFilePath = await KyotoStreetTrieFinder.getCacheFilePath(diContainer);
     const isExist = fs.existsSync(cacheFilePath);
-    try {
-      if (isExist) {
-        // キャッシュがあれば、キャッシュから読み込む
-        const encoded = await fs.promises.readFile(cacheFilePath);
-        tree.import(encoded);
-        return tree;
-      }
-    } catch (_e: unknown) {
-      // インポートエラーが発生した場合は、キャッシュを作り直すので、
-      // ここではエラーを殺すだけで良い
+    if (isExist) {
+      return;
     }
 
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: diContainer.cacheDir,
-      filename: 'kyoto-street_.*\\.v8',
+      filename: 'kyoto-street_.*\\.abrg2',
     });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
+    const commonDb = await diContainer.database.openCommonDb();
     const rows = await commonDb.getKyotoStreetRows();
+    const writer = await FileTrieWriter.openFile(cacheFilePath);
 
     for (const row of rows) {
       row.oaza_cho = toHankakuAlphaNum(row.oaza_cho);
@@ -88,8 +81,8 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
       switch (row.match_level) {
         case MatchLevel.MACHIAZA: {
           // 通り名がヒットしない場合、大字だけで検索を行う
-          tree.append({
-            key: KyotoStreetTrieFinder.normalizeStr(row.oaza_cho),
+          await writer.addNode({
+            key: KyotoStreetTrieFinder.normalize(row.oaza_cho),
             value: row,
           });
           break;
@@ -99,15 +92,14 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
           row.koaza = toHankakuAlphaNum(row.koaza);
           if (row.koaza_aka_code === 2) {
             // (通り名)+(大字)
-            tree.append({
-              key: KyotoStreetTrieFinder.normalizeStr(row.koaza + row.oaza_cho),
+            await writer.addNode({
+              key: KyotoStreetTrieFinder.normalize(row.koaza + row.oaza_cho),
               value: row,
             });
           } else {
             // (大字)+(丁目)
-            const key = KyotoStreetTrieFinder.normalizeStr(row.oaza_cho + row.chome);
-            tree.append({
-              key,
+            await writer.addNode({
+              key: KyotoStreetTrieFinder.normalize(row.oaza_cho + row.chome),
               value: row,
             });
           }
@@ -120,11 +112,28 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder<KoazaMachingInfo> {
           break;
       }
     }
+    await writer.close();
+  };
 
-    // キャッシュファイルに保存
-    const encoded = tree.export();
-    await fs.promises.writeFile(cacheFilePath, encoded);
-
-    return tree;
+  static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
+    const cacheFilePath = await KyotoStreetTrieFinder.getCacheFilePath(diContainer);
+    const isExist = fs.existsSync(cacheFilePath);
+    if (!isExist) {
+      await KyotoStreetTrieFinder.createDictionaryFile(diContainer);
+    }
+    
+    try {
+      // TrieFinderが作成できればOK
+      const data = await fs.promises.readFile(cacheFilePath);
+      const first100bytes = data.subarray(0, 100);
+      new KyotoStreetTrieFinder(first100bytes);
+      return data;
+    } catch (_e: unknown) {
+      // エラーが発生する場合は、再作成する
+      await fs.promises.unlink(cacheFilePath);
+      await KyotoStreetTrieFinder.createDictionaryFile(diContainer);
+      const data = await fs.promises.readFile(cacheFilePath);
+      return data;
+    }
   };
 }

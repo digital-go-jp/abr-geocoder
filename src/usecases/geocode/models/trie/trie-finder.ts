@@ -24,6 +24,7 @@
 import crc32Lib from "@domain/services/crc32-lib";
 import { deserialize, serialize } from "node:v8";
 import { CharNode } from "./char-node";
+import { TrieFinderResult } from "./common";
 
 
 export interface ITrieNode<T> {
@@ -31,25 +32,6 @@ export interface ITrieNode<T> {
   children: Map<string, ITrieNode<T>>;
 }
 
-export class TrieFinderResult<T> {
-  public readonly info: T | undefined;
-  public readonly unmatched: CharNode | undefined;
-  public readonly depth: number;
-  public readonly ambiguous: boolean;
-
-  constructor(params: {
-    info: T | undefined;
-    unmatched: CharNode | undefined;
-    depth: number;
-    ambiguous: boolean;
-  }) {
-    this.info = params.info;
-    this.unmatched = params.unmatched;
-    this.depth = params.depth;
-    this.ambiguous = params.ambiguous;
-    Object.freeze(this);
-  }
-}
 
 type InternalResult<T> = {
   info: T | undefined;
@@ -172,7 +154,7 @@ export class TrieAddressFinder<T> {
           info: internalResult.info,
           unmatched: internalResult.unmatched,
           depth: internalResult.depth,
-          ambiguous: internalResult.ambiguous,
+          ambiguousCnt: internalResult.ambiguous ? 1 : 0,
         }),
       );
     }

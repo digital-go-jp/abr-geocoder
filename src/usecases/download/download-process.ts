@@ -31,7 +31,6 @@ import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { PrefLgCode, isPrefLgCode } from '@domain/types/pref-lg-code';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
-import { loadGeocoderTrees, removeGeocoderCaches } from '@usecases/geocode/services/load-geoder-trees';
 import { StatusCodes } from 'http-status-codes';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -39,6 +38,16 @@ import timers from 'node:timers/promises';
 import { DownloadDiContainer } from './models/download-di-container';
 import { CsvParseTransform } from './transformations/csv-parse-transform';
 import { DownloadTransform } from './transformations/download-transform';
+import { CityAndWardTrieFinder } from '@usecases/geocode/models/city-and-ward-trie-finder';
+import { CountyAndCityTrieFinder } from '@usecases/geocode/models/county-and-city-trie-finder';
+import { KyotoStreetTrieFinder } from '@usecases/geocode/models/kyoto-street-trie-finder';
+import { OazaChoTrieFinder } from '@usecases/geocode/models/oaza-cho-trie-finder';
+import { PrefTrieFinder } from '@usecases/geocode/models/pref-trie-finder';
+import { Tokyo23TownTrieFinder } from '@usecases/geocode/models/tokyo23-town-finder';
+import { Tokyo23WardTrieFinder } from '@usecases/geocode/models/tokyo23-ward-trie-finder';
+import { WardAndOazaTrieFinder } from '@usecases/geocode/models/ward-and-oaza-trie-finder';
+import { WardTrieFinder } from '@usecases/geocode/models/ward-trie-finder';
+import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
 
 export type DownloaderOptions = {
   // データベース接続に関する情報
@@ -92,13 +101,25 @@ export class Downloader {
     // --------------------------------------
     // ダウンロード開始
     // --------------------------------------
+    
+    const createDictionaryFileFunctions = [
+      PrefTrieFinder.loadDataFile,
+      CountyAndCityTrieFinder.loadDataFile,
+      CityAndWardTrieFinder.loadDataFile,
+      KyotoStreetTrieFinder.loadDataFile,
+      OazaChoTrieFinder.loadDataFile,
+      WardAndOazaTrieFinder.loadDataFile,
+      WardTrieFinder.loadDataFile,
+      Tokyo23WardTrieFinder.loadDataFile,
+      Tokyo23TownTrieFinder.loadDataFile,
+    ];
 
     // LGCodeを整理する
     const lgCodeFilter = this.aggregateLGcodes(params.lgCodes);
     
     // ダウンロードリクエストを作成する
     const requests = await this.createDownloadRequests(lgCodeFilter);
-    const total = requests.length;
+    const total = requests.length + createDictionaryFileFunctions.length;
 
     // ランダムに入れ替える（DBの書き込みを分散させるため）
     requests.sort(() => {
@@ -168,16 +189,21 @@ export class Downloader {
     await downloadTransform.close();
     await csvParseTransform.close();
 
-    // キャッシュの削除
-    await removeGeocoderCaches({
-      cacheDir: this.container.urlCacheMgr.cacheDir,
-    });
     // キャッシュの作成
-    await loadGeocoderTrees({
+    const abrDirContainer = new AbrGeocoderDiContainer({
       cacheDir: this.container.urlCacheMgr.cacheDir,
       database: this.container.database.connectParams,
       debug: false,
     });
+
+    let cacheCreateProcess = 0;
+    for (const creater of createDictionaryFileFunctions) {
+      await creater(abrDirContainer);
+      cacheCreateProcess++;
+      if (params.progress) {
+        params.progress(dst.count + cacheCreateProcess, total + 1);
+      }
+    }
   }
   
 

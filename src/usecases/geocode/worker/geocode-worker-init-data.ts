@@ -21,41 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export class SemaphoreManager {
+import { AbrGeocoderDiContainerParams } from "../models/abr-geocoder-di-container";
 
-  static readonly UNLOCKED = 0;
-  static readonly LOCKED = 1;
-
-  private readonly semaphore: Int32Array;
-  public readonly size: number;
-
-  constructor(
-    shared: ArrayBuffer,
-  ) {
-    
-    this.semaphore = new Int32Array(shared);
-    this.size = this.semaphore.byteLength;
-  }
-
-  enterAwait(idx: number): Promise<number> {
-
-    idx = idx % this.semaphore.byteLength;
-
-    return new Promise((resolve: (idx: number) => void) => {
-      while (true) {
-        if (Atomics.compareExchange(this.semaphore, idx, SemaphoreManager.UNLOCKED, SemaphoreManager.LOCKED) === SemaphoreManager.UNLOCKED) {
-          resolve(idx);
-          return;
-        }
-        Atomics.wait(this.semaphore, idx, SemaphoreManager.LOCKED);
-      }
-    });
-  }
-
-  leave(idx: number) {
-    idx = idx % this.semaphore.byteLength;
-    
-    Atomics.compareExchange(this.semaphore, idx, SemaphoreManager.LOCKED, SemaphoreManager.UNLOCKED);
-    Atomics.notify(this.semaphore, idx, 1);
-  }
-}
+export type GeocodeWorkerInitData = {
+  diContainer: AbrGeocoderDiContainerParams;
+  trieData: {
+    pref: Uint8Array,
+    countyAndCity: Uint8Array,
+    cityAndWard: Uint8Array,
+    kyotoStreet: Uint8Array,
+    oazaCho: Uint8Array,
+    wardAndOaza: Uint8Array,
+    ward: Uint8Array,
+    tokyo23Ward: Uint8Array,
+    tokyo23Town: Uint8Array,
+  };
+  debug: boolean;
+};
