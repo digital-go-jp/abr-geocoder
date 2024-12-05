@@ -109,7 +109,7 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
     callback: TransformCallback,
   ): void {
 
-    const unmatched: string[] = [...result.unmatched];
+    const unmatched: string[] = [...result.unmatched || []];
     if (result.tempAddress) {
       unmatched.push(result.tempAddress?.toOriginalString()?.trim());
     }

@@ -30,7 +30,7 @@ export class SemaphoreManager {
   public readonly size: number;
 
   constructor(
-    shared: ArrayBuffer,
+    shared: SharedArrayBuffer,
   ) {
     
     this.semaphore = new Int32Array(shared);

@@ -26,11 +26,7 @@ import { DbTableName } from "@config/db-table-name";
 import { RsdtBlkInfo } from "@domain/types/geocode/rsdt-blk-info";
 import { IRsdtBlkDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
-
-export type GetBlockNumRowsOptions = {
-  town_key: number;
-  blk_num: string; 
-};
+import crc32Lib from "@domain/services/crc32-lib";
 
 export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbGeocode {
 
@@ -38,6 +34,10 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
     this.driver.close();
   }
 
+  getBlockNumRowsGeneratorHash() : string {
+    return crc32Lib.fromString(this.getBlockNumRows.toString());
+  }
+  
   async hasTable(): Promise<boolean> {
     const rows = this.prepare<{ name: string; }, { name: string; }>(`
       SELECT
@@ -53,14 +53,14 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
     return rows.length === 1;
   }
 
-  async getBlockNumRows(where: Required<GetBlockNumRowsOptions>): Promise<RsdtBlkInfo[]> {
+  async getBlockNumRows(): Promise<RsdtBlkInfo[]> {
     const existTable = await this.hasTable();
     if (!existTable) {
       return [];
     }
     
     return new Promise((resolve: (rows: RsdtBlkInfo[]) => void) => {
-      const rows = this.prepare<GetBlockNumRowsOptions, RsdtBlkInfo>(`
+      const rows = this.prepare<{}, RsdtBlkInfo>(`
         SELECT
           rsdtblk_key,
           town_key,
@@ -70,10 +70,7 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
           ${DataField.REP_LON.dbColumn} as rep_lon
         FROM
           ${DbTableName.RSDT_BLK}
-        WHERE
-          town_key = @town_key AND
-          ${DataField.BLK_NUM.dbColumn} = @blk_num
-      `).all(where);
+      `).all({});
 
       resolve(rows);
     });

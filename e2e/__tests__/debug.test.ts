@@ -30,6 +30,96 @@ import { runGeocoder } from './common';
 
 describe('debug', () => {
   
+  test('京都市北区大宮西脇台町17番地の2', async () => {
+    const input = '京都市北区大宮西脇台町17番地の2';
+    const { stdout } = await runGeocoder({
+      input,
+      geocode: {
+        outputFormat: OutputFormat.NDJSON,
+        searchTarget: SearchTarget.ALL,
+      },
+      useGlobalDB: false,
+    });
+
+    expect(JSON.parse(stdout)).toMatchObject({
+      "query": {
+        "input": "京都市北区大宮西脇台町17番地の2"
+      },
+      "result": {
+        "output": "京都府京都市北区大宮西脇台町17-2",
+        "others": [],
+        "match_level": "parcel",
+        "coordinate_level": "machiaza",
+        "lat": 35.053552,
+        "lon": 135.743577,
+        "lg_code": "261017",
+        "machiaza_id": "0035000",
+        "rsdt_addr_flg": 0,
+        "blk_id": null,
+        "rsdt_id": null,
+        "rsdt2_id": null,
+        "prc_id": "000170000200000",
+        "pref": "京都府",
+        "county": null,
+        "city": "京都市",
+        "ward": "北区",
+        "oaza_cho": "大宮西脇台町",
+        "chome": null,
+        "koaza": null,
+        "blk_num": null,
+        "rsdt_num": null,
+        "rsdt_num2": null,
+        "prc_num1": "17",
+        "prc_num2": "2",
+        "prc_num3": null
+      }
+    });
+  });
+  test('上京区御前通今出川上る鳥居前町671', async () => {
+    const input = '上京区御前通今出川上る鳥居前町671';
+    const { stdout } = await runGeocoder({
+      input,
+      geocode: {
+        outputFormat: OutputFormat.NDJSON,
+        searchTarget: SearchTarget.ALL,
+      },
+      useGlobalDB: false,
+    });
+
+    expect(JSON.parse(stdout)).toMatchObject({
+      "query": {
+        "input": "上京区御前通今出川上る鳥居前町671"
+      },
+      "result": {
+        "output": "京都府京都市上京区御前通今出川上る鳥居前町671",
+        "others": [],
+        "match_level": "parcel",
+        "coordinate_level": "machiaza_detail",
+        "lat": 35.031562,
+        "lon": 135.73729,
+        "lg_code": "261025",
+        "machiaza_id": "0344110",
+        "rsdt_addr_flg": 0,
+        "blk_id": null,
+        "rsdt_id": null,
+        "rsdt2_id": null,
+        "prc_id": "006710000000000",
+        "pref": "京都府",
+        "county": null,
+        "city": "京都市",
+        "ward": "上京区",
+        "oaza_cho": "鳥居前町",
+        "chome": null,
+        "koaza": "御前通今出川上る",
+        "blk_num": null,
+        "rsdt_num": null,
+        "rsdt_num2": null,
+        "prc_num1": "671",
+        "prc_num2": null,
+        "prc_num3": null
+      }
+    });
+  });
   test('千葉県山武郡横芝光町横芝字真砂４８２番地の２', async () => {
     const input = '千葉県山武郡横芝光町横芝字真砂４８２番地の２';
     const { stdout } = await runGeocoder({

@@ -42,7 +42,7 @@ import {
   VERSION_BYTES,
 } from './abrg-file-structure';
 import { CharNode } from './char-node';
-import { TrieFinderResult } from './common';
+import { TrieFinderResult, TrieTreeBuilderFinderCommon } from './common';
 
 export type TraverseQuery = {
   next: TraverseQuery | undefined;
@@ -93,120 +93,19 @@ class FileTrieResults {
   }
 }
 
-export class TrieAddressFinder2<T> {
+export class TrieAddressFinder2<T> extends TrieTreeBuilderFinderCommon {
   // ヘッダー
   private readonly header: AbrgDictHeader;
 
-  constructor(private readonly buffer: Buffer) {
-    this.header = this.readHeader();
+  constructor(fileBuffer: Buffer) {
+    super(fileBuffer);
+    const headerData = this.readHeader();
+    this.debug = false;
 
-    // console.log(`headerSize: ${this.header.headerSize} bytes`);
-    // console.log(`version: ${this.header.version.major}.${this.header.version.minor}`);
-    // console.log(`trieNodeOffset: ${this.header.trieNodeOffset}`);
-    // console.log(`dataOffset: ${this.header.dataNodeOffset}`);
-    // console.log("");
-  }
-
-  private readHeader() {
-    let offset = 0;
-
-    // ファイルマジックの確認
-    const magic = this.buffer.toString('utf8', offset, ABRG_FILE_MAGIC.size);
-    if (magic !== 'abrg') {
-      throw new Error(`Invalid file format: ${magic}`);
+    if (!headerData) {
+      throw new Error(`Can not load the abrg file`);
     }
-    offset += ABRG_FILE_MAGIC.size;
-
-    // ヘッダーサイズを取得
-    const headerSize = this.buffer.readUInt16BE(ABRG_FILE_HEADER_SIZE.offset);
-    offset += ABRG_FILE_HEADER_SIZE.size;
-
-    // 書き込んだバージョンを確認
-    // (将来的にバージョンの互換性をチェックするために使用する)
-    const majorVersion = this.buffer.readUInt8(VERSION_BYTES.offset);
-    const minorVersion = this.buffer.readUInt8(VERSION_BYTES.offset + 1);
-    offset += VERSION_BYTES.size;
-
-    // トライ木のオフセット値を取得
-    const trieNodeOffset = this.buffer.readUInt32BE(TRIE_NODE_ENTRY_POINT.offset);
-    offset += TRIE_NODE_ENTRY_POINT.size;
-
-    // データノードへのオフセット値
-    const dataNodeOffset = this.buffer.readUInt32BE(DATA_NODE_ENTRY_POINT.offset);
-    offset += DATA_NODE_ENTRY_POINT.size;
-
-    return {
-      version: {
-        major: majorVersion,
-        minor: minorVersion,
-      },
-      trieNodeOffset,
-      dataNodeOffset,
-      headerSize,
-    };
-  }
-
-
-  // ノード情報を読み込む
-  private readTrieNode(nodeOffset: number): ReadTrieNode {
-    let offset = 0;
-
-    // ノードサイズ
-    const nodeSize = this.buffer.readUInt8(nodeOffset + TRIE_NODE_SIZE_FIELD.offset);
-    offset += TRIE_NODE_SIZE_FIELD.size;
-
-    // 兄弟ノードへのオフセット値
-    const siblingOffset = this.buffer.readUInt32BE(nodeOffset + TRIE_NODE_SIBLING_OFFSET.offset);
-    offset += TRIE_NODE_SIBLING_OFFSET.size;
-
-    // 子ノードへのオフセット値
-    const childOffset = this.buffer.readUInt32BE(nodeOffset + TRIE_NODE_CHILD_OFFSET.offset);
-    offset += TRIE_NODE_CHILD_OFFSET.size;
-
-
-    // データノードへのオフセット値の連結リスト
-    const headValueList: TrieHashListNode = {
-      offset: 0,
-      hashValueOffset: 0,
-      next: undefined,
-    };
-    let tailHashValueList: TrieHashListNode = headValueList;
-    let storedHashValueOffset: number = 0;
-    let currentOffset = this.buffer.readUInt32BE(nodeOffset + TRIE_NODE_HASH_LINKED_LIST_OFFSET.offset);
-    let nextOffset: number = 0;
-    while (currentOffset) {
-      // 保存されているハッシュ値へのオフセット値
-      storedHashValueOffset = this.buffer.readUInt32BE(HASH_LINK_NODE_OFFSET_VALUE.offset + currentOffset);
-      // 次のハッシュオフセットノードへのオフセット値
-      nextOffset = this.buffer.readUInt32BE(HASH_LINK_NODE_NEXT_OFFSET.offset + currentOffset);
-      
-      tailHashValueList.next = {
-        offset: currentOffset,
-        hashValueOffset: storedHashValueOffset,
-        next: undefined,
-      };
-      tailHashValueList = tailHashValueList.next;
-      currentOffset = nextOffset;
-    }
-    offset += TRIE_NODE_HASH_LINKED_LIST_OFFSET.size;
-
-    // ノード名
-    let name = '';
-    if (offset < nodeSize) {
-      const start = offset + nodeOffset;
-      const end = start + (nodeSize - offset);
-      name = this.buffer.toString('utf8', start, end);
-      offset += nodeSize - offset;
-    }
-
-    return {
-      name,
-      nodeSize,
-      offset: nodeOffset,
-      siblingOffset,
-      childOffset,
-      hashValueList: headValueList.next,
-    };
+    this.header = headerData;
   }
 
   find({ 
@@ -231,6 +130,7 @@ export class TrieAddressFinder2<T> {
       return [];
     }
 
+    // targetに対する探索を行う
     const leafNodes = this.traverseToLeaf({
       target,
       partialMatches,
@@ -241,6 +141,8 @@ export class TrieAddressFinder2<T> {
     if (!leafNodes || leafNodes.length == 0) {
       return [];
     }
+
+    // マッチした結果を実データに変換する
     const results: TrieFinderResult<T>[] = [];
     leafNodes.forEach(node => {
       if (!node.hashValueList) {
@@ -257,15 +159,10 @@ export class TrieAddressFinder2<T> {
         });
         dataNodeHead = dataNodeHead.next;
       }
-      
-      // const originalData = convertToOriginalFields(data, reverseFieldMapping);
-      // console.log({
-      //   ...originalData,
-      //   node,
-      // });
     });
     return results;
   }
+
   private traverseToLeaf({
     target,
     partialMatches = false,
@@ -335,12 +232,15 @@ export class TrieAddressFinder2<T> {
       let matchedCnt: number = head.matchedCnt;
       let path: string = head.path;
       const allowExtraChallenge: boolean | undefined = head.allowExtraChallenge;
-      let node: ReadTrieNode;
+      let node: ReadTrieNode | null = null;
       let offset: number | undefined = head.offset;
       const matches: TraverseQuery[] = head.partialMatches || [];
       while (head && target && offset) {
         // 現在のノード（currentOffset）の情報を読取る
         node = this.readTrieNode(offset);
+        if (!node) {
+          throw `Can not load the trie node at ${offset}`;
+        }
         
         if (target?.char !== fuzzy && target?.char !== node.name) {
           if (node.siblingOffset) {
@@ -379,6 +279,7 @@ export class TrieAddressFinder2<T> {
               tail = tail.next;
             }
           }
+
           break;
         }
 
@@ -399,6 +300,9 @@ export class TrieAddressFinder2<T> {
           tail = tail.next;
           ambiguousCnt++;
         }
+        if (this.debug) {
+          console.log(matchedCnt, offset, node);
+        }
         path += target.char;
 
         // マッチした文字数のインクリメント
@@ -408,6 +312,7 @@ export class TrieAddressFinder2<T> {
         if (!target.next || !node.childOffset) {
           if (!node.hashValueList) {
             break;
+            // throw `Found the target node, but it does not have the hashValueList`;
           }
 
           // 保存する
@@ -438,7 +343,7 @@ export class TrieAddressFinder2<T> {
             next: undefined,
           });
         }
-        
+
         // 文字ポインターを移動させる
         target = target.next.moveToNext();
 
@@ -446,7 +351,7 @@ export class TrieAddressFinder2<T> {
       }
 
       // リーフには到達しないが部分的にマッチした場合は結果に含める
-      if (partialMatches && target && matches.length > 0) {
+      if (partialMatches) {
         matches.forEach(match => results.add(match));
       }
       
@@ -457,61 +362,4 @@ export class TrieAddressFinder2<T> {
     }
     return Array.from(results.values()).filter(x => x.hashValueList && x.path);
   }
-
-  readDataNode(hashValueOffset: number) {
-    let offset = hashValueOffset;
-    const nextDataNodeOffset = this.buffer.readUInt32BE(hashValueOffset);
-    offset += DATA_NODE_NEXT_OFFSET.size;
-
-    let nodeSize = this.buffer.readUint16BE(offset);
-    offset += DATA_NODE_SIZE_FIELD.size;
-    nodeSize -= DATA_NODE_NEXT_OFFSET.offset;
-    nodeSize -= DATA_NODE_SIZE_FIELD.offset;
-
-    const hashValue = this.buffer.readUInt32BE(offset);
-    offset += DATA_NODE_HASH_VALUE.size;
-    nodeSize -= DATA_NODE_HASH_VALUE.offset;
-
-    let data = undefined;
-    if (nodeSize > 0) {
-      const dataStr = this.buffer.toString('utf8', offset, nodeSize + offset);
-      data = JSON.parse(dataStr);
-    }
-     
-    return {
-      data,
-      nodeSize,
-      hashValue,
-      offset: hashValueOffset,
-      nextDataNodeOffset,
-    };
-  }
 }
-
-// ファイル読み込みと探索実行
-// fs.readFile(`test-with-paging.bin`, (err, data) => {
-//   if (err) throw err;
-
-//   const finder = new TrieAddressFinder2(data);
-//   [
-//     "中央区",
-//     "静岡県沼津市",
-//     "静岡県沼津市岡一色",
-//     "静岡県沼津市岡一色485-6",
-//     "静岡県沼津市岡一色485-3",
-//     "静岡県沼津市岡宮",
-//     "静岡県沼津市岡宮421",
-//     "静岡県三島市加茂川町",
-//     "静岡県三島市加茂川町123",
-//     "東京都千代田区紀尾井町1-3",
-//     "東京都千代田区紀尾井町1",
-//     "東京都調布市国領町3-8-15",
-//     "東京都調布市国領町",
-//   ].forEach(addr => {
-//     const results = finder.find({
-//       target: CharNode.create(addr),
-//       partialMatches: false,
-//     });
-//     console.log(results);
-//   })
-// });

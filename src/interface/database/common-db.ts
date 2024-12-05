@@ -103,10 +103,8 @@ export interface IRsdtBlkDbDownload {
 }
 
 export interface IRsdtBlkDbGeocode {
-  getBlockNumRows(where: Required<{
-    town_key: number;
-    blk_num: string; 
-  }>): Promise<RsdtBlkInfo[]>;
+  getBlockNumRows(): Promise<RsdtBlkInfo[]>;
+  getBlockNumRowsGeneratorHash(): string;
   close(): Promise<void>
 }
 
@@ -117,9 +115,7 @@ export interface IRsdtDspDbDownload {
 }
 
 export interface IRsdtDspDbGeocode {
-  getRsdtDspRows(where: Required<{
-    rsdtblk_key: number;
-  }>): Promise<RsdtDspInfo[]>;
+  getRsdtDspRows(): Promise<RsdtDspInfo[]>;
   close(): Promise<void>
 }
 
@@ -130,11 +126,7 @@ export interface IParcelDbDownload {
 }
 
 export interface IParcelDbGeocode {
-  getParcelRows(where: Required<{
-    city_key: number;
-    town_key?: number | null;
-    prc_id: string; 
-  }>): Promise<ParcelInfo[]>;
+  getParcelRows(): Promise<ParcelInfo[]>;
   close(): Promise<void>
 }
 

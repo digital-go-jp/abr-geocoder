@@ -27,7 +27,11 @@ import { MatchLevel } from "@domain/types/geocode/match-level";
   });
   await KyotoStreetTrieFinder.createDictionaryFile(container);
 
-  const finder = await KyotoStreetTrieFinder.createTrieFinder(container);
+  const data = await KyotoStreetTrieFinder.loadDataFile(container);
+  if (!data) {
+    throw `Can not load the data`;
+  }
+  const finder = new KyotoStreetTrieFinder(data);
   const dbCtrl = await container.database.openCommonDb();
   const rows = await dbCtrl.getKyotoStreetRows();
   rows.forEach(row => {

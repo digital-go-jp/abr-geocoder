@@ -35,21 +35,20 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
 
   static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
     const cacheFilePath = await PrefTrieFinder.getCacheFilePath(diContainer);
-    const isExist = fs.existsSync(cacheFilePath);
-    if (isExist) {
-      return;
-    }
 
     // 古いキャッシュファイルを削除
     await removeFiles({
       dir: diContainer.cacheDir,
       filename: 'pref_.*\\.abrg2',
     });
-    
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
-    const rows = await commonDb.getPrefList();
+    const db = await diContainer.database.openCommonDb();
+    if (!db) {
+      return false;
+    }
+
+    const rows = await db.getPrefList()
     const writer = await FileTrieWriter.openFile(cacheFilePath);
     for (const row of rows) {
       await writer.addNode({
@@ -58,28 +57,32 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
       });
     }
     await writer.close();
+    return true;
   };
 
   static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
     const cacheFilePath = await PrefTrieFinder.getCacheFilePath(diContainer);
-    const isExist = fs.existsSync(cacheFilePath);
-    if (!isExist) {
-      await PrefTrieFinder.createDictionaryFile(diContainer);
-    }
-    
-    try {
-      // TrieFinderが作成できればOK
-      const data = await fs.promises.readFile(cacheFilePath);
-      const first100bytes = data.subarray(0, 100);
-      new PrefTrieFinder(first100bytes);
-      return data;
-    } catch (_e: unknown) {
-      // エラーが発生する場合は、再作成する
-      await fs.promises.unlink(cacheFilePath);
-      await PrefTrieFinder.createDictionaryFile(diContainer);
-      const data = await fs.promises.readFile(cacheFilePath);
-      return data;
-    }
+    let data: Buffer | undefined;
+    let numOfTry: number = 0;
+    while (!data && numOfTry < 3) {
+      try {
+        // TrieFinderが作成できればOK
+        if (fs.existsSync(cacheFilePath)) {
+          data = await fs.promises.readFile(cacheFilePath);
+          const first100bytes = data.subarray(0, 100);
+          new PrefTrieFinder(first100bytes);
+          return data;
+        }
+      } catch (_e: unknown) {
+        // Do nothing here
+      }
 
+      // 新しく作成
+      if (!await PrefTrieFinder.createDictionaryFile(diContainer)) {
+        return;
+      }
+      numOfTry++;
+    }
+    return data;
   };
 }

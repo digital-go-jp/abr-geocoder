@@ -35,10 +35,6 @@ export class CityAndWardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> 
 
   static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
     const cacheFilePath = await CityAndWardTrieFinder.getCacheFilePath(diContainer);
-    const isExist = fs.existsSync(cacheFilePath);
-    if (isExist) {
-      return;
-    }
 
     // 古いキャッシュファイルを削除
     await removeFiles({
@@ -48,8 +44,12 @@ export class CityAndWardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> 
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
-    const rows = await commonDb.getCityAndWardList();
+    const db = await diContainer.database.openCommonDb();
+    if (!db) {
+      return false;
+    }
+
+    const rows = await db.getCityAndWardList();
     const writer = await FileTrieWriter.openFile(cacheFilePath);
     for (const row of rows) {
       await writer.addNode({
@@ -58,27 +58,32 @@ export class CityAndWardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> 
       });
     }
     await writer.close();
+    return true;
   };
   
   static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
     const cacheFilePath = await CityAndWardTrieFinder.getCacheFilePath(diContainer);
-    const isExist = fs.existsSync(cacheFilePath);
-    if (!isExist) {
-      await CityAndWardTrieFinder.createDictionaryFile(diContainer);
+    let data: Buffer | undefined;
+    let numOfTry: number = 0;
+    while (!data && numOfTry < 3) {
+      try {
+        // TrieFinderが作成できればOK
+        if (fs.existsSync(cacheFilePath)) {
+          data = await fs.promises.readFile(cacheFilePath);
+          const first100bytes = data.subarray(0, 100);
+          new CityAndWardTrieFinder(first100bytes);
+          return data;
+        }
+      } catch (_e: unknown) {
+        // Do nothing here
+      }
+
+      // 新しく作成
+      if (!await CityAndWardTrieFinder.createDictionaryFile(diContainer)) {
+        return;
+      }
+      numOfTry++;
     }
-    
-    try {
-      // TrieFinderが作成できればOK
-      const data = await fs.promises.readFile(cacheFilePath);
-      const first100bytes = data.subarray(0, 100);
-      new CityAndWardTrieFinder(first100bytes);
-      return data;
-    } catch (_e: unknown) {
-      // エラーが発生する場合は、再作成する
-      await fs.promises.unlink(cacheFilePath);
-      await CityAndWardTrieFinder.createDictionaryFile(diContainer);
-      const data = await fs.promises.readFile(cacheFilePath);
-      return data;
-    }
+    return data;
   };
 }

@@ -21,12 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { ThreadJob, ThreadPing } from '@domain/services/thread/thread-task';
 import fs from 'node:fs';
 import { Writable } from 'node:stream';
+import { isMainThread, MessagePort, parentPort } from "node:worker_threads";
+import { WorkerThreadPool } from './thread/worker-thread-pool';
 import { CommentFilterTransform } from './transformations/comment-filter-transform';
 import { LineByLineTransform } from './transformations/line-by-line-transform';
 
-export const countRequests = (filePath: string) => {
+const internalCounter = async (filePath: string) => {
+
   const lineByLine = new LineByLineTransform();
   const commentFilter = new CommentFilterTransform();
   return new Promise((
@@ -37,7 +41,7 @@ export const countRequests = (filePath: string) => {
       .pipe(commentFilter)
       .pipe(new Writable({
         objectMode: true,
-        write(chunk, encoding, callback) {
+        write(_chunk, _encoding, callback) {
           callback();
         },
         final(callback) {
@@ -47,3 +51,58 @@ export const countRequests = (filePath: string) => {
       }));
   });
 };
+
+export const countRequests = async (filePath: string) => {
+
+  // jest で動かしている場合は、メインスレッドで処理する
+  if (process.env.JEST_WORKER_ID) {
+    return await internalCounter(filePath);
+  }
+
+  // ファイルが大きい時もあるので、バッググラウンドで処理する
+  const pool = new WorkerThreadPool<undefined, string, number>({
+    filename: __filename,
+    initData: undefined,
+    maxConcurrency: 1,
+    maxTasksPerWorker: 1
+  });
+  const total = await pool.run(filePath);
+  await pool.close();
+  return total;
+};
+
+if (!isMainThread && parentPort) {
+  (async (parentPort: MessagePort) => {
+
+    // メインスレッドからメッセージを受け取る
+    parentPort.on('message', async (task: string) => {
+      const received = JSON.parse(task) as ThreadJob<string> | ThreadPing;
+      (task as unknown) = null;
+      switch (received.kind) {
+        case 'ping': {
+          parentPort.postMessage(JSON.stringify({
+            kind: 'pong',
+          }));
+          return;
+        }
+
+        case 'task': {
+          const total = await internalCounter(received.data);
+
+          // メインスレッドに返す
+          parentPort.postMessage(JSON.stringify({
+            taskId: received.taskId,
+            data: total,
+            kind: 'result',
+          }));
+          return;
+        }
+
+        default:
+          throw 'not implemented';
+      }
+    });
+
+
+  })(parentPort);
+}

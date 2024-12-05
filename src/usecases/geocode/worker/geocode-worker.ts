@@ -21,12 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { ThreadJob, ThreadPing } from '@domain/services/thread/thread-task';
-import { GeocodeDbController } from '@interface/database/geocode-db-controller';
-import { Duplex } from 'node:stream';
 import { isMainThread, MessagePort, parentPort, workerData } from "node:worker_threads";
-import { Readable, Writable } from "stream";
+import { Readable, Transform, TransformCallback, Writable } from "stream";
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
 import { AbrGeocoderInput } from '../models/abrg-input-data';
 import { CityAndWardTrieFinder } from '../models/city-and-ward-trie-finder';
@@ -34,7 +31,7 @@ import { CountyAndCityTrieFinder } from '../models/county-and-city-trie-finder';
 import { KyotoStreetTrieFinder } from '../models/kyoto-street-trie-finder';
 import { OazaChoTrieFinder } from '../models/oaza-cho-trie-finder';
 import { PrefTrieFinder } from '../models/pref-trie-finder';
-import { Query, QueryInput } from '../models/query';
+import { Query } from '../models/query';
 import { Tokyo23TownTrieFinder } from '../models/tokyo23-town-finder';
 import { Tokyo23WardTrieFinder } from '../models/tokyo23-ward-trie-finder';
 import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
@@ -55,26 +52,35 @@ import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 // import { WardAndOazaTransform } from '../steps/ward-and-oaza-transform';
 // import { setFlagsFromString } from 'v8';
 // import { runInNewContext } from 'vm';
+import { fromSharedMemory } from '@domain/services/thread/shared-memory';
 import { WardTransform } from '../steps/ward-transform';
 import { GeocodeWorkerInitData } from './geocode-worker-init-data';
-import { fromSharedMemory } from '@domain/services/thread/shared-memory';
 
-export class GeocodeTransform extends Duplex {
+export class GeocodeTransform extends Transform {
 
   private readonly reader = new Readable({
     objectMode: true,
     read() {},
+    highWaterMark: 1024,
   });
 
-  private constructor(params: {
-    dbCtrl: GeocodeDbController;
-    logger?: DebugLogger;
+  private constructor({
+    diContainer,
+    prefTrie,
+    countyAndCityTrie,
+    oazaChoTrie,
+    kyotoStreetTrie,
+    cityAndWardTrie,
+    wardTrie,
+    tokyo23WardTrie,
+    tokyo23TownTrie,
+  }: {
+    diContainer: AbrGeocoderDiContainer;
     prefTrie: PrefTrieFinder;
     countyAndCityTrie: CountyAndCityTrieFinder;
     oazaChoTrie: OazaChoTrieFinder;
     kyotoStreetTrie: KyotoStreetTrieFinder;
     cityAndWardTrie: CityAndWardTrieFinder;
-    wardAndOazaTrie: WardAndOazaTrieFinder;
     wardTrie: WardTrieFinder;
     tokyo23WardTrie: Tokyo23WardTrieFinder;
     tokyo23TownTrie: Tokyo23TownTrieFinder;
@@ -86,32 +92,32 @@ export class GeocodeTransform extends Duplex {
     });
     
     // 都道府県を試す
-    const prefTransform = new PrefTransform(params.prefTrie);
+    const prefTransform = new PrefTransform(prefTrie);
     
     // 〇〇郡〇〇市を試す
-    const countyAndCityTransform = new CountyAndCityTransform(params.countyAndCityTrie);
+    const countyAndCityTransform = new CountyAndCityTransform(countyAndCityTrie);
 
     // 〇〇市〇〇区を試す
-    const cityAndWardTransform = new CityAndWardTransform(params.cityAndWardTrie);
+    const cityAndWardTransform = new CityAndWardTransform(cityAndWardTrie);
 
     // 〇〇市 (〇〇郡が省略された場合）を試す
-    // const wardAndOazaTransform = new WardAndOazaTransform(params.wardAndOazaTrie);
+    // const wardAndOazaTransform = new WardAndOazaTransform(wardAndOazaTrie);
 
     // 大字を試す
-    const oazaChomeTransform = new OazaChomeTransform(params.oazaChoTrie);
+    const oazaChomeTransform = new OazaChomeTransform(oazaChoTrie);
 
     // 京都の通り名を試す
-    const kyotoStreetTransform = new KyotoStreetTransform(params.kyotoStreetTrie);
+    const kyotoStreetTransform = new KyotoStreetTransform(kyotoStreetTrie);
 
     // 東京23区を試す
     // 〇〇区＋大字の組み合わせで探す
-    const tokyo23TownTransform = new Tokyo23TownTranform(params.tokyo23TownTrie);
+    const tokyo23TownTransform = new Tokyo23TownTranform(tokyo23TownTrie);
 
     // 東京23区を試す
-    const tokyo23WardTransform = new Tokyo23WardTranform(params.tokyo23WardTrie);
+    const tokyo23WardTransform = new Tokyo23WardTranform(tokyo23WardTrie);
 
     // 〇〇区で始まるパターン(東京23区以外)
-    const wardTransform = new WardTransform(params.wardTrie);
+    const wardTransform = new WardTransform(wardTrie);
 
     // 住所の正規化処理
     //
@@ -124,13 +130,13 @@ export class GeocodeTransform extends Duplex {
     const normalizeTransform = new NormalizeTransform();
 
     // 地番の特定を試みる
-    const parcelTransform = new ParcelTransform(params.dbCtrl);
+    const parcelTransform = new ParcelTransform(diContainer);
 
     // 街区符号の特定を試みる
-    const rsdtBlkTransform = new RsdtBlkTransform(params.dbCtrl);
+    const rsdtBlkTransform = new RsdtBlkTransform(diContainer);
 
     // 住居番号の特定を試みる
-    const rsdtDspTransform = new RsdtDspTransform(params.dbCtrl);
+    const rsdtDspTransform = new RsdtDspTransform(diContainer);
 
     // 正規表現で番地を試みる
     const normalizeBanchomeTransform = new NormalizeBanchomeTransform();
@@ -138,7 +144,7 @@ export class GeocodeTransform extends Duplex {
     // 最終的な結果にまとめる
     const geocodeResultTransform = new GeocodeResultTransform();
 
-    // 
+    
     const dst = new Writable({
       objectMode: true,
       write: (query: Query, _, callback) => {
@@ -165,10 +171,14 @@ export class GeocodeTransform extends Duplex {
       .pipe(dst);
   }
 
-  _write(chunk: AbrGeocoderInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
-    callback();
+  _transform(chunk: any, _encoding: BufferEncoding, callback: TransformCallback): void {
     this.reader.push(chunk);
+    callback();
   }
+  // _write(chunk: AbrGeocoderInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
+  //   callback();
+  //   this.reader.push(chunk);
+  // }
 
   _final(callback: (error?: Error | null) => void): void {
     this.reader.push(null);
@@ -176,19 +186,15 @@ export class GeocodeTransform extends Duplex {
   }
  
   static readonly create = async (params: Required<GeocodeWorkerInitData>) => {
-    const container = new AbrGeocoderDiContainer(params.diContainer);
-    const dbCtrl = container.database;
-    const logger: DebugLogger | undefined = container.logger;
+    const diContainer = new AbrGeocoderDiContainer(params.diContainer);
 
     const result = new GeocodeTransform({
-      dbCtrl,
-      logger,
+      diContainer,
       prefTrie: new PrefTrieFinder(fromSharedMemory(params.trieData.pref)),
       countyAndCityTrie: new CountyAndCityTrieFinder(fromSharedMemory(params.trieData.countyAndCity)),
       cityAndWardTrie: new CityAndWardTrieFinder(fromSharedMemory(params.trieData.cityAndWard)),
       kyotoStreetTrie: new KyotoStreetTrieFinder(fromSharedMemory(params.trieData.kyotoStreet)),
       oazaChoTrie: new OazaChoTrieFinder(fromSharedMemory(params.trieData.oazaCho)),
-      wardAndOazaTrie: new WardAndOazaTrieFinder(fromSharedMemory(params.trieData.wardAndOaza)),
       wardTrie: new WardTrieFinder(fromSharedMemory(params.trieData.ward)),
       tokyo23WardTrie: new Tokyo23WardTrieFinder(fromSharedMemory(params.trieData.tokyo23Ward)),
       tokyo23TownTrie: new Tokyo23TownTrieFinder(fromSharedMemory(params.trieData.tokyo23Town)),
@@ -224,7 +230,7 @@ if (!isMainThread && parentPort) {
 
     // メインスレッドからメッセージを受け取る
     parentPort.on('message', (task: string) => {
-      const received = JSON.parse(task) as ThreadJob<QueryInput> | ThreadPing;
+      const received = JSON.parse(task) as ThreadJob<AbrGeocoderInput> | ThreadPing;
       (task as unknown) = null;
       switch (received.kind) {
         case 'ping': {

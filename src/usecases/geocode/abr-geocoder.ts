@@ -125,15 +125,15 @@ export class AbrGeocoder {
     signal?: AbortSignal;
   }) => {
     // トライ木を作成するために必要な辞書データの読み込み
-    const pref = toSharedMemory(await PrefTrieFinder.loadDataFile(params.container));
-    const countyAndCity = toSharedMemory(await CountyAndCityTrieFinder.loadDataFile(params.container));
-    const cityAndWard = toSharedMemory(await CityAndWardTrieFinder.loadDataFile(params.container));
-    const kyotoStreet = toSharedMemory(await KyotoStreetTrieFinder.loadDataFile(params.container));
-    const oazaCho = toSharedMemory(await OazaChoTrieFinder.loadDataFile(params.container));
-    const wardAndOaza = toSharedMemory(await WardAndOazaTrieFinder.loadDataFile(params.container));
-    const ward = toSharedMemory(await WardTrieFinder.loadDataFile(params.container));
-    const tokyo23Ward = toSharedMemory(await Tokyo23WardTrieFinder.loadDataFile(params.container));
-    const tokyo23Town = toSharedMemory(await Tokyo23TownTrieFinder.loadDataFile(params.container));
+    const pref = toSharedMemory((await PrefTrieFinder.loadDataFile(params.container))!);
+    const countyAndCity = toSharedMemory((await CountyAndCityTrieFinder.loadDataFile(params.container))!);
+    const cityAndWard = toSharedMemory((await CityAndWardTrieFinder.loadDataFile(params.container))!);
+    const kyotoStreet = toSharedMemory((await KyotoStreetTrieFinder.loadDataFile(params.container))!);
+    const oazaCho = toSharedMemory((await OazaChoTrieFinder.loadDataFile(params.container))!);
+    const wardAndOaza = toSharedMemory((await WardAndOazaTrieFinder.loadDataFile(params.container))!);
+    const ward = toSharedMemory((await WardTrieFinder.loadDataFile(params.container))!);
+    const tokyo23Ward = toSharedMemory((await Tokyo23WardTrieFinder.loadDataFile(params.container))!);
+    const tokyo23Town = toSharedMemory((await Tokyo23TownTrieFinder.loadDataFile(params.container))!);
 
     const initData: GeocodeWorkerInitData = {
       diContainer: params.container.toJSON(),

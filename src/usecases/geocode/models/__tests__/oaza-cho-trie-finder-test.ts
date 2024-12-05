@@ -23,16 +23,26 @@ import { OazaChoTrieFinder } from "../oaza-cho-trie-finder";
   });
   await OazaChoTrieFinder.createDictionaryFile(container);
 
-  const finder = await OazaChoTrieFinder.createTrieFinder(container);
-  // const dbCtrl = await container.database.openCommonDb();
-  // const rows = await dbCtrl.getOazaChomes();
-  const rows = ["横芝字真砂４８２番地の２"];
-  rows.forEach(key => {
+  const data = await OazaChoTrieFinder.loadDataFile(container);
+  if (!data) {
+    throw `Can not load the data`;
+  }
+  const finder = new OazaChoTrieFinder(data);
+  const dbCtrl = await container.database.openCommonDb();
+  const rows = await dbCtrl.getOazaChomes();
+  rows.forEach(row => {
+    const key = [
+      row.oaza_cho || '',
+      row.chome || '',
+      row.koaza || '',
+    ].join('');
     
     const result = finder.find({
       target: CharNode.create(OazaChoTrieFinder.normalize(key)),
     });
-    console.log(key, result);
+    if (result.length === 0) {
+      console.log(key, result);
+    }
   });
 
 })();

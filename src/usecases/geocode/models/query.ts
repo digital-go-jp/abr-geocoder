@@ -99,7 +99,7 @@ export type FormattedAddres = {
   address: string;
   score: number;
 };
-export type QueryJson = Omit<IQuery, 'tempAddress' | 'parent'> & { tempAddress: string | undefined; };
+export type QueryJson = Omit<IQuery, 'tempAddress'> & { tempAddress: string | undefined; };
 
 export class Query implements IQuery {
   public readonly input: QueryInput;
@@ -146,9 +146,8 @@ export class Query implements IQuery {
     processed?: string;
   };
   public readonly startTime: number = 0;
-  private parent: Query | null | undefined;
 
-  private constructor(params: IQuery & { parent?: Query }) {
+  private constructor(params: IQuery) {
     this.fuzzy = params.fuzzy;
     this.searchTarget = params.searchTarget;
     this.pref_key = params.pref_key;
@@ -196,8 +195,6 @@ export class Query implements IQuery {
       processed: this.tempAddress?.toProcessedString(),
     };
 
-    this.parent = params.parent;
-
     this.formatted = this.getFormattedAddress();
   }
 
@@ -215,7 +212,7 @@ export class Query implements IQuery {
       startTime: this.startTime,
       input: this.input,
       tempAddress: this.tempAddress?.toString(),
-      unmatched: this.unmatched,
+      unmatched: this.unmatched || [],
       pref: this.pref as string || undefined,
       county: this.county as string || undefined,
       city: this.city as string || undefined,
@@ -276,7 +273,7 @@ export class Query implements IQuery {
           startTime: this.startTime,
           matchedCnt: this.matchedCnt,
           tempAddress : this.tempAddress,
-          unmatched: this.unmatched,
+          unmatched: this.unmatched || [],
           pref : this.pref,
           county : this.county,
           city : this.city,
@@ -306,7 +303,6 @@ export class Query implements IQuery {
         newValues || {},
         {
           input : this.input,
-          parent: this,
         },
       ),
     );
@@ -421,12 +417,10 @@ export class Query implements IQuery {
 
   release() {
     this.tempAddress?.release();
-    this.parent?.release();
-    (this.parent as unknown) = undefined;
     (this.tempAddress as unknown) = undefined;
   }
 
-  static readonly from = (params: Omit<IQuery, 'tempAddress' | 'parent'> & { tempAddress: string | undefined; } ): Query => {
+  static readonly from = (params: Omit<IQuery, 'tempAddress'> & { tempAddress: string | undefined; } ): Query => {
     if (params.match_level === undefined) {
       params.match_level = MatchLevel.UNKNOWN;
     }
@@ -436,7 +430,6 @@ export class Query implements IQuery {
       return new Query({
         ...params,
         tempAddress: CharNode.fromString(tempAddress),
-        parent: undefined,
       });
     } else {
       return new Query(params as Omit<IQuery, 'tempAddress'> & { tempAddress: undefined });

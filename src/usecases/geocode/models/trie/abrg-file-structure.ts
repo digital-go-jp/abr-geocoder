@@ -10,6 +10,13 @@ export type TrieHashListNode = {
   offset: number;
   next?: TrieHashListNode;
 };
+export type DataNode = {
+  data: any;
+  nodeSize: number;
+  hashValue: number;
+  offset: number;
+  nextDataNodeOffset: number;
+}
 
 export type ReadTrieNode = {
   name: string;

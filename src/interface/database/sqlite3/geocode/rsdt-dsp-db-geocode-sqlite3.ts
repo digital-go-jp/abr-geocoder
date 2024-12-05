@@ -26,10 +26,7 @@ import { DbTableName } from "@config/db-table-name";
 import { RsdtDspInfo } from "@domain/types/geocode/rsdt-dsp-info";
 import { IRsdtDspDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
-
-export type GetRsdtDspRows = {
-  rsdtblk_key: number;
-};
+import crc32Lib from "@domain/services/crc32-lib";
 
 export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbGeocode {
 
@@ -52,7 +49,11 @@ export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbG
     return rows.length === 1;
   }
 
-  async getRsdtDspRows(where: Required<GetRsdtDspRows>): Promise<RsdtDspInfo[]> {
+  getRsdtDspRowsGeneratorHash() : string {
+    return crc32Lib.fromString(this.getRsdtDspRows.toString());
+  }
+
+  async getRsdtDspRows(): Promise<RsdtDspInfo[]> {
     const existTable = await this.hasTable();
     if (!existTable) {
       return [];
@@ -60,7 +61,7 @@ export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbG
 
     return new Promise((resolve: (rows: RsdtDspInfo[]) => void) => {
 
-      const rows = this.prepare<GetRsdtDspRows, RsdtDspInfo>(`
+      const rows = this.prepare<{}, RsdtDspInfo>(`
         SELECT
           rsdtdsp_key,
           rsdtblk_key,
@@ -83,9 +84,7 @@ export class RsdtDspGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtDspDbG
           ${DataField.REP_LON.dbColumn} as rep_lon
         FROM
           ${DbTableName.RSDT_DSP}
-        WHERE
-          rsdtblk_key = @rsdtblk_key
-      `).all(where);
+      `).all({});
       resolve(rows);
     });
   }

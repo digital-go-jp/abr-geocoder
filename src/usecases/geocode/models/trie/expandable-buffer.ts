@@ -8,6 +8,16 @@ export class ExpandableBuffer {
   size(): number {
     return this.offset;
   }
+  
+  readUInt8(offset: number): number {
+    return this.buffer.readUInt8(offset);
+  }
+  readUInt16BE(offset: number): number {
+    return this.buffer.readUInt16BE(offset);
+  }
+  readUInt32BE(offset: number): number {
+    return this.buffer.readUInt32BE(offset);
+  }
 
   read(offset: number, size: number): Buffer {
     return this.buffer.subarray(offset, offset + size);
@@ -45,5 +55,9 @@ export class ExpandableBuffer {
 
   getBuffer() {
     return this.buffer.subarray(0, this.offset);
+  }
+
+  toString(encoding?: BufferEncoding, start?: number, end?: number): string {
+    return this.buffer.toString(encoding, start, end);
   }
 }

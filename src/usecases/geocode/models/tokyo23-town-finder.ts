@@ -40,10 +40,6 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> 
 
   static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
     const cacheFilePath = await Tokyo23TownTrieFinder.getCacheFilePath(diContainer);
-    const isExist = fs.existsSync(cacheFilePath);
-    if (isExist) {
-      return;
-    }
 
     // 古いキャッシュファイルを削除
     await removeFiles({
@@ -53,8 +49,11 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> 
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
-    const rows = await commonDb.getTokyo23Towns();
+    const db = await diContainer.database.openCommonDb();
+    if (!db) {
+      return false;
+    }
+    const rows = await db.getTokyo23Towns();
     const writer = await FileTrieWriter.openFile(cacheFilePath);
     for (const row of rows) {
       await writer.addNode({
@@ -63,27 +62,32 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> 
       });
     }
     await writer.close();
+    return true;
   };
 
   static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
     const cacheFilePath = await Tokyo23TownTrieFinder.getCacheFilePath(diContainer);
-    const isExist = fs.existsSync(cacheFilePath);
-    if (!isExist) {
-      await Tokyo23TownTrieFinder.createDictionaryFile(diContainer);
+    let data: Buffer | undefined;
+    let numOfTry: number = 0;
+    while (!data && numOfTry < 3) {
+      try {
+        // TrieFinderが作成できればOK
+        if (fs.existsSync(cacheFilePath)) {
+          data = await fs.promises.readFile(cacheFilePath);
+          const first100bytes = data.subarray(0, 100);
+          new Tokyo23TownTrieFinder(first100bytes);
+          return data;
+        }
+      } catch (_e: unknown) {
+        // Do nothing here
+      }
+
+      // 新しく作成
+      if (!await Tokyo23TownTrieFinder.createDictionaryFile(diContainer)) {
+        return;
+      }
+      numOfTry++;
     }
-    
-    try {
-      // TrieFinderが作成できればOK
-      const data = await fs.promises.readFile(cacheFilePath);
-      const first100bytes = data.subarray(0, 100);
-      new Tokyo23TownTrieFinder(first100bytes);
-      return data;
-    } catch (_e: unknown) {
-      // エラーが発生する場合は、再作成する
-      await fs.promises.unlink(cacheFilePath);
-      await Tokyo23TownTrieFinder.createDictionaryFile(diContainer);
-      const data = await fs.promises.readFile(cacheFilePath);
-      return data;
-    }
+    return data;
   };
 }

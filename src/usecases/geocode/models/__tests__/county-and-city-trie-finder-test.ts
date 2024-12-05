@@ -1,7 +1,6 @@
-import { removeFiles } from "@domain/services/remove-files";
 import path from 'node:path';
 import { AbrGeocoderDiContainer } from "../abr-geocoder-di-container";
-import { CityAndWardTrieFinder } from "../city-and-ward-trie-finder";
+import { CountyAndCityTrieFinder } from "../county-and-city-trie-finder";
 import { CharNode } from "../trie/char-node";
 
 (async () => {
@@ -17,22 +16,25 @@ import { CharNode } from "../trie/char-node";
   });
 
   // 古いキャッシュファイルを削除
-  await removeFiles({
-    dir: container.cacheDir,
-    filename: 'city-and-ward_.*\\.abrg2',
-  });
-  await CityAndWardTrieFinder.createDictionaryFile(container);
+  // await removeFiles({
+  //   dir: container.cacheDir,
+  //   filename: 'county-and-city_.*\\.abrg2',
+  // });
+  await CountyAndCityTrieFinder.createDictionaryFile(container);
 
-  const finder = await CityAndWardTrieFinder.createTrieFinder(container);
+  const data = await CountyAndCityTrieFinder.loadDataFile(container);
+  if (!data) {
+    throw `Can not load the data`;
+  }
+  const finder = new CountyAndCityTrieFinder(data);
   const dbCtrl = await container.database.openCommonDb();
-  const rows = await dbCtrl.getCityAndWardList();
+  const rows = await dbCtrl.getCountyAndCityList();
+
   rows.forEach(row => {
     const result = finder.find({
-      target: CharNode.create(CityAndWardTrieFinder.normalize(row.key)),
+      target: CharNode.create(CountyAndCityTrieFinder.normalize(row.key)),
     });
-    if (result.length === 0) {
-      console.log(row.key, result);
-    }
+    console.log(row.key, result);
   });
 
 })();

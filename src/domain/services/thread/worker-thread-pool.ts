@@ -173,14 +173,15 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
     });
   }
 
-  close() {
+  async close() {
     if (this.signal && this.signal.aborted) {
       return;
     }
     this.abortCtrl.abort();
 
-    this.workers.forEach(worker => {
+    const tasks = this.workers.map(worker => {
       worker.terminate();
     });
+    await Promise.all(tasks);
   }
 }
