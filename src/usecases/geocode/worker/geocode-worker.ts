@@ -23,7 +23,7 @@
  */
 import { ThreadJob, ThreadPing } from '@domain/services/thread/thread-task';
 import { isMainThread, MessagePort, parentPort, workerData } from "node:worker_threads";
-import { Readable, Transform, TransformCallback, Writable } from "stream";
+import { Readable, Writable } from "stream";
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
 import { AbrGeocoderInput } from '../models/abrg-input-data';
 import { CityAndWardTrieFinder } from '../models/city-and-ward-trie-finder';
@@ -34,7 +34,6 @@ import { PrefTrieFinder } from '../models/pref-trie-finder';
 import { Query } from '../models/query';
 import { Tokyo23TownTrieFinder } from '../models/tokyo23-town-finder';
 import { Tokyo23WardTrieFinder } from '../models/tokyo23-ward-trie-finder';
-import { WardAndOazaTrieFinder } from '../models/ward-and-oaza-trie-finder';
 import { WardTrieFinder } from '../models/ward-trie-finder';
 import { CityAndWardTransform } from '../steps/city-and-ward-transform';
 import { CountyAndCityTransform } from '../steps/county-and-city-transform';
@@ -53,10 +52,11 @@ import { Tokyo23WardTranform } from '../steps/tokyo23ward-transform';
 // import { setFlagsFromString } from 'v8';
 // import { runInNewContext } from 'vm';
 import { fromSharedMemory } from '@domain/services/thread/shared-memory';
+import { Duplex } from 'node:stream';
 import { WardTransform } from '../steps/ward-transform';
 import { GeocodeWorkerInitData } from './geocode-worker-init-data';
 
-export class GeocodeTransform extends Transform {
+export class GeocodeTransform extends Duplex {
 
   private readonly reader = new Readable({
     objectMode: true,
@@ -171,14 +171,14 @@ export class GeocodeTransform extends Transform {
       .pipe(dst);
   }
 
-  _transform(chunk: any, _encoding: BufferEncoding, callback: TransformCallback): void {
-    this.reader.push(chunk);
-    callback();
-  }
-  // _write(chunk: AbrGeocoderInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
-  //   callback();
+  // _transform(chunk: any, _encoding: BufferEncoding, callback: TransformCallback): void {
   //   this.reader.push(chunk);
+  //   callback();
   // }
+  _write(chunk: AbrGeocoderInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
+    callback();
+    this.reader.push(chunk);
+  }
 
   _final(callback: (error?: Error | null) => void): void {
     this.reader.push(null);

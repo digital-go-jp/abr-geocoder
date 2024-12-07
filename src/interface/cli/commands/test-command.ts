@@ -206,10 +206,9 @@ const testCommand: CommandModule = {
         return process.stdout;
       }
 
-      // メモリを節約するため、あまり溜め込まないようにする
       const result = fs.createWriteStream(path.normalize(destination), {
         encoding: 'utf8',
-        highWaterMark: 64 * 1024 * 1024,
+        highWaterMark: 64 * 1024 * 1024, // 64MB
       });
       return result;
     })(destination);
@@ -223,7 +222,6 @@ const testCommand: CommandModule = {
         level: AbrgErrorLevel.ERROR,
       });
     }
-
 
     // DIコンテナをセットアップする
     // 初期設定値を DIコンテナに全て詰め込む
@@ -247,7 +245,7 @@ const testCommand: CommandModule = {
     })();
 
     // 初期化する
-    const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}');
+    const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar('prepare: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}');
     
     // キャッシュデータの作成と、ファイルからリクエスト数のカウントを並行して行う
     const createCacheTask = createGeocodeCaches({
@@ -271,8 +269,8 @@ const testCommand: CommandModule = {
     ])
 
     // 合計のリクエスト数をセット
-    const geocodeProgressBar = isSilentMode ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total} | {message} | ETA: {eta_formatted}');
-    geocodeProgressBar?.setTotal(numOfLinesInFiles);
+    const geocodeProgressBar = isSilentMode ? undefined : createSingleProgressBar('geocoding: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}');
+    geocodeProgressBar?.start(numOfLinesInFiles, 0);
 
     // ジオコーダの作成
     const geocoder = await AbrGeocoder.create({
@@ -285,6 +283,7 @@ const testCommand: CommandModule = {
       geocoder,
       fuzzy,
       searchTarget,
+      highWatermark: numOfThreads * 1024,
     });
 
     // プログレスバーをアップデート

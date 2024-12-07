@@ -36,14 +36,14 @@ import { RsdtBlkTrieFinder } from '@usecases/geocode/models/rsdt-blk-trie-finder
 import { RsdtDspTrieFinder } from '@usecases/geocode/models/rsdt-dsp-trie-finder';
 import { ParcelTrieFinder } from '@usecases/geocode/models/parcel-trie-finder';
 
-export type ValidationParams = {
+export type CreateCacheParams = {
   target: 'pref' | 'county-and-city' | 'city-and-ward' | 'kyoto-street' | 'oaza-cho' | 'tokyo23-town' | 'tokyo23-ward' | 'ward' | 'rsdtblk' | 'rsdtdsp' | 'parcel';
   lg_code?: string;
 };
 
-export type ValidationResult = {
+export type CreateCacheResult = {
   result: boolean;
-} & ValidationParams;
+} & CreateCacheParams;
 
 const createPrefTrieData = async (diContainer: AbrGeocoderDiContainer) => {
   
@@ -227,6 +227,62 @@ const createParcelTrieData = async (params: {
   }
   return retry < 2;
 };
+
+export const createCache = async ({
+  diContainer,
+  data,
+} : {
+  diContainer: AbrGeocoderDiContainer;
+  data: CreateCacheParams,
+}) => {
+  switch (data.target) {
+    case 'pref':
+      return await createPrefTrieData(diContainer);
+    
+    case 'county-and-city':
+      return await createCountyAndCityTrieData(diContainer);
+
+    case 'city-and-ward':
+      return await createCityAndWardTrieData(diContainer);
+
+    case 'kyoto-street':
+      return await createKyotoStreetTrieData(diContainer);
+
+    case 'oaza-cho':
+      return await createOazaChoTrieData(diContainer);
+
+    case 'tokyo23-town':
+      return await createTokyo23TownTrieData(diContainer);
+
+    case 'tokyo23-ward':
+      return await createTokyo23WardTrieData(diContainer);
+
+    case 'ward':
+      return await createWardTrieData(diContainer);
+            
+    case 'rsdtblk':
+      return await createRsdtBlkTrieData({
+        diContainer,
+        lg_code: data.lg_code!,
+      });
+            
+    case 'rsdtdsp':
+      return await createRsdtDspTrieData({
+        diContainer,
+        lg_code: data.lg_code!,
+      });
+
+    case 'parcel':
+      return await createParcelTrieData({
+        diContainer,
+        lg_code: data.lg_code!,
+      });
+              
+    default:
+      throw `unknown target: ${data.target}`;
+  }
+};
+
 // 作業スレッド
 if (!isMainThread && parentPort) {
 
@@ -237,7 +293,7 @@ if (!isMainThread && parentPort) {
 
     // メインスレッドからメッセージを受け取る
     parentPort.on('message', async (task: string) => {
-      const received = JSON.parse(task) as ThreadJob<ValidationParams> | ThreadPing;
+      const received = JSON.parse(task) as ThreadJob<CreateCacheParams> | ThreadPing;
       (task as unknown) = null;
       switch (received.kind) {
         case 'ping': {
@@ -249,65 +305,10 @@ if (!isMainThread && parentPort) {
 
         case 'task': {
           try {
-            let result = false;
-            switch (received.data.target) {
-              case 'pref':
-                result = await createPrefTrieData(diContainer);
-                break;
-              
-              case 'county-and-city':
-                result = await createCountyAndCityTrieData(diContainer);
-                break;
-          
-              case 'city-and-ward':
-                result = await createCityAndWardTrieData(diContainer);
-                break;
-          
-              case 'kyoto-street':
-                result = await createKyotoStreetTrieData(diContainer);
-                break;
-        
-              case 'oaza-cho':
-                result = await createOazaChoTrieData(diContainer);
-                break;
-      
-              case 'tokyo23-town':
-                result = await createTokyo23TownTrieData(diContainer);
-                break;
-    
-              case 'tokyo23-ward':
-                result = await createTokyo23WardTrieData(diContainer);
-                break;
-
-              case 'ward':
-                result = await createWardTrieData(diContainer);
-                break;
-                      
-              case 'rsdtblk':
-                result = await createRsdtBlkTrieData({
-                  diContainer,
-                  lg_code: received.data.lg_code!,
-                });
-                break;
-                      
-              case 'rsdtdsp':
-                result = await createRsdtDspTrieData({
-                  diContainer,
-                  lg_code: received.data.lg_code!,
-                });
-                break;
-
-              case 'parcel':
-                result = await createParcelTrieData({
-                  diContainer,
-                  lg_code: received.data.lg_code!,
-                });
-                break;
-                        
-              default:
-                console.error(`unknown target: ${received.data.target}`);
-                throw `unknown target: ${received.data.target}`;
-            }
+            const result = await createCache({
+              diContainer,
+              data: received.data
+            });
 
             // メインスレッドに送る
             parentPort.postMessage(JSON.stringify({

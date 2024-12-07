@@ -36,7 +36,7 @@ import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtBlkTransform extends Transform {
 
-  private readonly lgCodeToBuffer: LRUCache<string, Buffer> = new LRUCache<string, Buffer>({
+  private readonly lgCodeToFinder: LRUCache<string, RsdtBlkTrieFinder> = new LRUCache<string, RsdtBlkTrieFinder>({
     max: 10,
   });
   private readonly noDbLgCode: Set<string> = new Set();
@@ -95,22 +95,22 @@ export class RsdtBlkTransform extends Transform {
       }
 
       // トライ木のデータを読み込む
-      let trieData = this.lgCodeToBuffer.get(query.lg_code);
-      if (!trieData) {
-        trieData = await RsdtBlkTrieFinder.loadDataFile({
+      let finder = this.lgCodeToFinder.get(query.lg_code);
+      if (!finder) {
+        const trieData = await RsdtBlkTrieFinder.loadDataFile({
           lg_code: query.lg_code,
           diContainer: this.diContainer,
         });
-        this.lgCodeToBuffer.set(query.lg_code, trieData);
+        if (!trieData) {
+          // データがなければスキップ
+          results.add(query);
+          this.noDbLgCode.add(query.lg_code);
+          continue;
+        }
+        finder = new RsdtBlkTrieFinder(trieData);
+        this.lgCodeToFinder.set(query.lg_code, finder);
       }
-      if (!trieData) {
-        // データがなければスキップ
-        results.add(query);
-        this.noDbLgCode.add(query.lg_code);
-        continue;
-      }
-
-      const finder = new RsdtBlkTrieFinder(trieData);
+      
       // ------------------------
       // 街区符号で当たるものがあるか
       // ------------------------

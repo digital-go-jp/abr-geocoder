@@ -85,7 +85,6 @@ export class WardTrieFinder extends TrieAddressFinder2<WardMatchingInfo> {
       }
 
       // 新しく作成
-      console.log(`creating cache for wardTrieFinder`);
       if (!await WardTrieFinder.createDictionaryFile(diContainer)) {
         return;
       }

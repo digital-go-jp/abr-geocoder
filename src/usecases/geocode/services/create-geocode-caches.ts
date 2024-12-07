@@ -25,7 +25,7 @@ import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { SingleBar } from 'cli-progress';
 import path from 'node:path';
 import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from '../models/abr-geocoder-di-container';
-import { ValidationParams, ValidationResult } from './worker/create-geocode-caches-worker';
+import { createCache, CreateCacheParams, CreateCacheResult } from './worker/create-geocode-caches-worker';
 import { AbrAbortController } from '@domain/models/abr-abort-controller';
 
 export const createGeocodeCaches = async ({
@@ -40,7 +40,7 @@ export const createGeocodeCaches = async ({
 
   // LG_CODEの一覧を取得
   const db = await container.database.openCommonDb();
-  const targets: ValidationParams[] = [
+  const targets: CreateCacheParams[] = [
     {
       target: 'pref',
     },
@@ -110,29 +110,42 @@ export const createGeocodeCaches = async ({
 
   progressBar?.start(targets.length, 0);
 
-
   // jest で動かしている場合は、メインスレッドで処理する
   if (process.env.JEST_WORKER_ID) {
-    // TODO
+    let result: boolean = false;
+    for (const task of targets) {
+      result = await createCache({
+        diContainer: container,
+        data: task,
+      });
+      if (!result) {
+        throw `Can not create the cache file for ${task.target}(${task.lg_code})`;
+      }
+    }
+    return true;
   }
   const abortCtrl = new AbrAbortController();
   
-  
-  const pool = new WorkerThreadPool<AbrGeocoderDiContainerParams, ValidationParams, ValidationResult>({
+  const pool = new WorkerThreadPool<AbrGeocoderDiContainerParams, CreateCacheParams, CreateCacheResult>({
     filename: path.join(__dirname, 'worker', 'create-geocode-caches-worker'),
     initData: container.toJSON(),
     maxConcurrency: numOfThreads,
-    maxTasksPerWorker: 5,
+    maxTasksPerWorker: 1,
     signal: abortCtrl.signal,
   });
   let current = 0;
   await new Promise((
     resolve: (_?: unknown) => void,
+    reject: (errorMsg: string) => void,
   ) => {
     for (const task of targets) {
       pool.run(task).then(result => {
         current++;
         progressBar?.update(current);
+        if (!result) {
+          reject(`Can not create the cache file for ${task.target}(${task.lg_code})`);
+          return;
+        }
         
         if (current === targets.length) {
           resolve();
@@ -141,9 +154,7 @@ export const createGeocodeCaches = async ({
     }
   });
   
-  console.log(`---->pool.close()`);
   progressBar?.stop();
   await pool.close();
-  console.log(`---->pool.closed()`);
   return true;
 };

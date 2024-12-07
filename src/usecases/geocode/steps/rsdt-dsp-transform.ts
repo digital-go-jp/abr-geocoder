@@ -36,7 +36,7 @@ import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtDspTransform extends Transform {
 
-  private readonly lgCodeToBuffer: LRUCache<string, Buffer> = new LRUCache<string, Buffer>({
+  private readonly lgCodeToFinder: LRUCache<string, RsdtDspTrieFinder> = new LRUCache<string, RsdtDspTrieFinder>({
     max: 10,
   });
   private readonly noDbLgCode: Set<string> = new Set();
@@ -94,23 +94,23 @@ export class RsdtDspTransform extends Transform {
       }
 
       // トライ木のデータを読み込む
-      let trieData = this.lgCodeToBuffer.get(query.lg_code);
-      if (!trieData) {
-        trieData = await RsdtDspTrieFinder.loadDataFile({
+      let finder = this.lgCodeToFinder.get(query.lg_code);
+      if (!finder) {
+        const trieData = await RsdtDspTrieFinder.loadDataFile({
           lg_code: query.lg_code,
           diContainer: this.diContainer,
         });
-        this.lgCodeToBuffer.set(query.lg_code, trieData);
-      }
-      if (!trieData) {
-        // データがなければスキップ
-        results.add(query);
-        this.noDbLgCode.add(query.lg_code);
-        continue;
+        if (!trieData) {
+          // データがなければスキップ
+          results.add(query);
+          this.noDbLgCode.add(query.lg_code);
+          continue;
+        }
+        finder = new RsdtDspTrieFinder(trieData);
+        this.lgCodeToFinder.set(query.lg_code, finder);
       }
 
       const queryInfo = this.getDetailNums(query);
-      const finder = new RsdtDspTrieFinder(trieData);
 
       const key = [
         query.rsdtblk_key.toString() || '',

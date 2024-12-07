@@ -59,7 +59,7 @@ export class ParcelTrieFinder extends TrieAddressFinder2<ParcelInfo> {
     while (i < rows.length) {
       const row = rows[i++];
       const key = row.town_key + ':' + [
-        row.prc_num1.toString().padStart(PARCEL_LENGTH, '0'),
+        (row.prc_num1 || '').toString().padStart(PARCEL_LENGTH, '0'),
         (row.prc_num2 || '').toString().padStart(PARCEL_LENGTH, '0'),
         (row.prc_num3 || '').toString().padStart(PARCEL_LENGTH, '0'),
       ]

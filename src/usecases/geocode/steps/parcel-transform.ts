@@ -38,7 +38,7 @@ import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class ParcelTransform extends Transform {
 
-  private readonly lgCodeToBuffer: LRUCache<string, Buffer> = new LRUCache<string, Buffer>({
+  private readonly lgCodeToFinder: LRUCache<string, ParcelTrieFinder> = new LRUCache<string, ParcelTrieFinder>({
     max: 10,
   });
   private readonly noDbLgCode: Set<string> = new Set();
@@ -97,30 +97,33 @@ export class ParcelTransform extends Transform {
         results.add(query);
         continue;
       }
-      
-
-      // トライ木のデータを読み込む
-      let trieData = this.lgCodeToBuffer.get(query.lg_code);
-      if (!trieData) {
-        trieData = await ParcelTrieFinder.loadDataFile({
-          lg_code: query.lg_code,
-          diContainer: this.diContainer,
-        });
-        this.lgCodeToBuffer.set(query.lg_code, trieData);
-      }
-      if (!trieData) {
-        // データがなければスキップ
+      if (this.noDbLgCode.has(query.lg_code)) {
+        // データがないことが分かっている場合はスキップ
         results.add(query);
-        this.noDbLgCode.add(query.lg_code);
         continue;
       }
 
+      // トライ木のデータを読み込む
+      let finder = this.lgCodeToFinder.get(query.lg_code);
+      if (!finder) {
+        const trieData = await ParcelTrieFinder.loadDataFile({
+          lg_code: query.lg_code,
+          diContainer: this.diContainer,
+        });
+        if (!trieData) {
+          // データがなければスキップ
+          results.add(query);
+          this.noDbLgCode.add(query.lg_code);
+          continue;
+        }
+        finder = new ParcelTrieFinder(trieData);
+        this.lgCodeToFinder.set(query.lg_code, finder);
+      }
+      
       const town_key = TableKeyProvider.getTownKey({
         machiaza_id: query.machiaza_id!,
         lg_code: query.lg_code,
       });
-
-      const finder = new ParcelTrieFinder(trieData);
 
       let anyHit = false;
       // 番地部分を探索する
