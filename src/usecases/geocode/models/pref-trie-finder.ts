@@ -49,14 +49,17 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
     }
 
     const rows = await db.getPrefList()
-    const writer = await FileTrieWriter.openFile(cacheFilePath);
-    for (const row of rows) {
+    const writer = await FileTrieWriter.create(cacheFilePath);
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
       await writer.addNode({
         key: PrefTrieFinder.normalize(row.pref),
         value: row,
       });
     }
     await writer.close();
+    await db.close();
     return true;
   };
 

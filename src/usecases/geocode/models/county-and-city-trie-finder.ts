@@ -50,14 +50,17 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo
     }
 
     const rows = await db.getCountyAndCityList();
-    const writer = await FileTrieWriter.openFile(cacheFilePath);
-    for (const row of rows) {
+    const writer = await FileTrieWriter.create(cacheFilePath);
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
       await writer.addNode({
         key: CountyAndCityTrieFinder.normalize(row.key),
         value: row,
       });
     }
     await writer.close();
+    await db.close();
     return true;
   };
 

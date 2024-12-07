@@ -6,6 +6,7 @@ import { CharNode } from "../trie/char-node";
 
 (async () => {
   const rootDir = path.normalize(path.join(__dirname, '..', '..', '..', '..', '..'));
+  const lg_code = '011011';
 
   const container = new AbrGeocoderDiContainer({
     cacheDir: `${rootDir}/db/cache`,
@@ -19,23 +20,23 @@ import { CharNode } from "../trie/char-node";
   // 古いキャッシュファイルを削除
   await removeFiles({
     dir: container.cacheDir,
-    filename: `rsdtblk_012068_.*\\.abrg2`,
+    filename: `rsdtblk_${lg_code}_.*\\.abrg2`,
   });
   await RsdtBlkTrieFinder.createDictionaryFile({
     diContainer: container,
-    lg_code: '012068'
+    lg_code,
   });
 
   const finderData = await RsdtBlkTrieFinder.loadDataFile({
     diContainer: container,
-    lg_code: '012068'
+    lg_code,
   });
   if (!finderData) {
     throw `can not load the finder data`;
   }
   const finder = new RsdtBlkTrieFinder(finderData);
   const db = await container.database.openRsdtBlkDb({
-    lg_code: '012068',
+    lg_code,
     createIfNotExists: false,
   });
   const rows = await db?.getBlockNumRows();
@@ -44,7 +45,7 @@ import { CharNode } from "../trie/char-node";
       target: CharNode.create(`${row.town_key}:${row.blk_num}`)!,
       partialMatches: true,
     });
-    if (!result) {
+    if (result.length === 0) {
       console.log(`${row.town_key}:${row.blk_num}`, row);
     }
   })

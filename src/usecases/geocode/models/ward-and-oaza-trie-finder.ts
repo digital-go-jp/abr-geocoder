@@ -47,16 +47,19 @@ export class WardAndOazaTrieFinder extends TrieAddressFinder2<WardAndOazaMatchin
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const commonDb = await diContainer.database.openCommonDb();
-    const rows = await commonDb.getWardAndOazaChoList();
-    const writer = await FileTrieWriter.openFile(cacheFilePath);
-    for (const row of rows) {
+    const db = await diContainer.database.openCommonDb();
+    const rows = await db.getWardAndOazaChoList();
+    const writer = await FileTrieWriter.create(cacheFilePath);
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
       await writer.addNode({
         key: WardAndOazaTrieFinder.normalize(row.key),
         value: row,
       });
     }
     await writer.close();
+    await db.close();
   };
 
   static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {

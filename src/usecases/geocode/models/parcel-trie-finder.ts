@@ -6,11 +6,8 @@ import path from 'node:path';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { FileTrieWriter } from "./trie/file-trie-writer";
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
-import { SemaphoreManager } from "@domain/services/thread/semaphore-manager";
 
 export class ParcelTrieFinder extends TrieAddressFinder2<ParcelInfo> {
-
-  private static readonly semaphore: SemaphoreManager = new SemaphoreManager(new SharedArrayBuffer(4 * 11));
 
   private static readonly getCacheFilePath = async ({
     diContainer,
@@ -56,13 +53,11 @@ export class ParcelTrieFinder extends TrieAddressFinder2<ParcelInfo> {
 
     const rows = await db.getParcelRows();
 
-    // 同時書き込みの防止
-    const lockIdx = parseInt(lg_code) % 11;
-    await ParcelTrieFinder.semaphore.enterAwait(lockIdx);
-
-    const writer = await FileTrieWriter.openFile(cacheFilePath);
+    const writer = await FileTrieWriter.create(cacheFilePath);
     const PARCEL_LENGTH = 5;
-    for (const row of rows) {
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
       const key = row.town_key + ':' + [
         row.prc_num1.toString().padStart(PARCEL_LENGTH, '0'),
         (row.prc_num2 || '').toString().padStart(PARCEL_LENGTH, '0'),
@@ -85,9 +80,7 @@ export class ParcelTrieFinder extends TrieAddressFinder2<ParcelInfo> {
       });
     }
     await writer.close();
-
-    // セマフォの解除
-    ParcelTrieFinder.semaphore.leave(lockIdx);
+    await db.close();
 
     return true;
   };
@@ -109,6 +102,7 @@ export class ParcelTrieFinder extends TrieAddressFinder2<ParcelInfo> {
           return data;
         }
       } catch (_e: unknown) {
+        console.log(_e);
         // Do nothing here
       }
 

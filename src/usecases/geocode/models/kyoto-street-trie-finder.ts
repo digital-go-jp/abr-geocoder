@@ -73,9 +73,11 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
     }
     
     const rows = await db.getKyotoStreetRows();
-    const writer = await FileTrieWriter.openFile(cacheFilePath);
+    const writer = await FileTrieWriter.create(cacheFilePath);
 
-    for (const row of rows) {
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
       row.oaza_cho = toHankakuAlphaNum(row.oaza_cho);
       row.chome = toHankakuAlphaNum(row.chome);
       switch (row.match_level) {
@@ -113,6 +115,7 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
       }
     }
     await writer.close();
+    await db.close();
     return true;
   };
 

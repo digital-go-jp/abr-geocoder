@@ -126,20 +126,24 @@ export const createGeocodeCaches = async ({
     signal: abortCtrl.signal,
   });
   let current = 0;
-  const tasks = targets.map(params => {
-    return pool.run(params).then(result => {
-      current++;
-      progressBar?.update(current);
-      return Promise.resolve(result);
-    });
-  });
-  const validationResults = await Promise.all(tasks);
-  for (const validationResult of validationResults) {
-    if (!validationResult.result) {
-      throw `Invalid cache file : ${validationResult.target} (${validationResult.lg_code})`;
+  await new Promise((
+    resolve: (_?: unknown) => void,
+  ) => {
+    for (const task of targets) {
+      pool.run(task).then(result => {
+        current++;
+        progressBar?.update(current);
+        
+        if (current === targets.length) {
+          resolve();
+        }
+      });
     }
-  }
+  });
+  
+  console.log(`---->pool.close()`);
   progressBar?.stop();
   await pool.close();
+  console.log(`---->pool.closed()`);
   return true;
 };

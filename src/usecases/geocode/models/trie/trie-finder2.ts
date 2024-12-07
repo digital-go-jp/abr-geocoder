@@ -30,6 +30,7 @@ import {
   DATA_NODE_HASH_VALUE,
   DATA_NODE_NEXT_OFFSET,
   DATA_NODE_SIZE_FIELD,
+  DataNode,
   HASH_LINK_NODE_NEXT_OFFSET,
   HASH_LINK_NODE_OFFSET_VALUE,
   ReadTrieNode,
@@ -42,7 +43,7 @@ import {
   VERSION_BYTES,
 } from './abrg-file-structure';
 import { CharNode } from './char-node';
-import { TrieFinderResult, TrieTreeBuilderFinderCommon } from './common';
+import { TrieFinderResult } from './common';
 
 export type TraverseQuery = {
   next: TraverseQuery | undefined;
@@ -93,19 +94,191 @@ class FileTrieResults {
   }
 }
 
-export class TrieAddressFinder2<T> extends TrieTreeBuilderFinderCommon {
+export class TrieAddressFinder2<T> {
   // ヘッダー
   private readonly header: AbrgDictHeader;
-
-  constructor(fileBuffer: Buffer) {
-    super(fileBuffer);
-    const headerData = this.readHeader();
+  protected debug: boolean = false;
+  protected readonly trieNodeMap: Map<number, ReadTrieNode | null> = new Map();
+  
+  constructor(private readonly fileBuffer: Buffer) {
     this.debug = false;
-
-    if (!headerData) {
-      throw new Error(`Can not load the abrg file`);
+    const header = this.readHeader();
+    if (!header) {
+      if (this.debug) {
+        console.error(`Can not read the file`);
+      }
+      throw `Can not read the file`;
     }
-    this.header = headerData;
+    this.header = header;
+  }
+
+  protected read(offset: number, size: number): Buffer {
+    const result = Buffer.alloc(size);
+    this.fileBuffer.copy(result, 0, offset, offset + size);
+    return result;
+  }
+
+  protected readDataNode(hashValueOffset: number): DataNode {
+    let offset = hashValueOffset;
+
+    // 次のデータノードのアドレス
+    const nextDataNodeOffset = this.fileBuffer.readUInt32BE(hashValueOffset);
+    offset += DATA_NODE_NEXT_OFFSET.size;
+
+    // データノードのサイズ
+    let nodeSize = this.fileBuffer.readUInt16BE(offset);
+    offset += DATA_NODE_SIZE_FIELD.size;
+
+    // データに対するハッシュ値
+    const hashValue = this.fileBuffer.readUInt32BE(offset);
+    offset += DATA_NODE_HASH_VALUE.size;
+
+    // 実データ
+    let data = undefined;
+    if (offset < hashValueOffset + nodeSize) {
+      const dataStr = this.fileBuffer.toString('utf8', offset, hashValueOffset + nodeSize);
+      data = JSON.parse(dataStr);
+    }
+     
+    return {
+      data,
+      nodeSize,
+      hashValue,
+      offset: hashValueOffset,
+      nextDataNodeOffset,
+    };
+  }
+
+  protected readHeader(): AbrgDictHeader | null {
+
+    // ファイル先頭6バイトを読み込む
+    const first6BytesBuffer = this.read(0, ABRG_FILE_MAGIC.size + ABRG_FILE_HEADER_SIZE.size);
+
+    // ファイルマジックの確認 (先頭4バイト)
+    const name = first6BytesBuffer.toString('ascii', 0, ABRG_FILE_MAGIC.size);
+    if (name !== 'abrg') {
+      return null;
+    }
+
+    // ヘッダーサイズ
+    const headerSize = first6BytesBuffer.readUint16BE(ABRG_FILE_HEADER_SIZE.offset);
+
+    // ヘッダー全体の読み込み
+    const headerBuffer = this.read(0, headerSize);
+    
+    // バージョン番号の読み取り
+    // version 2.2でない場合はサポートしていない
+    // (将来的に書きこんだversionによってロジックが変わる可能性がある)
+    const majorVersion = headerBuffer.readUInt8(VERSION_BYTES.offset);
+    const minorVersion = headerBuffer.readUInt8(VERSION_BYTES.offset + 1);
+    if (majorVersion !== 2 || minorVersion < 2) {
+      return null;
+    }
+
+    // トライ木ノードへのオフセット値
+    const trieNodeOffset = headerBuffer.readUInt32BE(TRIE_NODE_ENTRY_POINT.offset);
+
+    // データノードへのオフセット値
+    const dataNodeOffset = headerBuffer.readUInt32BE(DATA_NODE_ENTRY_POINT.offset);
+
+    return {
+      version: {
+        major: majorVersion,
+        minor: minorVersion,
+      },
+      trieNodeOffset,
+      dataNodeOffset,
+      headerSize,
+    };
+  }
+
+  protected copyTo(offset: number, dst: Buffer) {
+    this.fileBuffer.copy(dst, 0, offset, offset + dst.length);
+  }
+  protected createHashValueList(nodeOffset: number) {
+    const headValueList: TrieHashListNode = {
+      hashValueOffset: 0,
+      offset: 0,
+      next: undefined,
+    };
+    let tailHashValueList: TrieHashListNode = headValueList;
+    let storedHashValueOffset: number = 0;
+    // トライ木ノードに紐づいているデータノードへのオフセット値を読むこむ
+    let currentOffset = this.fileBuffer.readUInt32BE(nodeOffset + TRIE_NODE_HASH_LINKED_LIST_OFFSET.offset);
+    if (this.debug) {
+      console.log(`(read)${currentOffset} at ${nodeOffset + TRIE_NODE_HASH_LINKED_LIST_OFFSET.offset}`);
+    }
+    let nextOffset: number = 0;
+    // ハッシュ値へのオフセット値の連結リストを読み取るためのバッファ
+    const hashLinkNodeBuffer = Buffer.alloc(
+      HASH_LINK_NODE_NEXT_OFFSET.size +
+      HASH_LINK_NODE_OFFSET_VALUE.size,
+    );
+    
+    while (currentOffset) {
+      // ハッシュ値へのオフセット値への連結リストを読み取る
+      this.copyTo(currentOffset, hashLinkNodeBuffer);
+
+      // 次のハッシュオフセットノードへのオフセット値
+      nextOffset = hashLinkNodeBuffer.readUInt32BE(HASH_LINK_NODE_NEXT_OFFSET.offset);
+      // 保存されているハッシュ値へのオフセット値
+      storedHashValueOffset = hashLinkNodeBuffer.readUInt32BE(HASH_LINK_NODE_OFFSET_VALUE.offset);
+      // リストを作成する
+      tailHashValueList.next = {
+        hashValueOffset: storedHashValueOffset,
+        offset: currentOffset,
+        next: undefined,
+      };
+      // 次に進む
+      tailHashValueList = tailHashValueList.next;
+      currentOffset = nextOffset;
+    }
+    return headValueList.next;
+  }
+  // ノード情報を読み込む
+  protected readTrieNode(nodeOffset: number): ReadTrieNode | null {
+    if (this.trieNodeMap.has(nodeOffset)) {
+      return this.trieNodeMap.get(nodeOffset)!;
+    }
+
+    // ノードサイズを読み取る(1)
+    const nodeSize = this.fileBuffer.readUInt8(nodeOffset + TRIE_NODE_SIZE_FIELD.offset);
+
+    // ノード全体を読み取る
+    const nodeBuffer = this.read(nodeOffset, nodeSize);
+    
+    // nodeBufferを読み取るためのオフセット値
+    let offset = TRIE_NODE_SIZE_FIELD.offset + TRIE_NODE_SIZE_FIELD.size;
+
+    // 兄弟ノードへのオフセット値
+    const siblingOffset = nodeBuffer.readUInt32BE(TRIE_NODE_SIBLING_OFFSET.offset);
+    offset += TRIE_NODE_SIBLING_OFFSET.size;
+
+    // 子ノードへのオフセット値
+    const childOffset = nodeBuffer.readUInt32BE(TRIE_NODE_CHILD_OFFSET.offset);
+    offset += TRIE_NODE_CHILD_OFFSET.size;
+
+    // データノードへのオフセット値の連結リスト
+    const headValueList = this.createHashValueList(nodeOffset);
+    offset += TRIE_NODE_HASH_LINKED_LIST_OFFSET.size;
+
+    // ノード名
+    let name = '';
+    if (offset < nodeOffset + nodeSize) {
+      name = nodeBuffer.toString('utf8', offset, nodeOffset + nodeSize);
+      // offset += nodeSize - offset;
+    }
+    const readTrieNode = {
+      name,
+      offset: nodeOffset,
+      childOffset: childOffset === 0 ? undefined : childOffset,
+      siblingOffset: siblingOffset === 0 ? undefined : siblingOffset,
+      hashValueList: headValueList,
+      nodeSize,
+    };
+    this.trieNodeMap.set(nodeOffset, readTrieNode);
+
+    return readTrieNode;
   }
 
   find({ 

@@ -253,7 +253,7 @@ const testCommand: CommandModule = {
     const createCacheTask = createGeocodeCaches({
       container,
       progressBar: cacheProgressBar,
-      numOfThreads: numOfThreads,
+      numOfThreads,
     });
 
     const countNumOfLinesTask = (async () => {

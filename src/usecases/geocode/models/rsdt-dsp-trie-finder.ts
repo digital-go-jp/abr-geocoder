@@ -6,11 +6,8 @@ import path from 'node:path';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { FileTrieWriter } from "./trie/file-trie-writer";
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
-import { SemaphoreManager } from "@domain/services/thread/semaphore-manager";
 
 export class RsdtDspTrieFinder extends TrieAddressFinder2<RsdtDspInfo> {
-
-  private static readonly semaphore: SemaphoreManager = new SemaphoreManager(new SharedArrayBuffer(4 * 11));
 
   private static readonly getCacheFilePath = async ({
     diContainer,
@@ -54,19 +51,12 @@ export class RsdtDspTrieFinder extends TrieAddressFinder2<RsdtDspInfo> {
       return false;
     }
 
-    const rows = (await db.getRsdtDspRows())
+    const rows = (await db.getRsdtDspRows());
 
-    // 同時書き込みの防止
-    const lockIdx = parseInt(lg_code) % 11;
-    await RsdtDspTrieFinder.semaphore.enterAwait(lockIdx);
-    const allows = new Set([
-      '3017300559:1',
-      '3017300559:2',
-      '3017300559:20',
-    ])
-
-    const writer = await FileTrieWriter.openFile(cacheFilePath);
-    for (const row of rows) {
+    const writer = await FileTrieWriter.create(cacheFilePath);
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
 
       const key = [
         row.rsdtblk_key.toString() || '',
@@ -95,10 +85,7 @@ export class RsdtDspTrieFinder extends TrieAddressFinder2<RsdtDspInfo> {
       });
     }
     await writer.close();
-
-    // セマフォの解除
-    RsdtDspTrieFinder.semaphore.leave(lockIdx);
-
+    await db.close();
     return true;
   };
   
@@ -120,6 +107,7 @@ export class RsdtDspTrieFinder extends TrieAddressFinder2<RsdtDspInfo> {
         }
       } catch (_e: unknown) {
         // Do nothing here
+        console.log(_e);
       }
 
       // 新しく作成

@@ -117,6 +117,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
       if (typeof error === 'string' && error === 'abort' || error instanceof Event && error.type === 'abort') {
         return;
       }
+      console.error(error);
       worker.removeAllListeners();
       const logger = DebugLogger.getInstance();
       logger.error(`thread error`, error);

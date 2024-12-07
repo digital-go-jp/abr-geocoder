@@ -54,14 +54,17 @@ export class Tokyo23WardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> 
       return false;
     }
     const rows = await db.getTokyo23Wards();
-    const writer = await FileTrieWriter.openFile(cacheFilePath);
-    for (const row of rows) {
+    const writer = await FileTrieWriter.create(cacheFilePath);
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
       await writer.addNode({
         key: Tokyo23WardTrieFinder.normalize(row.key),
         value: row,
       });
     }
     await writer.close();
+    await db.close();
     return true;
   };
 

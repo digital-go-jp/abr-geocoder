@@ -48,8 +48,10 @@ export class WardTrieFinder extends TrieAddressFinder2<WardMatchingInfo> {
       return false;
     }
     const rows = await db.getWards();
-    const writer = await FileTrieWriter.openFile(cacheFilePath);
-    for (const row of rows) {
+    const writer = await FileTrieWriter.create(cacheFilePath);
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
       await writer.addNode({
         key: WardTrieFinder.normalize(row.key),
         value: row,
@@ -61,6 +63,7 @@ export class WardTrieFinder extends TrieAddressFinder2<WardMatchingInfo> {
       });
     }
     await writer.close();
+    await db.close();
     return true;
   };
 
