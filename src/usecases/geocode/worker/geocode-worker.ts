@@ -61,7 +61,7 @@ export class GeocodeTransform extends Duplex {
   private readonly reader = new Readable({
     objectMode: true,
     read() {},
-    highWaterMark: 1024,
+    // highWaterMark: 1024,
   });
 
   private constructor({
@@ -144,7 +144,6 @@ export class GeocodeTransform extends Duplex {
     // 最終的な結果にまとめる
     const geocodeResultTransform = new GeocodeResultTransform();
 
-    
     const dst = new Writable({
       objectMode: true,
       write: (query: Query, _, callback) => {

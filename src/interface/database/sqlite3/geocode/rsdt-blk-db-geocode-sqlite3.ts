@@ -24,7 +24,7 @@
 import { DataField } from "@config/data-field";
 import { DbTableName } from "@config/db-table-name";
 import { RsdtBlkInfo } from "@domain/types/geocode/rsdt-blk-info";
-import { IRsdtBlkDbGeocode } from "../../common-db";
+import { GetBlockNumRowsOptions, IRsdtBlkDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 import crc32Lib from "@domain/services/crc32-lib";
 
@@ -53,24 +53,37 @@ export class RsdtBlkGeocodeSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbG
     return rows.length === 1;
   }
 
-  async getBlockNumRows(): Promise<RsdtBlkInfo[]> {
+  async getBlockNumRows(where?: GetBlockNumRowsOptions): Promise<RsdtBlkInfo[]> {
     const existTable = await this.hasTable();
     if (!existTable) {
       return [];
     }
+
+    let sql = `
+      SELECT
+        rsdtblk_key,
+        town_key,
+        ${DataField.BLK_ID.dbColumn} AS blk_id,
+        ${DataField.BLK_NUM.dbColumn} AS blk_num,
+        ${DataField.REP_LAT.dbColumn} as rep_lat,
+        ${DataField.REP_LON.dbColumn} as rep_lon
+      FROM
+        ${DbTableName.RSDT_BLK}
+    `;
+    if (where) {
+      sql += `
+        WHERE
+          town_key = @town_key AND
+          ${DataField.BLK_NUM.dbColumn} = @blk_num`;
+    } else {
+      where = {
+        town_key: 0,
+        blk_num: '', 
+      };
+    }
     
     return new Promise((resolve: (rows: RsdtBlkInfo[]) => void) => {
-      const rows = this.prepare<{}, RsdtBlkInfo>(`
-        SELECT
-          rsdtblk_key,
-          town_key,
-          ${DataField.BLK_ID.dbColumn} AS blk_id,
-          ${DataField.BLK_NUM.dbColumn} AS blk_num,
-          ${DataField.REP_LAT.dbColumn} as rep_lat,
-          ${DataField.REP_LON.dbColumn} as rep_lon
-        FROM
-          ${DbTableName.RSDT_BLK}
-      `).all({});
+      const rows = this.prepare<GetBlockNumRowsOptions, RsdtBlkInfo>(sql).all(where);
 
       resolve(rows);
     });

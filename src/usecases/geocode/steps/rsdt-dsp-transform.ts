@@ -21,25 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { DASH, DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
+import { RsdtDspInfo } from '@domain/types/geocode/rsdt-dsp-info';
 import { SearchTarget } from '@domain/types/search-target';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
-import { LRUCache } from 'lru-cache';
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
-import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
-import { RsdtDspTrieFinder } from '../models/rsdt-dsp-trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtDspTransform extends Transform {
-
-  private readonly lgCodeToFinder: LRUCache<string, RsdtDspTrieFinder> = new LRUCache<string, RsdtDspTrieFinder>({
-    max: 10,
-  });
-  private readonly noDbLgCode: Set<string> = new Set();
 
   constructor(
     private readonly diContainer: AbrGeocoderDiContainer,
@@ -58,6 +52,41 @@ export class RsdtDspTransform extends Transform {
     // ------------------------
     // 住居番号で当たるものがあるか
     // ------------------------
+    const trie = new TrieAddressFinder<RsdtDspInfo>();
+    for await (const query of queries.values()) {
+      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key) {
+        continue;
+      }
+      if (query.city === '京都市') {
+        // 京都市がマッチしている場合、スキップする
+        // (京都市は住居表示を行っていない)
+        continue;
+      }
+      if (query.searchTarget === SearchTarget.PARCEL) {
+        // 地番検索が指定されている場合、このステップはスキップする
+        continue;
+      }
+      const db = await this.diContainer.database.openRsdtDspDb({
+        lg_code: query.lg_code!,
+        createIfNotExists: false,
+      });
+      if (!db) {
+        continue;
+      }
+      const rows = await db.getRsdtDspRows({
+        rsdtblk_key: query.rsdtblk_key!,
+      });
+      db.close();
+
+      for (const row of rows) {
+        const key = [row.rsdt_num, row.rsdt_num2].filter(x => x !== null).join(DASH);
+        trie.append({
+          key,
+          value: row,
+        });
+      }
+    }
+
     const results = new QuerySet();
     for await (const query of queries.values()) {
 
@@ -88,40 +117,12 @@ export class RsdtDspTransform extends Transform {
       }
 
       // rest_abr_flg = 0のものは地番を検索する
-      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key || !query.lg_code) {
+      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key) {
         results.add(query);
         continue;
       }
-
-      // トライ木のデータを読み込む
-      let finder = this.lgCodeToFinder.get(query.lg_code);
-      if (!finder) {
-        const trieData = await RsdtDspTrieFinder.loadDataFile({
-          lg_code: query.lg_code,
-          diContainer: this.diContainer,
-        });
-        if (!trieData) {
-          // データがなければスキップ
-          results.add(query);
-          this.noDbLgCode.add(query.lg_code);
-          continue;
-        }
-        finder = new RsdtDspTrieFinder(trieData);
-        this.lgCodeToFinder.set(query.lg_code, finder);
-      }
-
-      const queryInfo = this.getDetailNums(query);
-
-      const key = [
-        query.rsdtblk_key.toString() || '',
-        queryInfo.rsdt_num || '',
-        queryInfo.rsdt_num2 || '',
-      ]
-      .filter(x => x !== '')
-      .join(':');
-
-      let findResults = finder.find({
-        target: CharNode.create(key),
+      const findResults = trie.find({
+        target,
         fuzzy: DEFAULT_FUZZY_CHAR,
       });
       if (findResults === undefined || findResults.length === 0) {
@@ -131,37 +132,38 @@ export class RsdtDspTransform extends Transform {
       
       let anyAmbiguous = false;
       let anyHit = false;
-      for (const result of findResults) {
+      for (const findResult of findResults) {
 
         // マッチしていない文字の最初の文字が数字のときは、
         // 数字の途中でミスマッチしたときなので
         // 結果を使用しない
-        if (result.unmatched?.char &&
-          RegExpEx.create('^[0-9]$').test(result.unmatched.char)) {
+        if (findResult.unmatched?.char &&
+          RegExpEx.create('^[0-9]$').test(findResult.unmatched.char)) {
           results.add(query);
           continue;
         }
         anyHit = true;
       
         // 番地がヒットした
-        anyAmbiguous = anyAmbiguous || result.ambiguousCnt > 0;
+        const info = findResult.info! as RsdtDspInfo;
+        anyAmbiguous = anyAmbiguous || findResult.ambiguousCnt > 0;
         const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
-          rsdtdsp_key: result.info?.rsdtdsp_key,
-          rsdtblk_key: result.info?.rsdtblk_key,
-          rsdt_num: result.info?.rsdt_num,
-          rsdt_id: result.info?.rsdt_id,
-          rsdt_num2: result.info?.rsdt_num2,
-          rsdt2_id: result.info?.rsdt2_id,
-          tempAddress: result.unmatched?.concat(queryInfo.unmatched) || queryInfo.unmatched,
+          rsdtdsp_key: info.rsdtdsp_key,
+          rsdtblk_key: info.rsdtblk_key,
+          rsdt_num: info.rsdt_num,
+          rsdt_id: info.rsdt_id,
+          rsdt_num2: info.rsdt_num2,
+          rsdt2_id: info.rsdt2_id,
+          tempAddress: findResult.unmatched,
           match_level: MatchLevel.RESIDENTIAL_DETAIL,
-          matchedCnt: query.matchedCnt + result.depth,
-          ambiguousCnt: query.ambiguousCnt + result.ambiguousCnt, 
+          matchedCnt: query.matchedCnt + findResult.depth,
+          ambiguousCnt: query.ambiguousCnt + findResult.ambiguousCnt, 
           rsdt_addr_flg: 1,
         };
-        if (result.info?.rep_lat && result.info?.rep_lon) {
+        if (info.rep_lat && info.rep_lon) {
           params.coordinate_level = MatchLevel.RESIDENTIAL_DETAIL;
-          params.rep_lat = result.info?.rep_lat;
-          params.rep_lon = result.info?.rep_lon;
+          params.rep_lat = info.rep_lat;
+          params.rep_lon = info.rep_lon;
         }
         const copied = query.copy(params);
         results.add(copied);
@@ -174,46 +176,5 @@ export class RsdtDspTransform extends Transform {
     queries.clear();
 
     callback(null, results);
-  }
-
-  // トライ木の作成に時間がかかるので、SQLの LIKE 演算子を使って
-  // DB内を直接検索するための blk_num を作成する
-  // fuzzyが含まれる可能性があるので、'_' に置換する
-  // ('_'は、SQLiteにおいて、任意の一文字を示す)
-  private getDetailNums(query: Query) {
-    let p : CharNode | undefined = trimDashAndSpace(query.tempAddress);
-    const buffer: string[] = [];
-    const buffer2: string[] = [];
-    // マッチした文字数
-    let matchedCnt = 0;
-
-    // Find the rsdt_num
-    while (p) {
-      if (p.char === DEFAULT_FUZZY_CHAR || RegExpEx.create('[0-9]').test(p.char!)) {
-        buffer.push(p.char!);
-        matchedCnt++;
-      } else {
-        break;
-      }
-      p = p.next;
-    }
-
-    // Find the rsdt_num2
-    while (p) {
-      if (p.char === DEFAULT_FUZZY_CHAR || RegExpEx.create('[0-9]').test(p.char!)) {
-        buffer2.push(p.char!);
-        matchedCnt++;
-      } else {
-        break;
-      }
-      p = p.next;
-    }
-
-    return {
-      rsdt_num: buffer.join(''),
-      rsdt_num2: buffer2.join(''),
-      unmatched: p, 
-      matchedCnt,
-    };
   }
 }

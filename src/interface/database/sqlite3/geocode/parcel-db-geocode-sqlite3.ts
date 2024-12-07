@@ -24,7 +24,7 @@
 import { DataField } from "@config/data-field";
 import { DbTableName } from "@config/db-table-name";
 import { ParcelInfo } from "@domain/types/geocode/parcel-info";
-import { IParcelDbGeocode } from "../../common-db";
+import { GetParcelRowsOptions, IParcelDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
 import crc32Lib from "@domain/services/crc32-lib";
 
@@ -53,9 +53,9 @@ export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbG
     return crc32Lib.fromString(this.getParcelRows.toString());
   }
   
-  async getParcelRows(): Promise<ParcelInfo[]> {
+  async getParcelRows(where?: GetParcelRowsOptions): Promise<ParcelInfo[]> {
     return new Promise((resolve: (rows: ParcelInfo[]) => void) => {
-      const rows = this.prepare<{}, ParcelInfo>(`
+      let sql = `
         SELECT
           parcel_key,
           IFNULL(town_key, 0) as town_key,
@@ -67,7 +67,21 @@ export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbG
           ${DataField.REP_LON.dbColumn} as rep_lon
         FROM
           ${DbTableName.PARCEL}
-      `).all({});
+      `;
+      if (where) {
+        sql += `
+        WHERE
+          town_key = @town_key AND
+          ${DataField.PRC_ID.dbColumn} LIKE @prc_id`;
+      } else {
+        where = {
+          city_key: 0,
+          town_key: 0,
+          prc_id: '', 
+        }
+      }
+
+      const rows = this.prepare<GetParcelRowsOptions, ParcelInfo>(sql).all(where);
       resolve(rows);
     });
   }

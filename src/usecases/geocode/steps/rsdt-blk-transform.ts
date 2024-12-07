@@ -26,20 +26,13 @@ import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
-import { LRUCache } from 'lru-cache';
 import { Transform, TransformCallback } from 'node:stream';
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
-import { RsdtBlkTrieFinder } from '../models/rsdt-blk-trie-finder';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtBlkTransform extends Transform {
-
-  private readonly lgCodeToFinder: LRUCache<string, RsdtBlkTrieFinder> = new LRUCache<string, RsdtBlkTrieFinder>({
-    max: 10,
-  });
-  private readonly noDbLgCode: Set<string> = new Set();
 
   constructor(
     private readonly diContainer: AbrGeocoderDiContainer,
@@ -89,36 +82,35 @@ export class RsdtBlkTransform extends Transform {
       //   continue;
       // }
 
-      if (!query.town_key || !query.lg_code || this.noDbLgCode.has(query.lg_code)) {
+      if (!query.town_key) {
+        results.add(query);
+        continue;
+      }
+      if (!query.lg_code) {
         results.add(query);
         continue;
       }
 
-      // トライ木のデータを読み込む
-      let finder = this.lgCodeToFinder.get(query.lg_code);
-      if (!finder) {
-        const trieData = await RsdtBlkTrieFinder.loadDataFile({
-          lg_code: query.lg_code,
-          diContainer: this.diContainer,
-        });
-        if (!trieData) {
-          // データがなければスキップ
-          results.add(query);
-          this.noDbLgCode.add(query.lg_code);
-          continue;
-        }
-        finder = new RsdtBlkTrieFinder(trieData);
-        this.lgCodeToFinder.set(query.lg_code, finder);
+      const db = await this.diContainer.database.openRsdtBlkDb({
+        lg_code: query.lg_code,
+        createIfNotExists: false,
+      });
+      if (!db) {
+        // DBをオープンできなければスキップ
+        results.add(query);
+        continue;
       }
-      
+
       // ------------------------
       // 街区符号で当たるものがあるか
       // ------------------------
       const queryInfo = this.getBlockNum(query);
-      const findResults = finder.find({
-        target: CharNode.create(`${query.town_key}:${queryInfo.block_num}`),
-        fuzzy: DEFAULT_FUZZY_CHAR,
+      const findResults = await db.getBlockNumRows({
+        town_key: query.town_key,
+        blk_num: queryInfo.block_num,
       });
+      
+      db.close();
 
       // 番地が見つからなかった
       // if (findResults.length === 0) {
@@ -131,18 +123,18 @@ export class RsdtBlkTransform extends Transform {
       
       findResults.forEach(result => {
         const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
-          block: result.info?.blk_num.toString(),
-          block_id: result.info?.blk_id,
-          rsdtblk_key: result.info?.rsdtblk_key,
-          tempAddress: result.unmatched?.concat(queryInfo.unmatched) || queryInfo.unmatched,
+          block: result.blk_num.toString(),
+          block_id: result.blk_id,
+          rsdtblk_key: result.rsdtblk_key,
+          tempAddress: queryInfo.unmatched,
           match_level: MatchLevel.RESIDENTIAL_BLOCK,
           matchedCnt: query.matchedCnt + queryInfo.matchedCnt,
           rsdt_addr_flg: 1,
         };
-        if (result.info?.rep_lat && result.info?.rep_lon) {
+        if (result.rep_lat && result.rep_lon) {
           params.coordinate_level = MatchLevel.RESIDENTIAL_BLOCK;
-          params.rep_lat = result.info?.rep_lat;
-          params.rep_lon = result.info?.rep_lon;
+          params.rep_lat = result.rep_lat;
+          params.rep_lon = result.rep_lon;
         }
         const copied = query.copy(params);
         results.add(copied);
@@ -165,7 +157,12 @@ export class RsdtBlkTransform extends Transform {
     let matchedCnt = 0;
 
     while (p) {
-      if (p.char === DEFAULT_FUZZY_CHAR || RegExpEx.create('[0-9]').test(p.char!)) {
+      if (p.char === DEFAULT_FUZZY_CHAR) {
+        // fuzzyの場合、任意の１文字
+        // TODO: Databaseごとの処理に対応させる
+        buffer.push('_');
+        matchedCnt++;
+      } else if (RegExpEx.create('[0-9]').test(p.char!)) {
         buffer.push(p.char!);
         matchedCnt++;
       } else {
@@ -189,6 +186,7 @@ export class RsdtBlkTransform extends Transform {
 
     return {
       block_num: buffer.join(''),
+      block_id: query.block_id!,
       unmatched: p, 
       matchedCnt,
     };

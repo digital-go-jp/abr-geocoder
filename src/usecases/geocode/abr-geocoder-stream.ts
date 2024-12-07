@@ -95,7 +95,7 @@ export class AbrGeocoderStream extends Duplex {
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
-    // await this.waiter();
+    await this.waiter();
 
     const lineId = ++this.writeIdx;
 

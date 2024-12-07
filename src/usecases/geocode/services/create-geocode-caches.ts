@@ -66,47 +66,47 @@ export const createGeocodeCaches = async ({
       target: 'ward',
     },
   ];
-  const cities = await db.getCityList();
-  for (const city of cities) {
-    // RSDT_BLKテーブルのチェック
-    const rsdtBlkDb = await container.database.openRsdtBlkDb({
-      lg_code: city.lg_code,
-      createIfNotExists: false,
-    });
-    if (rsdtBlkDb) {
-      targets.push({
-        target: 'rsdtblk',
-        lg_code: city.lg_code,
-      })
-    }
-    rsdtBlkDb?.close();
+  // const cities = await db.getCityList();
+  // for (const city of cities) {
+  //   // RSDT_BLKテーブルのチェック
+  //   const rsdtBlkDb = await container.database.openRsdtBlkDb({
+  //     lg_code: city.lg_code,
+  //     createIfNotExists: false,
+  //   });
+  //   if (rsdtBlkDb) {
+  //     targets.push({
+  //       target: 'rsdtblk',
+  //       lg_code: city.lg_code,
+  //     })
+  //   }
+  //   rsdtBlkDb?.close();
 
-    // RSDT_DSPテーブルのチェック
-    const rsdtDspDb = await container.database.openRsdtDspDb({
-      lg_code: city.lg_code,
-      createIfNotExists: false,
-    });
-    if (rsdtDspDb) {
-      targets.push({
-        target: 'rsdtdsp',
-        lg_code: city.lg_code,
-      })
-    }
-    rsdtDspDb?.close();
+  //   // RSDT_DSPテーブルのチェック
+  //   const rsdtDspDb = await container.database.openRsdtDspDb({
+  //     lg_code: city.lg_code,
+  //     createIfNotExists: false,
+  //   });
+  //   if (rsdtDspDb) {
+  //     targets.push({
+  //       target: 'rsdtdsp',
+  //       lg_code: city.lg_code,
+  //     })
+  //   }
+  //   rsdtDspDb?.close();
 
-    // PARCELテーブルのチェック
-    const parcelDb = await container.database.openParcelDb({
-      lg_code: city.lg_code,
-      createIfNotExists: false,
-    });
-    if (parcelDb) {
-      targets.push({
-        target: 'parcel',
-        lg_code: city.lg_code,
-      })
-    }
-    parcelDb?.close();
-  }
+  //   // PARCELテーブルのチェック
+  //   const parcelDb = await container.database.openParcelDb({
+  //     lg_code: city.lg_code,
+  //     createIfNotExists: false,
+  //   });
+  //   if (parcelDb) {
+  //     targets.push({
+  //       target: 'parcel',
+  //       lg_code: city.lg_code,
+  //     })
+  //   }
+  //   parcelDb?.close();
+  // }
 
   progressBar?.start(targets.length, 0);
 

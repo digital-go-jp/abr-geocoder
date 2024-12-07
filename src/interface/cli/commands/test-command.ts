@@ -24,7 +24,6 @@
 import { DEFAULT_FUZZY_CHAR, STDIN_FILEPATH } from '@config/constant-values';
 import { EnvProvider } from '@domain/models/env-provider';
 import { countRequests } from '@domain/services/count-requests';
-import { createMultiProgressBar } from '@domain/services/progress-bars/create-multi-progress-bar';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
 import { resolveHome } from '@domain/services/resolve-home';
 import { CommentFilterTransform } from '@domain/services/transformations/comment-filter-transform';
@@ -213,7 +212,6 @@ const testCommand: CommandModule = {
       return result;
     })(destination);
 
-
     // ルートディレクトリを探す
     const rootDir = upwardFileSearch(__dirname, 'build');
     if (!rootDir) {
@@ -241,7 +239,7 @@ const testCommand: CommandModule = {
         return 1;
       }
       // バックグラウンドスレッドを用いる
-      return container.env.availableParallelism();
+      return container.env.availableParallelism() * 2;
     })();
 
     // 初期化する
@@ -254,9 +252,9 @@ const testCommand: CommandModule = {
       numOfThreads,
     });
 
+    // ファイルの行数を数える
     const countNumOfLinesTask = (async () => {
       if (source !== STDIN_FILEPATH) {
-        // ファイルの場合は、先に合計数を数えておく
         return countRequests(source);
       } else {
         return Number.POSITIVE_INFINITY;
