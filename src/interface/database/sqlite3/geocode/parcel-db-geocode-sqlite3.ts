@@ -75,7 +75,6 @@ export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbG
           ${DataField.PRC_ID.dbColumn} LIKE @prc_id`;
       } else {
         where = {
-          city_key: 0,
           town_key: 0,
           prc_id: '', 
         }

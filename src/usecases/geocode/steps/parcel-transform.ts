@@ -23,7 +23,6 @@
  */
 import { DASH, DEFAULT_FUZZY_CHAR, KANJI_NUMS, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
-import { TableKeyProvider } from '@domain/services/table-key-provider';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
 import { IParcelDbGeocode } from '@interface/database/common-db';
@@ -34,6 +33,7 @@ import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { isDigit } from '../services/is-number';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
+import { TableKeyProvider } from '@domain/services/table-key-provider';
 
 export class ParcelTransform extends Transform {
 
@@ -117,10 +117,14 @@ export class ParcelTransform extends Transform {
         }
         seen.add(queryInfo.parcelId);
 
+        const machiaza_id = this.getMachiazaId(query);
+
         // town_key で指定した地番情報を取得
         const findResults = await db.getParcelRows({
-          city_key: query.city_key!,
-          town_key: query.town_key,
+          town_key: TableKeyProvider.getTownKey({
+            machiaza_id,
+            lg_code: query.lg_code,
+          }),
           prc_id: queryInfo.parcelId, 
         })
         
@@ -161,6 +165,16 @@ export class ParcelTransform extends Transform {
     callback(null, results);
   }
 
+  private getMachiazaId(query: Query) {
+    if (query.koaza_aka_code !== 2) {
+      return query.machiaza_id!;
+    }
+
+    // 京都の通り名の場合、大字のmachiaza_idを使用する
+    // (通り名にも machiaza_idが割り当てられているが、parcelテーブルにはない)
+    return query.machiaza_id?.substring(0, 4) + `000`;
+  }
+
   // 〇〇-△△-☓☓ を分解して、IDを作る
   private getPrcId(query: Query, numOfParcelNums: 1 | 2 | 3) {
     const PARCEL_LENGTH = 5;
@@ -179,9 +193,9 @@ export class ParcelTransform extends Transform {
 
     // マッチした文字数
     let matchedCnt = 0;
-    while (head && !head.ignore && buffer.length < numOfParcelNums) {
+    while (head && !head.ignore) {
       matchedCnt++;
-      if (head.char === DEFAULT_FUZZY_CHAR) {
+      if (head.char === query.fuzzy) {
         // fuzzyの場合、任意の１文字
         // TODO: Databaseごとの処理
         current.push(DEFAULT_FUZZY_CHAR);
@@ -217,6 +231,12 @@ export class ParcelTransform extends Transform {
         buffer.push(current.join('').padStart(PARCEL_LENGTH, '0'));
         current.length = 0;
       } else {
+        break;
+      }
+
+      // numOfParcelNumsの数値を取ったらループを抜ける
+      // (〇〇番地△△　の「番地△△」を残す)
+      if (buffer.length === numOfParcelNums) {
         break;
       }
       head = head?.next;

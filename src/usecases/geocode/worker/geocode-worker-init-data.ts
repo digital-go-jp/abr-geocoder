@@ -31,7 +31,6 @@ export type GeocodeWorkerInitData = {
     cityAndWard: Uint8Array,
     kyotoStreet: Uint8Array,
     oazaCho: Uint8Array,
-    wardAndOaza: Uint8Array,
     ward: Uint8Array,
     tokyo23Ward: Uint8Array,
     tokyo23Town: Uint8Array,

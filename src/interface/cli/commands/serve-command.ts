@@ -102,10 +102,21 @@ const serveCommand: CommandModule = {
       debug: EnvProvider.isDebug,
     });
 
+    // スレッド数を決める
+    const numOfThreads = (() => {
+      if (process.env.JEST_WORKER_ID) {
+        // メインスレッドで処理を行う
+        return 1;
+      }
+      // バックグラウンドスレッドを用いる
+      return container.env.availableParallelism();
+    })();
+
     // ジオコーダ
     const geocoder = await AbrGeocoder.create({
       container,
-      numOfThreads: 5,
+      numOfThreads,
+      isSilentMode: false,
     });
     
     // APIサーバー

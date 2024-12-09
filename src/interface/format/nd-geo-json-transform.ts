@@ -87,7 +87,7 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
       // Because we output string as Buffer.
       readableObjectMode: false,
 
-      highWaterMark: 3000,
+      highWaterMark: 2048,
     });
   }
 

@@ -35,265 +35,182 @@ import { WardTrieFinder } from '@usecases/geocode/models/ward-trie-finder';
 import { RsdtBlkTrieFinder } from '@usecases/geocode/models/rsdt-blk-trie-finder';
 import { RsdtDspTrieFinder } from '@usecases/geocode/models/rsdt-dsp-trie-finder';
 import { ParcelTrieFinder } from '@usecases/geocode/models/parcel-trie-finder';
+import { CreateCacheType, CreateCacheTaskParams } from './create-cache-params';
 
-export type CreateCacheParams = {
-  target: 'pref' | 'county-and-city' | 'city-and-ward' | 'kyoto-street' | 'oaza-cho' | 'tokyo23-town' | 'tokyo23-ward' | 'ward' | 'rsdtblk' | 'rsdtdsp' | 'parcel';
-  lg_code?: string;
-};
-
-export type CreateCacheResult = {
-  result: boolean;
-} & CreateCacheParams;
-
-const createPrefTrieData = async (diContainer: AbrGeocoderDiContainer) => {
+const createPrefTrieData = async (task: CreateCacheTaskParams) => {
   
   let retry = 0;
   while (retry < 2) { 
     try {
-      const data = await PrefTrieFinder.loadDataFile(diContainer);
+      const data = await PrefTrieFinder.loadDataFile(task);
       return data !== undefined;
     } catch (_e: unknown) {
       // キャッシュを再作成する
-      PrefTrieFinder.createDictionaryFile(diContainer);
+      PrefTrieFinder.createDictionaryFile(task);
       retry++;
     }
   }
   return retry < 2;
 };
 
-const createCountyAndCityTrieData = async (diContainer: AbrGeocoderDiContainer) => {
+const createCountyAndCityTrieData = async (task: CreateCacheTaskParams) => {
   
   let retry = 0;
   while (retry < 2) { 
     try {
-      const data = await CountyAndCityTrieFinder.loadDataFile(diContainer);
+      const data = await CountyAndCityTrieFinder.loadDataFile(task);
       return data !== undefined;
     } catch (_e: unknown) {
       // キャッシュを再作成する
-      CountyAndCityTrieFinder.createDictionaryFile(diContainer);
+      CountyAndCityTrieFinder.createDictionaryFile(task);
       retry++;
     }
   }
   return retry < 2;
 };
 
-const createCityAndWardTrieData = async (diContainer: AbrGeocoderDiContainer) => {
+const createCityAndWardTrieData = async (task: CreateCacheTaskParams) => {
   
   let retry = 0;
   while (retry < 2) { 
     try {
-      const data = await CityAndWardTrieFinder.loadDataFile(diContainer);
+      const data = await CityAndWardTrieFinder.loadDataFile(task);
       return data !== undefined;
     } catch (_e: unknown) {
       // キャッシュを再作成する
-      CityAndWardTrieFinder.createDictionaryFile(diContainer);
+      CityAndWardTrieFinder.createDictionaryFile(task);
       retry++;
     }
   }
   return retry < 2;
 };
 
-const createKyotoStreetTrieData = async (diContainer: AbrGeocoderDiContainer) => {
+const createKyotoStreetTrieData = async (task: CreateCacheTaskParams) => {
   
   let retry = 0;
   while (retry < 2) { 
     try {
-      const data = await KyotoStreetTrieFinder.loadDataFile(diContainer);
+      const data = await KyotoStreetTrieFinder.loadDataFile(task);
       return data !== undefined;
     } catch (_e: unknown) {
       // キャッシュを再作成する
-      KyotoStreetTrieFinder.createDictionaryFile(diContainer);
+      KyotoStreetTrieFinder.createDictionaryFile(task);
       retry++;
     }
   }
   return retry < 2;
 };
 
-const createOazaChoTrieData = async (diContainer: AbrGeocoderDiContainer) => {
+const createOazaChoTrieData = async (task: CreateCacheTaskParams) => {
   
   let retry = 0;
   while (retry < 2) { 
     try {
-      const data = await OazaChoTrieFinder.loadDataFile(diContainer);
+      const data = await OazaChoTrieFinder.loadDataFile(task);
       return data !== undefined;
     } catch (_e: unknown) {
       // キャッシュを再作成する
-      OazaChoTrieFinder.createDictionaryFile(diContainer);
+      OazaChoTrieFinder.createDictionaryFile(task);
       retry++;
     }
   }
   return retry < 2;
 };
 
-const createTokyo23TownTrieData = async (diContainer: AbrGeocoderDiContainer) => {
+const createTokyo23TownTrieData = async (task: CreateCacheTaskParams) => {
   
   let retry = 0;
   while (retry < 2) { 
     try {
-      const data = await Tokyo23TownTrieFinder.loadDataFile(diContainer);
+      const data = await Tokyo23TownTrieFinder.loadDataFile(task);
       return data !== undefined;
     } catch (_e: unknown) {
       // キャッシュを再作成する
-      Tokyo23TownTrieFinder.createDictionaryFile(diContainer);
+      Tokyo23TownTrieFinder.createDictionaryFile(task);
       retry++;
     }
   }
   return retry < 2;
 };
 
-const createTokyo23WardTrieData = async (diContainer: AbrGeocoderDiContainer) => {
+const createTokyo23WardTrieData = async (task: CreateCacheTaskParams) => {
   
   let retry = 0;
   while (retry < 2) { 
     try {
-      const data = await Tokyo23WardTrieFinder.loadDataFile(diContainer);
+      const data = await Tokyo23WardTrieFinder.loadDataFile(task);
       return data !== undefined;
     } catch (_e: unknown) {
       // キャッシュを再作成する
-      Tokyo23WardTrieFinder.createDictionaryFile(diContainer);
+      Tokyo23WardTrieFinder.createDictionaryFile(task);
       retry++;
     }
   }
   return retry < 2;
 };
 
-const createWardTrieData = async (diContainer: AbrGeocoderDiContainer) => {
+const createWardTrieData = async (task: CreateCacheTaskParams) => {
   
   let retry = 0;
   while (retry < 2) { 
     try {
-      const data = await WardTrieFinder.loadDataFile(diContainer);
+      const data = await WardTrieFinder.loadDataFile(task);
       return data !== undefined;
     } catch (_e: unknown) {
       // キャッシュを再作成する
-      WardTrieFinder.createDictionaryFile(diContainer);
-      retry++;
-    }
-  }
-  return retry < 2;
-};
-const createRsdtBlkTrieData = async (params: {
-  diContainer: AbrGeocoderDiContainer;
-  lg_code: string;
-}) => {
-  
-  let retry = 0;
-  while (retry < 2) { 
-    try {
-      const data = await RsdtBlkTrieFinder.loadDataFile(params);
-      return data !== undefined;
-    } catch (_e: unknown) {
-      // キャッシュを再作成する
-      RsdtBlkTrieFinder.createDictionaryFile(params);
+      WardTrieFinder.createDictionaryFile(task);
       retry++;
     }
   }
   return retry < 2;
 };
 
-const createRsdtDspTrieData = async (params: {
-  diContainer: AbrGeocoderDiContainer;
-  lg_code: string;
-}) => {
-  
-  let retry = 0;
-  while (retry < 2) { 
-    try {
-      const data = await RsdtDspTrieFinder.loadDataFile(params);
-      return data !== undefined;
-    } catch (_e: unknown) {
-      // キャッシュを再作成する
-      RsdtDspTrieFinder.createDictionaryFile(params);
-      retry++;
-    }
-  }
-  return retry < 2;
-};
-const createParcelTrieData = async (params: {
-  diContainer: AbrGeocoderDiContainer;
-  lg_code: string;
-}) => {
-  
-  let retry = 0;
-  while (retry < 2) { 
-    try {
-      const data = await ParcelTrieFinder.loadDataFile(params);
-      return data !== undefined;
-    } catch (_e: unknown) {
-      // キャッシュを再作成する
-      ParcelTrieFinder.createDictionaryFile(params);
-      retry++;
-    }
-  }
-  return retry < 2;
-};
-
-export const createCache = async ({
-  diContainer,
-  data,
-} : {
-  diContainer: AbrGeocoderDiContainer;
-  data: CreateCacheParams,
-}) => {
-  switch (data.target) {
+export const createCache = async (params : CreateCacheTaskParams) => {
+  switch (params.data) {
     case 'pref':
-      return await createPrefTrieData(diContainer);
+      return await createPrefTrieData(params);
     
     case 'county-and-city':
-      return await createCountyAndCityTrieData(diContainer);
+      return await createCountyAndCityTrieData(params);
 
     case 'city-and-ward':
-      return await createCityAndWardTrieData(diContainer);
+      return await createCityAndWardTrieData(params);
 
     case 'kyoto-street':
-      return await createKyotoStreetTrieData(diContainer);
+      return await createKyotoStreetTrieData(params);
 
     case 'oaza-cho':
-      return await createOazaChoTrieData(diContainer);
+      return await createOazaChoTrieData(params);
 
     case 'tokyo23-town':
-      return await createTokyo23TownTrieData(diContainer);
+      return await createTokyo23TownTrieData(params);
 
     case 'tokyo23-ward':
-      return await createTokyo23WardTrieData(diContainer);
+      return await createTokyo23WardTrieData(params);
 
     case 'ward':
-      return await createWardTrieData(diContainer);
+      return await createWardTrieData(params);
             
-    case 'rsdtblk':
-      return await createRsdtBlkTrieData({
-        diContainer,
-        lg_code: data.lg_code!,
-      });
-            
-    case 'rsdtdsp':
-      return await createRsdtDspTrieData({
-        diContainer,
-        lg_code: data.lg_code!,
-      });
-
-    case 'parcel':
-      return await createParcelTrieData({
-        diContainer,
-        lg_code: data.lg_code!,
-      });
-              
     default:
-      throw `unknown target: ${data.target}`;
+      throw `unknown target: ${params.data}`;
   }
 };
 
+export type CreateGeocodeCacheWorkerInitData = {
+  diContainer: AbrGeocoderDiContainerParams;
+  isSilentMode: boolean;
+}
 // 作業スレッド
 if (!isMainThread && parentPort) {
 
-  const diContainerParams = workerData as AbrGeocoderDiContainerParams;
-  const diContainer = new AbrGeocoderDiContainer(diContainerParams);
+  const initParams = workerData as CreateGeocodeCacheWorkerInitData;
+  const diContainer = new AbrGeocoderDiContainer(initParams.diContainer);
 
   (async (parentPort: MessagePort) => {
 
     // メインスレッドからメッセージを受け取る
     parentPort.on('message', async (task: string) => {
-      const received = JSON.parse(task) as ThreadJob<CreateCacheParams> | ThreadPing;
+      const received = JSON.parse(task) as ThreadJob<CreateCacheType> | ThreadPing;
       (task as unknown) = null;
       switch (received.kind) {
         case 'ping': {
@@ -305,17 +222,18 @@ if (!isMainThread && parentPort) {
 
         case 'task': {
           try {
+            // キャッシュを作成する
             const result = await createCache({
               diContainer,
-              data: received.data
+              data: received.data,
+              isSilentMode: initParams.isSilentMode,
             });
 
             // メインスレッドに送る
             parentPort.postMessage(JSON.stringify({
               taskId: received.taskId,
               data: {
-                target: received.data.target,
-                lg_code: received.data.lg_code,
+                target: received.data,
                 result,
               },
               kind: 'result',
@@ -327,8 +245,7 @@ if (!isMainThread && parentPort) {
             parentPort.postMessage(JSON.stringify({
               taskId: received.taskId,
               data: {
-                target: received.data.target,
-                lg_code: received.data.lg_code,
+                target: received.data,
                 result: false,
               },
               kind: 'result',

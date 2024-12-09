@@ -29,6 +29,8 @@ import { upwardFileSearch } from '@domain/services/upward-file-search';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { Downloader } from '@usecases/download/download-process';
+import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
+import { createGeocodeCaches } from '@usecases/geocode/services/create-geocode-caches';
 import path from 'node:path';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 
@@ -83,8 +85,10 @@ const downloadCommand: CommandModule = {
   },
 
   handler: async (argv: ArgumentsCamelCase<DownloadCommandArgv>) => {
+    const isSilentMode = argv.silent === true;
+
     // silent = true のときは、プログレスバーを表示しない
-    const progressBar = argv.silent ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total}');
+    const progressBar = isSilentMode ? undefined : createSingleProgressBar(' {bar} {percentage}% | {value}/{total}');
     progressBar?.start(1, 0);
 
     if (argv.debug) {
@@ -102,6 +106,26 @@ const downloadCommand: CommandModule = {
         level: AbrgErrorLevel.ERROR,
       });
     }
+
+    // キャッシュの作成
+    const container = new AbrGeocoderDiContainer({
+      cacheDir: path.join(abrgDir, 'cache'),
+      database: {
+        type: 'sqlite3',
+        dataDir: path.join(abrgDir, 'database'),
+      },
+      debug: false,
+    });
+
+    // スレッド数を決める
+    const numOfThreads = (() => {
+      if (process.env.JEST_WORKER_ID) {
+        // メインスレッドで処理を行う
+        return 1;
+      }
+      // バックグラウンドスレッドを用いる
+      return container.env.availableParallelism();
+    })();
 
     // ダウンロードを行う
     const downloader = new Downloader({
@@ -124,9 +148,19 @@ const downloadCommand: CommandModule = {
 
       // 同時ダウンロード数
       concurrentDownloads: MAX_CONCURRENT_DOWNLOAD,
+
+      // 使用するスレッド数
+      numOfThreads,
     });
     
     progressBar?.stop();
+
+    createGeocodeCaches({
+      container,
+      isSilentMode,
+      numOfThreads,
+    })
+
     if (argv.debug) {
       console.timeEnd("download");
     }

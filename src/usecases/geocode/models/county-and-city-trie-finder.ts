@@ -9,6 +9,8 @@ import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { removeFiles } from "@domain/services/remove-files";
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
+import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
+import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 
 export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo> {
 
@@ -33,39 +35,43 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo
     return path.join(diContainer.cacheDir, `county-and-city_${genHash}.abrg2`);
   };
 
-  static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheFilePath = await CountyAndCityTrieFinder.getCacheFilePath(diContainer);
+  static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await CountyAndCityTrieFinder.getCacheFilePath(task.diContainer);
  
     // 古いキャッシュファイルを削除
     await removeFiles({
-      dir: diContainer.cacheDir,
+      dir: task.diContainer.cacheDir,
       filename: 'county-and-city_.*\\.abrg2',
     });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const db = await diContainer.database.openCommonDb();
+    const db = await task.diContainer.database.openCommonDb();
     if (!db) {
       return false;
     }
 
+    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`county: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
     const rows = await db.getCountyAndCityList();
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
+    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       await writer.addNode({
         key: CountyAndCityTrieFinder.normalize(row.key),
         value: row,
       });
+      progressBar?.increment();
     }
+    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;
   };
 
-  static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheFilePath = await CountyAndCityTrieFinder.getCacheFilePath(diContainer);
+  static readonly loadDataFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await CountyAndCityTrieFinder.getCacheFilePath(task.diContainer);
     let data: Buffer | undefined;
     let numOfTry: number = 0;
     while (!data && numOfTry < 3) {
@@ -85,7 +91,7 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo
         console.log('Creates catch for CountyAndCityTrieFinder');
       }
       // 新しく作成
-      if (!await CountyAndCityTrieFinder.createDictionaryFile(diContainer)) {
+      if (!await CountyAndCityTrieFinder.createDictionaryFile(task)) {
         return;
       }
       numOfTry++;

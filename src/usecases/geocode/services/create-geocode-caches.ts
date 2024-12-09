@@ -21,92 +21,38 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
-import { SingleBar } from 'cli-progress';
-import path from 'node:path';
-import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from '../models/abr-geocoder-di-container';
-import { createCache, CreateCacheParams, CreateCacheResult } from './worker/create-geocode-caches-worker';
 import { AbrAbortController } from '@domain/models/abr-abort-controller';
+import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
+import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
+import path from 'node:path';
+import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
+import { CreateCacheResult, CreateCacheType } from './worker/create-cache-params';
+import { createCache, CreateGeocodeCacheWorkerInitData } from './worker/create-geocode-caches-worker';
 
 export const createGeocodeCaches = async ({
   container,
-  progressBar,
   numOfThreads = 1,
+  isSilentMode = false,
 }: {
   container: AbrGeocoderDiContainer;
-  progressBar?: SingleBar;
   numOfThreads: number;
+  isSilentMode: boolean;
 }) => {
 
+  // 初期化する
+  const progressBar = isSilentMode ? undefined : createSingleProgressBar('prepare: {bar} {percentage}% | {value}/{total}');
+  
   // LG_CODEの一覧を取得
-  const db = await container.database.openCommonDb();
-  const targets: CreateCacheParams[] = [
-    {
-      target: 'pref',
-    },
-    {
-      target: 'county-and-city',
-    },
-    {
-      target: 'city-and-ward',
-    },
-    {
-      target: 'kyoto-street',
-    },
-    {
-      target: 'oaza-cho',
-    },
-    {
-      target: 'tokyo23-town',
-    },
-    {
-      target: 'tokyo23-ward',
-    },
-    {
-      target: 'ward',
-    },
+  const targets: CreateCacheType[] = [
+    'pref',
+    'county-and-city',
+    'city-and-ward',
+    'kyoto-street',
+    'oaza-cho',
+    'tokyo23-town',
+    'tokyo23-ward',
+    'ward',
   ];
-  // const cities = await db.getCityList();
-  // for (const city of cities) {
-  //   // RSDT_BLKテーブルのチェック
-  //   const rsdtBlkDb = await container.database.openRsdtBlkDb({
-  //     lg_code: city.lg_code,
-  //     createIfNotExists: false,
-  //   });
-  //   if (rsdtBlkDb) {
-  //     targets.push({
-  //       target: 'rsdtblk',
-  //       lg_code: city.lg_code,
-  //     })
-  //   }
-  //   rsdtBlkDb?.close();
-
-  //   // RSDT_DSPテーブルのチェック
-  //   const rsdtDspDb = await container.database.openRsdtDspDb({
-  //     lg_code: city.lg_code,
-  //     createIfNotExists: false,
-  //   });
-  //   if (rsdtDspDb) {
-  //     targets.push({
-  //       target: 'rsdtdsp',
-  //       lg_code: city.lg_code,
-  //     })
-  //   }
-  //   rsdtDspDb?.close();
-
-  //   // PARCELテーブルのチェック
-  //   const parcelDb = await container.database.openParcelDb({
-  //     lg_code: city.lg_code,
-  //     createIfNotExists: false,
-  //   });
-  //   if (parcelDb) {
-  //     targets.push({
-  //       target: 'parcel',
-  //       lg_code: city.lg_code,
-  //     })
-  //   }
-  //   parcelDb?.close();
-  // }
 
   progressBar?.start(targets.length, 0);
 
@@ -117,18 +63,22 @@ export const createGeocodeCaches = async ({
       result = await createCache({
         diContainer: container,
         data: task,
+        isSilentMode,
       });
       if (!result) {
-        throw `Can not create the cache file for ${task.target}(${task.lg_code})`;
+        throw `Can not create the cache file for ${task}`;
       }
     }
     return true;
   }
   const abortCtrl = new AbrAbortController();
   
-  const pool = new WorkerThreadPool<AbrGeocoderDiContainerParams, CreateCacheParams, CreateCacheResult>({
+  const pool = new WorkerThreadPool<CreateGeocodeCacheWorkerInitData, CreateCacheType, CreateCacheResult>({
     filename: path.join(__dirname, 'worker', 'create-geocode-caches-worker'),
-    initData: container.toJSON(),
+    initData: {
+      diContainer: container.toJSON(),
+      isSilentMode,
+    },
     maxConcurrency: numOfThreads,
     maxTasksPerWorker: 1,
     signal: abortCtrl.signal,
@@ -143,7 +93,7 @@ export const createGeocodeCaches = async ({
         current++;
         progressBar?.update(current);
         if (!result) {
-          reject(`Can not create the cache file for ${task.target}(${task.lg_code})`);
+          reject(`Can not create the cache file for ${task})`);
           return;
         }
         

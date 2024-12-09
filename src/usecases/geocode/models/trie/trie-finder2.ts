@@ -21,7 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import {
   ABRG_FILE_HEADER_SIZE,
   ABRG_FILE_MAGIC,
@@ -415,8 +414,8 @@ export class TrieAddressFinder2<T> {
           throw `Can not load the trie node at ${offset}`;
         }
         
-        if (target?.char !== fuzzy && target?.char !== node.name) {
-          if (target?.char !== DEFAULT_FUZZY_CHAR) {
+        if (target?.char !== node.name) {
+          if (target?.char !== fuzzy) {
             if (node.siblingOffset) {
               // 次の兄弟ノードをチェックする
               offset = node.siblingOffset;
@@ -458,8 +457,8 @@ export class TrieAddressFinder2<T> {
             break;
           }
           // ワイルドカードだった場合はマッチしなかった場合と、マッチした場合の2つに分岐する
-          if (target?.char === DEFAULT_FUZZY_CHAR && node.siblingOffset) {
-            // 兄弟ノードを追加する
+          if (target?.char === fuzzy && node.siblingOffset) {
+            // 兄弟ノードを追加する (targetをコピーするので、次の探索でもfuzzyがヒットする)
             const moveToSiblingNode = {
               ambiguousCnt,
               matchedCnt,

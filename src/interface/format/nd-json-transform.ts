@@ -86,7 +86,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
       // Because we output string as Buffer.
       readableObjectMode: false,
 
-      highWaterMark: 3000,
+      highWaterMark: 2048,
     });
   }
 

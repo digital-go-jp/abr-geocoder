@@ -9,6 +9,8 @@ import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { removeFiles } from "@domain/services/remove-files";
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
+import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
+import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 
 export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
 
@@ -33,17 +35,17 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
     return path.join(diContainer.cacheDir, `pref_${genHash}.abrg2`);
   };
 
-  static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheFilePath = await PrefTrieFinder.getCacheFilePath(diContainer);
+  static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await PrefTrieFinder.getCacheFilePath(task.diContainer);
 
     // 古いキャッシュファイルを削除
     await removeFiles({
-      dir: diContainer.cacheDir,
+      dir: task.diContainer.cacheDir,
       filename: 'pref_.*\\.abrg2',
     });
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const db = await diContainer.database.openCommonDb();
+    const db = await task.diContainer.database.openCommonDb();
     if (!db) {
       return false;
     }
@@ -51,20 +53,24 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
     const rows = await db.getPrefList()
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
+    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`pref: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
+    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       await writer.addNode({
         key: PrefTrieFinder.normalize(row.pref),
         value: row,
       });
+      progressBar?.increment();
     }
+    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;
   };
 
-  static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheFilePath = await PrefTrieFinder.getCacheFilePath(diContainer);
+  static readonly loadDataFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await PrefTrieFinder.getCacheFilePath(task.diContainer);
     let data: Buffer | undefined;
     let numOfTry: number = 0;
     while (!data && numOfTry < 3) {
@@ -84,7 +90,7 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
         console.log('Creates catch for PrefTrieFinder');
       }
       // 新しく作成
-      if (!await PrefTrieFinder.createDictionaryFile(diContainer)) {
+      if (!await PrefTrieFinder.createDictionaryFile(task)) {
         return;
       }
       numOfTry++;

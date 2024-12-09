@@ -30,6 +30,100 @@ import { runGeocoder } from './common';
 
 describe('debug', () => {
   
+  test('春日部市大字八丁目３５３番地１', async () => {
+    const input = '春日部市大字八丁目３５３番地１';
+    const { stdout } = await runGeocoder({
+      input,
+      geocode: {
+        outputFormat: OutputFormat.NDJSON,
+        searchTarget: SearchTarget.ALL,
+      },
+      useGlobalDB: false,
+    });
+
+    expect(JSON.parse(stdout)).toMatchObject({
+      "query": {
+        "input": "春日部市大字八丁目３５３番地１"
+      },
+      "result": {
+        "output": "埼玉県春日部市八丁目353-1",
+        "others": [
+          "-1"
+        ],
+        "match_level": "parcel",
+        "coordinate_level": "machiaza",
+        "lat": 35.995717,
+        "lon": 139.772713,
+        "lg_code": "112143",
+        "machiaza_id": "0069000",
+        "rsdt_addr_flg": 0,
+        "blk_id": null,
+        "rsdt_id": null,
+        "rsdt2_id": null,
+        "prc_id": "003530000000000",
+        "pref": "埼玉県",
+        "county": null,
+        "city": "春日部市",
+        "ward": null,
+        "oaza_cho": "八丁目",
+        "chome": null,
+        "koaza": null,
+        "blk_num": null,
+        "rsdt_num": null,
+        "rsdt_num2": null,
+        "prc_num1": "353",
+        "prc_num2": null,
+        "prc_num3": null
+      }
+    });
+  });
+  test('東京都千代田区��尾井町1ー３ー２', async () => {
+    const input = '東京都千代田区��尾井町1ー３ー２';
+    const { stdout } = await runGeocoder({
+      input,
+      geocode: {
+        outputFormat: OutputFormat.NDJSON,
+        searchTarget: SearchTarget.ALL,
+      },
+      useGlobalDB: false,
+    });
+
+    expect(JSON.parse(stdout)).toMatchObject({
+      "query": {
+        "input": "東京都千代田区��尾井町1ー３ー２"
+      },
+      "result": {
+        "output": "東京都千代田区紀尾井町1-3-2",
+        "others": [
+          "-2"
+        ],
+        "match_level": "residential_detail",
+        "coordinate_level": "residential_detail",
+        "lat": 35.679107172,
+        "lon": 139.736394597,
+        "lg_code": "131016",
+        "machiaza_id": "0056000",
+        "rsdt_addr_flg": 1,
+        "blk_id": "001",
+        "rsdt_id": "003",
+        "rsdt2_id": null,
+        "prc_id": null,
+        "pref": "東京都",
+        "county": null,
+        "city": "千代田区",
+        "ward": null,
+        "oaza_cho": "紀尾井町",
+        "chome": null,
+        "koaza": null,
+        "blk_num": "1",
+        "rsdt_num": "3",
+        "rsdt_num2": null,
+        "prc_num1": null,
+        "prc_num2": null,
+        "prc_num3": null
+      }
+    });
+  });
   test('京都市北区大宮西脇台町17番地の2', async () => {
     const input = '京都市北区大宮西脇台町17番地の2';
     const { stdout } = await runGeocoder({

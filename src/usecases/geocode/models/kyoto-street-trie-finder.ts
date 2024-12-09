@@ -13,6 +13,8 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
+import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
+import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 
 export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> {
 
@@ -56,18 +58,18 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
     return path.join(diContainer.cacheDir, `kyoto-street_${genHash}.abrg2`);
   };
 
-  static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheFilePath = await KyotoStreetTrieFinder.getCacheFilePath(diContainer);
+  static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await KyotoStreetTrieFinder.getCacheFilePath(task.diContainer);
 
     // 古いキャッシュファイルを削除
     await removeFiles({
-      dir: diContainer.cacheDir,
+      dir: task.diContainer.cacheDir,
       filename: 'kyoto-street_.*\\.abrg2',
     });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const db = await diContainer.database.openCommonDb();
+    const db = await task.diContainer.database.openCommonDb();
     if (!db) {
       return false;
     }
@@ -76,6 +78,8 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
     const writer = await FileTrieWriter.create(cacheFilePath);
 
     let i = 0;
+    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`kyoto: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
+    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       row.oaza_cho = toHankakuAlphaNum(row.oaza_cho);
@@ -113,14 +117,16 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
           // Do nothing here
           break;
       }
+      progressBar?.increment();
     }
+    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;
   };
 
-  static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheFilePath = await KyotoStreetTrieFinder.getCacheFilePath(diContainer);
+  static readonly loadDataFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await KyotoStreetTrieFinder.getCacheFilePath(task.diContainer);
     let data: Buffer | undefined;
     let numOfTry: number = 0;
     while (!data && numOfTry < 3) {
@@ -140,7 +146,7 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
         console.log('Creates catch for KyotoStreetTrieFinder');
       }
       // 新しく作成
-      if (!await KyotoStreetTrieFinder.createDictionaryFile(diContainer)) {
+      if (!await KyotoStreetTrieFinder.createDictionaryFile(task)) {
         return;
       }
       numOfTry++;

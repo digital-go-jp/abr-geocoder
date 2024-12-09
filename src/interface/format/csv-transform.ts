@@ -49,7 +49,7 @@ export class CsvTransform extends Stream.Transform implements IFormatTransform {
       // Because we output string as Buffer.
       readableObjectMode: false,
 
-      highWaterMark: 1000,
+      highWaterMark: 2048,
     });
     this.columns = Array.from(options.columns);
 

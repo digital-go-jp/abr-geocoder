@@ -9,6 +9,8 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
+import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
+import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
 
 export class WardTrieFinder extends TrieAddressFinder2<WardMatchingInfo> {
 
@@ -32,24 +34,26 @@ export class WardTrieFinder extends TrieAddressFinder2<WardMatchingInfo> {
     return path.join(diContainer.cacheDir, `ward_${genHash}.abrg2`);
   };
 
-  static readonly createDictionaryFile = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheFilePath = await WardTrieFinder.getCacheFilePath(diContainer);
+  static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await WardTrieFinder.getCacheFilePath(task.diContainer);
 
     // 古いキャッシュファイルを削除
     await removeFiles({
-      dir: diContainer.cacheDir,
+      dir: task.diContainer.cacheDir,
       filename: 'ward_.*\\.abrg2',
     });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const db = await diContainer.database.openCommonDb();
+    const db = await task.diContainer.database.openCommonDb();
     if (!db) {
       return false;
     }
     const rows = await db.getWards();
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
+    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`ward: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
+    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       await writer.addNode({
@@ -62,13 +66,14 @@ export class WardTrieFinder extends TrieAddressFinder2<WardMatchingInfo> {
         value: row,
       });
     }
+    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;
   };
 
-  static readonly loadDataFile = async (diContainer: AbrGeocoderDiContainer) => {
-    const cacheFilePath = await WardTrieFinder.getCacheFilePath(diContainer);
+  static readonly loadDataFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await WardTrieFinder.getCacheFilePath(task.diContainer);
     let data: Buffer | undefined;
     let numOfTry: number = 0;
     while (!data && numOfTry < 3) {
@@ -88,7 +93,7 @@ export class WardTrieFinder extends TrieAddressFinder2<WardMatchingInfo> {
         console.log('Creates catch for WardTrieFinder');
       }
       // 新しく作成
-      if (!await WardTrieFinder.createDictionaryFile(diContainer)) {
+      if (!await WardTrieFinder.createDictionaryFile(task)) {
         return;
       }
       numOfTry++;

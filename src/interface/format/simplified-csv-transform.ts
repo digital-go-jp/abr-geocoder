@@ -55,7 +55,7 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
       // Because we output string as Buffer.
       readableObjectMode: false,
 
-      highWaterMark: 3000,
+      highWaterMark: 2048,
     });
     if (this.options.skipHeader) {
       return;

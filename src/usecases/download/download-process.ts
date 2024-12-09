@@ -68,6 +68,9 @@ export type DownloadOptions = {
 
   //同時ダウンロード数
   concurrentDownloads: number;
+
+  // 使用するスレッド数
+  numOfThreads: number;
 };
 
 export class Downloader {
@@ -127,11 +130,10 @@ export class Downloader {
     });
     
     const reader = Readable.from(requests);
-    const parallel = this.container.env.availableParallelism();
 
     // ダウンロード処理を行う
     // 最大6コネクション
-    const numOfDownloadThreads = Math.min(Math.max(Math.floor(parallel / 3 * 2), 1), 6);
+    const numOfDownloadThreads = Math.max(Math.floor(params.numOfThreads / 3 * 2), 1);
     const downloadTransform = new DownloadTransform({
       container: this.container,
       maxConcurrency: numOfDownloadThreads,
@@ -139,7 +141,7 @@ export class Downloader {
     });
 
     // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
-    const numOfCsvParserThreads = Math.max(parallel - numOfDownloadThreads, 1);
+    const numOfCsvParserThreads = Math.max(params.numOfThreads - numOfDownloadThreads, 1);
     const csvParseTransform = new CsvParseTransform({
       maxConcurrency: numOfCsvParserThreads,
       container: this.container,
@@ -189,21 +191,14 @@ export class Downloader {
     await downloadTransform.close();
     await csvParseTransform.close();
 
-    // キャッシュの作成
-    const abrDirContainer = new AbrGeocoderDiContainer({
-      cacheDir: this.container.urlCacheMgr.cacheDir,
-      database: this.container.database.connectParams,
-      debug: false,
-    });
-
-    let cacheCreateProcess = 0;
-    for (const creater of createDictionaryFileFunctions) {
-      await creater(abrDirContainer);
-      cacheCreateProcess++;
-      if (params.progress) {
-        params.progress(dst.count + cacheCreateProcess, total + 1);
-      }
-    }
+    // let cacheCreateProcess = 0;
+    // for (const creater of createDictionaryFileFunctions) {
+    //   await creater(abrDirContainer);
+    //   cacheCreateProcess++;
+    //   if (params.progress) {
+    //     params.progress(dst.count + cacheCreateProcess, total + 1);
+    //   }
+    // }
   }
   
 

@@ -123,17 +123,49 @@ export class AbrGeocoder {
     container: AbrGeocoderDiContainer;
     numOfThreads: number;
     signal?: AbortSignal;
+    isSilentMode: boolean;
   }) => {
     // トライ木を作成するために必要な辞書データの読み込み
-    const pref = toSharedMemory((await PrefTrieFinder.loadDataFile(params.container))!);
-    const countyAndCity = toSharedMemory((await CountyAndCityTrieFinder.loadDataFile(params.container))!);
-    const cityAndWard = toSharedMemory((await CityAndWardTrieFinder.loadDataFile(params.container))!);
-    const kyotoStreet = toSharedMemory((await KyotoStreetTrieFinder.loadDataFile(params.container))!);
-    const oazaCho = toSharedMemory((await OazaChoTrieFinder.loadDataFile(params.container))!);
-    const wardAndOaza = toSharedMemory((await WardAndOazaTrieFinder.loadDataFile(params.container))!);
-    const ward = toSharedMemory((await WardTrieFinder.loadDataFile(params.container))!);
-    const tokyo23Ward = toSharedMemory((await Tokyo23WardTrieFinder.loadDataFile(params.container))!);
-    const tokyo23Town = toSharedMemory((await Tokyo23TownTrieFinder.loadDataFile(params.container))!);
+    const pref = toSharedMemory((await PrefTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: "pref",
+      isSilentMode: params.isSilentMode,
+    }))!);
+    const countyAndCity = toSharedMemory((await CountyAndCityTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: "county-and-city",
+      isSilentMode: params.isSilentMode,
+    }))!);
+    const cityAndWard = toSharedMemory((await CityAndWardTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: "city-and-ward",
+      isSilentMode: params.isSilentMode,
+    }))!);
+    const kyotoStreet = toSharedMemory((await KyotoStreetTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: "kyoto-street",
+      isSilentMode: params.isSilentMode,
+    }))!);
+    const oazaCho = toSharedMemory((await OazaChoTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: "oaza-cho",
+      isSilentMode: params.isSilentMode,
+    }))!);
+    const ward = toSharedMemory((await WardTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: "ward",
+      isSilentMode: params.isSilentMode,
+    }))!);
+    const tokyo23Ward = toSharedMemory((await Tokyo23WardTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: "tokyo23-ward",
+      isSilentMode: params.isSilentMode,
+    }))!);
+    const tokyo23Town = toSharedMemory((await Tokyo23TownTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: "tokyo23-town",
+      isSilentMode: params.isSilentMode,
+    }))!);
 
     const initData: GeocodeWorkerInitData = {
       diContainer: params.container.toJSON(),
@@ -143,7 +175,6 @@ export class AbrGeocoder {
         cityAndWard,
         kyotoStreet,
         oazaCho,
-        wardAndOaza,
         ward,
         tokyo23Ward,
         tokyo23Town,

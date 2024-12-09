@@ -63,10 +63,10 @@ export class AbrGeocoderStream extends Duplex {
   _read(): void {}
 
   private closer() {
-    if (this.pausing && this.writeIdx - this.nextIdx < this.halfWatermark) {
-      this.emit('resume');
-      this.pausing = false;
-    }
+    // if (this.pausing && this.writeIdx - this.nextIdx < this.halfWatermark) {
+    //   this.emit('resume');
+    //   this.pausing = false;
+    // }
 
     if (!this.receivedFinal || this.pausing || this.nextIdx <= this.writeIdx) {
       return;
@@ -95,7 +95,7 @@ export class AbrGeocoderStream extends Duplex {
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
-    await this.waiter();
+    // await this.waiter();
 
     const lineId = ++this.writeIdx;
 

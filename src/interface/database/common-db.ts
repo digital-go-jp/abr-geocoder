@@ -134,7 +134,6 @@ export interface IParcelDbDownload {
 }
 
 export type GetParcelRowsOptions = {
-  city_key: number;
   town_key?: number | null;
   prc_id: string; 
 };
