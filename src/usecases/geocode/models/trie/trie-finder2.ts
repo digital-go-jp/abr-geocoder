@@ -97,7 +97,7 @@ class FileTrieResults {
 export class TrieAddressFinder2<T> {
   // ヘッダー
   private readonly header: AbrgDictHeader;
-  protected debug: boolean = false;
+  public debug: boolean = false;
   protected readonly trieNodeMap: Map<number, ReadTrieNode | null> = new Map();
   
   constructor(private readonly fileBuffer: Buffer) {
@@ -416,19 +416,23 @@ export class TrieAddressFinder2<T> {
         }
         
         if (target?.char !== fuzzy && target?.char !== node.name) {
-          if (node.siblingOffset) {
-            // 次の兄弟ノードをチェックする
-            offset = node.siblingOffset;
-            continue;
-          }
-          // allowExtraChallengeがある場合は、その文字にマッチするものがあればキューに追加する
-          if (allowExtraChallenge) {
+          if (target?.char !== DEFAULT_FUZZY_CHAR) {
+            if (node.siblingOffset) {
+              // 次の兄弟ノードをチェックする
+              offset = node.siblingOffset;
+              continue;
+            }
+            // allowExtraChallengeがない場合は、探索終了(見つからなかった)
+            if (!allowExtraChallenge) {
+              break;
+            }
+            // allowExtraChallengeがある場合は、その文字にマッチするものがあればキューに追加する
             for (const extraWord of extraChallenges) {
               // 1文字目がマッチしない extraChallengeは行わない
               if (extraWord[0] !== node.name) {
                 continue;
               }
-
+  
               // extraWordの後ろにtargetをつなげる
               const extraNode = CharNode.create(extraWord);
               let extraTail = extraNode;
@@ -436,7 +440,7 @@ export class TrieAddressFinder2<T> {
                 extraTail = extraTail!.next;
               }
               extraTail!.next = target.clone();
-
+  
               // extraWord + target で検索を行うタスクを追加する
               const challenge = {
                 ambiguousCnt: ambiguousCnt + extraWord.length,
@@ -451,28 +455,28 @@ export class TrieAddressFinder2<T> {
               tail.next = challenge;
               tail = tail.next;
             }
+            break;
           }
-
-          break;
+          // ワイルドカードだった場合はマッチしなかった場合と、マッチした場合の2つに分岐する
+          if (target?.char === DEFAULT_FUZZY_CHAR && node.siblingOffset) {
+            // 兄弟ノードを追加する
+            const moveToSiblingNode = {
+              ambiguousCnt,
+              matchedCnt,
+              target: target.clone(),
+              offset: node.siblingOffset,
+              partialMatches: Array.from(matches),
+              path,
+              allowExtraChallenge,
+              next: undefined,
+            };
+            tail.next = moveToSiblingNode;
+            tail = tail.next;
+            ambiguousCnt++;
+          }
         }
 
-        // ワイルドカードだった場合はマッチしなかった場合と、マッチした場合の2つに分岐する
-        if (target?.char === DEFAULT_FUZZY_CHAR && node.siblingOffset) {
-          // 兄弟ノードを追加する
-          const moveToSiblingNode = {
-            ambiguousCnt,
-            matchedCnt,
-            target: target.clone(),
-            offset: node.siblingOffset,
-            partialMatches: Array.from(matches),
-            path,
-            allowExtraChallenge,
-            next: undefined,
-          };
-          tail.next = moveToSiblingNode;
-          tail = tail.next;
-          ambiguousCnt++;
-        }
+
         if (this.debug) {
           console.log(matchedCnt, offset, node);
         }

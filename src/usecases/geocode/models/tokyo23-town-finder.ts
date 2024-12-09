@@ -85,6 +85,9 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> 
         // Do nothing here
       }
 
+      if (process.env.JEST_WORKER_ID) {
+        console.log('Creates catch for Tokyo23TownFinder');
+      }
       // 新しく作成
       if (!await Tokyo23TownTrieFinder.createDictionaryFile(diContainer)) {
         return;

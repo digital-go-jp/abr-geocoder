@@ -170,10 +170,6 @@ export class GeocodeTransform extends Duplex {
       .pipe(dst);
   }
 
-  // _transform(chunk: any, _encoding: BufferEncoding, callback: TransformCallback): void {
-  //   this.reader.push(chunk);
-  //   callback();
-  // }
   _write(chunk: AbrGeocoderInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
     callback();
     this.reader.push(chunk);

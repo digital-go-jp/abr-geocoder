@@ -112,12 +112,6 @@ export class RsdtBlkTransform extends Transform {
       
       db.close();
 
-      // 番地が見つからなかった
-      // if (findResults.length === 0) {
-      //   results.add(query);
-      //   continue;
-      // }
-
       // 住居表示が間違えている可能性があるので、地番のために残しておく
       results.add(query);
       

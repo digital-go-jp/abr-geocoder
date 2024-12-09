@@ -81,6 +81,9 @@ export class CityAndWardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> 
         // Do nothing here
       }
 
+      if (process.env.JEST_WORKER_ID) {
+        console.log('Creates catch for CityAndWardTrieFinder');
+      }
       // 新しく作成
       if (!await CityAndWardTrieFinder.createDictionaryFile(diContainer)) {
         return;

@@ -84,6 +84,9 @@ export class WardTrieFinder extends TrieAddressFinder2<WardMatchingInfo> {
         // Do nothing here
       }
 
+      if (process.env.JEST_WORKER_ID) {
+        console.log('Creates catch for WardTrieFinder');
+      }
       // 新しく作成
       if (!await WardTrieFinder.createDictionaryFile(diContainer)) {
         return;

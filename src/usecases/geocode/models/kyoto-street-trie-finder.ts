@@ -136,6 +136,9 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
         // Do nothing here
       }
 
+      if (process.env.JEST_WORKER_ID) {
+        console.log('Creates catch for KyotoStreetTrieFinder');
+      }
       // 新しく作成
       if (!await KyotoStreetTrieFinder.createDictionaryFile(diContainer)) {
         return;

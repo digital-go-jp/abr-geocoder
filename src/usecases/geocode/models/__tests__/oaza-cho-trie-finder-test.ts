@@ -17,32 +17,34 @@ import { OazaChoTrieFinder } from "../oaza-cho-trie-finder";
   });
 
   // 古いキャッシュファイルを削除
-  await removeFiles({
-    dir: container.cacheDir,
-    filename: 'oaza-cho_.*\\.abrg2',
-  });
-  await OazaChoTrieFinder.createDictionaryFile(container);
+  // await removeFiles({
+  //   dir: container.cacheDir,
+  //   filename: 'oaza-cho_.*\\.abrg2',
+  // });
+  // await OazaChoTrieFinder.createDictionaryFile(container);
 
   const data = await OazaChoTrieFinder.loadDataFile(container);
   if (!data) {
     throw `Can not load the data`;
   }
   const finder = new OazaChoTrieFinder(data);
-  const dbCtrl = await container.database.openCommonDb();
-  const rows = await dbCtrl.getOazaChomes();
+  // const dbCtrl = await container.database.openCommonDb();
+  // const rows = await dbCtrl.getOazaChomes();
+  const rows = [{
+    key: "横芝光町横芝真砂482-2",
+  }]
   rows.forEach(row => {
-    const key = [
-      row.oaza_cho || '',
-      row.chome || '',
-      row.koaza || '',
-    ].join('');
+    // let key = [
+    //   row.oaza_cho || '',
+    //   row.chome || '',
+    //   row.koaza || '',
+    // ].join('');
     
-    const result = finder.find({
-      target: CharNode.create(OazaChoTrieFinder.normalize(key)),
+    let result = finder.find({
+      target: CharNode.create(OazaChoTrieFinder.normalize(row.key)),
+      partialMatches: true,
     });
-    if (result.length === 0) {
-      console.log(key, result);
-    }
+    console.log(result);
   });
 
 })();

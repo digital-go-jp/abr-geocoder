@@ -189,6 +189,9 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<OazaChoMachingInfo> {
         // Do nothing here
       }
 
+      if (process.env.JEST_WORKER_ID) {
+        console.log('Creates catch for OazaChoTrieFinder');
+      }
       // 新しく作成
       if (!await OazaChoTrieFinder.createDictionaryFile(diContainer)) {
         return;

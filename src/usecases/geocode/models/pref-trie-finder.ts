@@ -80,6 +80,9 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
         // Do nothing here
       }
 
+      if (process.env.JEST_WORKER_ID) {
+        console.log('Creates catch for PrefTrieFinder');
+      }
       // 新しく作成
       if (!await PrefTrieFinder.createDictionaryFile(diContainer)) {
         return;

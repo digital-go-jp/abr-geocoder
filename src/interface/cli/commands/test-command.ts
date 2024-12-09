@@ -239,7 +239,7 @@ const testCommand: CommandModule = {
         return 1;
       }
       // バックグラウンドスレッドを用いる
-      return container.env.availableParallelism() * 2;
+      return container.env.availableParallelism();
     })();
 
     // 初期化する
