@@ -38,6 +38,10 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
   private readonly waitingTasks: WorkerPoolTaskInfo<TransformData, ReceiveData>[] = [];
   private readonly abortCtrl = new AbrAbortController();
 
+  public get waitingTaskCnt(): number {
+    return this.waitingTasks.length;
+  }
+
   constructor(params : {
     filename: string;
     initData?: InitData;
@@ -51,6 +55,10 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
     super();
     params.signal?.addEventListener('abort', () => {
       this.abortCtrl.abort();
+
+      this.workers.map(worker => {
+        worker.terminate();
+      });
     });
     this.signal = this.abortCtrl.signal;
 
@@ -110,9 +118,6 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
       worker.terminate();
       return;
     }
-    this.signal?.addEventListener('abort', () => {
-      worker.terminate();
-    });
     worker.on('error', async (error: Event | string) => {
       if (typeof error === 'string' && error === 'abort' || error instanceof Event && error.type === 'abort') {
         return;

@@ -50,7 +50,7 @@ export class OazaChomeTransform extends Transform {
     // ------------------------
     // 大字・丁目・小字で当たるものがあるか
     // ------------------------
-    const results = new QuerySet();
+    const results: QuerySet = new QuerySet();
     for (const query of queries.values()) {
       // if (query.match_level.num >= MatchLevel.MACHIAZA.num) {
       //   // 大字が既に判明している場合はスキップ

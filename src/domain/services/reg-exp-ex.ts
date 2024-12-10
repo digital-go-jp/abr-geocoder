@@ -39,15 +39,15 @@ export class RegExpEx {
   // 同じ正規表現を何度もコンパイルすることによるパフォーマンスの低下を避けるため、
   // LRUキャッシュを用いて（ちょっとだけ）高速化している
   static create(pattern: string, flag: string = ''): RegExp {
-    const patternStr = pattern.toString();
-    const key = RegExpEx.getKey(patternStr, flag);
-    const result = RegExpEx.staticCache.get(key);
-    if (result) {
-      return result;
-    }
+    // const patternStr = pattern.toString();
+    // const key = RegExpEx.getKey(patternStr, flag);
+    // const result = RegExpEx.staticCache.get(key);
+    // if (result) {
+    //   return result;
+    // }
 
-    const instance = new RegExp(patternStr, flag);
-    RegExpEx.staticCache.set(key, instance);
+    const instance = new RegExp(pattern, flag);
+    // RegExpEx.staticCache.set(key, instance);
     return instance;
   }
 }

@@ -282,6 +282,7 @@ const geocodeCommand: CommandModule = {
       geocoder,
       fuzzy,
       searchTarget,
+      highWatermark: numOfThreads * 500,
     });
 
     // プログレスバーをアップデート

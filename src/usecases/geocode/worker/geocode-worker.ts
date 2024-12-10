@@ -61,7 +61,6 @@ export class GeocodeTransform extends Duplex {
   private readonly reader = new Readable({
     objectMode: true,
     read() {},
-    // highWaterMark: 1024,
   });
 
   private constructor({
@@ -171,8 +170,8 @@ export class GeocodeTransform extends Duplex {
   }
 
   _write(chunk: AbrGeocoderInput, _: BufferEncoding, callback: (error?: Error | null) => void): void {
-    callback();
     this.reader.push(chunk);
+    callback();
   }
 
   _final(callback: (error?: Error | null) => void): void {

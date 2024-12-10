@@ -63,10 +63,10 @@ export class AbrGeocoderStream extends Duplex {
   _read(): void {}
 
   private closer() {
-    // if (this.pausing && this.writeIdx - this.nextIdx < this.halfWatermark) {
-    //   this.emit('resume');
-    //   this.pausing = false;
-    // }
+    if (this.pausing && this.writeIdx - this.nextIdx < this.halfWatermark) {
+      this.emit('resume');
+      this.pausing = false;
+    }
 
     if (!this.receivedFinal || this.pausing || this.nextIdx <= this.writeIdx) {
       return;
@@ -75,7 +75,7 @@ export class AbrGeocoderStream extends Duplex {
     this.push(null);
   }
 
-  private async waiter() {
+  private waiter() {
     // Out of memory を避けるために、受け入れを一時停止
     // 処理済みが追いつくまで、待機する
     const waitingCnt = this.writeIdx - this.nextIdx;
@@ -95,7 +95,7 @@ export class AbrGeocoderStream extends Duplex {
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
-    // await this.waiter();
+    this.waiter();
 
     const lineId = ++this.writeIdx;
 

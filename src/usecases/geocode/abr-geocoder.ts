@@ -38,7 +38,6 @@ import { PrefTrieFinder } from "./models/pref-trie-finder";
 import { Query, QueryJson } from "./models/query";
 import { Tokyo23TownTrieFinder } from "./models/tokyo23-town-finder";
 import { Tokyo23WardTrieFinder } from "./models/tokyo23-ward-trie-finder";
-import { WardAndOazaTrieFinder } from "./models/ward-and-oaza-trie-finder";
 import { WardTrieFinder } from "./models/ward-trie-finder";
 import { GeocodeWorkerInitData } from "./worker/geocode-worker-init-data";
 
@@ -198,8 +197,8 @@ export class AbrGeocoder {
       maxConcurrency: Math.max(1, params.numOfThreads),
 
       // 1スレッドあたり、いくつのタスクを同時並行させるか
-      // (増減させても大差はないので、固定値にする)
-      maxTasksPerWorker: 50,
+      // (ストリームのバックプレッシャに影響するので、固定値にしておく)
+      maxTasksPerWorker: 500,
 
       // geocode-worker.ts へのパス
       filename: path.join(__dirname, 'worker', 'geocode-worker'),

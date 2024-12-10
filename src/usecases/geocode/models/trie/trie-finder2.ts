@@ -91,13 +91,16 @@ class FileTrieResults {
   values() {
     return this.holder.values();
   }
+  clear() {
+    this.holder.clear();
+  }
 }
 
 export class TrieAddressFinder2<T> {
   // ヘッダー
   private readonly header: AbrgDictHeader;
   public debug: boolean = false;
-  protected readonly trieNodeMap: Map<number, ReadTrieNode | null> = new Map();
+  // protected readonly trieNodeMap: Map<number, ReadTrieNode | null> = new Map();
   
   constructor(private readonly fileBuffer: Buffer) {
     this.debug = false;
@@ -236,9 +239,9 @@ export class TrieAddressFinder2<T> {
   }
   // ノード情報を読み込む
   protected readTrieNode(nodeOffset: number): ReadTrieNode | null {
-    if (this.trieNodeMap.has(nodeOffset)) {
-      return this.trieNodeMap.get(nodeOffset)!;
-    }
+    // if (this.trieNodeMap.has(nodeOffset)) {
+    //   return this.trieNodeMap.get(nodeOffset)!;
+    // }
 
     // ノードサイズを読み取る(1)
     const nodeSize = this.fileBuffer.readUInt8(nodeOffset + TRIE_NODE_SIZE_FIELD.offset);
@@ -275,7 +278,7 @@ export class TrieAddressFinder2<T> {
       hashValueList: headValueList,
       nodeSize,
     };
-    this.trieNodeMap.set(nodeOffset, readTrieNode);
+    // this.trieNodeMap.set(nodeOffset, readTrieNode);
 
     return readTrieNode;
   }

@@ -23,13 +23,13 @@
  */
 import { AsyncResource } from 'node:async_hooks';
 
-
 export class WorkerPoolTaskInfo<DataType, ResultType> extends AsyncResource {
   next: WorkerPoolTaskInfo<DataType, ResultType> | undefined;
   result?: ResultType;
   error?: null | undefined | Error;
 
   private _isResolved: boolean = false;
+  private _isDestroyed: boolean = false;
   private resolve?: (value: ResultType) => void;
   private reject?: (err: Error) => void;
 
@@ -49,6 +49,14 @@ export class WorkerPoolTaskInfo<DataType, ResultType> extends AsyncResource {
     super('WorkerPoolTaskInfo');
   }
 
+  private destroy() {
+    if (this._isDestroyed) {
+      return;
+    }
+    this._isDestroyed = true;
+    this.emitDestroy();
+  }
+
   emit(): boolean {
     if (!this.isResolved) {
       return false;
@@ -66,7 +74,7 @@ export class WorkerPoolTaskInfo<DataType, ResultType> extends AsyncResource {
         throw new Error(`A resolver is not set for ${this.asyncId()}`);
       }
     }
-    this.emitDestroy();
+    this.destroy();
     return true;
   }
 
@@ -92,7 +100,8 @@ export class WorkerPoolTaskInfo<DataType, ResultType> extends AsyncResource {
     this.error = undefined;
     this.result = undefined;
     this.next = undefined;
-    this.emitDestroy();
+    
+    this.destroy();
   }
 }
 // export class WorkerPoolTaskInfo<T, R> extends AsyncResource {
