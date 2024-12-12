@@ -21,6 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */;
+import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
+import { AbrAbortController } from '@domain/models/abr-abort-controller';
 import { DownloadQueryBase, DownloadRequest, isDownloadProcessError } from '@domain/models/download-process-query';
 import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
@@ -33,25 +35,32 @@ export class DownloadTransform extends Duplex {
 
   private receivedFinal: boolean = false;
   private runningTasks = 0;
-  private abortCtrl = new AbortController();
+  private readonly abortCtrl = new AbrAbortController();
+  private pausing: boolean = false;
+  private readonly highWatermark: number;
+  private readonly halfWatermark: number;
 
   // ダウンロードを担当するワーカースレッド
-  private downloader?: WorkerThreadPool<
+  private downloader: WorkerThreadPool<
     DownloadWorkerInitData, 
     DownloadRequest,
     DownloadQueryBase
   >;
 
-  constructor(params : Required<{
+  constructor(params : {
     maxConcurrency: number;
     maxTasksPerWorker: number;
     container: DownloadDiContainer;
-  }>) {
+    highWatermark?: number;
+  }) {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
+
+    this.highWatermark = params.highWatermark || MAX_CONCURRENT_DOWNLOAD;
+    this.halfWatermark = this.highWatermark >> 1;
 
     this.downloader = new WorkerThreadPool<
       DownloadWorkerInitData, 
@@ -83,6 +92,32 @@ export class DownloadTransform extends Duplex {
     this.downloader?.close();
   }
 
+  private waiter() {
+    // Out of memory を避けるために、受け入れを一時停止
+    // 処理済みが追いつくまで、待機する
+    if (this.runningTasks < this.highWatermark || this.pausing) {
+      return;
+    }
+
+    if (!this.pausing) {
+      this.pausing = true;
+      this.emit('pause');
+    }
+  }
+
+  private closer() {
+    if (this.pausing && this.runningTasks < this.halfWatermark) {
+      this.emit('resume');
+      this.pausing = false;
+    }
+
+    if (!this.receivedFinal || this.pausing || this.runningTasks > 0) {
+      return;
+    }
+    // 全タスクが処理したので終了
+    this.push(null);
+  }
+
   // 前のstreamからデータが渡されてくる
   async _write(
     params: DownloadRequest,
@@ -90,9 +125,7 @@ export class DownloadTransform extends Duplex {
     // callback: (error?: Error | null | undefined) => void,
     callback: TransformCallback,
   ) {
-    while (!this.downloader) {
-      await timers.setTimeout(100);
-    }
+    this.waiter();
     
     this.runningTasks++;
 
@@ -111,16 +144,12 @@ export class DownloadTransform extends Duplex {
 
         if (isDownloadProcessError(downloadResult)) {
           this.push(downloadResult);
-          if (this.runningTasks === 0 && this.receivedFinal) {
-            this.push(null);
-          }
+          this.closer();
           return;
         }
 
         this.push(downloadResult);
-        if (this.runningTasks === 0 && this.receivedFinal) {
-          this.push(null);
-        }
+        this.closer();
         return;
       } catch (e) {
         console.debug("--------> retry!!!", e);
@@ -135,7 +164,7 @@ export class DownloadTransform extends Duplex {
       }
     }
 
-    this.abortCtrl.abort(`Can not download the file: ${params.packageId}`);
+    this.abortCtrl.abort(new Event(`Can not download the file: ${params.packageId}`));
     this.close();
   }
 

@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import zlib from 'node:zlib';
 import {
   ABRG_FILE_HEADER_SIZE,
   ABRG_FILE_MAGIC,
@@ -42,7 +43,15 @@ import {
   VERSION_BYTES,
 } from './abrg-file-structure';
 import { CharNode } from './char-node';
-import { TrieFinderResult } from './common';
+
+
+export type TrieFinderResult<T> = {
+  info: T | undefined;
+  unmatched: CharNode | undefined;
+  depth: number;
+  ambiguousCnt: number;
+  path: string;
+}
 
 export type TraverseQuery = {
   next: TraverseQuery | undefined;
@@ -120,7 +129,7 @@ export class TrieAddressFinder2<T> {
     return result;
   }
 
-  protected readDataNode(hashValueOffset: number): DataNode {
+  protected readDataNode(hashValueOffset: number, expectHashValue?: bigint): DataNode | undefined {
     let offset = hashValueOffset;
 
     // 次のデータノードのアドレス
@@ -132,23 +141,33 @@ export class TrieAddressFinder2<T> {
     offset += DATA_NODE_SIZE_FIELD.size;
 
     // データに対するハッシュ値
-    const hashValue = this.fileBuffer.readUInt32BE(offset);
+    const hashValue = this.fileBuffer.readBigUInt64BE(offset);
     offset += DATA_NODE_HASH_VALUE.size;
-
-    // 実データ
-    let data = undefined;
-    if (offset < hashValueOffset + nodeSize) {
-      const dataStr = this.fileBuffer.toString('utf8', offset, hashValueOffset + nodeSize);
-      data = JSON.parse(dataStr);
+    if (expectHashValue && expectHashValue !== hashValue) {
+      return;
     }
-     
-    return {
-      data,
+
+    const result: DataNode = {
+      data: Buffer.alloc(0),
       nodeSize,
       hashValue,
       offset: hashValueOffset,
       nextDataNodeOffset,
     };
+
+    // 実データ
+    if (offset < hashValueOffset + nodeSize) {
+      result.data = zlib.unzipSync(
+        this.fileBuffer.subarray(offset, hashValueOffset + nodeSize),
+      );
+
+      // ハッシュ値が衝突している場合、同じハッシュ値のデータノードを取り続ける
+      if (nextDataNodeOffset > 0) {
+        result.next = this.readDataNode(nextDataNodeOffset, hashValue);
+      }
+    }
+     
+    return result;
   }
 
   protected readHeader(): AbrgDictHeader | null {
@@ -325,13 +344,22 @@ export class TrieAddressFinder2<T> {
       }
       let dataNodeHead: TrieHashListNode | undefined = node.hashValueList;
       while (dataNodeHead) {
-        const dataNode = this.readDataNode(dataNodeHead.hashValueOffset);
-        results.push({
-          info: dataNode.data,
-          unmatched: node.target,
-          depth: node.matchedCnt,
-          ambiguousCnt: node.ambiguousCnt,
-        });
+        let dataNode = this.readDataNode(dataNodeHead.hashValueOffset);
+        // if (!dataNode?.data) {
+        //   dataNodeHead = dataNodeHead.next;
+        //   continue;
+        // }
+        while (dataNode) {
+          const info = JSON.parse(dataNode.data.toString('utf8'));
+          results.push({
+            info,
+            unmatched: node.target,
+            depth: node.matchedCnt,
+            ambiguousCnt: node.ambiguousCnt,
+            path: node.path,
+          });
+          dataNode = dataNode.next;
+        }
         dataNodeHead = dataNodeHead.next;
       }
     });
@@ -380,7 +408,7 @@ export class TrieAddressFinder2<T> {
       // 途中マッチした結果をキープしておく
       partialMatches: [],
 
-      // マッチした文字のパス（デバッグ用）
+      // マッチした文字のパス
       path: "",
 
       // extraChallengeをするか（一度したら、二回目はない)

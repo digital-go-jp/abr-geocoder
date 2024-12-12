@@ -219,7 +219,7 @@ if (!isMainThread && parentPort) {
     });
 
     const initData = workerData as GeocodeWorkerInitData;
-    initData.debug = true;
+    initData.debug = false;
     const geocodeTransform = await GeocodeTransform.create(initData);
 
     // メインスレッドからメッセージを受け取る

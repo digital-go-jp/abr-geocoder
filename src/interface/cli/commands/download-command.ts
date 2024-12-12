@@ -124,7 +124,7 @@ const downloadCommand: CommandModule = {
         return 1;
       }
       // バックグラウンドスレッドを用いる
-      return container.env.availableParallelism();
+      return container.env.availableParallelism() << 1;
     })();
 
     // ダウンロードを行う
@@ -147,7 +147,7 @@ const downloadCommand: CommandModule = {
       lgCodes: argv.lgCode,
 
       // 同時ダウンロード数
-      concurrentDownloads: MAX_CONCURRENT_DOWNLOAD,
+      concurrentDownloads: MAX_CONCURRENT_DOWNLOAD * numOfThreads,
 
       // 使用するスレッド数
       numOfThreads,

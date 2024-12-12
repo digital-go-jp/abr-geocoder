@@ -40,6 +40,7 @@ export class OazaChomeTransform extends Transform {
     super({
       objectMode: true,
     });
+    this.trie.debug = false;
   }
 
   async _transform(
@@ -116,6 +117,8 @@ export class OazaChomeTransform extends Transform {
         }));
       }
 
+      let anyHit = false;
+      let anyAmbiguous = false;
       for (const targetQuery of targets.values()) {
         if (!targetQuery || !targetQuery.tempAddress) {
           continue;
@@ -148,21 +151,15 @@ export class OazaChomeTransform extends Transform {
           //   matched = result.info?.town_key === query.town_key;
           // }
 
-          // ◯丁目 + 数字が残った場合、ミスマッチの可能性が高い
+          // 当たった文字列(path)の最後が数字で、unmatchedの先頭が数字なら間違い
           if (matched &&
             isDigit(result.unmatched) &&
-            (result.info?.oaza_cho.includes('丁目') || result.info?.chome.includes('丁目'))) {
-            matched = false;
-          }
-          // ◯◯地割 + 数字が残った場合、ミスマッチの可能性が高い
-          if (matched && result.info?.koaza.includes('地割') && isDigit(result.unmatched)) {
+            RegExpEx.create('[0-9]$').test(result.path || '')) {
             matched = false;
           }
           return matched;
         });
 
-        let anyHit = false;
-        let anyAmbiguous = false;
         // 複数都道府県にヒットする可能性があるので、全て試す
         filteredResult?.forEach(result => {
           let ambiguousCnt = targetQuery.ambiguousCnt + result.ambiguousCnt;
@@ -217,10 +214,9 @@ export class OazaChomeTransform extends Transform {
           const copied = targetQuery.copy(params);
           results.add(copied);
         });
-
-        if (!anyHit || anyAmbiguous) {
-          results.add(targetQuery);
-        }
+      }
+      if (!anyHit || anyAmbiguous) {
+        results.add(query);
       }
     }
 

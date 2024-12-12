@@ -3,7 +3,7 @@ import path from 'node:path';
 import { AbrGeocoderDiContainer } from "../abr-geocoder-di-container";
 import { CharNode } from "../trie/char-node";
 import { KyotoStreetTrieFinder } from "../kyoto-street-trie-finder";
-import { TrieFinderResult } from "../trie/common";
+import { TrieFinderResult } from "../trie/trie-tree-builder-base";
 import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
 import { toHankakuAlphaNum } from "@usecases/geocode/services/to-hankaku-alpha-num";
 import { MatchLevel } from "@domain/types/geocode/match-level";
@@ -25,9 +25,17 @@ import { MatchLevel } from "@domain/types/geocode/match-level";
     dir: container.cacheDir,
     filename: 'kyoto-street_.*\\.abrg2',
   });
-  await KyotoStreetTrieFinder.createDictionaryFile(container);
+  await KyotoStreetTrieFinder.createDictionaryFile({
+    diContainer: container,
+    data: 'kyoto-street',
+    isSilentMode: false,
+  });
 
-  const data = await KyotoStreetTrieFinder.loadDataFile(container);
+  const data = await KyotoStreetTrieFinder.loadDataFile({
+    diContainer: container,
+    data: 'kyoto-street',
+    isSilentMode: false,
+  });
   if (!data) {
     throw `Can not load the data`;
   }

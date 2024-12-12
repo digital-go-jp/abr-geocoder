@@ -123,7 +123,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<OazaChoMachingInfo> {
       row.oaza_cho = toHankakuAlphaNum(row.oaza_cho);
       row.chome = toHankakuAlphaNum(row.chome);
       row.koaza = toHankakuAlphaNum(row.koaza);
-
+      
       await writer.addNode({
         key: OazaChoTrieFinder.normalize([
           row.oaza_cho || '',
@@ -170,7 +170,9 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<OazaChoMachingInfo> {
           value: row,
         });
       }
+      progressBar?.increment();
     }
+    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;

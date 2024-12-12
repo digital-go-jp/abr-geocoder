@@ -24,6 +24,8 @@
 import { getPackageInfo } from '@domain/services/package/get-package-info';
 import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import stringify from 'json-stable-stringify';
+import fs from 'node:fs';
+import zlib from 'node:zlib';
 import {
   ABRG_FILE_HEADER_SIZE,
   ABRG_FILE_MAGIC,
@@ -34,7 +36,6 @@ import {
   DATA_NODE_SIZE_FIELD,
   HASH_LINK_NODE_NEXT_OFFSET,
   HASH_LINK_NODE_OFFSET_VALUE,
-  OFFSET_FIELD_SIZE,
   ReadTrieNode,
   TRIE_NODE_CHILD_OFFSET,
   TRIE_NODE_ENTRY_POINT,
@@ -45,16 +46,15 @@ import {
   VERSION_BYTES,
   WriteTrieNode
 } from './abrg-file-structure';
-import { TrieTreeBuilderFinderCommon } from './common';
-import fs from 'node:fs';
+import { TrieTreeBuilderBase } from './trie-tree-builder-base';
 
-export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
+export class FileTrieWriter extends TrieTreeBuilderBase {
   private header: AbrgDictHeader | undefined;
 
   private lastDataNodeOffset: number = 0;
 
   private readonly semaphore: SemaphoreManager;
-
+  private readonly dataHashValueToOffsetMap: Map<bigint, number> = new Map();
 
   private constructor(fd: fs.promises.FileHandle, size: number = 0) {
     super(fd, size);
@@ -133,7 +133,7 @@ export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
     
     // データノードを全て辿っていき、dataHashValueMap に格納していく
     let offset: number = this.header.dataNodeOffset;
-    let hashValue: number = 0;
+    let hashValue: bigint;
     let nextOffset: number = 0;
     // データノードのヘッダを読み込むためのバッファ
     const dataNodeHead = Buffer.alloc(DATA_NODE_NEXT_OFFSET.size + DATA_NODE_SIZE_FIELD.size + DATA_NODE_HASH_VALUE.size);
@@ -141,8 +141,12 @@ export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
     while (offset > 0) {
       await this.copyTo(offset, dataNodeHead);
       nextOffset = dataNodeHead.readUInt32BE(DATA_NODE_NEXT_OFFSET.offset);
-      hashValue = dataNodeHead.readUInt32BE(DATA_NODE_HASH_VALUE.offset);
-      this.dataHashValueMap.set(hashValue, offset);
+      hashValue = dataNodeHead.readBigUInt64BE(DATA_NODE_HASH_VALUE.offset);
+
+      // ハッシュ値が衝突する可能性があるが、それほど多くはないはずなので、先頭のオフセット値だけをキープする
+      if (!this.dataHashValueToOffsetMap.has(hashValue)) {
+        this.dataHashValueToOffsetMap.set(hashValue, offset);
+      }
 
       offset = nextOffset;
     }
@@ -167,11 +171,8 @@ export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
     header = await writer.writeHeader();
 
     // ルートノードの値(0)を書き込む
-    const rootDataOffset = await writer.storeHashValueAndData({
-      hashValue: 0,
-      data: '{}',
-    });
-    writer.dataHashValueMap.set(0, rootDataOffset);
+    const rootDataOffset = await writer.storeData({});
+    writer.dataHashValueToOffsetMap.set(0n, rootDataOffset);
     
     // ルートノード(トライ木ノード)を書き込む
     const rootNode = await writer.writeTrieNode({
@@ -445,37 +446,50 @@ export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
     return headValueList;
   }
 
-  private async storeHashValueAndData({
-    hashValue,
-    data,
-  }: {
-    hashValue: number;
-    data: string;
-  }): Promise<number> {
-    // キャッシュがあれば利用する
-    if (this.dataHashValueMap.has(hashValue)) {
-      return this.dataHashValueMap.get(hashValue)!;
-    }
+  private async storeData(data: any): Promise<number> {
+    const dataStr = stringify(data);
+    const dataBuffer = zlib.gzipSync(Buffer.from(dataStr), {
+      level: 9,
+    });
+    const hashValue = this.bufferToBigIntHash(dataBuffer);
 
     // データノード先頭にある、次のデータノードへのオフセット値を読み込むためのバッファ
-    const dataNodeOffsetBuffer = Buffer.alloc(DATA_NODE_ENTRY_POINT.size);
+    const nextDataNodeOffsetBuffer = Buffer.alloc(DATA_NODE_ENTRY_POINT.size);
 
     let parentDataNodeOffset = 0;
-    if (this.lastDataNodeOffset > 0) {
-      parentDataNodeOffset = this.lastDataNodeOffset;
+    if (this.dataHashValueToOffsetMap.has(hashValue)) {
+      // キャッシュがある場合、キーが衝突している可能性がある
+      parentDataNodeOffset = this.dataHashValueToOffsetMap.get(hashValue)!;
+
+      // 連結リストになって返ってくるので、各ノードの実データと保存したいデータを比較する
+      let dataNode = await this.readDataNode(parentDataNodeOffset);
+      while (dataNode) {
+        // データを読み取って同じなら、parentDataNodeOffsetを返す
+        if (dataNode?.data && dataBuffer.compare(dataNode.data) === 0) {
+          return dataNode.offset;
+        }
+        parentDataNodeOffset = dataNode.offset;
+        dataNode = dataNode.next;
+      }
+
     } else {
-      await this.copyTo(DATA_NODE_ENTRY_POINT.offset, dataNodeOffsetBuffer);
-      parentDataNodeOffset = dataNodeOffsetBuffer.readUInt32BE(0);
+      // キーが異なる場合は追記
+      if (this.lastDataNodeOffset > 0) {
+        parentDataNodeOffset = this.lastDataNodeOffset;
+      } else {
+        await this.copyTo(DATA_NODE_ENTRY_POINT.offset, nextDataNodeOffsetBuffer);
+        parentDataNodeOffset = nextDataNodeOffsetBuffer.readUInt32BE(0);
+      }
     }
 
     if (parentDataNodeOffset > 0) {
       // データの連結リストを辿っていき、最後に追加する
       let nextDataNodeOffset = 0;
       while (true) {
-        await this.copyTo(parentDataNodeOffset, dataNodeOffsetBuffer);
+        await this.copyTo(parentDataNodeOffset, nextDataNodeOffsetBuffer);
         
         // 次のデータノードへのオフセット値
-        nextDataNodeOffset = dataNodeOffsetBuffer.readUInt32BE(0);
+        nextDataNodeOffset = nextDataNodeOffsetBuffer.readUInt32BE(0);
         if (nextDataNodeOffset === 0) {
           break;
         }
@@ -485,34 +499,34 @@ export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
       // 初めてデータを追加する場合は、ヘッダーのDATA_NODE_ENTRY_POINT
       parentDataNodeOffset = DATA_NODE_ENTRY_POINT.offset;
     }
-    this.lastDataNodeOffset = parentDataNodeOffset;
+    this.lastDataNodeOffset = Math.max(this.lastDataNodeOffset, parentDataNodeOffset);
 
     // ファイルの末尾をデータを書き込むオフセット値にする
     // (親ノードに記録する)
     const writeOffset = this.fileSize;
-    dataNodeOffsetBuffer.writeUInt32BE(writeOffset, DATA_NODE_NEXT_OFFSET.offset);
-    await this.write(dataNodeOffsetBuffer, parentDataNodeOffset);
+    nextDataNodeOffsetBuffer.writeUInt32BE(writeOffset, DATA_NODE_NEXT_OFFSET.offset);
+    await this.write(nextDataNodeOffsetBuffer, parentDataNodeOffset);
 
     const buffers: Buffer[] = [];
     let dataNodeSize = 0;
+    
     // 次のデータノードへのオフセット値を保存するためのプレイスホルダ
-    const nextDataNodeOffsetBuffer = Buffer.alloc(OFFSET_FIELD_SIZE);
+    nextDataNodeOffsetBuffer.fill(0);
     buffers.push(nextDataNodeOffsetBuffer);
     dataNodeSize += nextDataNodeOffsetBuffer.length;
     
     // データノードのサイズ
-    const dataNodeSizeBuffer = Buffer.alloc(2);
+    const dataNodeSizeBuffer = Buffer.alloc(DATA_NODE_SIZE_FIELD.size);
     buffers.push(dataNodeSizeBuffer);
     dataNodeSize += dataNodeSizeBuffer.length;
 
     // データのハッシュ値(データに対するキー)
-    const hashValueBuffer = Buffer.alloc(4);
-    hashValueBuffer.writeUInt32BE(hashValue);
+    const hashValueBuffer = Buffer.alloc(DATA_NODE_HASH_VALUE.size);
+    hashValueBuffer.writeBigUInt64BE(hashValue);
     buffers.push(hashValueBuffer);
     dataNodeSize += hashValueBuffer.length;
 
     // 実データ
-    const dataBuffer = Buffer.from(data);
     buffers.push(dataBuffer);
     dataNodeSize += dataBuffer.length;
 
@@ -524,15 +538,18 @@ export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
     await this.write(dataNodeBuffer, writeOffset);
 
     // 前回のデータノードと関連付ける
-    const offsetBuffer = Buffer.alloc(OFFSET_FIELD_SIZE);
-    offsetBuffer.writeUInt32BE(writeOffset);
-    await this.write(offsetBuffer, this.lastDataNodeOffset);
+    // const offsetBuffer = Buffer.alloc(OFFSET_FIELD_SIZE);
+    // offsetBuffer.writeUInt32BE(writeOffset);
+    // await this.write(offsetBuffer, this.lastDataNodeOffset);
 
     // 次のためにオフセット値を持っておく
     this.lastDataNodeOffset = writeOffset;
 
     // ハッシュ値に対するオフセット値を記録
-    this.dataHashValueMap.set(hashValue, writeOffset);
+    if (!this.dataHashValueToOffsetMap.has(hashValue)) {
+      this.dataHashValueToOffsetMap.set(hashValue, writeOffset);
+    }
+
     return writeOffset;
   }
 
@@ -551,15 +568,8 @@ export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
     // セマフォをロック
     await this.semaphore.enterAwait(0);
 
-    // データをハッシュ値に変換
-    const data = stringify(value);
-    const hashValue = this.stringTo4ByteHash(data);
-
     // 新しいハッシュ値ならファイルに書き込む
-    let hashValueOffset = await this.storeHashValueAndData({
-      hashValue,
-      data,
-    });
+    let hashValueOffset = await this.storeData(value);
 
     // ルートノードの読み取り
     const offset = this.header.trieNodeOffset;
@@ -696,15 +706,15 @@ export class FileTrieWriter extends TrieTreeBuilderFinderCommon {
     this.semaphore.leave(0);
   }
 
-  private stringTo4ByteHash(str: string) {
-    const strBuffer = Buffer.from(str);
+  private bufferToBigIntHash(data: Buffer): bigint {
+    const FNV_OFFSET_BASIS = BigInt("0xcbf29ce484222325"); // 64ビット FNV offset basis
+    const FNV_PRIME = BigInt("0x100000001b3");           // 64ビット FNV prime
 
-    let hash = 0;
-    for (let i = 0; i < strBuffer.length; i++) {
-      const charCode = strBuffer.at(i)!;
-      hash = ((hash << 5) - hash + charCode) & 0xFFFFFFFF;
+    let hash = FNV_OFFSET_BASIS;
+    for (let i = 0; i < data.length; i++) {
+        hash ^= BigInt(data.at(i)!);               // XOR
+        hash = (hash * FNV_PRIME) & BigInt("0xffffffffffffffff"); // 64ビットの範囲内に収める
     }
-    // 符号なし32ビット整数として返す
-    return hash >>> 0;
+    return hash;
   }
 }

@@ -40,6 +40,7 @@ import { Tokyo23TownTrieFinder } from "./models/tokyo23-town-finder";
 import { Tokyo23WardTrieFinder } from "./models/tokyo23-ward-trie-finder";
 import { WardTrieFinder } from "./models/ward-trie-finder";
 import { GeocodeWorkerInitData } from "./worker/geocode-worker-init-data";
+import { AbrAbortSignal } from "@domain/models/abr-abort-controller";
 
 export class AbrGeocoder {
   private taskHead: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
@@ -49,7 +50,7 @@ export class AbrGeocoder {
 
   private constructor(
     private readonly workerPool: IWorkerThreadPool<AbrGeocoderInput, QueryJson>,
-    private readonly signal?: AbortSignal,
+    private readonly signal?: AbrAbortSignal,
   ) {
     this.signal?.addEventListener('abort', () => this.close());
   }
@@ -121,7 +122,7 @@ export class AbrGeocoder {
   static create = async (params: {
     container: AbrGeocoderDiContainer;
     numOfThreads: number;
-    signal?: AbortSignal;
+    signal?: AbrAbortSignal;
     isSilentMode: boolean;
   }) => {
     // トライ木を作成するために必要な辞書データの読み込み

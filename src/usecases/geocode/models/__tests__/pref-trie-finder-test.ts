@@ -21,9 +21,17 @@ import { removeFiles } from '@domain/services/remove-files';
     dir: container.cacheDir,
     filename: 'pref_.*\\.abrg2',
   });
-  await PrefTrieFinder.createDictionaryFile(container);
+  await PrefTrieFinder.createDictionaryFile({
+    diContainer: container,
+    data: 'pref',
+    isSilentMode: false,
+  });
 
-  const data = await PrefTrieFinder.loadDataFile(container);
+  const data = await PrefTrieFinder.loadDataFile({
+    diContainer: container,
+    data: 'pref',
+    isSilentMode: false,
+  });
   if (!data) {
     throw `Can not load the data`;
   }

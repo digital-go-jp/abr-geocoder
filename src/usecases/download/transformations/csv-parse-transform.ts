@@ -26,14 +26,18 @@ import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
 import path from 'node:path';
 import { Duplex, TransformCallback } from 'node:stream';
-import timers from 'node:timers/promises';
 import { ParseWorkerInitData } from '../workers/csv-parse-worker';
+import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
+import { AbrAbortController } from '@domain/models/abr-abort-controller';
 
 export class CsvParseTransform extends Duplex {
 
   private receivedFinal: boolean = false;
   private runningTasks = 0;
-  private abortCtrl = new AbortController();
+  private readonly abortCtrl = new AbrAbortController();
+  private readonly highWatermark: number;
+  private readonly halfWatermark: number;
+  private pausing: boolean = false;
 
   // ダウンロードされた zip ファイルを展開して、データベースに登録するワーカースレッド
   private csvParsers: WorkerThreadPool<
@@ -42,16 +46,20 @@ export class CsvParseTransform extends Duplex {
     DownloadResult | DownloadProcessError
   >;
 
-  constructor(params : Required<{
+  constructor(params : {
     maxConcurrency: number;
     container: DownloadDiContainer;
     lgCodeFilter: Set<string>;
-  }>) {
+    highWatermark?: number;
+  }) {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
+
+    this.highWatermark = params.highWatermark || MAX_CONCURRENT_DOWNLOAD;
+    this.halfWatermark = this.highWatermark >> 1;
 
     // 4  = Int32Array を使用するため (32 bits = 4 bytes)
     // 最初の4は、common.sqlite を制御するために用いる。
@@ -94,6 +102,32 @@ export class CsvParseTransform extends Duplex {
     this.csvParsers?.close();
   }
 
+  private waiter() {
+    // Out of memory を避けるために、受け入れを一時停止
+    // 処理済みが追いつくまで、待機する
+    if (this.runningTasks < this.highWatermark || this.pausing) {
+      return;
+    }
+
+    if (!this.pausing) {
+      this.pausing = true;
+      this.emit('pause');
+    }
+  }
+
+  private closer() {
+    if (this.pausing && this.runningTasks < this.halfWatermark) {
+      this.emit('resume');
+      this.pausing = false;
+    }
+
+    if (!this.receivedFinal || this.pausing || this.runningTasks > 0) {
+      return;
+    }
+    // 全タスクが処理したので終了
+    this.push(null);
+  }
+
   // 前のstreamからデータが渡されてくる
   async _write(
     downloadResult: DownloadQuery2,
@@ -101,11 +135,8 @@ export class CsvParseTransform extends Duplex {
     // callback: (error?: Error | null | undefined) => void,
     callback: TransformCallback,
   ) {
+    this.waiter();
 
-    while (!this.csvParsers) {
-      await timers.setTimeout(100);
-    }
-    
     // 次のタスクをもらうために、先にCallbackを呼ぶ
     callback();
     this.runningTasks++;
@@ -116,14 +147,10 @@ export class CsvParseTransform extends Duplex {
       this.runningTasks--;
       
       // 全てタスクが完了したかをチェック
-      if (this.runningTasks === 0 && this.receivedFinal) {
-        if (!this.closed) {
-          this.push(null);
-        }
-      }
+      this.closer();
     }).catch((_) => {
 
-      this.abortCtrl.abort(`Can not parse the file: ${[downloadResult.csvFilePath]}`);
+      this.abortCtrl.abort(new Event(`Can not parse the file: ${[downloadResult.csvFilePath]}`));
       this.close();
     });
   }

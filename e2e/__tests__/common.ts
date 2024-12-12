@@ -156,6 +156,7 @@ export const runGeocoder = async (options: ExecOptions) => {
   const geocoder = await AbrGeocoder.create({
     container,
     numOfThreads: 1,
+    isSilentMode: false,
   });
 
   // ジオコーディング・ストリーマの作成

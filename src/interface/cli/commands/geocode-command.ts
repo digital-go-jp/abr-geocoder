@@ -273,7 +273,7 @@ const geocodeCommand: CommandModule = {
     // ジオコーダの作成
     const geocoder = await AbrGeocoder.create({
       container,
-      numOfThreads,
+      numOfThreads: numOfLinesInFiles < numOfThreads ? numOfLinesInFiles : numOfThreads,
       isSilentMode,
     });
 

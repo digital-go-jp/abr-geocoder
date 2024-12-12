@@ -5,25 +5,35 @@ import { removeFiles } from "@domain/services/remove-files";
 import { OazaChoTrieFinder } from "../oaza-cho-trie-finder";
 
 (async () => {
-  const rootDir = path.normalize(path.join(__dirname, '..', '..', '..', '..', '..'));
+  // const rootDir = path.normalize(path.join(__dirname, '..', '..', '..', '..', '..', 'db));
+  const rootDir = '/Users/maskatsum/.abr-geocoder'
 
   const container = new AbrGeocoderDiContainer({
-    cacheDir: `${rootDir}/db/cache`,
+    cacheDir: `${rootDir}/cache`,
     database: {
       type: 'sqlite3',
-      dataDir: `${rootDir}/db/database`,
+      dataDir: `${rootDir}/database`,
     },
     debug: true,
   });
 
   // 古いキャッシュファイルを削除
-  // await removeFiles({
-  //   dir: container.cacheDir,
-  //   filename: 'oaza-cho_.*\\.abrg2',
-  // });
-  // await OazaChoTrieFinder.createDictionaryFile(container);
+  await removeFiles({
+    dir: container.cacheDir,
+    filename: 'oaza-cho_.*\\.abrg2',
+  });
 
-  const data = await OazaChoTrieFinder.loadDataFile(container);
+  await OazaChoTrieFinder.createDictionaryFile({
+    diContainer: container,
+    data: 'oaza-cho',
+    isSilentMode: true,
+  });
+
+  const data = await OazaChoTrieFinder.loadDataFile({
+    diContainer: container,
+    data: 'oaza-cho',
+    isSilentMode: true,
+  });
   if (!data) {
     throw `Can not load the data`;
   }
@@ -31,7 +41,7 @@ import { OazaChoTrieFinder } from "../oaza-cho-trie-finder";
   // const dbCtrl = await container.database.openCommonDb();
   // const rows = await dbCtrl.getOazaChomes();
   const rows = [{
-    key: "横芝光町横芝真砂482-2",
+    key: "昆布町",
   }]
   rows.forEach(row => {
     // let key = [

@@ -1,30 +1,8 @@
-import { ABRG_FILE_HEADER_SIZE, ABRG_FILE_MAGIC, AbrgDictHeader, DATA_NODE_ENTRY_POINT, DATA_NODE_HASH_VALUE, DATA_NODE_NEXT_OFFSET, DATA_NODE_SIZE_FIELD, DataNode, HASH_LINK_NODE_NEXT_OFFSET, HASH_LINK_NODE_OFFSET_VALUE, ReadTrieNode, TRIE_NODE_CHILD_OFFSET, TRIE_NODE_ENTRY_POINT, TRIE_NODE_HASH_LINKED_LIST_OFFSET, TRIE_NODE_SIBLING_OFFSET, TRIE_NODE_SIZE_FIELD, TrieHashListNode, VERSION_BYTES } from "./abrg-file-structure";
-import { CharNode } from "./char-node";
 import fs from 'node:fs';
+import { ABRG_FILE_HEADER_SIZE, ABRG_FILE_MAGIC, AbrgDictHeader, DATA_NODE_ENTRY_POINT, DATA_NODE_HASH_VALUE, DATA_NODE_NEXT_OFFSET, DATA_NODE_SIZE_FIELD, DataNode, HASH_LINK_NODE_NEXT_OFFSET, HASH_LINK_NODE_OFFSET_VALUE, ReadTrieNode, TRIE_NODE_CHILD_OFFSET, TRIE_NODE_ENTRY_POINT, TRIE_NODE_HASH_LINKED_LIST_OFFSET, TRIE_NODE_SIBLING_OFFSET, TRIE_NODE_SIZE_FIELD, TrieHashListNode, VERSION_BYTES } from "./abrg-file-structure";
 
-export class TrieFinderResult<T> {
-  public readonly info: T | undefined;
-  public readonly unmatched: CharNode | undefined;
-  public readonly depth: number;
-  public readonly ambiguousCnt: number;
+export class TrieTreeBuilderBase {
 
-  constructor(params: {
-    info: T | undefined;
-    unmatched: CharNode | undefined;
-    depth: number;
-    ambiguousCnt: number;
-  }) {
-    this.info = params.info;
-    this.unmatched = params.unmatched;
-    this.depth = params.depth;
-    this.ambiguousCnt = params.ambiguousCnt;
-    Object.freeze(this);
-  }
-}
-
-export class TrieTreeBuilderFinderCommon {
-
-  protected readonly dataHashValueMap: Map<number, number> = new Map();
   protected readonly trieNodeMap: Map<number, ReadTrieNode | null> = new Map();
   protected readonly trieHashListNodeMap: Map<number, TrieHashListNode> = new Map();
   protected debug: boolean = false;
@@ -154,6 +132,10 @@ export class TrieTreeBuilderFinderCommon {
   protected async readUInt32BE(offset: number): Promise<number> {
     const result = await this.read(offset, 4);
     return result.readUInt32BE(0);
+  }
+  protected async readBigUInt64BE(offset: number): Promise<bigint> {
+    const result = await this.read(offset, 8);
+    return result.readBigUInt64BE(0);
   }
   protected async copyTo(offset: number, dst: Buffer): Promise<number> {
     const result = await this.read(offset, dst.length);
@@ -295,35 +277,49 @@ export class TrieTreeBuilderFinderCommon {
     return readTrieNode;
   }
 
-  protected async readDataNode(hashValueOffset: number): Promise<DataNode> {
-    let offset = hashValueOffset;
+
+
+  protected async readDataNode(hashValueOffset: number, expectHashValue?: BigInt): Promise<DataNode | undefined> {
+    let offset = 0;
+    if (hashValueOffset === 0) {
+      return undefined;
+    }
 
     // 次のデータノードのアドレス
     const nextDataNodeOffset = await this.readUInt32BE(hashValueOffset);
     offset += DATA_NODE_NEXT_OFFSET.size;
 
     // データノードのサイズ
-    let nodeSize = await this.readUInt16BE(offset);
+    let nodeSize = await this.readUInt16BE(offset + hashValueOffset);
     offset += DATA_NODE_SIZE_FIELD.size;
 
     // データに対するハッシュ値
-    const hashValue = await this.readUInt32BE(offset);
+    const hashValue = await this.readBigUInt64BE(offset + hashValueOffset);
     offset += DATA_NODE_HASH_VALUE.size;
+    // expectHashValueが指定されている時、hashValueが異なる場合は読み取り終了
+    if (expectHashValue && expectHashValue !== hashValue) {
+      return undefined;
+    }
 
     // 実データ
-    let data = undefined;
-    if (nodeSize > 0) {
-      const dataStr = await this.toString('utf8', offset, offset + nodeSize);
-      data = JSON.parse(dataStr);
-    }
-     
-    return {
+    let data = Buffer.alloc(0);
+    const result: DataNode = {
       data,
       nodeSize,
       hashValue,
       offset: hashValueOffset,
       nextDataNodeOffset,
+      next: undefined,
     };
+    const dataRegionSize = nodeSize - offset;
+    if (dataRegionSize > 0) {
+      result.data = await this.read(offset + hashValueOffset, dataRegionSize);
+      if (nextDataNodeOffset > 0) {
+        result.next = await this.readDataNode(nextDataNodeOffset, hashValue);
+      }
+    }
+     
+    return result;
   }
 
   async toString(encoding: BufferEncoding, start: number, end: number): Promise<string> {

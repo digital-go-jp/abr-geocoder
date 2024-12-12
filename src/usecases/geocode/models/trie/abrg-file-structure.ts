@@ -11,11 +11,12 @@ export type TrieHashListNode = {
   next?: TrieHashListNode;
 };
 export type DataNode = {
-  data: any;
+  data: Buffer;
   nodeSize: number;
-  hashValue: number;
+  hashValue: bigint;
   offset: number;
   nextDataNodeOffset: number;
+  next?: DataNode;
 }
 
 export type ReadTrieNode = {
@@ -36,21 +37,6 @@ export type WriteTrieNode = {
   childOffset?: number;
   siblingOffset?: number;
   hashValueList?: TrieHashListNode;
-};
-
-export type TrieNode = {
-  name: string;
-  hashValue?: number;
-  offset?: number;
-  childOffset?: number;
-  siblingOffset?: number;
-  hashValueOffset?: number;
-
-  // トライ木ノードに複数の値（同じキーだけど異なる値）を関連付けられるようにするため
-  // ノードに対する関連付けるハッシュ値の連結リストを保存する必要がある。
-  // そのための先頭オフセット値
-  trieHash: TrieHashListNode;
-  nodeSize?: number;
 };
 
 export type AbrgDictHeader = {
@@ -128,7 +114,7 @@ export const DATA_NODE_SIZE_FIELD: AbrgBytes = {
 export const DATA_NODE_HASH_VALUE: AbrgBytes = {
   offset: DATA_NODE_SIZE_FIELD.offset + DATA_NODE_SIZE_FIELD.size,
   description: 'データノードのハッシュ値',
-  size: 4,
+  size: 8,
 };
 
 

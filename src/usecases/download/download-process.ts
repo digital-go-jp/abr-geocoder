@@ -129,15 +129,16 @@ export class Downloader {
       return -1 + Math.random() * 3;
     });
     
-    const reader = Readable.from(requests);
+    const srcStream = Readable.from(requests);
 
     // ダウンロード処理を行う
     // 最大6コネクション
-    const numOfDownloadThreads = Math.max(Math.floor(params.numOfThreads / 3 * 2), 1);
+    const numOfDownloadThreads = Math.min(Math.max(Math.floor(params.numOfThreads / 3), 1), 6);
     const downloadTransform = new DownloadTransform({
       container: this.container,
       maxConcurrency: numOfDownloadThreads,
       maxTasksPerWorker: Math.max(params.concurrentDownloads || 1),
+      highWatermark: 100 * numOfDownloadThreads,
     });
 
     // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
@@ -146,6 +147,7 @@ export class Downloader {
       maxConcurrency: numOfCsvParserThreads,
       container: this.container,
       lgCodeFilter,
+      highWatermark: 50 * numOfCsvParserThreads,
     });
 
     // プログレスバーに進捗を出力する
@@ -158,30 +160,23 @@ export class Downloader {
       },
     });
 
-    let inputCnt = 0;
+    // メモリを圧迫しないように、処理が滞っているときは streamを一時停止する
+    let pauseCnt = 0;
+    const onPause = () => {
+      pauseCnt++;
+      return !srcStream.isPaused() && srcStream.pause();
+    };
+    const onResume = () => {
+      pauseCnt = Math.max(pauseCnt - 1, 0);
+      return pauseCnt === 0 && srcStream.isPaused() && srcStream.resume();
+    };
+    downloadTransform.on('pause', onPause);
+    downloadTransform.on('resume', onResume);
+    csvParseTransform.on('pause', onPause);
+    csvParseTransform.on('resume', onResume);
+
     await pipeline(
-      reader,
-      new Transform({
-        objectMode: true,
-        async transform(chunk, _, callback) {
-          inputCnt++;
-
-          const waitingCnt = inputCnt - dst.count;
-          if (waitingCnt < MAX_CONCURRENT_DOWNLOAD) {
-            return callback(null, chunk);
-          }
-
-          // Out of memory を避けるために、受け入れを一時停止
-          // 処理済みが追いつくまで、待機する
-          const half = MAX_CONCURRENT_DOWNLOAD >> 1;
-          while (inputCnt - dst.count > half) {
-            await timers.setTimeout(100);
-          }
-      
-          // 再開する
-          callback(null, chunk);
-        },
-      }),
+      srcStream,
       downloadTransform,
       csvParseTransform,
       dst,
