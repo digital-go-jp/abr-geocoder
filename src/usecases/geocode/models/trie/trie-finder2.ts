@@ -50,7 +50,7 @@ export type TrieFinderResult<T> = {
   unmatched: CharNode | undefined;
   depth: number;
   ambiguousCnt: number;
-  path: string;
+  path: CharNode | undefined;
 }
 
 export type TraverseQuery = {
@@ -61,7 +61,7 @@ export type TraverseQuery = {
   offset?: number;
   hashValueList?: TrieHashListNode | undefined;
   partialMatches?: TraverseQuery[];
-  path: string;
+  path: CharNode | undefined;
   allowExtraChallenge?: boolean;
 };
 
@@ -387,6 +387,10 @@ export class TrieAddressFinder2<T> {
       char: '',
     });
     dummyHead!.next = target;
+    const dummyHead2 = new CharNode({
+      originalChar: '',
+      char: '',
+    });
 
     // 結果を保存するためのFileTrieResults
     const results = new FileTrieResults();
@@ -409,7 +413,7 @@ export class TrieAddressFinder2<T> {
       partialMatches: [],
 
       // マッチした文字のパス
-      path: "",
+      path: dummyHead2,
 
       // extraChallengeをするか（一度したら、二回目はない)
       allowExtraChallenge: extraChallenges.length > 0,
@@ -429,12 +433,26 @@ export class TrieAddressFinder2<T> {
         head = taskNext;
         continue;
       }
-      
+      // 探索したい文字列
       let target: CharNode | undefined = head.target;
+
+      // fuzzyやextraChallengeとして何文字マッチしたか（最後にスコアリングするときに、データの信頼度を評価するのに使用する）
       let ambiguousCnt: number = head.ambiguousCnt;
+
+      // 何文字マッチしたか
       let matchedCnt: number = head.matchedCnt;
-      let path: string = head.path;
+
+      // どの文字がマッチしたのかを後で調べたいので、CharNodeの形を維持しながら検索結果に含める
+      const pathHead: CharNode | undefined = head.path;
+      let pathTail: CharNode | undefined = pathHead;
+      while (pathTail?.next) {
+        pathTail = pathTail.next;
+      }
+
+      // キーに対して一致するノードが見つからないときに、キーの先頭に何文字か追加して探索を続けるかどうか
       const allowExtraChallenge: boolean | undefined = head.allowExtraChallenge;
+
+      // 作業用の変数
       let node: ReadTrieNode | null = null;
       let offset: number | undefined = head.offset;
       const matches: TraverseQuery[] = head.partialMatches || [];
@@ -478,7 +496,7 @@ export class TrieAddressFinder2<T> {
                 target: extraNode,
                 offset,
                 partialMatches: Array.from(matches),
-                path,
+                path: pathHead,
                 allowExtraChallenge: false,
                 next: undefined,
               };
@@ -496,7 +514,7 @@ export class TrieAddressFinder2<T> {
               target: target.clone(),
               offset: node.siblingOffset,
               partialMatches: Array.from(matches),
-              path,
+              path: pathHead,
               allowExtraChallenge,
               next: undefined,
             };
@@ -510,7 +528,12 @@ export class TrieAddressFinder2<T> {
         if (this.debug) {
           console.log(matchedCnt, offset, node);
         }
-        path += target.char;
+        pathTail!.next = new CharNode({
+          originalChar: target.originalChar,
+          char: target.char!,
+          ignore: false,
+        });
+        pathTail = pathTail!.next;
 
         // マッチした文字数のインクリメント
         matchedCnt++;
@@ -523,13 +546,14 @@ export class TrieAddressFinder2<T> {
           }
 
           // 保存する
+          pathTail.next = undefined;
           results.add({
             matchedCnt,
             ambiguousCnt: ambiguousCnt,
             hashValueList: node.hashValueList,
             target: target.next?.moveToNext(),
             offset,
-            path,
+            path: pathHead,
             next: undefined,
           });
           if (partialMatches && matches?.length) {
@@ -540,13 +564,15 @@ export class TrieAddressFinder2<T> {
 
         // 途中結果も保存する
         if (node.hashValueList && matchedCnt > 0) {
+          const copiedPathTail = pathTail;
+          copiedPathTail.next = undefined;
           matches.push({
             matchedCnt,
             ambiguousCnt: ambiguousCnt,
             hashValueList: node.hashValueList,
             target: target.next.moveToNext(),
             offset,
-            path,
+            path: pathHead,
             next: undefined,
           });
         }

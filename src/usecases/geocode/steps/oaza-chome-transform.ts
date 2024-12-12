@@ -31,6 +31,7 @@ import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { isDigit } from '../services/is-number';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
+import { isKanjiNums } from '../services/is-kanji-nums';
 
 export class OazaChomeTransform extends Transform {
 
@@ -140,24 +141,30 @@ export class OazaChomeTransform extends Transform {
         // Queryの情報を使って、条件式を作成
         // ------------------------------------
         const filteredResult = findResults?.filter(result => {
-          let matched = true;
-          if (query.pref_key) {
-            matched = result.info?.pref_key === query.pref_key;
+          if (query.pref_key && result.info?.pref_key !== query.pref_key) {
+            return false;
           }
-          if (matched && query.city_key) {
-            matched = result.info?.city_key === query.city_key;
+          if (query.city_key && result.info?.city_key !== query.city_key) {
+            return false;
           }
-          // if (matched && query.town_key) {
-          //   matched = result.info?.town_key === query.town_key;
-          // }
 
           // 当たった文字列(path)の最後が数字で、unmatchedの先頭が数字なら間違い
-          if (matched &&
-            isDigit(result.unmatched) &&
-            RegExpEx.create('[0-9]$').test(result.path || '')) {
-            matched = false;
+          if (isDigit(result.unmatched) ) {
+            let pathTail = result.path;
+            while (pathTail?.next) {
+              pathTail = pathTail.next;
+            }
+            if (isDigit(pathTail?.char)) {
+              // ただしどちらかが漢数字で、どちらかが算用数字の場合、たぶん合っている
+              // (両方とも同じなら間違い)
+              const isTailKanjiNum = isKanjiNums(pathTail?.originalChar);
+              const isUnmatchedKanjiNum = isKanjiNums(result.unmatched?.originalChar);
+              if (isTailKanjiNum === isUnmatchedKanjiNum) {
+                return false;
+              }
+            }
           }
-          return matched;
+          return true;
         });
 
         // 複数都道府県にヒットする可能性があるので、全て試す

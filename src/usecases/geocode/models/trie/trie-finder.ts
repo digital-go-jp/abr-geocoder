@@ -156,7 +156,7 @@ export class TrieAddressFinder<T> {
         unmatched: internalResult.unmatched,
         depth: internalResult.depth,
         ambiguousCnt: internalResult.ambiguous ? 1 : 0,
-        path: internalResult.path,
+        path: CharNode.create(internalResult.path),
       });
     }
 
