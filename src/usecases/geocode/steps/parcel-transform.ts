@@ -153,6 +153,7 @@ export class ParcelTransform extends Transform {
             reducedParams.prc_id = info.prc_id;
             reducedParams.match_level = MatchLevel.PARCEL;
             reducedParams.tempAddress = queryInfo.unmatched;
+            reducedParams.rsdt_addr_flg = 0;
           }
           if (reducedParams.coordinate_level?.num !== MatchLevel.PARCEL.num && info.rep_lat) {
             reducedParams.rep_lat = info.rep_lat;
