@@ -65,5 +65,40 @@
       "prc_num2": "4",
       "prc_num3": null
     }
+  },
+  {
+    "query": {
+      "input": "茨城県古河市中田１２２１"
+    },
+    "result": {
+      "output": "茨城県古河市中田1221",
+      "others": [
+        "1221"
+      ],
+      "match_level": "machiaza",
+      "coordinate_level": "machiaza",
+      "lat": 36.144816,
+      "lon": 139.710968,
+      "lg_code": "082040",
+      "machiaza_id": "0089000",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "茨城県",
+      "county": null,
+      "city": "古河市",
+      "ward": null,
+      "oaza_cho": "中田",
+      "chome": null,
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
   }
 ]

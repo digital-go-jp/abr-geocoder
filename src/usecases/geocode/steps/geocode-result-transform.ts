@@ -125,7 +125,16 @@ export class GeocodeResultTransform extends Transform {
     const withScore: WithScore[] = queryList.map(query => this.toWithScore(query));
 
     // スコアを降順にソート
-    withScore.sort((a, b) => b.score - a.score);
+    withScore.sort((a, b) => {
+      // スコアが高い方を優先
+      const diff = b.score - a.score;
+      if (diff !== 0) {
+        return diff;
+      }
+      // 2つの結果のスコアが同じだったら、マッチした文字数が長い方を採用
+      // (それも一緒だったら、もうどちらでも同じとみなす)
+      return b.query.matchedCnt - a.query.matchedCnt;
+    });
 
     // targetオプションの期待に沿うように結果を返す
     // ただしallの場合、rsdt_addr_flg が間違えている可能性もあるので

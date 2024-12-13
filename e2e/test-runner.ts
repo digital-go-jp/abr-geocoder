@@ -79,12 +79,12 @@ const lgCodes = [
   '401323', // 福岡県福岡市博多区
   '231061', // 愛知県名古屋市中区
   '022098', // 青森県つがる市
+  '052124', // 秋田県大仙市
+  '082040', // 茨城県古河市
 ];
 
 (async () => {
   await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
-  await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
-  await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
   await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
   
   const controller = new AbortController();
