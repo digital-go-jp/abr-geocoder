@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DASH, DEFAULT_FUZZY_CHAR, KANJI_NUMS, SPACE } from '@config/constant-values';
+import { DASH, KANJI_NUMS, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
@@ -29,7 +29,7 @@ import { IParcelDbGeocode } from '@interface/database/common-db';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
-import { Query } from '../models/query';
+import { IQuery, Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { isDigit } from '../services/is-number';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
@@ -106,8 +106,22 @@ export class ParcelTransform extends Transform {
         this.getPrcId(query, 1),
       ];
 
+      // 統合した結果を作る
       let anyHit = false;
       const seen = new Set();
+      const reducedParams: Partial<IQuery> = {
+        matchedCnt: query.matchedCnt,
+        ambiguousCnt: query.ambiguousCnt,
+        tempAddress: query.tempAddress,
+        parcel_key: undefined,
+        prc_num1: undefined,
+        prc_num2: undefined,
+        prc_num3: undefined,
+        match_level: query.match_level,
+        coordinate_level: query.coordinate_level,
+        rep_lat: query.rep_lat,
+        rep_lon: query.rep_lon,
+      };
       for (const queryInfo of searchPatterns) {
         if (!queryInfo) {
           continue;
@@ -130,33 +144,28 @@ export class ParcelTransform extends Transform {
         
         findResults.forEach(info => {
           anyHit = true;
-          const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
-            parcel_key: info.parcel_key,
-            prc_id: info.prc_id,
-            prc_num1: info.prc_num1,
-            prc_num2: info.prc_num2,
-            prc_num3: info.prc_num3,
-            tempAddress: queryInfo.unmatched,
-            match_level: MatchLevel.PARCEL,
-            matchedCnt: query.matchedCnt + queryInfo.matchedCnt,
-            rsdt_addr_flg: 0,
-          };
-          if (info.rep_lat && info.rep_lon) {
-            params.coordinate_level = MatchLevel.PARCEL;
-            params.rep_lat = info.rep_lat;
-            params.rep_lon = info.rep_lon;
+          if (reducedParams.matchedCnt! < query.matchedCnt + queryInfo.matchedCnt) {
+            reducedParams.matchedCnt = query.matchedCnt + queryInfo.matchedCnt;
+            reducedParams.ambiguousCnt = query.ambiguousCnt + queryInfo.ambiguousCnt;
+            reducedParams.prc_num1 = info.prc_num1;
+            reducedParams.prc_num2 = info.prc_num2;
+            reducedParams.prc_num3 = info.prc_num3;
+            reducedParams.prc_id = info.prc_id;
+            reducedParams.match_level = MatchLevel.PARCEL;
+            reducedParams.tempAddress = queryInfo.unmatched;
           }
-          const copied = query.copy(params);
-          results.add(copied);
+          if (reducedParams.coordinate_level?.num !== MatchLevel.PARCEL.num && info.rep_lat) {
+            reducedParams.rep_lat = info.rep_lat;
+            reducedParams.rep_lon = info.rep_lon;
+            reducedParams.coordinate_level = MatchLevel.PARCEL;
+          }
         });
-
-        // 見つかった場合は探索終了
-        if (anyHit) {
-          break;
-        }
       }
-      // 何も見つからない場合は、元のクエリをキープする
-      if (!anyHit) {
+      if (anyHit) {
+        const copied = query.copy(reducedParams);
+        results.add(copied);
+      } else {
+        // 何も見つからない場合は、元のクエリをキープする
         results.add(query);
       }
       db.close();
@@ -193,12 +202,13 @@ export class ParcelTransform extends Transform {
 
     // マッチした文字数
     let matchedCnt = 0;
+    let ambiguousCnt = 0;
     while (head && !head.ignore) {
       matchedCnt++;
       if (head.char === query.fuzzy) {
         // fuzzyの場合、任意の１文字
-        // TODO: Databaseごとの処理
-        current.push(DEFAULT_FUZZY_CHAR);
+        current.push('_'); // SQLで任意の1文字を示す
+        ambiguousCnt++;
       } else if (/\d/.test(head.char!)) {
         // 数字の後ろの文字をチェック
         // SPACE, DASH, 漢数字、または終了なら、追加する
@@ -263,6 +273,7 @@ export class ParcelTransform extends Transform {
       parcelId,
       unmatched,
       matchedCnt,
+      ambiguousCnt,
     };
   }
 }

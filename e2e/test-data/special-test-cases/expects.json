@@ -32,5 +32,38 @@
       "prc_num2": null,
       "prc_num3": null
     }
+  },
+  {
+    "query": {
+      "input": "秋田県大仙市神宮寺字中瀬古川敷３１－４"
+    },
+    "result": {
+      "output": "秋田県大仙市神宮寺字中瀬古川敷31-4",
+      "others": [],
+      "match_level": "parcel",
+      "coordinate_level": "parcel",
+      "lat": 39.493896079,
+      "lon": 140.418779517,
+      "lg_code": "052124",
+      "machiaza_id": "0081213",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": "000310000400000",
+      "pref": "秋田県",
+      "county": null,
+      "city": "大仙市",
+      "ward": null,
+      "oaza_cho": "神宮寺",
+      "chome": null,
+      "koaza": "字中瀬古川敷",
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": "31",
+      "prc_num2": "4",
+      "prc_num3": null
+    }
   }
 ]
