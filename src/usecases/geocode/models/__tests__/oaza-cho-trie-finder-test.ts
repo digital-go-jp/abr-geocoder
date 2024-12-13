@@ -41,7 +41,7 @@ import { OazaChoTrieFinder } from "../oaza-cho-trie-finder";
   // const dbCtrl = await container.database.openCommonDb();
   // const rows = await dbCtrl.getOazaChomes();
   const rows = [{
-    key: "昆布町",
+    key: "木造大畑座八１",
   }]
   rows.forEach(row => {
     // let key = [

@@ -93,18 +93,26 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<OazaChoMachingInfo> {
     makeDirIfNotExists(diContainer.cacheDir);
     const commonDb = await diContainer.database.openCommonDb();
     const genHash = commonDb.getOazaChomesGeneratorHash();
+    const extension = process.env.JEST_WORKER_ID ? 'debug' : 'abrg2';
 
-    return path.join(diContainer.cacheDir, `oaza-cho_${genHash}.abrg2`);
+    return path.join(diContainer.cacheDir, `oaza-cho_${genHash}.${extension}`);
   };
 
   static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
     const cacheFilePath = await OazaChoTrieFinder.getCacheFilePath(task.diContainer);
 
     // 古いキャッシュファイルを削除
-    await removeFiles({
-      dir: task.diContainer.cacheDir,
-      filename: 'oaza-cho_.*\\.abrg2',
-    });
+    if (process.env.JEST_WORKER_ID) {
+      await removeFiles({
+        dir: task.diContainer.cacheDir,
+        filename: 'oaza-cho_.*\\.debug',
+      });
+    } else {
+      await removeFiles({
+        dir: task.diContainer.cacheDir,
+        filename: 'oaza-cho_.*\\.abrg2',
+      });
+    }
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する

@@ -54,18 +54,26 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
     makeDirIfNotExists(diContainer.cacheDir);
     const commonDb = await diContainer.database.openCommonDb();
     const genHash = commonDb.getKyotoStreetGeneratorHash();
+    const extension = process.env.JEST_WORKER_ID ? 'debug' : 'abrg2';
 
-    return path.join(diContainer.cacheDir, `kyoto-street_${genHash}.abrg2`);
+    return path.join(diContainer.cacheDir, `kyoto-street_${genHash}.${extension}`);
   };
 
   static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
     const cacheFilePath = await KyotoStreetTrieFinder.getCacheFilePath(task.diContainer);
 
     // 古いキャッシュファイルを削除
-    await removeFiles({
-      dir: task.diContainer.cacheDir,
-      filename: 'kyoto-street_.*\\.abrg2',
-    });
+    if (process.env.JEST_WORKER_ID) {
+      await removeFiles({
+        dir: task.diContainer.cacheDir,
+        filename: 'kyoto-street_.*\\.debug',
+      });
+    } else {
+      await removeFiles({
+        dir: task.diContainer.cacheDir,
+        filename: 'kyoto-street_.*\\.abrg2',
+      });
+    }
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
