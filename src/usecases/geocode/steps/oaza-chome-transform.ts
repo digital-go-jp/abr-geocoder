@@ -118,6 +118,12 @@ export class OazaChomeTransform extends Transform {
         }));
       }
 
+      // 既にmachiaza_detailで正しい場合、ここではヒットしないので、結果に追加しておく
+      // (ただし他の可能性もあるので、targetsに対するチェックは行う)
+      if (query.match_level.num === MatchLevel.MACHIAZA_DETAIL.num) {
+        results.add(query);
+      }
+
       let anyHit = false;
       let anyAmbiguous = false;
       for (const targetQuery of targets.values()) {
