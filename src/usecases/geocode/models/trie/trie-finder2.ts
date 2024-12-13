@@ -496,7 +496,7 @@ export class TrieAddressFinder2<T> {
                 target: extraNode,
                 offset,
                 partialMatches: Array.from(matches),
-                path: pathHead,
+                path: pathHead?.clone(),
                 allowExtraChallenge: false,
                 next: undefined,
               };
@@ -514,7 +514,7 @@ export class TrieAddressFinder2<T> {
               target: target.clone(),
               offset: node.siblingOffset,
               partialMatches: Array.from(matches),
-              path: pathHead,
+              path: pathHead?.clone(),
               allowExtraChallenge,
               next: undefined,
             };
@@ -553,7 +553,7 @@ export class TrieAddressFinder2<T> {
             hashValueList: node.hashValueList,
             target: target.next?.moveToNext(),
             offset,
-            path: pathHead,
+            path: pathHead?.clone(),
             next: undefined,
           });
           if (partialMatches && matches?.length) {
@@ -564,15 +564,13 @@ export class TrieAddressFinder2<T> {
 
         // 途中結果も保存する
         if (node.hashValueList && matchedCnt > 0) {
-          const copiedPathTail = pathTail;
-          copiedPathTail.next = undefined;
           matches.push({
             matchedCnt,
             ambiguousCnt: ambiguousCnt,
             hashValueList: node.hashValueList,
             target: target.next.moveToNext(),
             offset,
-            path: pathHead,
+            path: pathHead?.clone(),
             next: undefined,
           });
         }
