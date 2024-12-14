@@ -39,34 +39,34 @@ type WithScore = {
 export class GeocodeResultTransform extends Transform {
 
   private readonly matchLevelToScroe = new Map<string, number>([
-    [`${SearchTarget.ALL}:${MatchLevel.UNKNOWN}`, -2],
-    [`${SearchTarget.ALL}:${MatchLevel.PREFECTURE}`, 1],
-    [`${SearchTarget.ALL}:${MatchLevel.CITY}`, 2],
-    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA}`, 3],
-    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
-    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+    [`${SearchTarget.ALL}:${MatchLevel.UNKNOWN.str}`, -2],
+    [`${SearchTarget.ALL}:${MatchLevel.PREFECTURE.str}`, 1],
+    [`${SearchTarget.ALL}:${MatchLevel.CITY.str}`, 2],
+    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA.str}`, 3],
+    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL.str}`, 4],
+    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK.str}`, 5],
+    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL.str}`, 6],
     
     // rsdt_addr_flgが間違えている可能性もあるので、MACHIAZA_DETAILより僅かに上の価値、というスコアにしておく
     [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, 4.5],
 
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN}`, -2],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE}`, 1],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.CITY}`, 2],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA}`, 3],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN.str}`, -2],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE.str}`, 1],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.CITY.str}`, 2],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA.str}`, 3],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA_DETAIL.str}`, 4],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_BLOCK.str}`, 5],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_DETAIL.str}`, 6],
     [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PARCEL}`, -1],
 
-    [`${SearchTarget.PARCEL}:${MatchLevel.UNKNOWN}`, -2],
-    [`${SearchTarget.PARCEL}:${MatchLevel.PREFECTURE}`, 1],
-    [`${SearchTarget.PARCEL}:${MatchLevel.CITY}`, 2],
-    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA}`, 3],
-    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_BLOCK}`, -1],
-    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_DETAIL}`, -1],
-    [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL}`, 6],
+    [`${SearchTarget.PARCEL}:${MatchLevel.UNKNOWN.str}`, -2],
+    [`${SearchTarget.PARCEL}:${MatchLevel.PREFECTURE.str}`, 1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.CITY.str}`, 2],
+    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA.str}`, 3],
+    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA_DETAIL.str}`, 4],
+    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_BLOCK.str}`, -1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_DETAIL.str}`, -1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL.str}`, 6],
   ]);
 
   constructor() {
@@ -164,10 +164,7 @@ export class GeocodeResultTransform extends Transform {
       case searchTarget === SearchTarget.ALL: {
         if (
           // RSDTのがスコアが高ければRSDTを返す
-          topRSDT.score >= topParcel.score ||
-
-          // Parcelのがスコアが高くても RSDTと差が少なければRSDTを返す
-          topParcel.score - topRSDT.score <= 5
+          topRSDT.score >= topParcel.score
         ) {
           callback(null, topRSDT.query);
           queries.clear();

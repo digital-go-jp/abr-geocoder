@@ -38,7 +38,7 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo
 
   static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
     const cacheFilePath = await CountyAndCityTrieFinder.getCacheFilePath(task.diContainer);
- 
+
     // 古いキャッシュファイルを削除
     if (process.env.JEST_WORKER_ID) {
       await removeFiles({

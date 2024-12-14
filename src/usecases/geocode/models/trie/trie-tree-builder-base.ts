@@ -6,7 +6,7 @@ export class TrieTreeBuilderBase {
   protected readonly trieNodeMap: Map<number, ReadTrieNode | null> = new Map();
   protected readonly trieHashListNodeMap: Map<number, TrieHashListNode> = new Map();
   protected debug: boolean = false;
-  private fileBuffer: Buffer = Buffer.alloc(1024 * 1024); // 1MB
+  private fileBuffer: Buffer = Buffer.alloc(64 *1024 * 1024); // 64MB
   private fileBufferStart: number = 0;
   private fileBufferSize: number = 0;
   

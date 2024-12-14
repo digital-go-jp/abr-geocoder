@@ -37,36 +37,33 @@
   },
   {
     "query": {
-      "input": "東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+      "input": "東京都中央区銀座3-4−1 # all:住居表示, rsdt:住居表示, parcel:地番"
     },
     "result": {
-      "output": "東京都港区芝浦三丁目1-1 # all:住居表示, rsdt:住居表示, parcel:地番",
-      "others": [
-        "# all:住居表示, rsdt:住居表示, parcel:地番"
-      ],
-      "score": 0.94,
+      "output": "東京都中央区銀座三丁目4-1 # all:住居表示, rsdt:住居表示, parcel:地番",
+      "others": [],
       "match_level": "parcel",
       "coordinate_level": "machiaza_detail",
-      "lat": 35.643973,
-      "lon": 139.747836,
-      "lg_code": "131032",
-      "machiaza_id": "0005003",
+      "lat": 35.671967,
+      "lon": 139.767249,
+      "lg_code": "131024",
+      "machiaza_id": "0004003",
       "rsdt_addr_flg": 0,
       "blk_id": null,
       "rsdt_id": null,
       "rsdt2_id": null,
-      "prc_id": "000010000100000",
+      "prc_id": "000040000100000",
       "pref": "東京都",
       "county": null,
-      "city": "港区",
+      "city": "中央区",
       "ward": null,
-      "oaza_cho": "芝浦",
+      "oaza_cho": "銀座",
       "chome": "三丁目",
       "koaza": null,
       "blk_num": null,
       "rsdt_num": null,
       "rsdt_num2": null,
-      "prc_num1": "1",
+      "prc_num1": "4",
       "prc_num2": "1",
       "prc_num3": null
     }
