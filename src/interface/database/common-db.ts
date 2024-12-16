@@ -25,7 +25,6 @@ import { PackageInfo } from "@domain/services/parse-package-id";
 import { ChomeMachingInfo } from "@domain/types/geocode/chome-info";
 import { CityInfo, CityMatchingInfo } from "@domain/types/geocode/city-info";
 import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
-import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import { ParcelInfo } from "@domain/types/geocode/parcel-info";
 import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { RsdtBlkInfo } from "@domain/types/geocode/rsdt-blk-info";
@@ -73,7 +72,9 @@ export interface ICommonDbGeocode {
   getTokyo23Wards(): Promise<CityMatchingInfo[]>;
   getTokyo23WardsGeneratorHash(): string;
   
-  getOazaChomes(): Promise<OazaChoMachingInfo[]>;
+  getOazaChomes(params: {
+    lg_code: string;
+  }): Promise<TownMatchingInfo[]>;
   getOazaChomesGeneratorHash(): string;
 
   getKyotoStreetRows(): Promise<KoazaMachingInfo[]>;

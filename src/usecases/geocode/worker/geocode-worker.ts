@@ -55,6 +55,7 @@ import { fromSharedMemory } from '@domain/services/thread/shared-memory';
 import { Duplex } from 'node:stream';
 import { WardTransform } from '../steps/ward-transform';
 import { GeocodeWorkerInitData } from './geocode-worker-init-data';
+import { PrefLgCode } from '@domain/types/pref-lg-code';
 
 export class GeocodeTransform extends Duplex {
 
@@ -67,7 +68,7 @@ export class GeocodeTransform extends Duplex {
     diContainer,
     prefTrie,
     countyAndCityTrie,
-    oazaChoTrie,
+    oazaChoTries,
     kyotoStreetTrie,
     cityAndWardTrie,
     wardTrie,
@@ -77,7 +78,7 @@ export class GeocodeTransform extends Duplex {
     diContainer: AbrGeocoderDiContainer;
     prefTrie: PrefTrieFinder;
     countyAndCityTrie: CountyAndCityTrieFinder;
-    oazaChoTrie: OazaChoTrieFinder;
+    oazaChoTries: Map<PrefLgCode, OazaChoTrieFinder>;
     kyotoStreetTrie: KyotoStreetTrieFinder;
     cityAndWardTrie: CityAndWardTrieFinder;
     wardTrie: WardTrieFinder;
@@ -103,7 +104,7 @@ export class GeocodeTransform extends Duplex {
     // const wardAndOazaTransform = new WardAndOazaTransform(wardAndOazaTrie);
 
     // 大字を試す
-    const oazaChomeTransform = new OazaChomeTransform(oazaChoTrie);
+    const oazaChomeTransform = new OazaChomeTransform(oazaChoTries);
 
     // 京都の通り名を試す
     const kyotoStreetTransform = new KyotoStreetTransform(kyotoStreetTrie);
@@ -182,13 +183,18 @@ export class GeocodeTransform extends Duplex {
   static readonly create = async (params: Required<GeocodeWorkerInitData>) => {
     const diContainer = new AbrGeocoderDiContainer(params.diContainer);
 
+    const oazaChoTries = new Map<PrefLgCode, OazaChoTrieFinder>();
+    params.trieData.oazaChomes.forEach(value => {
+      oazaChoTries.set(value.lg_code, new OazaChoTrieFinder(fromSharedMemory(value.data)));
+    });
+
     const result = new GeocodeTransform({
       diContainer,
       prefTrie: new PrefTrieFinder(fromSharedMemory(params.trieData.pref)),
       countyAndCityTrie: new CountyAndCityTrieFinder(fromSharedMemory(params.trieData.countyAndCity)),
       cityAndWardTrie: new CityAndWardTrieFinder(fromSharedMemory(params.trieData.cityAndWard)),
       kyotoStreetTrie: new KyotoStreetTrieFinder(fromSharedMemory(params.trieData.kyotoStreet)),
-      oazaChoTrie: new OazaChoTrieFinder(fromSharedMemory(params.trieData.oazaCho)),
+      oazaChoTries,
       wardTrie: new WardTrieFinder(fromSharedMemory(params.trieData.ward)),
       tokyo23WardTrie: new Tokyo23WardTrieFinder(fromSharedMemory(params.trieData.tokyo23Ward)),
       tokyo23TownTrie: new Tokyo23TownTrieFinder(fromSharedMemory(params.trieData.tokyo23Town)),

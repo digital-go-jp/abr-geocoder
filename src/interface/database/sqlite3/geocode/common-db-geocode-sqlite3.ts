@@ -30,7 +30,6 @@ import { ChomeMachingInfo } from "@domain/types/geocode/chome-info";
 import { CityInfo, CityMatchingInfo } from "@domain/types/geocode/city-info";
 import { KoazaMachingInfo } from "@domain/types/geocode/koaza-info";
 import { MatchLevel } from "@domain/types/geocode/match-level";
-import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
@@ -334,7 +333,9 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     return crc32Lib.fromString(this.getOazaChomes.toString());
   }
   
-  async getOazaChomes(): Promise<OazaChoMachingInfo[]> {
+  async getOazaChomes(params: {
+    lg_code: string;
+  }): Promise<TownMatchingInfo[]> {
 
     type Row = {
       pkey: string;
@@ -349,6 +350,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
       rep_lon: string;
       match_level: number;
       coordinate_level: number;
+      koaza_aka_code: number;
     };
 
     const [
@@ -362,6 +364,10 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     const workTable = new Map<string, Row>();
     const insertIntoResultTable = (rows: Row[]) => {
       rows.forEach(row => {
+        // データが不完全なものは排除
+        if (!row.oaza_cho && !row.chome && !row.koaza || !row.rep_lat) {
+          return;
+        }
         switch (row.pkey.at(-1)) {
           case '*': {
             // 0か1なのか、selectした時点では分からない: 
@@ -421,6 +427,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           NULL as town_key,
           t.city_key,
           (substr(t.${DataField.MACHIAZA_ID.dbColumn}, 1, 4) || '000') as machiaza_id,
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} as koaza_aka_code,
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           '' as chome,
           '' as koaza,
@@ -432,18 +439,20 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         FROM
           ${DbTableName.TOWN} as t
           JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
+          JOIN ${DbTableName.PREF} as p ON p.pref_key = c.pref_key
         WHERE
           (
             t.${DataField.OAZA_CHO.dbColumn} != '' AND
             t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
           ) AND 
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2' AND
+          p.${DataField.LG_CODE.dbColumn} = @lg_code
         GROUP BY
           pkey
       `;
 
-      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      const rows = this.driver.prepare<{lg_code: string;}, Row>(sql).all(params);
       insertIntoResultTable(rows);
     }
 
@@ -471,6 +480,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           t.${DataField.CHOME.dbColumn} as chome,
           '' as koaza,
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} as koaza_aka_code,
           CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} as INTEGER) as rsdt_addr_flg,
           IFNULL(
             t.${DataField.REP_LAT.dbColumn},
@@ -489,15 +499,17 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         FROM
           ${DbTableName.TOWN} as t
           JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
+          JOIN ${DbTableName.PREF} as p ON p.pref_key = c.pref_key
         WHERE
           (
             t.${DataField.OAZA_CHO.dbColumn} != '' AND
             t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
           ) AND 
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2' AND
+          p.${DataField.LG_CODE.dbColumn} = @lg_code
       `;
-      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      const rows = this.driver.prepare<{lg_code: string;}, Row>(sql).all(params);
       insertIntoResultTable(rows);
     }
 
@@ -526,6 +538,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           '' as oaza_cho,
           '' as chome,
           t.${DataField.KOAZA.dbColumn} as koaza,
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} as koaza_aka_code,
           CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
           IFNULL(
             t.${DataField.REP_LAT.dbColumn},
@@ -544,19 +557,74 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         FROM
           ${DbTableName.TOWN} as t
           JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
+          JOIN ${DbTableName.PREF} as p ON p.pref_key = c.pref_key
+        WHERE
+          (
+            t.${DataField.OAZA_CHO.dbColumn} = '' OR
+            t.${DataField.OAZA_CHO.dbColumn} IS NULL
+          ) AND 
+          substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2' AND
+          p.${DataField.LG_CODE.dbColumn} = @lg_code
+      `;
+
+      const rows = this.driver.prepare<{lg_code: string;}, Row>(sql).all(params);
+      insertIntoResultTable(rows);
+    }
+
+    {
+
+      /*
+       * パターン： 〇〇市〇〇丁目 (大字が省略、丁目のみ)
+       *
+       * 宮城県大崎市三丁目のように、大字がなくて丁目が来るパターンがある
+       */
+      const sql = `
+        SELECT
+          (
+            t.city_key ||
+            t.${DataField.MACHIAZA_ID.dbColumn} ||
+            t.${DataField.RSDT_ADDR_FLG.dbColumn}
+          ) as pkey,
+          t.town_key,
+          t.city_key,
+          t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
+          '' as oaza_cho,
+          t.${DataField.CHOME.dbColumn} as chome,
+          t.${DataField.KOAZA.dbColumn} as koaza,
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} as koaza_aka_code,
+          CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
+          IFNULL(
+            t.${DataField.REP_LAT.dbColumn},
+            c.${DataField.REP_LAT.dbColumn}
+          ) as rep_lat,
+          IFNULL(
+            t.${DataField.REP_LON.dbColumn},
+            c.${DataField.REP_LON.dbColumn}
+          ) as rep_lon,
+          ${MatchLevel.MACHIAZA_DETAIL.num} as match_level,
+          IIF(
+            t.${DataField.REP_LAT.dbColumn} = '' OR t.${DataField.REP_LAT.dbColumn} IS NULL,
+            ${MatchLevel.CITY.num},
+            ${MatchLevel.MACHIAZA_DETAIL.num}
+          ) as coordinate_level
+        FROM
+          ${DbTableName.TOWN} as t
+          JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
+          JOIN ${DbTableName.PREF} as p ON p.pref_key = c.pref_key
         WHERE
           (
             t.${DataField.OAZA_CHO.dbColumn} = '' OR
             t.${DataField.OAZA_CHO.dbColumn} IS NULL
           ) AND (
-            t.${DataField.CHOME.dbColumn} = '' OR
-            t.${DataField.CHOME.dbColumn} IS NULL
+            t.${DataField.CHOME.dbColumn} != '' AND
+            t.${DataField.CHOME.dbColumn} IS NOT NULL
           ) AND 
-          substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2' AND
+          p.${DataField.LG_CODE.dbColumn} = @lg_code
       `;
 
-      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      const rows = this.driver.prepare<{lg_code: string;}, Row>(sql).all(params);
       insertIntoResultTable(rows);
     }
 
@@ -578,6 +646,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           t.${DataField.CHOME.dbColumn} as chome,
           t.${DataField.KOAZA.dbColumn} as koaza,
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} as koaza_aka_code,
           CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
           IFNULL(
             t.${DataField.REP_LAT.dbColumn},
@@ -596,16 +665,18 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         FROM
           ${DbTableName.TOWN} as t
           JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
+          JOIN ${DbTableName.PREF} as p ON p.pref_key = c.pref_key
         WHERE
           (
             t.${DataField.OAZA_CHO.dbColumn} != '' AND
             t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
           ) AND
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) != '000' AND
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2' AND
+          p.${DataField.LG_CODE.dbColumn} = @lg_code
       `;
 
-      const rows = this.driver.prepare<unknown[], Row>(sql).all();
+      const rows = this.driver.prepare<{lg_code: string;}, Row>(sql).all(params);
       insertIntoResultTable(rows);
     }
 
@@ -642,6 +713,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           t.${DataField.MACHIAZA_ID.dbColumn} as machiaza_id,
           t.${DataField.OAZA_CHO.dbColumn} as oaza_cho,
           t.${DataField.CHOME.dbColumn} as chome,
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} as koaza_aka_code,
           '' as koaza,
           CAST(t.${DataField.RSDT_ADDR_FLG.dbColumn} AS INTEGER) as rsdt_addr_flg,
           IFNULL(
@@ -661,16 +733,18 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         FROM
           ${DbTableName.TOWN} as t
           JOIN ${DbTableName.CITY} as c ON t.city_key = c.city_key
+          JOIN ${DbTableName.PREF} as p ON p.pref_key = c.pref_key
         WHERE
           (
             t.${DataField.OAZA_CHO.dbColumn} != '' AND
             t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
           ) AND
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) = '000' AND
-          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2'
+          t.${DataField.KOAZA_AKA_CODE.dbColumn} != '2' AND
+          p.${DataField.LG_CODE.dbColumn} = @lg_code
       `;
 
-      const rows: Row[] = this.driver.prepare<unknown[], Row>(sql).all();
+      const rows = this.driver.prepare<{lg_code: string;}, Row>(sql).all(params);
       insertIntoResultTable(rows);
 
       rows.forEach(row => {
@@ -695,7 +769,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
     // 大字が持っている場合がある。
     // この場合、大字の緯度経度を丁目に適用する
     //--------------------------------------
-    const results: OazaChoMachingInfo[] = [];
+    const results: TownMatchingInfo[] = [];
     const seen = new Set<string>();
 
     workTable.forEach((row: Row) => {
@@ -750,6 +824,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         coordinate_level: MatchLevel.from(row.coordinate_level),
         pref: prefInfo.pref,
         city: cityInfo.city,
+        koaza_aka_code: row.koaza_aka_code,
       };
 
       results.push(value);

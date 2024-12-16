@@ -26,7 +26,7 @@ import { createSingleProgressBar } from '@domain/services/progress-bars/create-s
 import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import path from 'node:path';
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
-import { CreateCacheResult, CreateCacheType } from './worker/create-cache-params';
+import { CreateCacheResult, CreateCacheTaskData } from './worker/create-cache-params';
 import { createCache, CreateGeocodeCacheWorkerInitData } from './worker/create-geocode-caches-worker';
 
 export const createGeocodeCaches = async ({
@@ -41,18 +41,39 @@ export const createGeocodeCaches = async ({
 
   // 初期化する
   const progressBar = isSilentMode ? undefined : createSingleProgressBar('prepare: {bar} {percentage}% | {value}/{total}');
-  
+
   // LG_CODEの一覧を取得
-  const targets: CreateCacheType[] = [
-    'pref',
-    'county-and-city',
-    'city-and-ward',
-    'kyoto-street',
-    'oaza-cho',
-    'tokyo23-town',
-    'tokyo23-ward',
-    'ward',
+  const targets: CreateCacheTaskData[] = [
+    {
+      type: 'pref',
+    },
+    {
+      type: 'county-and-city',
+    },
+    {
+      type: 'city-and-ward',
+    },
+    {
+      type: 'kyoto-street',
+    },
+    {
+      type: 'tokyo23-town',
+    },
+    {
+      type: 'tokyo23-ward',
+    },
+    {
+      type: 'ward',
+    },
   ];
+
+  const db = await container.database.openCommonDb();
+  for (const prefInfo of await db.getPrefList()) {
+    targets.push({
+      type: 'oaza-cho',
+      lg_code: prefInfo.lg_code,
+    })
+  }
 
   progressBar?.start(targets.length, 0);
 
@@ -73,7 +94,7 @@ export const createGeocodeCaches = async ({
   }
   const abortCtrl = new AbrAbortController();
   
-  const pool = new WorkerThreadPool<CreateGeocodeCacheWorkerInitData, CreateCacheType, CreateCacheResult>({
+  const pool = new WorkerThreadPool<CreateGeocodeCacheWorkerInitData, CreateCacheTaskData, CreateCacheResult>({
     filename: path.join(__dirname, 'worker', 'create-geocode-caches-worker'),
     initData: {
       diContainer: container.toJSON(),

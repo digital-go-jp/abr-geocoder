@@ -35,7 +35,7 @@ import { WardTrieFinder } from '@usecases/geocode/models/ward-trie-finder';
 import { RsdtBlkTrieFinder } from '@usecases/geocode/models/rsdt-blk-trie-finder';
 import { RsdtDspTrieFinder } from '@usecases/geocode/models/rsdt-dsp-trie-finder';
 import { ParcelTrieFinder } from '@usecases/geocode/models/parcel-trie-finder';
-import { CreateCacheType, CreateCacheTaskParams } from './create-cache-params';
+import { CreateCacheType, CreateCacheTaskParams, CreateCacheTaskData } from './create-cache-params';
 
 const createPrefTrieData = async (task: CreateCacheTaskParams) => {
   
@@ -166,7 +166,7 @@ const createWardTrieData = async (task: CreateCacheTaskParams) => {
 };
 
 export const createCache = async (params : CreateCacheTaskParams) => {
-  switch (params.data) {
+  switch (params.data.type) {
     case 'pref':
       return await createPrefTrieData(params);
     
@@ -181,7 +181,7 @@ export const createCache = async (params : CreateCacheTaskParams) => {
 
     case 'oaza-cho':
       return await createOazaChoTrieData(params);
-
+      
     case 'tokyo23-town':
       return await createTokyo23TownTrieData(params);
 
@@ -210,7 +210,7 @@ if (!isMainThread && parentPort) {
 
     // メインスレッドからメッセージを受け取る
     parentPort.on('message', async (task: string) => {
-      const received = JSON.parse(task) as ThreadJob<CreateCacheType> | ThreadPing;
+      const received = JSON.parse(task) as ThreadJob<CreateCacheTaskData> | ThreadPing;
       (task as unknown) = null;
       switch (received.kind) {
         case 'ping': {

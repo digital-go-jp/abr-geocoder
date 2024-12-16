@@ -164,7 +164,10 @@ export class GeocodeResultTransform extends Transform {
       case searchTarget === SearchTarget.ALL: {
         if (
           // RSDTのがスコアが高ければRSDTを返す
-          topRSDT.score >= topParcel.score
+          topRSDT.score >= topParcel.score ||
+
+          // Parcelのがスコアが高くても RSDTと差が少なければRSDTを返す
+          topParcel.score - topRSDT.score <= 5
         ) {
           callback(null, topRSDT.query);
           queries.clear();

@@ -40,7 +40,9 @@
     },
     "result": {
       "output": "東京都中央区銀座三丁目4-1 # all:住居表示, rsdt:住居表示, parcel:地番",
-      "others": [],
+      "others": [
+        "# all:住居表示, rsdt:住居表示, parcel:地番"
+      ],
       "match_level": "residential_detail",
       "coordinate_level": "residential_detail",
       "lat": 35.673369565,

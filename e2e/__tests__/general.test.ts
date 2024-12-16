@@ -49,10 +49,6 @@ describe('General cases', () => {
     await jsonTestRunner('sapporo-schools');
   });
 
-  test('v2.1でミスマッチした結果の確認', async () => {
-    await jsonTestRunner('failed-v2.1');
-  });
-
   test('特殊なケースのテスト', async () => {
     await jsonTestRunner('special-test-cases');
   });

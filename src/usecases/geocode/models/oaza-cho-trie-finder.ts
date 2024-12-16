@@ -2,7 +2,6 @@ import { BANGAICHI, DASH, DASH_SYMBOLS, MUBANCHI, OAZA_BANCHO, OAZA_CENTER, SPAC
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { removeFiles } from "@domain/services/remove-files";
-import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import fs from 'node:fs';
 import path from 'node:path';
 import { jisKanji } from '../services/jis-kanji';
@@ -15,8 +14,9 @@ import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
 import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
+import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 
-export class OazaChoTrieFinder extends TrieAddressFinder2<OazaChoMachingInfo> {
+export class OazaChoTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
 
   static normalize<T extends string | CharNode | undefined>(address: T): T {
     if (address === undefined) {
@@ -89,28 +89,31 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<OazaChoMachingInfo> {
     return address;
   }
 
-  private static readonly getCacheFilePath = async (diContainer: AbrGeocoderDiContainer) => {
-    makeDirIfNotExists(diContainer.cacheDir);
-    const commonDb = await diContainer.database.openCommonDb();
+  private static readonly getCacheFilePath = async (task: CreateCacheTaskParams) => {
+    makeDirIfNotExists(task.diContainer.cacheDir);
+    const commonDb = await task.diContainer.database.openCommonDb();
     const genHash = commonDb.getOazaChomesGeneratorHash();
     const extension = process.env.JEST_WORKER_ID ? 'debug' : 'abrg2';
 
-    return path.join(diContainer.cacheDir, `oaza-cho_${genHash}.${extension}`);
+    return path.join(task.diContainer.cacheDir, `oaza-cho_${genHash}_${task.data.lg_code}.${extension}`);
   };
 
   static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
-    const cacheFilePath = await OazaChoTrieFinder.getCacheFilePath(task.diContainer);
+    if (!task.data.lg_code) {
+      throw `lg_code is required`;
+    }
+    const cacheFilePath = await OazaChoTrieFinder.getCacheFilePath(task);
 
     // 古いキャッシュファイルを削除
     if (process.env.JEST_WORKER_ID) {
       await removeFiles({
         dir: task.diContainer.cacheDir,
-        filename: 'oaza-cho_.*\\.debug',
+        filename: `oaza-cho_[^_]+_${task.data.lg_code}$\\.debug`,
       });
     } else {
       await removeFiles({
         dir: task.diContainer.cacheDir,
-        filename: 'oaza-cho_.*\\.abrg2',
+        filename: `oaza-cho_[^_]+_${task.data.lg_code}$\\.abrg2`,
       });
     }
     
@@ -120,10 +123,12 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<OazaChoMachingInfo> {
     if (!db) {
       return false;
     }
-    const rows = await db.getOazaChomes();
+    const rows = await db.getOazaChomes({
+      lg_code: task.data.lg_code,
+    });
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
-    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`oaza: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
+    const progressBar = createSingleProgressBar(`oaza: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
     progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
@@ -187,7 +192,10 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<OazaChoMachingInfo> {
   };
   
   static readonly loadDataFile = async (task: CreateCacheTaskParams) => {
-    const cacheFilePath = await OazaChoTrieFinder.getCacheFilePath(task.diContainer);
+    if (!task.data.lg_code) {
+      throw `lg_code is required`;
+    }
+    const cacheFilePath = await OazaChoTrieFinder.getCacheFilePath(task);
     let data: Buffer | undefined;
     let numOfTry: number = 0;
     while (!data && numOfTry < 3) {

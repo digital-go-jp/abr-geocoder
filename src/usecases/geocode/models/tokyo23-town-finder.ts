@@ -70,8 +70,14 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> 
     progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
+      const key = [
+        row.city || '',
+        row.oaza_cho || '',
+        row.chome || '',
+        row.koaza || '',
+      ].join('');
       await writer.addNode({
-        key: Tokyo23TownTrieFinder.normalize(row.key),
+        key: Tokyo23TownTrieFinder.normalize(key),
         value: row,
       });
     }

@@ -1,0 +1,71 @@
+[
+  {
+    "query": {
+      "input": "北海道雨竜郡秩父別町１５３６番地"
+    },
+    "result": {
+      "output": "北海道雨竜郡秩父別町1536",
+      "others": [
+        "1536"
+      ],
+      "match_level": "city",
+      "coordinate_level": "city",
+      "lat": 43.767,
+      "lon": 141.957896,
+      "lg_code": "014346",
+      "machiaza_id": null,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "北海道",
+      "county": "雨竜郡",
+      "city": "秩父別町",
+      "ward": null,
+      "oaza_cho": null,
+      "chome": null,
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "青森県つがる市木造大畑座八１"
+    },
+    "result": {
+      "output": "青森県つがる市木造大畑座八1",
+      "others": [
+        "1"
+      ],
+      "match_level": "machiaza_detail",
+      "coordinate_level": "machiaza",
+      "lat": 40.838006,
+      "lon": 140.358736,
+      "lg_code": "022098",
+      "machiaza_id": "0027103",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "青森県",
+      "county": null,
+      "city": "つがる市",
+      "ward": null,
+      "oaza_cho": "木造大畑",
+      "chome": null,
+      "koaza": "座八",
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  }
+]

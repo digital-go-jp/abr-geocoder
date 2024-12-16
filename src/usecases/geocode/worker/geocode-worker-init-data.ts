@@ -21,19 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { PrefLgCode } from "@domain/types/pref-lg-code";
 import { AbrGeocoderDiContainerParams } from "../models/abr-geocoder-di-container";
 
 export type GeocodeWorkerInitData = {
   diContainer: AbrGeocoderDiContainerParams;
   trieData: {
-    pref: Uint8Array,
-    countyAndCity: Uint8Array,
-    cityAndWard: Uint8Array,
-    kyotoStreet: Uint8Array,
-    oazaCho: Uint8Array,
-    ward: Uint8Array,
-    tokyo23Ward: Uint8Array,
-    tokyo23Town: Uint8Array,
+    pref: Uint8Array;
+    countyAndCity: Uint8Array;
+    cityAndWard: Uint8Array;
+    kyotoStreet: Uint8Array;
+    oazaChomes: {
+      lg_code: PrefLgCode;
+      data: Uint8Array
+    }[];
+    ward: Uint8Array;
+    tokyo23Ward: Uint8Array;
+    tokyo23Town: Uint8Array;
   };
   debug: boolean;
 };

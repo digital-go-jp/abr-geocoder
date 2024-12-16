@@ -32,16 +32,16 @@ import { QuerySet } from '../models/query-set';
 import { isDigit } from '../services/is-number';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 import { isKanjiNums } from '../services/is-kanji-nums';
+import { PrefLgCode, toPrefLgCode } from '@domain/types/pref-lg-code';
 
 export class OazaChomeTransform extends Transform {
 
   constructor(
-    private readonly trie: OazaChoTrieFinder,
+    private readonly trieTrees: Map<PrefLgCode, OazaChoTrieFinder>,
   ) {
     super({
       objectMode: true,
     });
-    this.trie.debug = false;
   }
 
   async _transform(
@@ -59,23 +59,39 @@ export class OazaChomeTransform extends Transform {
       //   results.add(query);
       //   continue;
       // }
+
+      // 探索する文字がなければスキップ
       if (!query.tempAddress) {
-        // 探索する文字がなければスキップ
         results.add(query);
         continue;
       }
+      // 通り名が当たっている場合はスキップ
       if (query.koaza_aka_code === 2) {
-        // 通り名が当たっている場合はスキップ
         results.add(query);
         continue;
       }
       
+      // 京都通り名の特徴がある場合はスキップ
       const bearingWord = query.tempAddress.match(RegExpEx.create('(?:(?:上る|下る|東入る?|西入る?)|(?:角[東西南北])|(?:[東西南北]側))'));
       if (bearingWord) {
-        // 京都通り名の特徴がある場合はスキップ
         results.add(query);
         continue;
       }
+
+      // この時点で都道府県が判別できていない場合、全都道府県を探す
+      const trieTrees: OazaChoTrieFinder[] = [];
+      if (!query.lg_code) {
+        trieTrees.push(...Array.from(this.trieTrees.values()));
+      } else {
+        // 都道府県が判別できている場合は、都道府県のトライ木を使う
+        const prefLgCode = toPrefLgCode(query.lg_code!);
+        if (!prefLgCode || !this.trieTrees.has(prefLgCode)) {
+          results.add(query);
+          continue;
+        }
+        trieTrees.push(this.trieTrees.get(prefLgCode)!);
+      }
+
 
       // ------------------------------------
       // トライ木を使って探索
@@ -126,107 +142,109 @@ export class OazaChomeTransform extends Transform {
 
       let anyHit = false;
       let anyAmbiguous = false;
-      for (const targetQuery of targets.values()) {
-        if (!targetQuery || !targetQuery.tempAddress) {
-          continue;
-        }
-        // 小字に数字が含まれていて、それが番地にヒットする場合がある。
-        // この場合は、マッチしすぎているので、中間結果を返す必要がある。
-        // partialMatches = true にすると、中間結果を含めて返す。
-        //
-        // target = 末広町184
-        // expected = 末広町
-        // wrong_matched_result = 末広町18字
-        const findResults = this.trie.find({
-          target: targetQuery.tempAddress,
-          partialMatches: true,
-          fuzzy: DEFAULT_FUZZY_CHAR,
-        }) || [];
-        
-        // ------------------------------------
-        // Queryの情報を使って、条件式を作成
-        // ------------------------------------
-        const filteredResult = findResults?.filter(result => {
-          if (query.pref_key && result.info?.pref_key !== query.pref_key) {
-            return false;
+      for (const trie of trieTrees) {
+        for (const targetQuery of targets.values()) {
+          if (!targetQuery || !targetQuery.tempAddress) {
+            continue;
           }
-          if (query.city_key && result.info?.city_key !== query.city_key) {
-            return false;
-          }
-
-          // 当たった文字列(path)の最後が数字で、unmatchedの先頭が数字なら間違い
-          if (isDigit(result.unmatched) ) {
-            let pathTail = result.path;
-            while (pathTail?.next) {
-              pathTail = pathTail.next;
+          // 小字に数字が含まれていて、それが番地にヒットする場合がある。
+          // この場合は、マッチしすぎているので、中間結果を返す必要がある。
+          // partialMatches = true にすると、中間結果を含めて返す。
+          //
+          // target = 末広町184
+          // expected = 末広町
+          // wrong_matched_result = 末広町18字
+          const findResults = trie.find({
+            target: targetQuery.tempAddress,
+            partialMatches: true,
+            fuzzy: DEFAULT_FUZZY_CHAR,
+          }) || [];
+          
+          // ------------------------------------
+          // Queryの情報を使って、条件式を作成
+          // ------------------------------------
+          const filteredResult = findResults?.filter(result => {
+            if (query.pref_key && result.info?.pref_key !== query.pref_key) {
+              return false;
             }
-            if (isDigit(pathTail?.char)) {
-              // ただしどちらかが漢数字で、どちらかが算用数字の場合、たぶん合っている
-              // (両方とも同じなら間違い)
-              const isTailKanjiNum = isKanjiNums(pathTail?.originalChar);
-              const isUnmatchedKanjiNum = isKanjiNums(result.unmatched?.originalChar);
-              if (isTailKanjiNum === isUnmatchedKanjiNum) {
-                return false;
+            if (query.city_key && result.info?.city_key !== query.city_key) {
+              return false;
+            }
+
+            // 当たった文字列(path)の最後が数字で、unmatchedの先頭が数字なら間違い
+            if (isDigit(result.unmatched) ) {
+              let pathTail = result.path;
+              while (pathTail?.next) {
+                pathTail = pathTail.next;
+              }
+              if (isDigit(pathTail?.char)) {
+                // ただしどちらかが漢数字で、どちらかが算用数字の場合、たぶん合っている
+                // (両方とも同じなら間違い)
+                const isTailKanjiNum = isKanjiNums(pathTail?.originalChar);
+                const isUnmatchedKanjiNum = isKanjiNums(result.unmatched?.originalChar);
+                if (isTailKanjiNum === isUnmatchedKanjiNum) {
+                  return false;
+                }
               }
             }
-          }
-          return true;
-        });
+            return true;
+          });
 
-        // 複数都道府県にヒットする可能性があるので、全て試す
-        filteredResult?.forEach(result => {
-          let ambiguousCnt = targetQuery.ambiguousCnt + result.ambiguousCnt;
-          let matchedCnt = targetQuery.matchedCnt + result.depth;
-          if (targetQuery.oaza_cho && targetQuery.oaza_cho !== result.info?.oaza_cho) {
-            anyAmbiguous = true;
-            ambiguousCnt += targetQuery.oaza_cho.length;
-            return;
-          }
+          // 複数都道府県にヒットする可能性があるので、全て試す
+          filteredResult?.forEach(result => {
+            let ambiguousCnt = targetQuery.ambiguousCnt + result.ambiguousCnt;
+            let matchedCnt = targetQuery.matchedCnt + result.depth;
+            if (targetQuery.oaza_cho && targetQuery.oaza_cho !== result.info?.oaza_cho) {
+              anyAmbiguous = true;
+              ambiguousCnt += targetQuery.oaza_cho.length;
+              return;
+            }
 
-          const info = result.info!;
-          let unmatched = result.unmatched;
+            const info = result.info!;
+            let unmatched = result.unmatched;
 
-          if ((info.chome.includes('丁目') || info.oaza_cho.includes('丁目')) &&
-            result.unmatched?.char === DASH) {
-            matchedCnt += 1;
-            unmatched = trimDashAndSpace(result.unmatched);
-          }
-          if (info.oaza_cho.endsWith('町') && unmatched?.char === '町') {
-            unmatched = unmatched.next?.moveToNext();
-            matchedCnt += 1;
-          }
-          if (info.chome.endsWith('町') && unmatched?.char === '町') {
-            unmatched = unmatched.next?.moveToNext();
-            matchedCnt += 1;
-          }
+            if ((info.chome.includes('丁目') || info.oaza_cho.includes('丁目')) &&
+              result.unmatched?.char === DASH) {
+              matchedCnt += 1;
+              unmatched = trimDashAndSpace(result.unmatched);
+            }
+            if (info.oaza_cho.endsWith('町') && unmatched?.char === '町') {
+              unmatched = unmatched.next?.moveToNext();
+              matchedCnt += 1;
+            }
+            if (info.chome.endsWith('町') && unmatched?.char === '町') {
+              unmatched = unmatched.next?.moveToNext();
+              matchedCnt += 1;
+            }
 
-          anyHit = true;
-          const params: Record<string, CharNode | number | string | MatchLevel | null | undefined> = {
-            pref_key: info.pref_key,
-            city_key: info.city_key,
-            town_key: info.town_key,
-            lg_code: info.lg_code,
-            pref: info.pref,
-            city: info.city,
-            oaza_cho: info.oaza_cho,
-            chome: info.chome,
-            koaza: info.koaza,
-            ward: info.ward,
-            machiaza_id: info.machiaza_id,
-            rsdt_addr_flg: info.rsdt_addr_flg,
-            tempAddress: unmatched,
-            match_level: info.match_level,
-            matchedCnt,
-            ambiguousCnt, 
-          };
-          if (info.rep_lat && info.rep_lon) {
-            params.rep_lat = info.rep_lat;
-            params.rep_lon = info.rep_lon;
-            params.coordinate_level = info.coordinate_level;
-          }
-          const copied = targetQuery.copy(params);
-          results.add(copied);
-        });
+            anyHit = true;
+            const params: Record<string, CharNode | number | string | MatchLevel | null | undefined> = {
+              pref_key: info.pref_key,
+              city_key: info.city_key,
+              town_key: info.town_key,
+              lg_code: info.lg_code,
+              pref: info.pref,
+              city: info.city,
+              oaza_cho: info.oaza_cho,
+              chome: info.chome,
+              koaza: info.koaza,
+              ward: info.ward,
+              machiaza_id: info.machiaza_id,
+              rsdt_addr_flg: info.rsdt_addr_flg,
+              tempAddress: unmatched,
+              match_level: info.match_level,
+              matchedCnt,
+              ambiguousCnt, 
+            };
+            if (info.rep_lat && info.rep_lon) {
+              params.rep_lat = info.rep_lat;
+              params.rep_lon = info.rep_lon;
+              params.coordinate_level = info.coordinate_level;
+            }
+            const copied = targetQuery.copy(params);
+            results.add(copied);
+          });
+        }
       }
       if (!anyHit || anyAmbiguous) {
         results.add(query);
