@@ -143,6 +143,7 @@ export class OazaChomeTransform extends Transform {
       let anyHit = false;
       let anyAmbiguous = false;
       for (const trie of trieTrees) {
+        trie.debug = false; // デバッグ用
         for (const targetQuery of targets.values()) {
           if (!targetQuery || !targetQuery.tempAddress) {
             continue;
@@ -245,6 +246,7 @@ export class OazaChomeTransform extends Transform {
             results.add(copied);
           });
         }
+        trie.debug = false;
       }
       if (!anyHit || anyAmbiguous) {
         results.add(query);

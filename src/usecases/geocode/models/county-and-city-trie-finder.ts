@@ -10,7 +10,6 @@ import { removeFiles } from "@domain/services/remove-files";
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
 import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
-import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 
 export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo> {
 
@@ -59,20 +58,16 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo
       return false;
     }
 
-    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`county: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
     const rows = await db.getCountyAndCityList();
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
-    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       await writer.addNode({
         key: CountyAndCityTrieFinder.normalize(row.key),
         value: row,
       });
-      progressBar?.increment();
     }
-    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;

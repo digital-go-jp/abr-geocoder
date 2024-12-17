@@ -11,7 +11,6 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
-import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
 
 export class Tokyo23WardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> {
@@ -66,8 +65,6 @@ export class Tokyo23WardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> 
     const rows = await db.getTokyo23Wards();
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
-    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`tokyo23ward: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
-    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       await writer.addNode({

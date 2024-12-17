@@ -512,7 +512,7 @@ export class TrieAddressFinder2<T> {
               ambiguousCnt,
               matchedCnt,
               target: target.clone(),
-              offset: node.siblingOffset,
+              offset: node.siblingOffset, // 兄弟ノードに移動する
               partialMatches: Array.from(matches),
               path: pathHead?.clone(),
               allowExtraChallenge,
@@ -551,7 +551,7 @@ export class TrieAddressFinder2<T> {
             matchedCnt,
             ambiguousCnt: ambiguousCnt,
             hashValueList: node.hashValueList,
-            target: target.next?.moveToNext(),
+            target: target.next?.moveToNext()?.clone(), // マッチしていないのは次の文字からなので、moveToNext()を実行しておく
             offset,
             path: pathHead?.clone(),
             next: undefined,
@@ -568,7 +568,7 @@ export class TrieAddressFinder2<T> {
             matchedCnt,
             ambiguousCnt: ambiguousCnt,
             hashValueList: node.hashValueList,
-            target: target.next.moveToNext(),
+            target: target.next?.moveToNext()?.clone(),
             offset,
             path: pathHead?.clone(),
             next: undefined,

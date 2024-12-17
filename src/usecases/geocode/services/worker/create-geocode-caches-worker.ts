@@ -226,7 +226,6 @@ if (!isMainThread && parentPort) {
             const result = await createCache({
               diContainer,
               data: received.data,
-              isSilentMode: initParams.isSilentMode,
             });
 
             // メインスレッドに送る

@@ -33,7 +33,7 @@ describe('v2.1-faild test cases', () => {
     await jsonTestRunner('issue186');
   });
   
-  test('issue187: 「「丁」が重複', async () => {
+  test('issue187: 「丁」が重複', async () => {
     await jsonTestRunner('issue187');
   });
   

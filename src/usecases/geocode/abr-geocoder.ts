@@ -135,28 +135,24 @@ export class AbrGeocoder {
       data: {
         type: "pref",
       },
-      isSilentMode: params.isSilentMode,
     }))!);
     const countyAndCity = toSharedMemory((await CountyAndCityTrieFinder.loadDataFile({
       diContainer: params.container,
       data: {
         type: "county-and-city",
       },
-      isSilentMode: params.isSilentMode,
     }))!);
     const cityAndWard = toSharedMemory((await CityAndWardTrieFinder.loadDataFile({
       diContainer: params.container,
       data:  {
         type: "city-and-ward",
       },
-      isSilentMode: params.isSilentMode,
     }))!);
     const kyotoStreet = toSharedMemory((await KyotoStreetTrieFinder.loadDataFile({
       diContainer: params.container,
       data:  {
         type: "kyoto-street",
       },
-      isSilentMode: params.isSilentMode,
     }))!);
 
     const oazaChomes = [];
@@ -169,7 +165,6 @@ export class AbrGeocoder {
             type: "oaza-cho",
             lg_code: prefInfo.lg_code as PrefLgCode,
           },
-          isSilentMode: params.isSilentMode,
         }))!)
       });
     }
@@ -179,21 +174,18 @@ export class AbrGeocoder {
       data: {
         type:  "ward",
       },
-      isSilentMode: params.isSilentMode,
     }))!);
     const tokyo23Ward = toSharedMemory((await Tokyo23WardTrieFinder.loadDataFile({
       diContainer: params.container,
       data:  {
         type: "tokyo23-ward",
       },
-      isSilentMode: params.isSilentMode,
     }))!);
     const tokyo23Town = toSharedMemory((await Tokyo23TownTrieFinder.loadDataFile({
       diContainer: params.container,
       data:  {
         type: "tokyo23-town",
       },
-      isSilentMode: params.isSilentMode,
     }))!);
 
     const initData: GeocodeWorkerInitData = {

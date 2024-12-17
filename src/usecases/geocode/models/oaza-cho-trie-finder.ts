@@ -12,7 +12,6 @@ import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { CharNode } from "./trie/char-node";
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
-import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
 import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 
@@ -128,8 +127,6 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
     });
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
-    const progressBar = createSingleProgressBar(`oaza: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
-    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       
@@ -183,9 +180,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
           value: row,
         });
       }
-      progressBar?.increment();
     }
-    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;
@@ -212,7 +207,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
       }
 
       if (process.env.JEST_WORKER_ID) {
-        console.log('Creates catch for OazaChoTrieFinder');
+        console.log(`Creates catch for OazaChoTrieFinder (lgCode: ${task.data.lg_code})`);
       }
       // 新しく作成
       if (!await OazaChoTrieFinder.createDictionaryFile(task)) {

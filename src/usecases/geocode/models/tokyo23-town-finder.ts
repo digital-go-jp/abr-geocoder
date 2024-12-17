@@ -11,7 +11,6 @@ import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
-import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
 
 export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
@@ -66,8 +65,6 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> 
     const rows = await db.getTokyo23Towns();
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
-    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`tokyo23town: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
-    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       const key = [
@@ -81,7 +78,6 @@ export class Tokyo23TownTrieFinder extends TrieAddressFinder2<TownMatchingInfo> 
         value: row,
       });
     }
-    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;

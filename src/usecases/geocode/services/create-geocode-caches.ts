@@ -84,7 +84,6 @@ export const createGeocodeCaches = async ({
       result = await createCache({
         diContainer: container,
         data: task,
-        isSilentMode,
       });
       if (!result) {
         throw `Can not create the cache file for ${task}`;

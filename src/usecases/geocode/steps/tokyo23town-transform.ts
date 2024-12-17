@@ -75,25 +75,34 @@ export class Tokyo23TownTranform extends Transform {
         if (!searchResult.info) {
           throw new Error('searchResult.info is empty');
         }
+
+        // ここで大字・丁目・小字まで確定させると、oaza-chome-transformとの整合性が合わなくなるので無視する。
+        // partialMatches = trueなので、〇〇区〇〇市が必ずヒットする
+        if (searchResult.info.oaza_cho || searchResult.info.chome || searchResult.info.koaza) {
+          return;
+        }
         anyAmbiguous = anyAmbiguous || searchResult.ambiguousCnt > 0;
         anyHit = true;
-
+        const matchedCnt = query.matchedCnt + searchResult.depth -
+          searchResult.info.oaza_cho.length -
+          searchResult.info.chome.length;
+        
         const params: Record<string, CharNode | number | string | MatchLevel | undefined | null> = {
           pref_key: searchResult.info.pref_key,
           city_key: searchResult.info.city_key,
           town_key: searchResult.info.town_key,
           rsdt_addr_flg: searchResult.info.rsdt_addr_flg,
           tempAddress: searchResult.unmatched,
-          matchedCnt: query.matchedCnt + searchResult.depth,
-          koaza: toHankakuAlphaNum(searchResult.info.koaza),
+          matchedCnt,
+          // koaza: toHankakuAlphaNum(searchResult.info.koaza),
           pref: searchResult.info.pref,
           county: searchResult.info.county,
           city: searchResult.info.city,
           ward: searchResult.info.ward,
           lg_code: searchResult.info.lg_code,
-          oaza_cho: searchResult.info.oaza_cho,
+          // oaza_cho: searchResult.info.oaza_cho,
           machiaza_id: searchResult.info.machiaza_id,
-          chome: searchResult.info.chome,
+          // chome: searchResult.info.chome,
           ambiguousCnt: query.ambiguousCnt + searchResult.ambiguousCnt, 
         };
         if (searchResult.info.machiaza_id.endsWith('000')) {

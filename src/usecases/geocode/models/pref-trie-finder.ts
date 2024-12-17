@@ -10,7 +10,6 @@ import { removeFiles } from "@domain/services/remove-files";
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
 import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
-import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 
 export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
 
@@ -61,17 +60,13 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
     const rows = await db.getPrefList()
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
-    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`pref: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
-    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       await writer.addNode({
         key: PrefTrieFinder.normalize(row.pref),
         value: row,
       });
-      progressBar?.increment();
     }
-    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;
@@ -91,6 +86,7 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
           return data;
         }
       } catch (_e: unknown) {
+        console.error(_e);
         // Do nothing here
       }
 

@@ -14,7 +14,6 @@ import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
 import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
-import { createSingleProgressBar } from "@domain/services/progress-bars/create-single-progress-bar";
 
 export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> {
 
@@ -86,8 +85,6 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
     const writer = await FileTrieWriter.create(cacheFilePath);
 
     let i = 0;
-    const progressBar = task.isSilentMode ? undefined : createSingleProgressBar(`kyoto: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}`);
-    progressBar?.start(rows.length, 0);
     while (i < rows.length) {
       const row = rows[i++];
       row.oaza_cho = toHankakuAlphaNum(row.oaza_cho);
@@ -125,9 +122,7 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
           // Do nothing here
           break;
       }
-      progressBar?.increment();
     }
-    progressBar?.stop();
     await writer.close();
     await db.close();
     return true;
