@@ -14,10 +14,15 @@ import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";
 import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
+import { CharNode } from "./trie/char-node";
 
 export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> {
 
-  static normalize(address: string): string {
+  static normalize<T extends string | CharNode | undefined>(address: T): T {
+    if (!address) {
+      return undefined as T;
+    }
+
     // 漢数字を半角数字に変換する
     address = kan2num(address);
 
@@ -32,19 +37,19 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
 
     // input =「丸の内一の八」のように「ハイフン」を「の」で表現する場合があるので
     // 「の」は全部DASHに変換する
-    address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`);
+    address = address?.replaceAll(RegExpEx.create('([0-9])の', 'g'), `$1${DASH}`) as T;
     
-    address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}$2`);
+    address = address?.replaceAll(RegExpEx.create('([0-9])の([0-9])', 'g'), `$1${DASH}$2`) as T;
 
     // 「1丁目下る」の「丁目」を省略して書く事があるので、丁目が入っていなかったら DASHを挿入
     // address = address?.replaceAll(RegExpEx.create(`([0-9]+)(?:丁目|${DASH})?(上る|下る|東入|西入)`, 'g'), `$1${DASH}$2`);
 
     // // 「丁目」を DASHにする
-    address = address?.replaceAll(RegExpEx.create('丁目', 'g'), DASH);
+    address = address?.replaceAll(RegExpEx.create('丁目', 'g'), DASH) as T;
 
     address = address?.
       replaceAll(RegExpEx.create(`^[${SPACE}${DASH}]`, 'g'), '')?.
-      replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '');
+      replaceAll(RegExpEx.create(`[${SPACE}${DASH}]$`, 'g'), '') as T;
 
     return address;
   }
@@ -108,11 +113,34 @@ export class KyotoStreetTrieFinder extends TrieAddressFinder2<KoazaMachingInfo> 
               value: row,
             });
           } else {
-            // (大字)+(丁目)
-            await writer.addNode({
-              key: KyotoStreetTrieFinder.normalize(row.oaza_cho + row.chome),
-              value: row,
-            });
+            if (!row.oaza_cho && !row.chome && row.koaza) {
+              // (小字)
+              await writer.addNode({
+                key: KyotoStreetTrieFinder.normalize(row.koaza),
+                value: row,
+              });
+            }
+            if (row.oaza_cho && !row.chome && row.koaza) {
+              // (大字)+(小字)
+              await writer.addNode({
+                key: KyotoStreetTrieFinder.normalize(row.oaza_cho + row.koaza),
+                value: row,
+              });
+            }
+            if (row.oaza_cho && row.chome) {
+              // (大字)+(丁目)
+              await writer.addNode({
+                key: KyotoStreetTrieFinder.normalize(row.oaza_cho + row.chome),
+                value: row,
+              });
+            }
+            if (row.oaza_cho && row.chome && row.koaza) {
+              // (大字)+(丁目)+(小字)
+              await writer.addNode({
+                key: KyotoStreetTrieFinder.normalize(row.oaza_cho + row.chome + row.koaza),
+                value: row,
+              });
+            }
           }
   
           break;

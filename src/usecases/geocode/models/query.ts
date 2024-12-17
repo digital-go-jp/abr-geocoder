@@ -40,46 +40,81 @@ export interface IQuery {
   // 全体として何文字マッチしたのか
   matchedCnt: number;
 
+  // 処理の開始時間（デバッグ用）
   startTime: number;
+
+  // 任意の1文字を表すための1文字
   fuzzy?: string;
+
+  // 検索対象
   searchTarget: SearchTarget;
+
+  // 京都の通り名判定のときに、敢えて外した文字列
   unmatched: string[];
 
-  pref?: string;
+  // SQLiteのテーブル行ID
   pref_key?: number;
   city_key?: number;
   town_key?: number;
-  machiaza_id?: string;
   rsdtblk_key?: number;
   rsdtdsp_key?: number;
+  parcel_key?: number;
+
+  machiaza_id?: string;
+
+  // townレコードに設定されていたrsdt_addr_flgを最後までキープする
+  original_rsdt_addr_flg?: number;
+
+  // rsdt_blk,rsdt_dsp,parcelで書き換える
   rsdt_addr_flg?: number;
+
+  // 0: 通常
+  // 1: 通称地名
+  // 2: 京都の通り名
   koaza_aka_code?: number;
 
+  // 都道府県
+  pref?: string;
+
+  // 〇〇郡
   county?: string;
+
+  // 〇〇市町村
   city?: string;
+
+  // 〇〇区
   ward?: string;
   
+  // 大字
   oaza_cho?: string;
+
+  // 〇丁目
   chome?: string;
+
+  // 小字
   koaza?: string;
 
+  // 都道府県・市区町村ごとに割り当てられたコード
   lg_code?: string;
+
+  // 緯度
   rep_lat?: string;
+  // 経度
   rep_lon?: string;
 
+  // rsdt_addr_flg = 1(住居表示)のときの枝番
   block?: string;
   block_id?: string;
-
   rsdt_num?: number;
   rsdt_id?: string;
   rsdt_num2?: number;
   rsdt2_id?: string;
   
+  // rsdt_addr_flg = 0(地番)のときの枝番
   prc_num1?: string;
   prc_num2?: string;
   prc_num3?: string;
   prc_id?: string;
-  parcel_key?: number;
 
   // 文字列として、どのレベルまでマッチしたか
   match_level: MatchLevel;
@@ -135,6 +170,7 @@ export class Query implements IQuery {
   public readonly prc_num3?: string;
   public readonly prc_id?: string;
   public readonly rsdt_addr_flg?: number;
+  public readonly original_rsdt_addr_flg?: number;
   public readonly koaza_aka_code?: number;
   public readonly match_level: MatchLevel;
   public readonly coordinate_level: MatchLevel;
@@ -179,6 +215,7 @@ export class Query implements IQuery {
     this.rep_lat = params.rep_lat;
     this.rep_lon = params.rep_lon;
     this.rsdt_addr_flg = params.rsdt_addr_flg;
+    this.original_rsdt_addr_flg = params.original_rsdt_addr_flg;
     this.koaza_aka_code = params.koaza_aka_code;
     this.rsdt_num = params.rsdt_num;
     this.rsdt_id = params.rsdt_id;
@@ -198,6 +235,7 @@ export class Query implements IQuery {
     this.formatted = this.getFormattedAddress();
   }
 
+  // JSONに変換する
   public toJSON(): QueryJson {
     return {
       ambiguousCnt: this.ambiguousCnt,
@@ -224,6 +262,7 @@ export class Query implements IQuery {
       rep_lat: this.rep_lat,
       rep_lon: this.rep_lon,
       rsdt_addr_flg: this.rsdt_addr_flg,
+      original_rsdt_addr_flg: this.original_rsdt_addr_flg,
       koaza_aka_code: this.koaza_aka_code,
       machiaza_id: this.machiaza_id as string,
       block: this.block,
@@ -248,6 +287,7 @@ export class Query implements IQuery {
     };
   }
 
+  // 複製する 
   public copy(newValues: Partial<IQuery>): Query {
     if ('rep_lat' in newValues || 'rep_lon' in newValues) {
       if (!newValues.rep_lat || !newValues.rep_lon) {
@@ -291,6 +331,7 @@ export class Query implements IQuery {
           rep_lat : this.rep_lat,
           rep_lon : this.rep_lon,
           rsdt_addr_flg : this.rsdt_addr_flg,
+          original_rsdt_addr_flg : this.original_rsdt_addr_flg,
           koaza_aka_code : this.koaza_aka_code,
           machiaza_id : this.machiaza_id,
           prc_num1 : this.prc_num1,
@@ -308,6 +349,7 @@ export class Query implements IQuery {
     );
   }
 
+  // 空文字を取り除く
   private eliminateEmptyElement(strList: (string | undefined)[]): string[] {
     return strList.filter(value => value !== undefined && value !== '') as string[];
   }
@@ -420,6 +462,8 @@ export class Query implements IQuery {
     (this.tempAddress as unknown) = undefined;
   }
 
+  // IQueryのJSONからQueryを作成
+  // (サブスレッドからメインスレッドに結果を戻したときに使う)
   static readonly from = (params: Omit<IQuery, 'tempAddress'> & { tempAddress: string | undefined; } ): Query => {
     if (params.match_level === undefined) {
       params.match_level = MatchLevel.UNKNOWN;
@@ -436,6 +480,7 @@ export class Query implements IQuery {
     }
   };
 
+  // Queryクラスの作成
   static readonly create = (input: QueryInput): Query => {
     input.data.address = input.data.address.trim();
 

@@ -146,7 +146,6 @@ const lgCodes = [
   await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
   await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
   
-  return;
   const controller = new AbortController();
 
   try {

@@ -54,25 +54,24 @@ export class KyotoStreetTransform extends Transform {
     const buffer: Query[] = [];
     const KYOTO_PREF_LG_CODE = PrefLgCode.KYOTO.substring(0, 2);
     for (const query of queries.values()) {
+      // 間違えてヒットする可能性もあるので、未処理のクエリもキープする
+      results.add(query);
+
       if (query.match_level.num > MatchLevel.MACHIAZA.num) {
         // 大字以降が既に判明しているものはスキップ
-        results.add(query);
         continue;
       }
 
       if (query.lg_code && query.lg_code.substring(0, 2) !== KYOTO_PREF_LG_CODE) {
         // 京都府以外の場合はスキップ
-        results.add(query);
         continue;
       }
 
       if (!query.tempAddress) {
         // 探索する文字がなければスキップ
-        results.add(query);
         continue;
       }
 
-      let anyHit = false;
       const target = query.tempAddress.
         replaceAll(RegExpEx.create('([東西]入)る', 'g'), '$1');
 
@@ -140,7 +139,7 @@ export class KyotoStreetTransform extends Transform {
         }
 
         const findResults = this.trie.find({
-          target: search.target,
+          target: KyotoStreetTrieFinder.normalize(search.target),
           fuzzy: DEFAULT_FUZZY_CHAR,
           partialMatches: true,
           extraChallenges: ['通', '角', '東入', '西入', '上る', '下る', '角西', '角東', '北側', '南側', '東側', '西側'],
@@ -194,6 +193,7 @@ export class KyotoStreetTransform extends Transform {
             city_key: result.info!.city_key,
             pref_key: result.info!.pref_key,
             rsdt_addr_flg: result.info!.rsdt_addr_flg,
+            original_rsdt_addr_flg: result.info!.rsdt_addr_flg,
             oaza_cho: result.info!.oaza_cho,
             chome: result.info!.chome,
             ward: result.info!.ward,
@@ -220,13 +220,8 @@ export class KyotoStreetTransform extends Transform {
           if (search.unused.length > 0) {
             copied.unmatched?.push(...search.unused);
           }
-          anyHit = true;
         });
       });
-
-      if (!anyHit) {
-        results.add(query);
-      }
     }
 
     // 最もスコアが高い結果を採用する(入力文字列と整形された文字列が似ている結果を採用する)

@@ -65,6 +65,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
 
   getKyotoStreetRows(): Promise<KoazaMachingInfo[]> {
     type Row = Omit<KoazaMachingInfo, 'coordinate_level' | 'match_level'> & {
+      match_level: number;
       coordinate_level: number;
     };
     const sql =`
@@ -90,25 +91,66 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
           substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) = '000', 
           ${MatchLevel.MACHIAZA.num},
           ${MatchLevel.MACHIAZA_DETAIL.num}
+        ) as match_level,
+        IIF(
+          substr(t.${DataField.MACHIAZA_ID.dbColumn}, 5, 7) = '000', 
+          ${MatchLevel.MACHIAZA.num},
+          ${MatchLevel.MACHIAZA_DETAIL.num}
         ) as coordinate_level
       FROM
         ${DbTableName.PREF} p
         JOIN ${DbTableName.CITY} c ON p.pref_key = c.pref_key
         JOIN ${DbTableName.TOWN} t ON c.city_key = t.city_key
       WHERE
-        -- 京都市に係るLG_Codeは"261"から始まる
+        -- 京都市に関係するLG_Codeは"261"から始まる
+        -- 京都府全体は"260xxx"なので、PrefLgCode.KYOTOは使えない
         substr(c.${DataField.LG_CODE.dbColumn}, 1, 3) = '261' AND
         t.${DataField.OAZA_CHO.dbColumn} IS NOT NULL
     `;
     const rows: Row[] = this.prepare<{}, Row>(sql).all({});
 
-    const results = rows.map(row => {
-      const match_level = row.coordinate_level === MatchLevel.MACHIAZA.num ? MatchLevel.MACHIAZA : MatchLevel.MACHIAZA_DETAIL;
+    const machiazaTable = new Map<string, Row>();
+    const machiazaDetailTable = new Map<string, Row>();
+    const insertIntoResultTable = (rows: Row[]) => {
+      rows.forEach(row => {
+        // データが不完全なものは排除
+        if (!row.oaza_cho && !row.chome && !row.koaza || !row.rep_lat) {
+          return;
+        }
+
+        if (row.match_level === MatchLevel.MACHIAZA.num) {
+          machiazaTable.set(`${row.city_key}:${row.machiaza_id}`, row);
+          return;
+        }
+
+        machiazaDetailTable.set(`${row.city_key}:${row.machiaza_id}`, row);
+      });
+    };
+    insertIntoResultTable(rows);
+
+    const results = Array.from(machiazaDetailTable.values()).map(row => {
+      const match_level = row.match_level === MatchLevel.MACHIAZA.num ? MatchLevel.MACHIAZA : MatchLevel.MACHIAZA_DETAIL;
+      let coordinate_level = row.coordinate_level === MatchLevel.MACHIAZA.num ? MatchLevel.MACHIAZA : MatchLevel.MACHIAZA_DETAIL;
+
+      if (!row.rep_lat) {
+        const machiaza = machiazaTable.get(`${row.city_key}:${row.machiaza_id.substring(0, 4)}000`);
+        row.rep_lat = machiaza!.rep_lat;
+        row.rep_lon = machiaza!.rep_lon;
+        coordinate_level = MatchLevel.MACHIAZA;
+      }
+
       return {
         ...row,
         match_level,
-        coordinate_level: match_level,
+        coordinate_level,
       };
+    });
+    Array.from(machiazaTable.values()).forEach(row => {
+      results.push({
+        ...row,
+        match_level: MatchLevel.MACHIAZA,
+        coordinate_level: MatchLevel.MACHIAZA,
+      });
     });
 
     return Promise.resolve(results);

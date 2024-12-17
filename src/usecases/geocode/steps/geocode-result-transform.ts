@@ -166,8 +166,10 @@ export class GeocodeResultTransform extends Transform {
           // RSDTのがスコアが高ければRSDTを返す
           topRSDT.score >= topParcel.score ||
 
-          // Parcelのがスコアが高くても RSDTと差が少なければRSDTを返す
-          topParcel.score - topRSDT.score <= 5
+          // スコアの差が小さくて、original_rsdt_addr_flg = 1 のときは、RSDTを返す
+          topParcel.score - topRSDT.score <= 2 &&
+          topRSDT.query.match_level.num >= MatchLevel.MACHIAZA.num &&
+          topRSDT.query.original_rsdt_addr_flg === 1
         ) {
           callback(null, topRSDT.query);
           queries.clear();
@@ -246,6 +248,12 @@ export class GeocodeResultTransform extends Transform {
     const diffScore = -Math.abs(matchScore - coordinateScore) * 2;
     debug.push(`diff of two levels: -${diffScore}`);
 
+    // townレコードに指定されていたrsdt_addr_flgと最終結果のrsdt_addr_flgが一致している場合は、信頼度アップ
+    const rsdtFlgScore = (
+      query.original_rsdt_addr_flg === 1 && query.rsdt_addr_flg  === 1 ||
+      query.original_rsdt_addr_flg === 2 && query.rsdt_addr_flg  === 0 ||
+      query.original_rsdt_addr_flg === 0 && query.rsdt_addr_flg  === 0) ? 1 : 0;
+
     const score = matchScore +
       coordinateScore +
       matchedCntScore + 
@@ -253,7 +261,8 @@ export class GeocodeResultTransform extends Transform {
       remainScore +
       ambiguousScore +
       similarScore +
-      diffScore;
+      diffScore +
+      rsdtFlgScore;
 
     return {
       score,

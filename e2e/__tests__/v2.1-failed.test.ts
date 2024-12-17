@@ -29,20 +29,5 @@ describe('v2.1-faild test cases', () => {
   test('v2.1でミスマッチしたケース', async () => {
     await jsonTestRunner('v2.1-failed-test-cases');
   });
-  test('issue186: 「部」が重複', async () => {
-    await jsonTestRunner('issue186');
-  });
-  
-  test('issue187: 「丁」が重複', async () => {
-    await jsonTestRunner('issue187');
-  });
-  
-  test('issue188: 「条」が重複', async () => {
-    await jsonTestRunner('issue188');
-  });
-  
-  test('issue189: 「丁目」が省略される', async () => {
-    await jsonTestRunner('issue189');
-  });
   
 });

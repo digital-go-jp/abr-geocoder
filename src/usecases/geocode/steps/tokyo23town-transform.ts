@@ -83,26 +83,21 @@ export class Tokyo23TownTranform extends Transform {
         }
         anyAmbiguous = anyAmbiguous || searchResult.ambiguousCnt > 0;
         anyHit = true;
-        const matchedCnt = query.matchedCnt + searchResult.depth -
-          searchResult.info.oaza_cho.length -
-          searchResult.info.chome.length;
         
         const params: Record<string, CharNode | number | string | MatchLevel | undefined | null> = {
           pref_key: searchResult.info.pref_key,
           city_key: searchResult.info.city_key,
           town_key: searchResult.info.town_key,
+          original_rsdt_addr_flg: searchResult.info.rsdt_addr_flg,
           rsdt_addr_flg: searchResult.info.rsdt_addr_flg,
           tempAddress: searchResult.unmatched,
-          matchedCnt,
-          // koaza: toHankakuAlphaNum(searchResult.info.koaza),
+          matchedCnt: query.matchedCnt + searchResult.depth,
           pref: searchResult.info.pref,
           county: searchResult.info.county,
           city: searchResult.info.city,
           ward: searchResult.info.ward,
           lg_code: searchResult.info.lg_code,
-          // oaza_cho: searchResult.info.oaza_cho,
           machiaza_id: searchResult.info.machiaza_id,
-          // chome: searchResult.info.chome,
           ambiguousCnt: query.ambiguousCnt + searchResult.ambiguousCnt, 
         };
         if (searchResult.info.machiaza_id.endsWith('000')) {

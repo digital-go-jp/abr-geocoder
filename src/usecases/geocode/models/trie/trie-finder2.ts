@@ -43,6 +43,9 @@ import {
   VERSION_BYTES,
 } from './abrg-file-structure';
 import { CharNode } from './char-node';
+import { isKanjiNums } from '@usecases/geocode/services/is-kanji-nums';
+import { toHankakuAlphaNum } from '@usecases/geocode/services/to-hankaku-alpha-num';
+import { isDigit } from '@usecases/geocode/services/is-number';
 
 
 export type TrieFinderResult<T> = {
@@ -463,7 +466,18 @@ export class TrieAddressFinder2<T> {
           throw `Can not load the trie node at ${offset}`;
         }
         
-        if (target?.char !== node.name) {
+        if (
+          // target.charとnode.nameが異なっていて、
+          target?.char !== node.name &&
+          (
+            // node.nameが漢数字ででも算用数字でもない、
+            !isKanjiNums(node.name) && !isDigit(node.name) ||
+            // またはtarget.charが漢数字ではない場合
+            !isKanjiNums(target.char) && !isDigit(target.char) ||
+            // または両方を算用数字に変換しても異なる場合
+            toHankakuAlphaNum(target.char) !== toHankakuAlphaNum(node.name)
+          )
+        ) {
           if (target?.char !== fuzzy) {
             if (node.siblingOffset) {
               // 次の兄弟ノードをチェックする

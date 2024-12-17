@@ -134,9 +134,9 @@ export class OazaChomeTransform extends Transform {
         }));
       }
 
-      // 既にmachiaza_detailで正しい場合、ここではヒットしないので、結果に追加しておく
+      // 既にmachiaza以上で正しい場合、ここではヒットしないので、結果に追加しておく
       // (ただし他の可能性もあるので、targetsに対するチェックは行う)
-      if (query.match_level.num === MatchLevel.MACHIAZA_DETAIL.num) {
+      if (query.match_level.num >= MatchLevel.MACHIAZA.num) {
         results.add(query);
       }
 
@@ -232,6 +232,7 @@ export class OazaChomeTransform extends Transform {
               ward: info.ward,
               machiaza_id: info.machiaza_id,
               rsdt_addr_flg: info.rsdt_addr_flg,
+              original_rsdt_addr_flg: info.rsdt_addr_flg,
               tempAddress: unmatched,
               match_level: info.match_level,
               matchedCnt,

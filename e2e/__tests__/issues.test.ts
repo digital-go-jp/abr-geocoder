@@ -47,4 +47,20 @@ describe('issues', () => {
   test('#166: 半角カタカナの「ｹ」がマッチしない', async () => {
     await jsonTestRunner('issue166');
   });
+  
+  test('issue186: 「部」が重複', async () => {
+    await jsonTestRunner('issue186');
+  });
+  
+  test('issue187: 「丁」が重複', async () => {
+    await jsonTestRunner('issue187');
+  });
+  
+  test('issue188: 「条」が重複', async () => {
+    await jsonTestRunner('issue188');
+  });
+  
+  test('issue189: 「丁目」が省略される', async () => {
+    await jsonTestRunner('issue189');
+  });
 });
