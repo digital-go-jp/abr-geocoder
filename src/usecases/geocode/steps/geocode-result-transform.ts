@@ -253,6 +253,7 @@ export class GeocodeResultTransform extends Transform {
       query.original_rsdt_addr_flg === 1 && query.rsdt_addr_flg  === 1 ||
       query.original_rsdt_addr_flg === 2 && query.rsdt_addr_flg  === 0 ||
       query.original_rsdt_addr_flg === 0 && query.rsdt_addr_flg  === 0) ? 1 : 0;
+    debug.push(`rsdtFlgScore: ${rsdtFlgScore}`);
 
     const score = matchScore +
       coordinateScore +

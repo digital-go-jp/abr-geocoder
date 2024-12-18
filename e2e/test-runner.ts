@@ -48,9 +48,8 @@ const gatheringLgCode = async (targetDir: string): Promise<Set<string>> => {
 
   // ダウンロード
   await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${Array.from(lgCodes).join(' ')} -d ${dbPath}`;
-  
-  const controller = new AbortController();
 
+  const controller = new AbortController();
   try {
     const serverTaskPromise = $({
       stdout: 'inherit',
@@ -62,7 +61,8 @@ const gatheringLgCode = async (targetDir: string): Promise<Set<string>> => {
       }
     })`node ${cliPath} serve -d ${dbPath}`;
 
-    await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js`
+    // --runInBand はファイルを1つずつテストするためのオプション
+    await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js --runInBand`
     controller.abort();
 
     await serverTaskPromise;
