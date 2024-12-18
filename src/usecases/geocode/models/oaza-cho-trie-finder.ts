@@ -55,7 +55,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH) as T;
+    address = address?.replaceAll(RegExpEx.create('([0-9])丁目?', 'g'), `$1${DASH}`) as T;
     
     // 京都の「四条通」の「通」が省略されることがある
     // 北海道では「春光四条二丁目1-1」を「春光4-2-1-1」と表記する例がある
