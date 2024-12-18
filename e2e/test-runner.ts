@@ -1,150 +1,53 @@
 import { $, execaNode } from 'execa-cjs';
 import path from 'node:path';
+import fs from 'node:fs';
 const packageJsonPath = path.normalize(path.join(__dirname, '..', 'package.json'));
 const rootDir = path.dirname(packageJsonPath);
 const dbPath = path.join(rootDir, 'db');
 const cliPath = path.join(rootDir, 'build', 'interface', 'cli', 'cli.js');
 
-const lgCodes = [
-  // basic-test-cases
-  '131016', // 東京都千代田区
-  '011045', // 北海道札幌市白石区 (小字に丁目が入る)
+const gatheringLgCode = async (targetDir: string): Promise<Set<string>> => {
+  const results: Set<string> = new Set();
+  const dir = await fs.promises.opendir(targetDir);
+  for await (const dirent of dir) {
+    // ディレクトリの場合は再帰呼び出し
+    if (dirent.isDirectory()) {
+      if (dirent.name === '.' || dirent.name === '..') {
+        continue;
+      }
+      const others = await gatheringLgCode(path.join(dir.path, dirent.name));
+      for (const other of others.values()) {
+        results.add(other);
+      }
+      continue;
+    }
 
-  // general-test-cases
-  '033812', // 岩手県胆沢郡金ケ崎町
-  '132080', // 東京都調布市
-  '122157', // 千葉県旭市
-  '124109', // 千葉県山武郡横芝光町
-  '102083', // 群馬県渋川市
-  '162019', // 富山県富山市
-  '011029', // 北海道札幌市
-  '202126', // 長野県大町市
-  '271284', // 大阪府大阪市中央区
-  '011011', // 北海道札幌市中央区
-  '232114', // 愛知県豊田市
-  '282197', // 兵庫県三田市
-  '112143', // 埼玉県春日部市
-  '442011', // 大分県大分市
-  '082082', // 茨城県龍ケ崎市
-  '271098', // 大阪府大阪市天王寺区
-  '015857', // 北海道勇払郡安平町
-  '142182', // 神奈川県綾瀬市
-  '016624', // 北海道厚岸郡厚岸町
-  '014346', // 北海道雨竜郡秩父別町
-  '372013', // 香川県高松市
-  '022039', // 青森県八戸市
-  '072044', // 福島県いわき市
-  '032018', // 岩手県盛岡市
-  '262013', // 京都府福知山市
-  '012068', // 北海道釧路市
-  '013048', // 北海道石狩郡新篠津村
-  '242080', // 三重県名張市
-  '022063', // 青森県十和田市
-
-  // issue #166
-  '122246', // 千葉県鎌ケ谷市
-  '122297', // 千葉県袖ケ浦市
-  '213624', // 岐阜県不破郡関ケ原
-
-  // issue #133
-  '183229', // 福井県永平寺町
-  '182052', // 福井県大野市
-  '032140', // 岩手県八幡平市
-
-  // issue #122
-  '014257', // 北海道空知郡上砂川町
-
-  '261017', // 京都府 京都市北区
-  '261025', // 京都府 京都市上京区
-  '261033', // 京都府 京都市左京区
-  '261041', // 京都府 京都市中京区
-  '261050', // 京都府 京都市東山区
-  '261068', // 京都府 京都市下京区
-  '261076', // 京都府 京都市南区
-  '261084', // 京都府 京都市右京区
-  '261092', // 京都府 京都市伏見区
-  '261106', // 京都府 京都市山科区
-  '261114', // 京都府 京都市西京区
-  
-  '011011', // 北海道札幌市中央区
-  '011029', // 北海道札幌市北区
-  '011053', // 北海道札幌市豊平区
-  '011061', // 北海道札幌市南区
-  '011070', // 北海道札幌市西区
-  '011096', // 北海道札幌市手稲区
-
-  '122271', // 千葉県安浦市
-  '131032', // 東京都港区
-  '131130', // 東京都渋谷区
-  '401323', // 福岡県福岡市博多区
-  '231061', // 愛知県名古屋市中区
-  '022098', // 青森県つがる市
-  '052124', // 秋田県大仙市
-  '082040', // 茨城県古河市
-  '112399', // 埼玉県坂戸市
-  '131024', // 東京都中央区
-
-  // issue186
-  '412074', // 佐賀県鹿島市
-  '282227', // 兵庫県養父市
-  '012092', // 北海道夕張市
-  '062022', // 山形県米沢市
-  '172057', // 石川県珠洲市
-
-  // issue187
-  '212059', // 岐阜県関市
-  '212059', // 広島県福山市
-  '102105', // 群馬県富岡市
-  '412082', // 佐賀県小城市
-  '122238', // 千葉県鴨川市
-  '442062', // 大分県臼杵市
-  '042064', // 宮城県白石市
-  '042081', // 宮城県角田市
-  '352039', // 山口県山口市
-  '342076', // 広島県福山市
-  '235610', // 愛知県北設楽郡設楽町
-  '074471', // 福島県大沼郡会津美里町
-  '074217', // 福島県河沼郡会津坂下町
-  '074641', // 福島県西白河郡泉崎村
-  '072036', // 福島県郡山市熱海町
-  '043231', // 宮城県柴田郡柴田町
-  '074217', // 福島県河沼郡会津坂下町
-  '343684', // 広島県山県郡安芸太田町
-  '043231', // 宮城県柴田郡柴田町
-  '261025', // 京都府京都市上京区
-
-  // issue188
-  '412082', // 佐賀県小城市
-  '412104', // 佐賀県神埼市
-  '292044', // 奈良県天理市
-  '452033', // 宮崎県延岡市
-  '362069', // 徳島県阿波市
-  '232033', // 愛知県一宮市
-  '402079', // 福岡県柳川市
-  '072117', // 福島県田村市
-  '261050', // 京都府京都市東山区
-  '261041', // 京都府京都市中京区
-  '261033', // 京都府京都市左京区
-  '261050', // 京都府京都市東山区
-  '011070', // 北海道札幌市西区
-
-  // issue189
-  '012157', // 北海道美唄市
-  '122173', // 千葉県柏市
-  '112101', // 埼玉県加須市
-  '042153', // 宮城県大崎市
-  '042137', // 宮城県栗原市
-
-
-  // issue206
-  '372013', // 香川県高松市
-
-];
+    // JSONファイルなら、lg_codeを探す
+    if (!dirent.name.endsWith('.json')) {
+      continue;
+    }
+    const fileContents = fs.readFileSync(path.join(dir.path, dirent.name), {
+      encoding: 'utf-8',
+    });
+    const expectValues: { result: { lg_code: string; }}[] = JSON.parse(fileContents);
+    for (const entry of expectValues) {
+      results.add(entry.result.lg_code);
+    }
+  }
+  return results;
+};
 
 (async () => {
+  // ビルド
   await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
+  // キャッシュの削除
   await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
-  await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${lgCodes.join(' ')} -d ${dbPath}`;
+
+  // test-dataディレクトリの各jsonファイルから、lg_codeを収集する
+  const lgCodes = await gatheringLgCode(path.join(__dirname, 'test-data'));
+
+  // ダウンロード
+  await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${Array.from(lgCodes).join(' ')} -d ${dbPath}`;
   
   const controller = new AbortController();
 
