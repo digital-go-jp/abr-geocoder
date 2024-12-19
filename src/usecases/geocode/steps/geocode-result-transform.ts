@@ -227,7 +227,7 @@ export class GeocodeResultTransform extends Transform {
 
     // unmatched_cnt (少ないほど良い)
     const unmatchedCnt = query.unmatched.reduce((total, word) => total + word.length, 0);
-    const unmatchedCntScore = query.input.data.address.length - unmatchedCnt;
+    const unmatchedCntScore = -unmatchedCnt;
     debug.push(`unmatchedCnt: ${unmatchedCntScore}`);
 
     // 残り文字数 (少ないほど良い)

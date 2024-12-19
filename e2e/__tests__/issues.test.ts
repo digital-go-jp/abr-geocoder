@@ -48,19 +48,28 @@ describe('issues', () => {
     await jsonTestRunner('issue166');
   });
   
-  test('issue186: 「部」が重複', async () => {
+  test('#186: 「部」が重複', async () => {
     await jsonTestRunner('issue186');
   });
   
-  test('issue187: 「丁」が重複', async () => {
+  test('#187: 「丁」が重複', async () => {
     await jsonTestRunner('issue187');
   });
   
-  test('issue188: 「条」が重複', async () => {
+  test('#188: 「条」が重複', async () => {
     await jsonTestRunner('issue188');
   });
   
-  test('issue189: 「丁目」が省略される', async () => {
+  test('#189: 「丁目」が省略される', async () => {
     await jsonTestRunner('issue189');
+  });
+  test('#197: 「町」が重複', async () => {
+    await jsonTestRunner('issue197');
+  });
+  test('#201: 末尾の漢数字が重複する', async () => {
+    await jsonTestRunner('issue201');
+  });
+  test('#203: 町字が二重で追加される', async () => {
+    await jsonTestRunner('issue203');
   });
 });
