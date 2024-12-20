@@ -36,9 +36,6 @@ export class DownloadTransform extends Duplex {
   private receivedFinal: boolean = false;
   private runningTasks = 0;
   private readonly abortCtrl = new AbrAbortController();
-  private pausing: boolean = false;
-  private readonly highWatermark: number;
-  private readonly halfWatermark: number;
 
   // ダウンロードを担当するワーカースレッド
   private downloader: WorkerThreadPool<
@@ -51,16 +48,12 @@ export class DownloadTransform extends Duplex {
     maxConcurrency: number;
     maxTasksPerWorker: number;
     container: DownloadDiContainer;
-    highWatermark?: number;
   }) {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
-
-    this.highWatermark = params.highWatermark || MAX_CONCURRENT_DOWNLOAD;
-    this.halfWatermark = this.highWatermark >> 1;
 
     this.downloader = new WorkerThreadPool<
       DownloadWorkerInitData, 
@@ -92,26 +85,10 @@ export class DownloadTransform extends Duplex {
     this.downloader?.close();
   }
 
-  private waiter() {
-    // Out of memory を避けるために、受け入れを一時停止
-    // 処理済みが追いつくまで、待機する
-    if (this.runningTasks < this.highWatermark || this.pausing) {
-      return;
-    }
-
-    if (!this.pausing) {
-      this.pausing = true;
-      this.emit('pause');
-    }
-  }
 
   private closer() {
-    if (this.pausing && this.runningTasks < this.halfWatermark) {
-      this.emit('resume');
-      this.pausing = false;
-    }
 
-    if (!this.receivedFinal || this.pausing || this.runningTasks > 0) {
+    if (!this.receivedFinal || this.runningTasks > 0) {
       return;
     }
     // 全タスクが処理したので終了
@@ -125,7 +102,6 @@ export class DownloadTransform extends Duplex {
     // callback: (error?: Error | null | undefined) => void,
     callback: TransformCallback,
   ) {
-    this.waiter();
     
     this.runningTasks++;
 

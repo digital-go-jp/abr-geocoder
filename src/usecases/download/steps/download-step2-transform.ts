@@ -47,10 +47,10 @@ export class DownloadStep2Transform extends Duplex {
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
-    callback();
     // エラーになったQueryはスキップする
     if (isDownloadProcessError(job.data)) {
       this.push(job as ThreadJob<DownloadProcessError>);
+      callback();
       return;
     }
 
@@ -91,6 +91,7 @@ export class DownloadStep2Transform extends Duplex {
         dataset: job.data.dataset,
       },
     } as ThreadJob<DownloadResult>);
+    callback();
   }
 
 }

@@ -48,27 +48,21 @@ export class CsvLoadStep2Transform extends Duplex {
     callback: TransformCallback,
   ) {
 
-    callback();
-    
     // エラーになったQueryはスキップする
     if (isDownloadProcessError(job.data)) {
       this.push(job);
+      callback();
       return;
     }
 
     // DBに取り込む
-    const tasks = job.data.files.map(fileInfo => {
-      return loadCsvToDatabase({
+    for (const fileInfo of job.data.files) {
+      await loadCsvToDatabase({
         semaphore: this.params.semaphore,
         datasetFile: fileInfo.datasetFile,
         databaseCtrl: this.params.databaseCtrl,
       });
-    });
-
-    // await promise.all() で DBへの取り込み処理が完了するまで待つ
-    await Promise.all(tasks).catch(e => {
-      console.error(`[error]`, e);
-    });
+    }
 
     this.push({
       taskId: job.taskId,
@@ -83,5 +77,7 @@ export class CsvLoadStep2Transform extends Duplex {
     await Promise.all((job as ThreadJob<CsvLoadQuery2>).data.files.map(file => {
       return fs.promises.unlink(file.csvFile.path);
     }));
+
+    callback();
   }
 }

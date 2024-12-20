@@ -61,10 +61,10 @@ export class CsvLoadStep1Transform extends Duplex {
     _: BufferEncoding,
     callback: TransformCallback,
   ) {
-    callback();
     // エラーになったQueryはスキップする
     if (isDownloadProcessError(job.data)) {
       this.push(job as ThreadJob<DownloadProcessError>);
+      callback();
       return;
     }
     const start = Date.now();
@@ -110,6 +110,7 @@ export class CsvLoadStep1Transform extends Duplex {
       },
     } as ThreadJob<CsvLoadQuery2>);
     this.timeAmount += Date.now() - start;
+    callback();
   }
 
   private toDataset(params : {

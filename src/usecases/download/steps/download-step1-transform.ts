@@ -56,14 +56,12 @@ export class DownloadStep1Transform extends Duplex {
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
-    // 次のリクエストをもらうために、先にCallbackを呼ぶ
-    callback();
-
     // 同時並行ダウンロード
     const response = await this.downloadResource({
       job,
     });
     this.push(response);
+    callback();
   }
 
   private async downloadResource({
