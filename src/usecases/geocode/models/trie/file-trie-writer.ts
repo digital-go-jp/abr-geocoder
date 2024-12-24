@@ -447,7 +447,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
   }
 
   private async storeData(data: any): Promise<number> {
-    const dataStr = stringify(data);
+    const dataStr = stringify(data)!;
     const dataBuffer = zlib.gzipSync(Buffer.from(dataStr), {
       level: 9,
     });

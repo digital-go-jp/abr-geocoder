@@ -72,8 +72,7 @@ export class CsvParseTransform extends Duplex {
       maxConcurrency: params.maxConcurrency,
 
       // スレッドごとに割り当てるタスクの数
-      // (いくつにしても、そんなに変化はなかった)
-      maxTasksPerWorker: 5,
+      maxTasksPerWorker: 1,
 
       // スレッド側に渡すデータ
       // プリミティブな値しか渡せない（インスタンスは渡せない）

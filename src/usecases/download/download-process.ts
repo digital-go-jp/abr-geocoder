@@ -145,17 +145,34 @@ export class Downloader {
     });
 
     // プログレスバーに進捗を出力する
+    let waitCnt = 0;
     const dst = new CounterWritable<CsvLoadResult>({
       write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
         if (params.progress) {
           params.progress(dst.count, total + 1);
         }
+        waitCnt--;
+        if (waitCnt <= 2 && !srcStream.isPaused()) {
+          srcStream.resume();
+        }
         callback();
       },
     });
 
+    const srcStream = Readable.from(requests);
+
     await pipeline(
-      Readable.from(requests),
+      srcStream,
+      new Transform({
+        objectMode: true,
+        transform(chunk, encoding, callback) {
+          waitCnt++;
+          if (waitCnt > numOfDownloadThreads * 2 && srcStream.isPaused()) {
+            srcStream.pause();
+          }
+          callback(null, chunk);
+        },
+      }),
       downloadTransform,
       csvParseTransform,
       dst,
