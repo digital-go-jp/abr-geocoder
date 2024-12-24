@@ -111,19 +111,18 @@ export class CsvParseTransform extends Duplex {
   ) {
 
     // 次のタスクをもらうために、先にCallbackを呼ぶ
+    callback();
     this.runningTasks++;
 
     // CSVファイルを分析して、データベースに登録する
     this.csvParsers.run(downloadResult).then((parseResult) => {
       this.push(parseResult);
       this.runningTasks--;
-      callback();
       
       // 全てタスクが完了したかをチェック
       this.closer();
     }).catch((_) => {
 
-      callback();
       this.abortCtrl.abort(new Event(`Can not parse the file: ${[downloadResult.csvFilePath]}`));
       this.close();
     });

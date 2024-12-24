@@ -68,10 +68,10 @@ export const createGeocodeCaches = async ({
   ];
 
   const db = await container.database.openCommonDb();
-  for (const prefInfo of await db.getPrefList()) {
+  for (const cityInfo of await db.getCityList()) {
     targets.push({
       type: 'oaza-cho',
-      lg_code: prefInfo.lg_code,
+      lg_code: cityInfo.lg_code,
     })
   }
 

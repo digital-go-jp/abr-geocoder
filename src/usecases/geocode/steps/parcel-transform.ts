@@ -25,7 +25,7 @@ import { DASH, KANJI_NUMS, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
-import { IParcelDbGeocode } from '@interface/database/common-db';
+import { IParcelDbGeocode } from '@drivers/database/common-db';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';

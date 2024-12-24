@@ -23,13 +23,13 @@
  */
 import { DownloadRequest } from '@domain/models/download-process-query';
 import { EnvProvider } from '@domain/models/env-provider';
-import * as geocodeDbControllerModule from '@interface/database/geocode-db-controller';
+import * as geocodeDbControllerModule from '@drivers/database/geocode-db-controller';
 import { describe, expect, jest, test } from '@jest/globals';
 import * as CsvParserTransformMockModule from '@usecases/download/transformations/__mocks__/csv-parse-transform';
 import * as DownloadTransformMockModule from '@usecases/download/transformations/__mocks__/download-transform';
 
-// @@interface/database/__mocks__/geocode-db-controller
-jest.mock('@interface/database/geocode-db-controller');
+// @@drivers/database/__mocks__/geocode-db-controller
+jest.mock('@drivers/database/geocode-db-controller');
 
 // @usecases/download/transformations/__mocks__/download-transform
 jest.mock('@usecases/download/transformations/download-transform');
@@ -44,7 +44,7 @@ jest.mock('@usecases/download/models/download-di-container');
 jest.mock('@interface/http-request-adapter');
 
 const mockedModules = {
-  geocodeDbController: jest.requireMock<typeof geocodeDbControllerModule>('@interface/database/geocode-db-controller'),
+  geocodeDbController: jest.requireMock<typeof geocodeDbControllerModule>('@drivers/database/geocode-db-controller'),
   downloadDiContainer: jest.requireMock('@usecases/download/models/download-di-container'),
   downloadTransform: jest.requireMock<typeof DownloadTransformMockModule>('@usecases/download/transformations/download-transform'),
   csvParserTransform: jest.requireMock<typeof CsvParserTransformMockModule>('@usecases/download/transformations/csv-parse-transform'),

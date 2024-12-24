@@ -25,7 +25,7 @@ import { getUrlHash } from "@domain/services/get-url-hash";
 import { PackageInfo } from "@domain/services/parse-package-id";
 import { CkanPackageResponse, CkanResource } from "@domain/types/download/ckan-package";
 import { isPrefLgCode } from "@domain/types/pref-lg-code";
-import { ICommonDbUpdateCheck } from "@interface/database/common-db";
+import { ICommonDbUpdateCheck } from "@drivers/database/common-db";
 import { HttpRequestAdapter } from "@interface/http-request-adapter";
 import { StatusCodes } from "http-status-codes";
 import timers from 'node:timers/promises';

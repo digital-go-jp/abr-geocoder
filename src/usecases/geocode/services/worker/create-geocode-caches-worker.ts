@@ -22,20 +22,17 @@
  * SOFTWARE.
  */
 import { ThreadJob, ThreadPing } from '@domain/services/thread/thread-task';
-import { isMainThread, MessagePort, parentPort, workerData } from "node:worker_threads";
-import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from '../../models/abr-geocoder-di-container';
-import { PrefTrieFinder } from '../../models/pref-trie-finder';
-import { CountyAndCityTrieFinder } from '@usecases/geocode/models/county-and-city-trie-finder';
 import { CityAndWardTrieFinder } from '@usecases/geocode/models/city-and-ward-trie-finder';
+import { CountyAndCityTrieFinder } from '@usecases/geocode/models/county-and-city-trie-finder';
 import { KyotoStreetTrieFinder } from '@usecases/geocode/models/kyoto-street-trie-finder';
 import { OazaChoTrieFinder } from '@usecases/geocode/models/oaza-cho-trie-finder';
 import { Tokyo23TownTrieFinder } from '@usecases/geocode/models/tokyo23-town-finder';
 import { Tokyo23WardTrieFinder } from '@usecases/geocode/models/tokyo23-ward-trie-finder';
 import { WardTrieFinder } from '@usecases/geocode/models/ward-trie-finder';
-import { RsdtBlkTrieFinder } from '@usecases/geocode/models/rsdt-blk-trie-finder';
-import { RsdtDspTrieFinder } from '@usecases/geocode/models/rsdt-dsp-trie-finder';
-import { ParcelTrieFinder } from '@usecases/geocode/models/parcel-trie-finder';
-import { CreateCacheType, CreateCacheTaskParams, CreateCacheTaskData } from './create-cache-params';
+import { isMainThread, MessagePort, parentPort, workerData } from "node:worker_threads";
+import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from '../../models/abr-geocoder-di-container';
+import { PrefTrieFinder } from '../../models/pref-trie-finder';
+import { CreateCacheTaskData, CreateCacheTaskParams } from './create-cache-params';
 
 const createPrefTrieData = async (task: CreateCacheTaskParams) => {
   

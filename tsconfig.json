@@ -23,6 +23,7 @@
     "paths": {
       "@domain/*": ["src/domain/*"],
       "@interface/*": ["src/interface/*"],
+      "@drivers/*": ["src/drivers/*"],
       "@usecases/*": ["src/usecases/*"],
       "@config/*": ["src/config/*"],
       "@mock/*": ["__mocks__/*"]

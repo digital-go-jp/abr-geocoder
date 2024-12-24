@@ -25,7 +25,7 @@ import { CommonDiContainer } from '@domain/models/common-di-container';
 import { makeDirIfNotExists } from '@domain/services/make-dir-if-not-exists';
 import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { DatabaseParams } from '@domain/types/database-params';
-import { UpdateCheckDbController } from '@interface/database/update-check-db-controller';
+import { UpdateCheckDbController } from '@drivers/database/update-check-db-controller';
 
 export type UpdateCheckDiContainerParams = {
   cacheDir: string;

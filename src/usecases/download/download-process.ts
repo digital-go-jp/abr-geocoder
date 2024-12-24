@@ -126,8 +126,6 @@ export class Downloader {
     requests.sort(() => {
       return -1 + Math.random() * 3;
     });
-    
-    const srcStream = Readable.from(requests);
 
     // ダウンロード処理を行う
     // 最大6コネクション
@@ -146,18 +144,9 @@ export class Downloader {
       lgCodeFilter,
     });
 
-    // ダウンロードのバランスを調整
-    let inputCnt = 0;
-    const downloadHighWatermark = MAX_CONCURRENT_DOWNLOAD * numOfDownloadThreads;
-
     // プログレスバーに進捗を出力する
-    const half = downloadHighWatermark >> 1;
     const dst = new CounterWritable<CsvLoadResult>({
       write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
-        const waitingCnt = inputCnt - dst.count;
-        if (waitingCnt === half && srcStream.isPaused()) {
-          srcStream.resume();
-        }
         if (params.progress) {
           params.progress(dst.count, total + 1);
         }
@@ -166,24 +155,7 @@ export class Downloader {
     });
 
     await pipeline(
-      srcStream,
-      new Transform({
-        objectMode: true,
-        async transform(chunk, _, callback) {
-          inputCnt++;
-
-          const waitingCnt = inputCnt - dst.count;
-          if (waitingCnt < downloadHighWatermark) {
-            return callback(null, chunk);
-          }
-          // メモリを圧迫しないように受け入れを一時停止
-          // 処理済みが追いつくまで、待機する
-          if (!srcStream.isPaused()) {
-            srcStream.pause();
-          }
-          callback(null, chunk);
-        },
-      }),
+      Readable.from(requests),
       downloadTransform,
       csvParseTransform,
       dst,

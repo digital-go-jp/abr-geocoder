@@ -88,7 +88,7 @@ const downloadCommand: CommandModule = {
     const isSilentMode = argv.silent === true;
 
     // silent = true のときは、プログレスバーを表示しない
-    const progressBar = isSilentMode ? undefined : createSingleProgressBar('download: {bar} {percentage}% | {value}/{total}');
+    const progressBar = isSilentMode ? undefined : createSingleProgressBar('download: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}');
     progressBar?.start(1, 0);
 
     if (argv.debug) {

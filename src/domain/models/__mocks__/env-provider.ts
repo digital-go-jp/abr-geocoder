@@ -24,7 +24,7 @@
 import { jest } from '@jest/globals';
 
 jest.mock('@domain/services/url-cache-manager');
-jest.mock('@interface/database/download-db-controller');
+jest.mock('@drivers/database/download-db-controller');
 
 const EnvProvider = jest.fn(() => {
   const DEFAULT_ABRG_DIR = './';

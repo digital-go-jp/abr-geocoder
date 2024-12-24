@@ -2,8 +2,8 @@ import { DASH, DEFAULT_FUZZY_CHAR } from "@config/constant-values";
 import { MatchLevel } from "@domain/types/geocode/match-level";
 import { ParcelInfo } from "@domain/types/geocode/parcel-info";
 import { SearchTarget } from "@domain/types/search-target";
-import { GeocodeDbController } from "@interface/database/__mocks__/geocode-db-controller";
-import { IParcelDbGeocode } from "@interface/database/common-db";
+import { GeocodeDbController } from "@drivers/database/__mocks__/geocode-db-controller";
+import { IParcelDbGeocode } from "@drivers/database/common-db";
 import { describe, expect, jest, test } from '@jest/globals';
 import { Query } from "@usecases/geocode/models/query";
 import { QuerySet } from "@usecases/geocode/models/query-set";
@@ -12,7 +12,7 @@ import { Readable, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { ParcelTransform } from "../parcel-transform";
 
-jest.mock('@interface/database/geocode-db-controller');
+jest.mock('@drivers/database/geocode-db-controller');
 
 const dbCtrl = new GeocodeDbController({
   connectParams: {

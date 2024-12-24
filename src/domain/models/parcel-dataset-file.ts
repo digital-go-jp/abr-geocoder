@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { DataField } from '@config/data-field';
-import { IParcelDbDownload } from '@interface/database/common-db';
+import { IParcelDbDownload } from '@drivers/database/common-db';
 import { DataWithDateFile, IDatasetFileMeta, ProcessOptions } from './dataset-file';
 
 export class ParcelDatasetFile

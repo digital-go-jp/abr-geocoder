@@ -23,7 +23,7 @@
  */
 import { DataField } from '@config/data-field';
 import { DataWithDateFile, DatasetParams, IDatasetFileMeta, ProcessOptions } from './dataset-file';
-import { ICommonDbDownload } from '@interface/database/common-db';
+import { ICommonDbDownload } from '@drivers/database/common-db';
 
 export class PrefDatasetFile
   extends DataWithDateFile

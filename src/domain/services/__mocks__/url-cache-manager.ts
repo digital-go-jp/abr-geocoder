@@ -27,8 +27,8 @@ import { jest } from '@jest/globals';
 // @domain/services/__mocks__/url-cache-manager
 jest.mock('@domain/services/url-cache-manager');
 
-// @interface/database/__mocks__/download-db-controller
-jest.mock('@interface/database/download-db-controller');
+// @drivers/database/__mocks__/download-db-controller
+jest.mock('@drivers/database/download-db-controller');
 
 // @domain/models/__mocks__/env-provider
 jest.mock('@domain/models/env-provider');

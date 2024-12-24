@@ -24,8 +24,8 @@
 import { DataField } from "@config/data-field";
 import { DbTableName } from "@config/db-table-name";
 import { TableKeyProvider } from "@domain/services/table-key-provider";
-import { IRsdtBlkDbDownload } from "@interface/database/common-db";
-import { Sqlite3Wrapper } from "@interface/database/sqlite3/better-sqlite3-wrap";
+import { IRsdtBlkDbDownload } from "@drivers/database/common-db";
+import { Sqlite3Wrapper } from "@drivers/database/sqlite3/better-sqlite3-wrap";
 import { Statement } from "better-sqlite3";
 
 export class RsdtBlkDbDownloadSqlite3 extends Sqlite3Wrapper implements IRsdtBlkDbDownload {

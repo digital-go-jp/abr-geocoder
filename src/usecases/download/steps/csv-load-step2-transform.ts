@@ -25,7 +25,7 @@
 import { CsvLoadQuery2, CsvLoadResult, DownloadProcessError, DownloadProcessStatus, isDownloadProcessError } from '@domain/models/download-process-query';
 import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import { ThreadJob } from '@domain/services/thread/thread-task';
-import { DownloadDbController } from '@interface/database/download-db-controller';
+import { DownloadDbController } from '@drivers/database/download-db-controller';
 import fs from 'node:fs';
 import { Duplex, TransformCallback } from 'node:stream';
 import { loadCsvToDatabase } from './load-csv-to-database';
@@ -48,12 +48,16 @@ export class CsvLoadStep2Transform extends Duplex {
     callback: TransformCallback,
   ) {
 
+    callback();
     // エラーになったQueryはスキップする
     if (isDownloadProcessError(job.data)) {
       this.push(job);
-      callback();
       return;
     }
+
+    // DBに取り込んでいる間は、前のステップを止める
+    // (DB取り込みに時間がかかるので、処理データが溜まりメモリを圧迫する)
+    this.pause();
 
     // DBに取り込む
     for (const fileInfo of job.data.files) {
@@ -63,6 +67,9 @@ export class CsvLoadStep2Transform extends Duplex {
         databaseCtrl: this.params.databaseCtrl,
       });
     }
+
+    // 処理を再開する
+    this.resume();
 
     this.push({
       taskId: job.taskId,
@@ -78,6 +85,5 @@ export class CsvLoadStep2Transform extends Duplex {
       return fs.promises.unlink(file.csvFile.path);
     }));
 
-    callback();
   }
 }

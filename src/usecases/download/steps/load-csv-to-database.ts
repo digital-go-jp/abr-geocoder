@@ -25,7 +25,7 @@ import { CsvLine, DatasetFile } from "@domain/models/dataset-file";
 import { SemaphoreManager } from "@domain/services/thread/semaphore-manager";
 import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
 import { AbrgMessage } from "@domain/types/messages/abrg-message";
-import { DownloadDbController } from "@interface/database/download-db-controller";
+import { DownloadDbController } from "@drivers/database/download-db-controller";
 import { StreamLimiter } from "@domain/services/transformations/stream-limitter";
 import csvParser from "csv-parser";
 import fs from 'node:fs';
@@ -54,11 +54,12 @@ export const loadCsvToDatabase = async (params : Required<{
 
   const semaphoreIdx = getSemaphoreIdx(params.datasetFile, params.semaphore.size);
 
+  const srcStream = fs.createReadStream(params.datasetFile.csvFile.path, {
+    encoding: 'utf-8',
+  });
 
   await pipeline(
-    fs.createReadStream(params.datasetFile.csvFile.path, {
-      encoding: 'utf-8',
-    }),
+    srcStream,
 
     csvParser({
       skipComments: true,
@@ -73,6 +74,7 @@ export const loadCsvToDatabase = async (params : Required<{
       async write(csvLines: CsvLine[], _, next) {
         // セマフォで同時書き込みの排除
         await params.semaphore.enterAwait(semaphoreIdx);
+        srcStream.pause();
 
         // DBを開く
         const db = await openDb({
@@ -90,6 +92,7 @@ export const loadCsvToDatabase = async (params : Required<{
           });
         }
 
+        srcStream.resume();
         // 書き込みロックを解除
         params.semaphore.leave(semaphoreIdx);
         
