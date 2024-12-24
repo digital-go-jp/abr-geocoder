@@ -31,13 +31,6 @@ import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { PrefLgCode, isPrefLgCode } from '@domain/types/pref-lg-code';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
-import { StatusCodes } from 'http-status-codes';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
-import timers from 'node:timers/promises';
-import { DownloadDiContainer } from './models/download-di-container';
-import { CsvParseTransform } from './transformations/csv-parse-transform';
-import { DownloadTransform } from './transformations/download-transform';
 import { CityAndWardTrieFinder } from '@usecases/geocode/models/city-and-ward-trie-finder';
 import { CountyAndCityTrieFinder } from '@usecases/geocode/models/county-and-city-trie-finder';
 import { KyotoStreetTrieFinder } from '@usecases/geocode/models/kyoto-street-trie-finder';
@@ -47,7 +40,12 @@ import { Tokyo23TownTrieFinder } from '@usecases/geocode/models/tokyo23-town-fin
 import { Tokyo23WardTrieFinder } from '@usecases/geocode/models/tokyo23-ward-trie-finder';
 import { WardAndOazaTrieFinder } from '@usecases/geocode/models/ward-and-oaza-trie-finder';
 import { WardTrieFinder } from '@usecases/geocode/models/ward-trie-finder';
-import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
+import { StatusCodes } from 'http-status-codes';
+import { Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { DownloadDiContainer } from './models/download-di-container';
+import { CsvParseTransform } from './transformations/csv-parse-transform';
+import { DownloadTransform } from './transformations/download-transform';
 
 export type DownloaderOptions = {
   // データベース接続に関する情報
@@ -137,8 +135,7 @@ export class Downloader {
     const downloadTransform = new DownloadTransform({
       container: this.container,
       maxConcurrency: numOfDownloadThreads,
-      maxTasksPerWorker: Math.max(params.concurrentDownloads || 1),
-      highWatermark: 100 * numOfDownloadThreads,
+      maxTasksPerWorker: MAX_CONCURRENT_DOWNLOAD,
     });
 
     // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
@@ -147,12 +144,20 @@ export class Downloader {
       maxConcurrency: numOfCsvParserThreads,
       container: this.container,
       lgCodeFilter,
-      highWatermark: 50 * numOfCsvParserThreads,
     });
 
+    // ダウンロードのバランスを調整
+    let inputCnt = 0;
+    const downloadHighWatermark = MAX_CONCURRENT_DOWNLOAD * numOfDownloadThreads;
+
     // プログレスバーに進捗を出力する
+    const half = downloadHighWatermark >> 1;
     const dst = new CounterWritable<CsvLoadResult>({
       write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
+        const waitingCnt = inputCnt - dst.count;
+        if (waitingCnt === half && srcStream.isPaused()) {
+          srcStream.resume();
+        }
         if (params.progress) {
           params.progress(dst.count, total + 1);
         }
@@ -160,23 +165,25 @@ export class Downloader {
       },
     });
 
-    // メモリを圧迫しないように、処理が滞っているときは streamを一時停止する
-    let pauseCnt = 0;
-    const onPause = () => {
-      pauseCnt++;
-      return !srcStream.isPaused() && srcStream.pause();
-    };
-    const onResume = () => {
-      pauseCnt = Math.max(pauseCnt - 1, 0);
-      return pauseCnt === 0 && srcStream.isPaused() && srcStream.resume();
-    };
-    downloadTransform.on('pause', onPause);
-    downloadTransform.on('resume', onResume);
-    csvParseTransform.on('pause', onPause);
-    csvParseTransform.on('resume', onResume);
-
     await pipeline(
       srcStream,
+      new Transform({
+        objectMode: true,
+        async transform(chunk, _, callback) {
+          inputCnt++;
+
+          const waitingCnt = inputCnt - dst.count;
+          if (waitingCnt < downloadHighWatermark) {
+            return callback(null, chunk);
+          }
+          // メモリを圧迫しないように受け入れを一時停止
+          // 処理済みが追いつくまで、待機する
+          if (!srcStream.isPaused()) {
+            srcStream.pause();
+          }
+          callback(null, chunk);
+        },
+      }),
       downloadTransform,
       csvParseTransform,
       dst,
