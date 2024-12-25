@@ -195,7 +195,6 @@ export const createCache = async (params : CreateCacheTaskParams) => {
 
 export type CreateGeocodeCacheWorkerInitData = {
   diContainer: AbrGeocoderDiContainerParams;
-  isSilentMode: boolean;
 }
 // 作業スレッド
 if (!isMainThread && parentPort) {

@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 import { CsvLine, DatasetFile } from "@domain/models/dataset-file";
-import { SemaphoreManager } from "@domain/services/thread/semaphore-manager";
 import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
 import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import { DownloadDbController } from "@drivers/database/download-db-controller";
@@ -32,27 +31,10 @@ import fs from 'node:fs';
 import { Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-const getSemaphoreIdx = (datasetFile: DatasetFile, size: number): number => {
-  if (datasetFile.type === 'pref' ||
-    datasetFile.type === 'pref_pos' ||
-    datasetFile.type === 'city' ||
-    datasetFile.type === 'city_pos' ||
-    datasetFile.type === 'town' ||
-    datasetFile.type === 'town_pos') {
-    return 0;
-  }
-
-  return (parseInt(datasetFile.lgCode) % (size / 4 - 1)) + 1;
-};
-
 export const loadCsvToDatabase = async (params : Required<{
-  semaphore: SemaphoreManager;
   datasetFile: DatasetFile;
   databaseCtrl: DownloadDbController;
 }>): Promise<void> => {
-  // console.log(`     > ${params.datasetFile.filename}`);
-
-  const semaphoreIdx = getSemaphoreIdx(params.datasetFile, params.semaphore.size);
 
   const srcStream = fs.createReadStream(params.datasetFile.csvFile.path, {
     encoding: 'utf-8',
@@ -72,9 +54,9 @@ export const loadCsvToDatabase = async (params : Required<{
     new Writable({
       objectMode: true,
       async write(csvLines: CsvLine[], _, next) {
-        // セマフォで同時書き込みの排除
-        await params.semaphore.enterAwait(semaphoreIdx);
-        srcStream.pause();
+        if (!srcStream.isPaused()) {
+          srcStream.pause();
+        }
 
         // DBを開く
         const db = await openDb({
@@ -83,18 +65,20 @@ export const loadCsvToDatabase = async (params : Required<{
         });
         
         if (db) {
-          // データを一時テーブルに読み込む
+          // データをテーブルに読み込む
           await params.datasetFile.process({
             lines: csvLines,
             db,
           }).catch((e) => {
             console.error(`error: ${e}`);
           });
+
+          await db.close();
         }
 
-        srcStream.resume();
-        // 書き込みロックを解除
-        params.semaphore.leave(semaphoreIdx);
+        if (srcStream.isPaused()) {
+          srcStream.resume();
+        }
         
         next();
       },

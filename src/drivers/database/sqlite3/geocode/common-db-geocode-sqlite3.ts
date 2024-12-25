@@ -75,7 +75,6 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         c.pref_key,
         p.${DataField.PREF.dbColumn} as pref,
         t.${DataField.CHOME.dbColumn} as chome,
-        p.${DataField.PREF.dbColumn} as pref,
         c.${DataField.CITY.dbColumn} as city,
         c.${DataField.COUNTY.dbColumn} as county,
         c.${DataField.WARD.dbColumn} as ward,

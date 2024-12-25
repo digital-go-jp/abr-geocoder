@@ -53,13 +53,6 @@ export class CsvParseTransform extends Duplex {
       read() {},
     });
 
-    // 4  = Int32Array を使用するため (32 bits = 4 bytes)
-    // 最初の4は、common.sqlite を制御するために用いる。
-    // params.maxConcurrency * 4 は、スレッドごとに割り当てる。
-    // もし全てのスレッドが異なるlgCodeの場合
-    // ブロックする必要がないので、maxConcurrency * 4となる
-    const semaphoreSharedMemory = new SharedArrayBuffer(4 + params.maxConcurrency * 4);
-
     this.csvParsers = new WorkerThreadPool<
       Required<ParseWorkerInitData>,
       DownloadQuery2,
@@ -72,13 +65,12 @@ export class CsvParseTransform extends Duplex {
       maxConcurrency: params.maxConcurrency,
 
       // スレッドごとに割り当てるタスクの数
-      maxTasksPerWorker: 1,
+      maxTasksPerWorker: 5,
 
       // スレッド側に渡すデータ
       // プリミティブな値しか渡せない（インスタンスは渡せない）
       initData: {
         containerParams: params.container.toJSON(),
-        semaphoreSharedMemory,
         lgCodeFilter: Array.from(params.lgCodeFilter),
       },
 
@@ -94,7 +86,7 @@ export class CsvParseTransform extends Duplex {
   }
 
   private closer() {
-    if (!this.receivedFinal || this.runningTasks > 0) {
+    if (!this.receivedFinal || this.runningTasks > 0 || this.closed) {
       return;
     }
     // 全タスクが処理したので終了

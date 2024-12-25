@@ -21,39 +21,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
-import { CACHE_CREATE_PROGRESS_BAR, DOWNLOAD_PROGRESS_BAR } from '@config/progress-bar-formats';
+import { CACHE_CREATE_PROGRESS_BAR } from '@config/progress-bar-formats';
 import { EnvProvider } from '@domain/models/env-provider';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
+import { RegExpEx } from '@domain/services/reg-exp-ex';
+import { removeFiles } from '@domain/services/remove-files';
 import { resolveHome } from '@domain/services/resolve-home';
 import { upwardFileSearch } from '@domain/services/upward-file-search';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
-import { Downloader } from '@usecases/download/download-process';
 import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
 import { createGeocodeCaches } from '@usecases/geocode/services/create-geocode-caches';
 import path from 'node:path';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 
 
-export type DownloadCommandArgv = {
+export type InvalidCacheCommandArgv = {
   abrgDir?: string;
   d?: string;
-  lgCode?: string[];
-  c?: string[];
-  debug?: boolean;
   silent?: boolean;
 };
 
 /**
- * abrg download
- * データセットをダウンロードする
+ * abrg invalid-cache
+ * キャッシュを再作成する
  */
-const downloadCommand: CommandModule = {
-  command: 'download [options]',
-  describe: AbrgMessage.toString(AbrgMessage.CLI_DOWNLOAD_DESC),
+const invalidCacheCommand: CommandModule = {
+  command: 'invalid-cache [options]',
+  describe: AbrgMessage.toString(AbrgMessage.CLI_INVALID_CACHE_DESC),
 
-  builder: (yargs: Argv): Argv<DownloadCommandArgv> => {
+  builder: (yargs: Argv): Argv<InvalidCacheCommandArgv> => {
     return yargs
       .option('abrgDir', {
         alias: 'd',
@@ -62,14 +59,6 @@ const downloadCommand: CommandModule = {
         describe: AbrgMessage.toString(
           AbrgMessage.CLI_COMMON_DATADIR_OPTION,
         ),
-      })
-      .option('lgCode', {
-        alias: 'c',
-        type: 'array',
-        describe: AbrgMessage.toString(
-          AbrgMessage.CLI_DOWNLOAD_TARGET_LGCODES,
-        ),
-        coerce: (lgCode: string | number) => lgCode.toString().split(','),
       })
       .option('debug', {
         type: 'boolean',
@@ -85,15 +74,11 @@ const downloadCommand: CommandModule = {
       });
   },
 
-  handler: async (argv: ArgumentsCamelCase<DownloadCommandArgv>) => {
+  handler: async (argv: ArgumentsCamelCase<InvalidCacheCommandArgv>) => {
     const isSilentMode = argv.silent === true;
 
-    // silent = true のときは、プログレスバーを表示しない
-    const downloadProgressBar = isSilentMode ? undefined : createSingleProgressBar(DOWNLOAD_PROGRESS_BAR);
-    downloadProgressBar?.start(1, 0);
-
     if (argv.debug) {
-      console.time("download");
+      console.time("cache");
     }
 
     // プロジェクトのワークスペースディレクトリ
@@ -125,41 +110,18 @@ const downloadCommand: CommandModule = {
         return 1;
       }
       // バックグラウンドスレッドを用いる
-      // (処理が軽いのでCPUのリソースに余裕があるので、スレッド数を少し増やしておく)
-      return Math.floor(container.env.availableParallelism() * 1.5);
+      return container.env.availableParallelism();
     })();
-
-    // ダウンロードを行う
-    const downloader = new Downloader({
-      cacheDir: path.join(abrgDir, 'cache'),
-      downloadDir: path.join(abrgDir, 'download'),
-      database: {
-        type: 'sqlite3',
-        dataDir: path.join(abrgDir, 'database'),
-      },
-    });
-    await downloader.download({
-      // 進捗状況を知らせるコールバック
-      progress: (current: number, total: number) => {
-        downloadProgressBar?.setTotal(total);
-        downloadProgressBar?.update(current);
-      },
-
-      // ダウンロード対象のlgcode
-      lgCodes: argv.lgCode,
-
-      // 同時ダウンロード数
-      concurrentDownloads: MAX_CONCURRENT_DOWNLOAD,
-
-      // 使用するスレッド数
-      numOfThreads,
-    });
-    downloadProgressBar?.stop();
-
 
     // silent = true のときは、プログレスバーを表示しない
     const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
     cacheProgressBar?.start(1, 0);
+
+    // キャッシュファイルを消す
+    await removeFiles({
+      dir: container.cacheDir,
+      filename: RegExpEx.create(`.*\.abrg2`),
+    });
 
     await createGeocodeCaches({
       container,
@@ -170,12 +132,13 @@ const downloadCommand: CommandModule = {
         cacheProgressBar?.update(current);
       },
     })
+    cacheProgressBar?.update(cacheProgressBar.getTotal());
     cacheProgressBar?.stop();
 
     if (argv.debug) {
-      console.timeEnd("download");
+      console.timeEnd("cache");
     }
   },
 };
 
-export default downloadCommand;
+export default invalidCacheCommand;

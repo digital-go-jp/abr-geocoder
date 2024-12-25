@@ -100,7 +100,7 @@ export class Tokyo23TownTranform extends Transform {
           machiaza_id: searchResult.info.machiaza_id,
           ambiguousCnt: query.ambiguousCnt + searchResult.ambiguousCnt, 
         };
-        if (searchResult.info.machiaza_id.endsWith('000')) {
+        if (searchResult.info.machiaza_id && searchResult.info.machiaza_id.endsWith('000')) {
           params.match_level = MatchLevel.MACHIAZA;
         } else {
           params.match_level = MatchLevel.MACHIAZA_DETAIL;

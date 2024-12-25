@@ -21,12 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export enum DbTableName {
-  PREF = 'pref',
-  CITY = 'city',
-  TOWN = 'town',
-  RSDT_BLK = 'rsdt_blk',
-  RSDT_DSP = 'rsdt_dsp',
-  PARCEL = 'parcel',
-  ZIP_FILES = 'zipFiles',
-}
+
+export const CACHE_CREATE_PROGRESS_BAR = 'caching: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}';
+
+export const DOWNLOAD_PROGRESS_BAR = 'download: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}';
+
+export const GEOCODING_PROGRESS_BAR = 'geocoding: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}';
+
+export type ProgressCallback = (current: number, total: number) => void;

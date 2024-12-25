@@ -23,7 +23,6 @@
  */
 
 import { CsvLoadQuery2, CsvLoadResult, DownloadProcessError, DownloadProcessStatus, isDownloadProcessError } from '@domain/models/download-process-query';
-import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import { ThreadJob } from '@domain/services/thread/thread-task';
 import { DownloadDbController } from '@drivers/database/download-db-controller';
 import fs from 'node:fs';
@@ -33,7 +32,6 @@ import { loadCsvToDatabase } from './load-csv-to-database';
 export class CsvLoadStep2Transform extends Duplex {
   constructor(private readonly params: Required<{
     databaseCtrl: DownloadDbController;
-    semaphore: SemaphoreManager;
   }>) {
     super({
       objectMode: true,
@@ -55,21 +53,38 @@ export class CsvLoadStep2Transform extends Duplex {
       return;
     }
 
-    // DBに取り込んでいる間は、前のステップを止める
-    // (DB取り込みに時間がかかるので、処理データが溜まりメモリを圧迫する)
-    this.pause();
-
     // DBに取り込む
-    for (const fileInfo of job.data.files) {
-      await loadCsvToDatabase({
-        semaphore: this.params.semaphore,
-        datasetFile: fileInfo.datasetFile,
-        databaseCtrl: this.params.databaseCtrl,
-      });
+    let queue = job.data.files;
+    while (queue.length > 0) {
+      const fileInfo = queue.shift()!;
+      try {
+        await loadCsvToDatabase({
+          datasetFile: fileInfo.datasetFile,
+          databaseCtrl: this.params.databaseCtrl,
+        });
+      } catch (e: unknown) {
+        if (e &&
+          typeof e === 'object' &&
+          ('code' in e) &&
+          e.code === 'SQLITE_BUSY'
+        ) {
+          // キューの末尾に追加（先に他のタスクを処理する）
+          setTimeout(() => {
+            queue.push(fileInfo);
+          }, 100);
+          continue;
+        }
+
+        console.error(e);
+        // Re-throw the error
+        throw e;
+      }
     }
 
-    // 処理を再開する
-    this.resume();
+    // 展開したcsvファイルを消す
+    await Promise.all((job as ThreadJob<CsvLoadQuery2>).data.files.map(file => {
+      return fs.promises.unlink(file.csvFile.path);
+    }));
 
     this.push({
       taskId: job.taskId,
@@ -79,11 +94,6 @@ export class CsvLoadStep2Transform extends Duplex {
         status: DownloadProcessStatus.SUCCESS,
       },
     } as ThreadJob<CsvLoadResult>);
-
-    // 展開したcsvファイルを消す
-    await Promise.all((job as ThreadJob<CsvLoadQuery2>).data.files.map(file => {
-      return fs.promises.unlink(file.csvFile.path);
-    }));
 
   }
 }

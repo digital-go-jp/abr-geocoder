@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 import { DEFAULT_FUZZY_CHAR, STDIN_FILEPATH } from '@config/constant-values';
+import { CACHE_CREATE_PROGRESS_BAR, GEOCODING_PROGRESS_BAR } from '@config/progress-bar-formats';
 import { EnvProvider } from '@domain/models/env-provider';
 import { countRequests } from '@domain/services/count-requests';
 import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
@@ -46,10 +47,6 @@ import { Writable } from 'node:stream';
 import streamPromises from 'node:stream/promises';
 import { ArgumentsCamelCase, Argv, CommandModule } from 'yargs';
 
-/**
- * abrg geocode
- * 入力されたファイル、または標準入力から与えられる住所をジオコーディングする
- */
 export type GeocodeCommandArgv = {
   abrgDir?: string; // 'abrgDir' または 'd' はオプショナル
   d?: string; // alias 'd' もオプショナル
@@ -71,7 +68,7 @@ export type GeocodeCommandArgv = {
 
 /**
  * abrg
- * データセットをダウンロードする
+ * 入力されたファイル、または標準入力から与えられる住所をジオコーディングする
  */
 const geocodeCommand: CommandModule = {
   command: '$0 <inputFile> [outputFile] [options]',
@@ -245,12 +242,20 @@ const geocodeCommand: CommandModule = {
       return container.env.availableParallelism();
     })();
 
+    const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
+    cacheProgressBar?.start(1, 0);
+    
     // キャッシュデータの作成と、ファイルからリクエスト数のカウントを並行して行う
     const createCacheTask = createGeocodeCaches({
       container,
-      isSilentMode,
-      numOfThreads,
+      maxConcurrency: numOfThreads,
+      // 進捗状況を知らせるコールバック
+      progress: (current: number, total: number) => {
+        cacheProgressBar?.setTotal(total);
+        cacheProgressBar?.update(current);
+      },
     });
+    cacheProgressBar?.stop();
 
     // ファイルの行数を数える
     const countNumOfLinesTask = (async () => {
@@ -265,10 +270,6 @@ const geocodeCommand: CommandModule = {
       countNumOfLinesTask,
       createCacheTask,
     ])
-
-    // 合計のリクエスト数をセット
-    const geocodeProgressBar = isSilentMode ? undefined : createSingleProgressBar('geocoding: {bar} {percentage}% | {value}/{total} | ETA: {eta_formatted}');
-    geocodeProgressBar?.start(numOfLinesInFiles, 0);
 
     // ジオコーダの作成
     const geocoder = await AbrGeocoder.create({
@@ -285,14 +286,15 @@ const geocodeCommand: CommandModule = {
       highWatermark: numOfThreads * 500,
     });
 
+    // 合計のリクエスト数をセット
+    const geocodeProgressBar = isSilentMode ? undefined : createSingleProgressBar(GEOCODING_PROGRESS_BAR);
+    geocodeProgressBar?.start(numOfLinesInFiles, 0);
+
     // プログレスバーをアップデート
-    let totalPause = 0;
     const streamCounter = new StreamCounter({
       fps: 10,
       callback(current) {
-        geocodeProgressBar?.update(current, {
-          totalPause,
-        });
+        geocodeProgressBar?.update(current);
       },
     });
 
@@ -300,7 +302,6 @@ const geocodeCommand: CommandModule = {
     const lineByLine = new LineByLineTransform();
     const commentFilter = new CommentFilterTransform();
     const onPause = () => {
-      totalPause++;
       return !srcStream.isPaused() && srcStream.pause();
     };
     const onResume = () => {

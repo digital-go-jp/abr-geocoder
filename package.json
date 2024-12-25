@@ -66,7 +66,7 @@
     "typescript-transform-paths": "^3.5.1"
   },
   "dependencies": {
-    "better-sqlite3": "^11.6.0",
+    "better-sqlite3": "11.7.0",
     "buffer-crc32": "^1.0.0",
     "busboy": "^1.6.0",
     "cli-progress": "^3.12.0",

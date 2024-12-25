@@ -72,21 +72,21 @@ export class Sqlite3Wrapper {
        * デフォルト値は -2000（ページ数で設定）ですが、
        * キャッシュを増やすことでパフォーマンスが向上することが多いです。
        */
-      // this.driver.pragma('cache_size = 20000');
+      this.driver.pragma('cache_size = 20000');
 
       /**
        * 一時データの保存先をメモリに指定することで、ディスクアクセスが不要になり、
        * パフォーマンスが向上します。
        * これにより、ソートや結合処理などの際の一時データもメモリに保持されます。
        */
-      // this.driver.pragma('temp_store = MEMORY');
+      this.driver.pragma('temp_store = MEMORY');
 
       /**
        * mmap（メモリマップ）を有効にすると、SQLite はファイル全体をメモリにマップしてアクセスできます。
        * mmap_size を適切な値に設定することで、ディスクからの読み込みが高速化され、
        * 特にランダムアクセスが多い場合に有効です。大きすぎないようにシステムのメモリ状況に合わせて設定するのが理想です。
        */
-      // this.driver.pragma('mmap_size = 268435456'); // 例として 256MB を設定
+      this.driver.pragma('mmap_size = 268435456'); // 例として 256MB を設定
 
       /**
        * read_uncommitted を TRUE に設定すると、トランザクション分離レベルが READ UNCOMMITTED になります。

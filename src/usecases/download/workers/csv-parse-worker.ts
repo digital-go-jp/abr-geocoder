@@ -22,9 +22,8 @@
  * SOFTWARE.
  */
 import { DownloadQuery2, DownloadQueryBase } from '@domain/models/download-process-query';
-import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import { ThreadJob, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
-import { Readable, Writable } from "stream";
+import { Readable, Transform, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
 import { DownloadDiContainer, DownloadDiContainerParams } from '../models/download-di-container';
 import { CsvLoadStep1Transform } from '../steps/csv-load-step1-transform';
@@ -34,7 +33,6 @@ import { DownloadStep2Transform } from '../steps/download-step2-transform';
 export type ParseWorkerInitData = {
   containerParams: DownloadDiContainerParams,
   lgCodeFilter: string[];
-  semaphoreSharedMemory: SharedArrayBuffer;
 };
 
 export const parseOnWorkerThread = (params: Required<{
@@ -53,14 +51,10 @@ export const parseOnWorkerThread = (params: Required<{
     lgCodeFilter: new Set(params.initData.lgCodeFilter),
   });
 
-  // データベース書き込みのためのセマフォ
-  const semaphore = new SemaphoreManager(params.initData.semaphoreSharedMemory);
-
   // データベースに書き込みを行う
   const databaseCtrl = container.database;
   const step4 = new CsvLoadStep2Transform({
     databaseCtrl,
-    semaphore,
   });
 
   const reader = new Readable({

@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
+import { ProgressCallback } from '@config/progress-bar-formats';
 import { CsvLoadResult, DownloadProcessError, DownloadRequest } from '@domain/models/download-process-query';
 import { CounterWritable } from '@domain/services/counter-writable';
 import { createPackageTree } from '@domain/services/create-package-tree';
@@ -41,7 +41,7 @@ import { Tokyo23WardTrieFinder } from '@usecases/geocode/models/tokyo23-ward-tri
 import { WardAndOazaTrieFinder } from '@usecases/geocode/models/ward-and-oaza-trie-finder';
 import { WardTrieFinder } from '@usecases/geocode/models/ward-trie-finder';
 import { StatusCodes } from 'http-status-codes';
-import { Readable, Transform } from 'node:stream';
+import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { DownloadDiContainer } from './models/download-di-container';
 import { CsvParseTransform } from './transformations/csv-parse-transform';
@@ -56,13 +56,11 @@ export type DownloaderOptions = {
   downloadDir: string;
 };
 
-export type DownloadOptionsProgressCallback = (current: number, total: number) => void;
-
 export type DownloadOptions = {
   // ダウンロードするデータの対象を示す都道府県コード
   lgCodes?: string[];
   // 進み具合を示すプログレスのコールバック
-  progress?: DownloadOptionsProgressCallback;
+  progress?: ProgressCallback;
 
   //同時ダウンロード数
   concurrentDownloads: number;
@@ -87,7 +85,9 @@ export class Downloader {
 
     const client = new HttpRequestAdapter({
       hostname: urlObj.hostname,
+      // User-Agent
       userAgent: this.container.env.userAgent,
+      // 同時並行数(すぐに閉じるので1で良い)
       peerMaxConcurrentStreams: 1,
     });
   
@@ -129,11 +129,11 @@ export class Downloader {
 
     // ダウンロード処理を行う
     // 最大6コネクション
-    const numOfDownloadThreads = Math.min(Math.max(Math.floor(params.numOfThreads / 3), 1), 6);
+    const numOfDownloadThreads = Math.min(Math.max(Math.floor(params.numOfThreads / 2), 1), 6);
     const downloadTransform = new DownloadTransform({
       container: this.container,
       maxConcurrency: numOfDownloadThreads,
-      maxTasksPerWorker: MAX_CONCURRENT_DOWNLOAD,
+      maxTasksPerWorker: Math.max(params.concurrentDownloads || 1),
     });
 
     // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
@@ -144,17 +144,10 @@ export class Downloader {
       lgCodeFilter,
     });
 
-    // プログレスバーに進捗を出力する
-    let waitCnt = 0;
+    // 進捗状況をコールバックする
     const dst = new CounterWritable<CsvLoadResult>({
       write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
-        if (params.progress) {
-          params.progress(dst.count, total + 1);
-        }
-        waitCnt--;
-        if (waitCnt <= 2 && !srcStream.isPaused()) {
-          srcStream.resume();
-        }
+        params.progress && params.progress(dst.count, total + 1);
         callback();
       },
     });
@@ -163,16 +156,6 @@ export class Downloader {
 
     await pipeline(
       srcStream,
-      new Transform({
-        objectMode: true,
-        transform(chunk, encoding, callback) {
-          waitCnt++;
-          if (waitCnt > numOfDownloadThreads * 2 && srcStream.isPaused()) {
-            srcStream.pause();
-          }
-          callback(null, chunk);
-        },
-      }),
       downloadTransform,
       csvParseTransform,
       dst,
@@ -181,15 +164,6 @@ export class Downloader {
     });
     await downloadTransform.close();
     await csvParseTransform.close();
-
-    // let cacheCreateProcess = 0;
-    // for (const creater of createDictionaryFileFunctions) {
-    //   await creater(abrDirContainer);
-    //   cacheCreateProcess++;
-    //   if (params.progress) {
-    //     params.progress(dst.count + cacheCreateProcess, total + 1);
-    //   }
-    // }
   }
   
 

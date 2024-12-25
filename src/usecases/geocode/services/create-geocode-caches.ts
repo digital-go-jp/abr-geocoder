@@ -21,8 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { ProgressCallback } from '@config/progress-bar-formats';
 import { AbrAbortController } from '@domain/models/abr-abort-controller';
-import { createSingleProgressBar } from '@domain/services/progress-bars/create-single-progress-bar';
 import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import path from 'node:path';
 import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
@@ -31,16 +31,14 @@ import { createCache, CreateGeocodeCacheWorkerInitData } from './worker/create-g
 
 export const createGeocodeCaches = async ({
   container,
-  numOfThreads = 1,
-  isSilentMode = false,
+  maxConcurrency,
+  progress,
 }: {
   container: AbrGeocoderDiContainer;
-  numOfThreads: number;
-  isSilentMode: boolean;
+  maxConcurrency: number;
+  // 進み具合を示すプログレスのコールバック
+  progress?: ProgressCallback;
 }) => {
-
-  // 初期化する
-  const progressBar = isSilentMode ? undefined : createSingleProgressBar('prepare: {bar} {percentage}% | {value}/{total}');
 
   // LG_CODEの一覧を取得
   const targets: CreateCacheTaskData[] = [
@@ -67,15 +65,18 @@ export const createGeocodeCaches = async ({
     },
   ];
 
+  // 都道府県単位で大字・丁目・小字のキャッシュを作成
   const db = await container.database.openCommonDb();
-  for (const cityInfo of await db.getCityList()) {
+  for (const prefInfo of await db.getPrefList()) {
     targets.push({
       type: 'oaza-cho',
-      lg_code: cityInfo.lg_code,
+      lg_code: prefInfo.lg_code,
     })
   }
+  await db.close();
 
-  progressBar?.start(targets.length, 0);
+  // 進捗状況をコールバック
+  progress && progress(0, targets.length);
 
   // jest で動かしている場合は、メインスレッドで処理する
   if (process.env.JEST_WORKER_ID) {
@@ -97,9 +98,13 @@ export const createGeocodeCaches = async ({
     filename: path.join(__dirname, 'worker', 'create-geocode-caches-worker'),
     initData: {
       diContainer: container.toJSON(),
-      isSilentMode,
     },
-    maxConcurrency: numOfThreads,
+
+    // 複数スレッドで処理
+    maxConcurrency,
+
+    // 複数スレッドで単発で処理したほうが
+    // うまく分散されて早くなるので、maxTasksPerWorker = 1に固定
     maxTasksPerWorker: 1,
     signal: abortCtrl.signal,
   });
@@ -111,7 +116,10 @@ export const createGeocodeCaches = async ({
     for (const task of targets) {
       pool.run(task).then(result => {
         current++;
-        progressBar?.update(current);
+
+        // 進捗状況をコールバック
+        progress && progress(current, targets.length);
+        
         if (!result) {
           reject(`Can not create the cache file for ${task})`);
           return;
@@ -124,7 +132,6 @@ export const createGeocodeCaches = async ({
     }
   });
   
-  progressBar?.stop();
   await pool.close();
   return true;
 };

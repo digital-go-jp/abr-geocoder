@@ -32,6 +32,7 @@ import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
 import { EnvProvider } from '@domain/models/env-provider';
+import invalidCacheCommand from './commands/invalid-cache-command';
 
 // const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 const terminalWidth = 120;
@@ -52,6 +53,7 @@ export const main = async (
     .command(updateCheckCommand)
     .command(downloadCommand)
     .command(geocodeCommand)
+    .command(invalidCacheCommand)
     .command(serveCommand)
     .fail((msg: string, e: Error, yargs: Argv<{}>): void => {
       if (parsedArgs.length <= 2) {

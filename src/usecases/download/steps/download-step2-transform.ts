@@ -81,6 +81,9 @@ export class DownloadStep2Transform extends Duplex {
             .once('finish', resolve);
         });
     }));
+
+    // zipファイルを消去する
+    // await fs.promises.unlink((job as ThreadJob<DownloadQuery2>).data.csvFilePath);
     
     this.push({
       taskId: job.taskId,
