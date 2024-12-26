@@ -46,23 +46,6 @@ export const parseOnWorkerThread = async (params: Required<{
 }>) => {
   const container = new DownloadDiContainer(params.initData.containerParams);
   
-  // const client = new HttpRequestAdapter({
-  //   hostname: container.env.hostname,
-  //   userAgent: container.env.userAgent,
-  //   peerMaxConcurrentStreams: params.initData.maxTasksPerWorker,
-  // });
-
-  // const datasetDb = await container.database.openDatasetDb();
-
-  // // CKANからダウンロードを行う
-  // const step1 = new DownloadStep1Transform({
-  //   client,
-  //   datasetDb,
-  //   downloadDir: container.downloadDir,
-  //   fileShowUrl: container.getFileShowUrl(),
-  //   highWaterMark: params.initData.maxTasksPerWorker,
-  // });
-
   // データベース書き込みのためのセマフォ
   const semaphore = new SemaphoreManager(params.initData.semaphoreSharedMemory);
 
@@ -88,7 +71,6 @@ export const parseOnWorkerThread = async (params: Required<{
     read() {},
   });
   
-
   // メインスレッドに結果を送信する
   const returnTheResult = (job: ThreadJob<DownloadProcessBase>) => {
     const jsonStr = JSON.stringify({
@@ -108,7 +90,6 @@ export const parseOnWorkerThread = async (params: Required<{
   });
   
   reader
-    // .pipe(step1)
     .pipe(new Transform({
       objectMode: true,
       allowHalfOpen: true,

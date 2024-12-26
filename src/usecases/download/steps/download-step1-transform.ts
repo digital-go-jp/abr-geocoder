@@ -192,15 +192,6 @@ export class DownloadStep1Transform extends Duplex {
     );
     const fileCrc32 = await crc32.fromFile(csvFilePath)!;
 
-    // キャッシュに情報を保存する
-    // await this.params.datasetDb.saveUrlCache({
-    //   url: csvMeta.url,
-    //   etag: headResponse.header.eTag,
-    //   last_modified: headResponse.header.lastModified,
-    //   content_length: headResponse.header.contentLength,
-    //   crc32: fileCrc32,
-    // });
-    
     return {
       taskId: job.taskId,
       data: {

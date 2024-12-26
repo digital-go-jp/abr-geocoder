@@ -118,7 +118,7 @@ export class HttpRequestAdapter {
 
   constructor(public readonly options: Required<HttpRequestAdapterOptions>) {
     this.connect();
-    this.timer = setInterval(() => this.sendPing(), 45000);
+    this.timer = setInterval(() => this.sendPing(), 5000);
   }
 
   private sendPing() {

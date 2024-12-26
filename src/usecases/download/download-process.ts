@@ -162,15 +162,10 @@ export class Downloader {
       datasetDb,
     });
 
-    // 処理が遅延してプログレスバーが変化しなくなると止まってしまったように思えてしまうので、
-    // タイマーで定期的に進捗状況をコールバックする
-    const progressTimer = setInterval(() => {
-      params.progress && params.progress(dst.count, total + 1);
-    }, 500);
-
     // 終了したタスク数のカウント
     const dst = new CounterWritable<DownloadResult>({
       write: (_: DownloadResult | DownloadProcessError, __, callback) => {
+        params.progress && params.progress(dst.count, total + 1);
         callback();
       },
     });
@@ -188,7 +183,6 @@ export class Downloader {
     });
     await downloadTransform.close();
     await csvParseTransform.close();
-    clearInterval(progressTimer);
   }
   
   private async createDownloadRequests(downloadTargetLgCodes: Set<string>): Promise<DownloadRequest[]> {

@@ -43,6 +43,7 @@ export type DownloadCommandArgv = {
   c?: string[];
   debug?: boolean;
   silent?: boolean;
+  threads?: number;
 };
 
 /**
@@ -70,6 +71,13 @@ const downloadCommand: CommandModule = {
           AbrgMessage.CLI_DOWNLOAD_TARGET_LGCODES,
         ),
         coerce: (lgCode: string | number) => lgCode.toString().split(','),
+      })
+      .option('threads', {
+        alias: 't',
+        type: 'number',
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_DOWNLOAD_TARGET_LGCODES,
+        ),
       })
       .option('debug', {
         type: 'boolean',
@@ -124,6 +132,12 @@ const downloadCommand: CommandModule = {
         // メインスレッドで処理を行う
         return 1;
       }
+    
+      if (argv.threads && Number.isInteger(argv.threads)) {
+        // スレッド数の指定がある場合は従う
+        return Math.max(Math.floor(argv.threads), 1);
+      }
+
       // バックグラウンドスレッドを用いる
       // (処理が軽いのでCPUのリソースに余裕があるので、スレッド数を少し増やしておく)
       return Math.floor(container.env.availableParallelism() * 1.5);

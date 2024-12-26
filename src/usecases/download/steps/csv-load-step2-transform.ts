@@ -82,19 +82,21 @@ export class CsvLoadStep2Transform extends Duplex {
           ('code' in e) &&
           e.code === 'SQLITE_BUSY'
         ) {
+          this.params.semaphore.leave(lockIdx);
+
           // キューの末尾に追加（先に他のタスクを処理する）
           setTimeout(() => {
             queue.push(fileInfo);
-          }, 100);
+          }, 10 + Math.random() * 200);
           continue;
         }
 
+        this.params.semaphore.leave(lockIdx);
         console.error(e);
         callback(e as Error);
         return;
-      } finally {
-        this.params.semaphore.leave(lockIdx);
       }
+      this.params.semaphore.leave(lockIdx);
     }
 
     // 展開したcsvファイルを消す

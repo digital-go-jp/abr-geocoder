@@ -119,9 +119,10 @@
       ],
       "args": [
         "download",
+        "--threads 1",
+        "-c 210005",
+        "-d ${workspaceFolder}/db",
         "--silent",
-        "-c 131016 033812 082082 122246 122297 213624",
-        "-d ./db"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
