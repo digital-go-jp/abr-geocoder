@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { ProgressCallback } from '@config/progress-bar-formats';
-import { CsvLoadResult, DownloadProcessError, DownloadRequest } from '@domain/models/download-process-query';
+import { DownloadProcessError, DownloadRequest, DownloadResult } from '@domain/models/download-process-query';
 import { CounterWritable } from '@domain/services/counter-writable';
 import { createPackageTree } from '@domain/services/create-package-tree';
 import { DatabaseParams } from '@domain/types/database-params';
@@ -46,6 +46,7 @@ import { pipeline } from 'node:stream/promises';
 import { DownloadDiContainer } from './models/download-di-container';
 import { CsvParseTransform } from './transformations/csv-parse-transform';
 import { DownloadTransform } from './transformations/download-transform';
+import { SaveResourceInfoTransform } from './transformations/save-resource-info-transform';
 
 export type DownloaderOptions = {
   // データベース接続に関する情報
@@ -80,11 +81,10 @@ export class Downloader {
     });
   }
 
-  private async getJSON(url: string) {
-    const urlObj = new URL(url);
+  private async getJSON(url: URL) {
 
     const client = new HttpRequestAdapter({
-      hostname: urlObj.hostname,
+      hostname: url.hostname,
       // User-Agent
       userAgent: this.container.env.userAgent,
       // 同時並行数(すぐに閉じるので1で良い)
@@ -128,26 +128,49 @@ export class Downloader {
     });
 
     // ダウンロード処理を行う
-    // 最大6コネクション
-    const numOfDownloadThreads = Math.min(Math.max(Math.floor(params.numOfThreads / 2), 1), 6);
+    const numOfDownloadThreads = Math.min(Math.max(params.numOfThreads >> 1, 1), 6);
     const downloadTransform = new DownloadTransform({
       container: this.container,
+
+      // スレッド数
       maxConcurrency: numOfDownloadThreads,
+
+      // 1スレッド(1HTTPクライアント)で何ファイル同時並行でダウンロードするか
       maxTasksPerWorker: Math.max(params.concurrentDownloads || 1),
     });
 
     // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
     const numOfCsvParserThreads = Math.max(params.numOfThreads - numOfDownloadThreads, 1);
     const csvParseTransform = new CsvParseTransform({
+      // CSV Parserのスレッド数
       maxConcurrency: numOfCsvParserThreads,
+
+      // DB書き込みを分散ロックするためのセマフォのサイズ
+      // Primary numberであるほうが望ましい
+      // 101で適度に分散されるので、固定しておく
+      semaphoreSize: 101,
+
       container: this.container,
+
+      // ダウンロードするターゲットのLGCode
       lgCodeFilter,
     });
 
-    // 進捗状況をコールバックする
-    const dst = new CounterWritable<CsvLoadResult>({
-      write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
-        params.progress && params.progress(dst.count, total + 1);
+    // zipファイルのメタ情報(ETagとか)を記録するDB
+    const datasetDb = await this.container.database.openDatasetDb();
+    const saveResourceInfoTransform = new SaveResourceInfoTransform({
+      datasetDb,
+    });
+
+    // 処理が遅延してプログレスバーが変化しなくなると止まってしまったように思えてしまうので、
+    // タイマーで定期的に進捗状況をコールバックする
+    const progressTimer = setInterval(() => {
+      params.progress && params.progress(dst.count, total + 1);
+    }, 500);
+
+    // 終了したタスク数のカウント
+    const dst = new CounterWritable<DownloadResult>({
+      write: (_: DownloadResult | DownloadProcessError, __, callback) => {
         callback();
       },
     });
@@ -158,15 +181,16 @@ export class Downloader {
       srcStream,
       downloadTransform,
       csvParseTransform,
+      saveResourceInfoTransform,
       dst,
     ).catch((e: unknown) => {
       console.error(e);
     });
     await downloadTransform.close();
     await csvParseTransform.close();
+    clearInterval(progressTimer);
   }
   
-
   private async createDownloadRequests(downloadTargetLgCodes: Set<string>): Promise<DownloadRequest[]> {
     // レジストリ・カタログサーバーから、パッケージの一覧を取得する
     const packageListUrl = this.container.getPackageListUrl();

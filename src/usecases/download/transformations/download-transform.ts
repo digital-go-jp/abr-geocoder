@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */;
-import { DownloadQueryBase, DownloadRequest, isDownloadProcessError } from '@domain/models/download-process-query';
+import { DownloadProcessStatus, DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
 import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
 import { DownloadWorkerInitData } from '@usecases/download/workers/download-worker';
@@ -104,7 +104,7 @@ export class DownloadTransform extends Duplex {
         const downloadResult = await this.downloader.run(params);
         this.runningTasks--;
 
-        if (isDownloadProcessError(downloadResult)) {
+        if (downloadResult.status === DownloadProcessStatus.ERROR) {
           this.push(downloadResult);
           if (this.runningTasks === 0 && this.receivedFinal) {
             this.push(null);

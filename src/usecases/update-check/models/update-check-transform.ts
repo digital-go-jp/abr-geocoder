@@ -232,11 +232,21 @@ export class UpdateCheckTransform extends Duplex {
     }
 
     // CSVファイルのURLを抽出する
-    const packageInfo = packageResponse.body as unknown as CkanPackageResponse;
-    const csvMeta: CkanResource | undefined = packageInfo.result!.resources
-      .find(x =>
-        x.format.toLowerCase().startsWith('csv'),
-      );
+    const packageInfo = packageResponse.body as unknown as CkanPackageResponse<string>;
+    let csvMeta: CkanResource<URL> | undefined;
+    if (packageInfo && packageInfo.result) {
+      csvMeta = packageInfo.result!.resources
+        .map(x => {
+          return Object.assign(x, {
+            url: new URL(x.url),
+          });
+        })
+        .find(x =>
+          x.format.toLowerCase().startsWith('csv'),
+        );
+    }
+    
+
 
     // CSVがない (予防的なコード)
     if (!csvMeta) {
@@ -244,12 +254,11 @@ export class UpdateCheckTransform extends Duplex {
     }
     
     // URLに対するハッシュ文字列の生成
-    const urlHash = getUrlHash(csvMeta.url);
     // キャッシュを利用できるか確認する
-    const cache = await this.container.urlCacheMgr.readCache({
-      key: urlHash,
-    });
-    if (!cache) {
+    csvMeta.url
+    const datasetDb = await this.container.database.openDatasetDb();
+    const cache = await datasetDb.readUrlCache(csvMeta.url);;
+    if (!cache || !cache.etag) {
       // キャッシュファイルが見つからないので、アップデートが必要
       return true;
     }
@@ -271,9 +280,9 @@ export class UpdateCheckTransform extends Duplex {
     return headResponse.header.statusCode !== StatusCodes.NOT_MODIFIED;
   }
 
-  private getFileShowUrl(packageId: string): string {
+  private getFileShowUrl(packageId: string): URL {
     const fileShowUrl = this.container.getFileShowUrl();
-    return `${fileShowUrl}?id=${packageId}`;
+    return new URL(`${fileShowUrl}?id=${packageId}`);
   }
 
   _final(callback: (error?: Error | null) => void): void {

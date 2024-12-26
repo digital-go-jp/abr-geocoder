@@ -21,17 +21,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export type CkanResource = {
+export type CkanResource<T> = {
   id: string;
   format: string;
   last_modified: string;
   mimetype: string;
-  url: string;
+  url: T;
 };
 
-export type CkanPackageResponse = {
+export type CkanPackageResponse<T> = {
   success: boolean;
   result?: {
-    resources: CkanResource[];
+    resources: CkanResource<T>[];
   }
 };

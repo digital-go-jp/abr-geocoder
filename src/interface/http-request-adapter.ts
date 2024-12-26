@@ -106,7 +106,7 @@ export type HttpRequestAdapterOptions = {
 };
 
 export type GetJsonOptions = {
-  url: string;
+  url: URL;
   headers?: Record<string, string>;
 };
 
@@ -192,7 +192,7 @@ export class HttpRequestAdapter {
   }
 
   public async getText(params: {
-    url: string;
+    url: URL;
     headers?: Record<string, string>;
   }): Promise<StringResponseData> {
     return new Promise<StringResponseData>((
@@ -222,7 +222,7 @@ export class HttpRequestAdapter {
 
 
   public async getBuffer(params: {
-    url: string;
+    url: URL;
     headers?: Record<string, string>;
   }): Promise<BufferResponseData> {
     return new Promise<BufferResponseData>((
@@ -256,7 +256,7 @@ export class HttpRequestAdapter {
     url,
     headers = {},
   }: {
-    url: string;
+    url: URL;
     headers?: Record<string, string>;
   }): Promise<StringResponseData> {
     return new Promise<StringResponseData>((
@@ -286,7 +286,7 @@ export class HttpRequestAdapter {
     url,
     headers = {},
   }: {
-    url: string;
+    url: URL;
     headers?: Record<string, string | undefined>;
   }): Promise<ResponseData> {
     return new Promise<ResponseData>((
@@ -316,20 +316,19 @@ export class HttpRequestAdapter {
     encoding,
     headers = {},
   }: {
-    url: string;
+    url: URL;
     method: 'GET' | 'HEAD';
     encoding: BufferEncoding;
     headers?: Record<string, string | undefined>;
   }): Promise<ResponseData> {
 
-    const urlObj = new URL(url);
     const reqParams = Object.assign(
       headers,
       {
         [http2.constants.HTTP2_HEADER_METHOD]: method.toUpperCase(),
         [http2.constants.HTTP2_HEADER_PATH]: [
-          urlObj.pathname,
-          urlObj.search,
+          url.pathname,
+          url.search,
         ].join(''),
         [http2.constants.HTTP2_HEADER_USER_AGENT]: this.options.userAgent,
       },
@@ -391,12 +390,11 @@ export class HttpRequestAdapter {
     headers = {},
     abortController,
   }: {
-    url: string;
+    url: URL;
     headers?: Record<string, string | undefined>;
     abortController?: AbortController;
   }) {
 
-    const urlObj = new URL(url);
     const requestOptions: ClientSessionRequestOptions = {
       endStream: false,
       signal: abortController?.signal,
@@ -424,8 +422,8 @@ export class HttpRequestAdapter {
       headers,
       {
         [http2.constants.HTTP2_HEADER_PATH]: [
-          urlObj.pathname,
-          urlObj.search,
+          url.pathname,
+          url.search,
         ].join('?'),
         [http2.constants.HTTP2_HEADER_METHOD]: 'GET',
         [http2.constants.HTTP2_HEADER_USER_AGENT]: this.options.userAgent,

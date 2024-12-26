@@ -27,6 +27,8 @@ import { AbrgMessage } from "@domain/types/messages/abrg-message";
 import path from "node:path";
 import { ICommonDbUpdateCheck } from "./common-db";
 import { CommonDbUpdateCheckSqlite3 } from "./sqlite3/update-check/common-db-update-check-sqlite3";
+import { IDatasetDb } from "./dataset-db";
+import { DatasetDbSqlite3 } from "./sqlite3/dataset/dataset-db-sqlite3";
 
 export class UpdateCheckDbController {
   public readonly connectParams: DatabaseParams;
@@ -35,6 +37,23 @@ export class UpdateCheckDbController {
     this.connectParams = params;
   }
 
+  openDatasetDb(): Promise<IDatasetDb> {
+    switch(this.connectParams.type) {
+      case 'sqlite3':
+        return Promise.resolve(new DatasetDbSqlite3({
+          sqliteFilePath: path.join(this.connectParams.dataDir, 'dataset.sqlite'),
+          readonly: false,
+        }));
+      
+      default: {
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
+      }
+    }
+  }
+  
   openCommonDb(): Promise<ICommonDbUpdateCheck> {
     switch(this.connectParams.type) {
       case 'sqlite3':

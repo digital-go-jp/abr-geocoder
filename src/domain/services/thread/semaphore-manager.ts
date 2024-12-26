@@ -36,26 +36,26 @@ export class SemaphoreManager {
       throw new Error("SharedArrayBuffer size must be a multiple of Int32Array element size");
     }
     this.semaphore = new Int32Array(shared);
-    this.size = this.semaphore.byteLength;
+    this.size = this.semaphore.length;  // = this.semaphore.byteLength / 4
   }
 
   async enterAwait(idx: number): Promise<number> {
 
     // idx = idx % this.semaphore.byteLength;
-    idx = idx % this.semaphore.length;
+    idx = idx % this.size;
 
     while (true) {
       if (Atomics.compareExchange(this.semaphore, idx, SemaphoreManager.UNLOCKED, SemaphoreManager.LOCKED) === SemaphoreManager.UNLOCKED) {
         break;
       }
-      await Atomics.waitAsync(this.semaphore, idx, SemaphoreManager.LOCKED);
+      await Atomics.wait(this.semaphore, idx, SemaphoreManager.LOCKED);
     }
     return idx;
   }
 
   leave(idx: number) {
     // idx = idx % this.semaphore.byteLength;
-    idx = idx % this.semaphore.length;
+    idx = idx % this.size;
     
     Atomics.store(this.semaphore, idx, SemaphoreManager.UNLOCKED);
     // Atomics.compareExchange(this.semaphore, idx, SemaphoreManager.LOCKED, SemaphoreManager.UNLOCKED);

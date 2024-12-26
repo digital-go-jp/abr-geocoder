@@ -21,25 +21,50 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DownloadQuery2, DownloadQueryBase } from '@domain/models/download-process-query';
-import { ThreadJob, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
+import { DownloadProcessBase, DownloadProcessError, DownloadProcessSkip, DownloadProcessStatus, DownloadQuery2, DownloadQueryBase } from '@domain/models/download-process-query';
+import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
 import { Readable, Transform, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
 import { DownloadDiContainer, DownloadDiContainerParams } from '../models/download-di-container';
 import { CsvLoadStep1Transform } from '../steps/csv-load-step1-transform';
 import { CsvLoadStep2Transform } from '../steps/csv-load-step2-transform';
 import { DownloadStep2Transform } from '../steps/download-step2-transform';
+import { DownloadStep1Transform } from '../steps/download-step1-transform';
+import { HttpRequestAdapter } from '@interface/http-request-adapter';
+import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 
 export type ParseWorkerInitData = {
   containerParams: DownloadDiContainerParams,
   lgCodeFilter: string[];
+  maxTasksPerWorker: number;
+  semaphoreSharedMemory: SharedArrayBuffer;
 };
 
-export const parseOnWorkerThread = (params: Required<{
+export const parseOnWorkerThread = async (params: Required<{
   port: MessagePort;
   initData: ParseWorkerInitData;
 }>) => {
   const container = new DownloadDiContainer(params.initData.containerParams);
+  
+  // const client = new HttpRequestAdapter({
+  //   hostname: container.env.hostname,
+  //   userAgent: container.env.userAgent,
+  //   peerMaxConcurrentStreams: params.initData.maxTasksPerWorker,
+  // });
+
+  // const datasetDb = await container.database.openDatasetDb();
+
+  // // CKANからダウンロードを行う
+  // const step1 = new DownloadStep1Transform({
+  //   client,
+  //   datasetDb,
+  //   downloadDir: container.downloadDir,
+  //   fileShowUrl: container.getFileShowUrl(),
+  //   highWaterMark: params.initData.maxTasksPerWorker,
+  // });
+
+  // データベース書き込みのためのセマフォ
+  const semaphore = new SemaphoreManager(params.initData.semaphoreSharedMemory);
 
   // ZIPファイルを展開する
   const step2 = new DownloadStep2Transform({
@@ -55,29 +80,57 @@ export const parseOnWorkerThread = (params: Required<{
   const databaseCtrl = container.database;
   const step4 = new CsvLoadStep2Transform({
     databaseCtrl,
+    semaphore,
   });
 
   const reader = new Readable({
     objectMode: true,
     read() {},
   });
+  
 
   // メインスレッドに結果を送信する
+  const returnTheResult = (job: ThreadJob<DownloadProcessBase>) => {
+    const jsonStr = JSON.stringify({
+      taskId: job.taskId,
+      kind: 'result',
+      data: job.data,
+    });
+    params.port.postMessage(jsonStr);
+  };
+
   const dst = new Writable({
     objectMode: true,
-    write(job: ThreadJob<DownloadQueryBase>, _, callback) {
-      const sharedMemory = JSON.stringify({
-        taskId: job.taskId,
-        kind: 'result',
-        data: job.data,
-      });
-      params.port.postMessage(sharedMemory);
-
+    write(job: ThreadJob<DownloadProcessBase>, _, callback) {
+      returnTheResult(job);
       callback();
     },
   });
   
   reader
+    // .pipe(step1)
+    .pipe(new Transform({
+      objectMode: true,
+      allowHalfOpen: true,
+      transform(job: ThreadJobResult<DownloadProcessError | DownloadQuery2 | DownloadProcessSkip>, _, callback) {
+
+        // エラーになったQuery or 変更がないZIPファイルはスキップする
+        if (
+          job.data.status === DownloadProcessStatus.ERROR || 
+          job.data.status === DownloadProcessStatus.SKIP
+        ) {
+          returnTheResult({
+            ...job,
+            kind: 'task',
+          });
+          callback();
+          return;
+        }
+
+        // ダウンロードされたファイル
+        callback(null, job);
+      },
+    }))
     .pipe(step2)
     .pipe(step3)
     .pipe(step4)

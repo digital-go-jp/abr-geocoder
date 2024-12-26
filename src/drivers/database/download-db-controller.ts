@@ -31,6 +31,8 @@ import { RsdtDspDownloadSqlite3 } from "./sqlite3/download/rsdt-dsp-db-download-
 import { Sqlite3Util } from "./sqlite3/sqlite3-util";
 import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
 import { AbrgMessage } from "@domain/types/messages/abrg-message";
+import { IDatasetDb } from "./dataset-db";
+import { DatasetDbSqlite3 } from "./sqlite3/dataset/dataset-db-sqlite3";
 
 export class DownloadDbController {
   private readonly sqlite3Util?: Sqlite3Util;
@@ -52,6 +54,23 @@ export class DownloadDbController {
     }
   }
 
+  openDatasetDb(): Promise<IDatasetDb> {
+    switch(this.connectParams.type) {
+      case 'sqlite3':
+        return Promise.resolve(new DatasetDbSqlite3({
+          sqliteFilePath: path.join(this.connectParams.dataDir, 'dataset.sqlite'),
+          readonly: false,
+        }));
+      
+      default: {
+        throw new AbrgError({
+          messageId: AbrgMessage.NOT_IMPLEMENTED,
+          level: AbrgErrorLevel.ERROR,
+        });
+      }
+    }
+  }
+  
   openCommonDb(): Promise<ICommonDbDownload> {
     switch(this.connectParams.type) {
       case 'sqlite3':

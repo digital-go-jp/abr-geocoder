@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import { DownloadProcessError, DownloadQuery2, DownloadResult, isDownloadProcessError } from '@domain/models/download-process-query';
+import { DownloadQuery2, DownloadResult } from '@domain/models/download-process-query';
 import { ThreadJob } from '@domain/services/thread/thread-task';
 import { ICsvFile } from '@domain/types/download/icsv-file';
 import fs from 'node:fs';
@@ -43,17 +43,10 @@ export class DownloadStep2Transform extends Duplex {
   }
 
   async _write(
-    job: ThreadJob<DownloadQuery2 | DownloadProcessError>,
+    job: ThreadJob<DownloadQuery2>,
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
-    callback();
-    // エラーになったQueryはスキップする
-    if (isDownloadProcessError(job.data)) {
-      this.push(job as ThreadJob<DownloadProcessError>);
-      return;
-    }
-
     const csvFiles: ICsvFile[] = [];
 
     await (new Promise((resolve: (_?: void) => void) => {
@@ -90,10 +83,13 @@ export class DownloadStep2Transform extends Duplex {
       kind: 'task',
       data: {
         csvFiles,
+        urlCache: job.data.urlCache,
         status: 'success',
         dataset: job.data.dataset,
       },
     } as ThreadJob<DownloadResult>);
+
+    callback();
   }
 
 }

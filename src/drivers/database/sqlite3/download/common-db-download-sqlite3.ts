@@ -25,8 +25,9 @@ import { DataField } from "@config/data-field";
 import { DbTableName } from "@config/db-table-name";
 import { TableKeyProvider } from "@domain/services/table-key-provider";
 import { ICommonDbDownload } from "@drivers/database/common-db";
-import { Sqlite3Wrapper } from "@drivers/database/sqlite3/better-sqlite3-wrap";
 import { Statement } from "better-sqlite3";
+import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
+
 export class CommonDbDownloadSqlite3 
   extends Sqlite3Wrapper
   implements ICommonDbDownload {

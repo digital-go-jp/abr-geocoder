@@ -33,6 +33,15 @@ import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
 import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
 
+
+export interface ICommonDbDataset {
+  getLgCodes(): Promise<string[]>;
+  hasPrefRows(): Promise<boolean>;
+  hasCityRows(packageInfo: PackageInfo): Promise<boolean>;
+  hasTownRows(packageInfo: PackageInfo): Promise<boolean>;
+  close(): Promise<void>
+}
+
 export interface ICommonDbUpdateCheck {
   getLgCodes(): Promise<string[]>;
   hasPrefRows(): Promise<boolean>;

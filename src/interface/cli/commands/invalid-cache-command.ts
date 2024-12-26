@@ -123,6 +123,12 @@ const invalidCacheCommand: CommandModule = {
       filename: RegExpEx.create(`.*\.abrg2`),
     });
 
+    // 処理が遅延してプログレスバーが変化しなくなると止まってしまったように思えてしまうので、
+    // タイマーで定期的にETAを更新する
+    const progressTimer = setInterval(() => {
+      cacheProgressBar?.updateETA();
+    }, 1000);
+
     await createGeocodeCaches({
       container,
       maxConcurrency: numOfThreads,
@@ -134,6 +140,7 @@ const invalidCacheCommand: CommandModule = {
     })
     cacheProgressBar?.update(cacheProgressBar.getTotal());
     cacheProgressBar?.stop();
+    clearInterval(progressTimer);
 
     if (argv.debug) {
       console.timeEnd("cache");

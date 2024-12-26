@@ -22,16 +22,21 @@
  * SOFTWARE.
  */
 
-import { CsvLoadQuery2, CsvLoadResult, DownloadProcessError, DownloadProcessStatus, isDownloadProcessError } from '@domain/models/download-process-query';
+import { CsvLoadQuery, DownloadProcessStatus, DownloadResult } from '@domain/models/download-process-query';
 import { ThreadJob } from '@domain/services/thread/thread-task';
 import { DownloadDbController } from '@drivers/database/download-db-controller';
 import fs from 'node:fs';
-import { Duplex, TransformCallback } from 'node:stream';
+import { Duplex, Transform, TransformCallback } from 'node:stream';
 import { loadCsvToDatabase } from './load-csv-to-database';
+import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
+import { DatasetFile } from '@domain/models/dataset-file';
+
+
 
 export class CsvLoadStep2Transform extends Duplex {
   constructor(private readonly params: Required<{
     databaseCtrl: DownloadDbController;
+    semaphore: SemaphoreManager;
   }>) {
     super({
       objectMode: true,
@@ -39,24 +44,33 @@ export class CsvLoadStep2Transform extends Duplex {
       read() {},
     });
   }
+
+  getSemaphoreIdx(datasetFile: DatasetFile): number {
+    if (datasetFile.type === 'pref' ||
+      datasetFile.type === 'pref_pos' ||
+      datasetFile.type === 'city' ||
+      datasetFile.type === 'city_pos' ||
+      datasetFile.type === 'town' ||
+      datasetFile.type === 'town_pos') {
+      return 0;
+    }
+  
+    return (parseInt(datasetFile.lgCode) % (this.params.semaphore.size - 1)) + 1;
+  };
   
   async _write(
-    job: ThreadJob<CsvLoadQuery2 | DownloadProcessError>,
+    job: ThreadJob<CsvLoadQuery>,
     _: BufferEncoding,
     callback: TransformCallback,
   ) {
-
-    callback();
-    // エラーになったQueryはスキップする
-    if (isDownloadProcessError(job.data)) {
-      this.push(job);
-      return;
-    }
 
     // DBに取り込む
     let queue = job.data.files;
     while (queue.length > 0) {
       const fileInfo = queue.shift()!;
+
+      const lockIdx = this.getSemaphoreIdx(fileInfo.datasetFile);
+      await this.params.semaphore.enterAwait(lockIdx);
       try {
         await loadCsvToDatabase({
           datasetFile: fileInfo.datasetFile,
@@ -76,13 +90,15 @@ export class CsvLoadStep2Transform extends Duplex {
         }
 
         console.error(e);
-        // Re-throw the error
-        throw e;
+        callback(e as Error);
+        return;
+      } finally {
+        this.params.semaphore.leave(lockIdx);
       }
     }
 
     // 展開したcsvファイルを消す
-    await Promise.all((job as ThreadJob<CsvLoadQuery2>).data.files.map(file => {
+    await Promise.all((job as ThreadJob<CsvLoadQuery>).data.files.map(file => {
       return fs.promises.unlink(file.csvFile.path);
     }));
 
@@ -92,8 +108,9 @@ export class CsvLoadStep2Transform extends Duplex {
       data: {
         dataset: job.data.dataset,
         status: DownloadProcessStatus.SUCCESS,
+        urlCache: job.data.urlCache,
       },
-    } as ThreadJob<CsvLoadResult>);
-
+    });
+    callback();
   }
 }

@@ -27,6 +27,7 @@ import { PackageInfo } from "@domain/services/parse-package-id";
 import { TableKeyProvider } from "@domain/services/table-key-provider";
 import { ICommonDbUpdateCheck } from "@drivers/database/common-db";
 import { Sqlite3Wrapper } from "@drivers/database/sqlite3/better-sqlite3-wrap";
+
 export class CommonDbUpdateCheckSqlite3 
   extends Sqlite3Wrapper
   implements ICommonDbUpdateCheck {

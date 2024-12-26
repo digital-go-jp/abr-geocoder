@@ -23,7 +23,6 @@
  */
 import { CommonDiContainer } from '@domain/models/common-di-container';
 import { makeDirIfNotExists } from '@domain/services/make-dir-if-not-exists';
-import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { DatabaseParams } from '@domain/types/database-params';
 import { DownloadDbController } from '@drivers/database/download-db-controller';
 
@@ -35,7 +34,6 @@ export type DownloadDiContainerParams = {
 
 export class DownloadDiContainer extends CommonDiContainer {
 
-  public readonly urlCacheMgr: UrlCacheManager;
   public readonly downloadDir: string;
   public readonly database: DownloadDbController;
 
@@ -47,18 +45,16 @@ export class DownloadDiContainer extends CommonDiContainer {
 
     // ダウンロードディレクトリにキャッシュファイルを保存する
     makeDirIfNotExists(params.cacheDir);
-    this.urlCacheMgr = new UrlCacheManager(params.cacheDir);
-
     this.database = new DownloadDbController(params.database);
 
     Object.freeze(this);
   }
 
   getFileShowUrl() {
-    return `https://${this.env.hostname}/rc/api/3/action/package_show`;
+    return new URL(`https://${this.env.hostname}/rc/api/3/action/package_show`);
   }
   getPackageListUrl() {
-    return `https://${this.env.hostname}/rc/api/3/action/package_list`;
+    return new URL(`https://${this.env.hostname}/rc/api/3/action/package_list`);
   }
 
   toJSON(): DownloadDiContainerParams {

@@ -161,16 +161,22 @@ const downloadCommand: CommandModule = {
     const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
     cacheProgressBar?.start(1, 0);
 
+    // 処理が遅延してプログレスバーが変化しなくなると止まってしまったように思えてしまうので、
+    // タイマーで定期的にETAを更新する
+    const progressTimer = setInterval(() => {
+      cacheProgressBar?.updateETA();
+    }, 1000);
+
     await createGeocodeCaches({
       container,
       maxConcurrency: numOfThreads,
       // 進捗状況を知らせるコールバック
-      progress: (current: number, total: number) => {
-        cacheProgressBar?.setTotal(total);
+      progress: (current: number) => {
         cacheProgressBar?.update(current);
       },
     })
     cacheProgressBar?.stop();
+    clearInterval(progressTimer);
 
     if (argv.debug) {
       console.timeEnd("download");
