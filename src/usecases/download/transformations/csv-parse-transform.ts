@@ -150,5 +150,7 @@ export class CsvParseTransform extends Duplex {
   _final(callback: (error?: Error | null) => void): void {
     this.receivedFinal = true;
     callback();
+    // 全てタスクが完了したかをチェック
+    this.closer();
   }
 }
