@@ -113,8 +113,8 @@ const invalidCacheCommand: CommandModule = {
       return container.env.availableParallelism();
     })();
 
-    // silent = true のときは、プログレスバーを表示しない
-    const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
+    // jestで実行時 or silent = true のときは、プログレスバーを表示しない
+    const cacheProgressBar = process.env.JEST_WORKER_ID || isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
     cacheProgressBar?.start(1, 0);
 
     // キャッシュファイルを消す
@@ -125,7 +125,7 @@ const invalidCacheCommand: CommandModule = {
 
     // 処理が遅延してプログレスバーが変化しなくなると止まってしまったように思えてしまうので、
     // タイマーで定期的にETAを更新する
-    const progressTimer = setInterval(() => {
+    const progressTimer = cacheProgressBar && setInterval(() => {
       cacheProgressBar?.updateETA();
     }, 1000);
 
@@ -140,7 +140,9 @@ const invalidCacheCommand: CommandModule = {
     })
     cacheProgressBar?.update(cacheProgressBar.getTotal());
     cacheProgressBar?.stop();
-    clearInterval(progressTimer);
+    if (progressTimer) {
+      clearInterval(progressTimer);
+    }
 
     if (argv.debug) {
       console.timeEnd("cache");

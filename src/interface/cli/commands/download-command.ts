@@ -88,8 +88,8 @@ const downloadCommand: CommandModule = {
   handler: async (argv: ArgumentsCamelCase<DownloadCommandArgv>) => {
     const isSilentMode = argv.silent === true;
 
-    // silent = true のときは、プログレスバーを表示しない
-    const downloadProgressBar = isSilentMode ? undefined : createSingleProgressBar(DOWNLOAD_PROGRESS_BAR);
+    // jestで実行時 or silent = true のときは、プログレスバーを表示しない
+    const downloadProgressBar = process.env.JEST_WORKER_ID || isSilentMode ? undefined : createSingleProgressBar(DOWNLOAD_PROGRESS_BAR);
     downloadProgressBar?.start(1, 0);
 
     if (argv.debug) {
@@ -157,13 +157,13 @@ const downloadCommand: CommandModule = {
     downloadProgressBar?.stop();
 
 
-    // silent = true のときは、プログレスバーを表示しない
-    const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
+    // jestで実行時 or silent = true のときは、プログレスバーを表示しない
+    const cacheProgressBar = process.env.JEST_WORKER_ID || isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
     cacheProgressBar?.start(1, 0);
 
     // 処理が遅延してプログレスバーが変化しなくなると止まってしまったように思えてしまうので、
     // タイマーで定期的にETAを更新する
-    const progressTimer = setInterval(() => {
+    const progressTimer = cacheProgressBar && setInterval(() => {
       cacheProgressBar?.updateETA();
     }, 1000);
 
@@ -176,7 +176,9 @@ const downloadCommand: CommandModule = {
       },
     })
     cacheProgressBar?.stop();
-    clearInterval(progressTimer);
+    if (progressTimer) {
+      clearInterval(progressTimer);
+    }
 
     if (argv.debug) {
       console.timeEnd("download");
