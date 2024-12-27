@@ -44,6 +44,12 @@ const gatheringLgCode = async (targetDir: string): Promise<Set<string>> => {
   // test-dataディレクトリの各jsonファイルから、lg_codeを収集する
   const lgCodes = await gatheringLgCode(path.join(__dirname, 'test-data'));
 
+  // キャッシュの削除
+  await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
+  
+  // Databaseの削除
+  await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
+
   // ダウンロード
   await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${Array.from(lgCodes).join(' ')} -d ${dbPath}`;
 
