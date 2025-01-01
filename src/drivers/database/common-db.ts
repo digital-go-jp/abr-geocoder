@@ -98,11 +98,6 @@ export interface ICommonDbGeocode {
     town_key: number;
     oaza_cho: string;
   }>): Promise<ChomeMachingInfo[]>;
-  getKoazaRows(where: Partial<{
-    city_key: number;
-    oaza_cho: string;
-    chome: string;
-  }>): Promise<KoazaMachingInfo[]>;
   close(): Promise<void>
 }
 

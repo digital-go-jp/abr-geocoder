@@ -255,7 +255,6 @@ const geocodeCommand: CommandModule = {
         cacheProgressBar?.update(current);
       },
     });
-    cacheProgressBar?.stop();
 
     // ファイルの行数を数える
     const countNumOfLinesTask = (async () => {
@@ -269,7 +268,9 @@ const geocodeCommand: CommandModule = {
     const [numOfLinesInFiles, _ignore] = await Promise.all([
       countNumOfLinesTask,
       createCacheTask,
-    ])
+    ]);
+
+    cacheProgressBar?.stop();
 
     // ジオコーダの作成
     const geocoder = await AbrGeocoder.create({

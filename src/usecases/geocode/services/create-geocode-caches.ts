@@ -81,11 +81,17 @@ export const createGeocodeCaches = async ({
   // jest で動かしている場合は、メインスレッドで処理する
   if (process.env.JEST_WORKER_ID) {
     let result: boolean = false;
+    let current = 0;
     for (const task of targets) {
       result = await createCache({
         diContainer: container,
         data: task,
       });
+      current++;
+
+      // 進捗状況をコールバック
+      progress && progress(current, targets.length);
+      
       if (!result) {
         throw `Can not create the cache file for ${task}`;
       }

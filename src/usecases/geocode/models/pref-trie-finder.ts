@@ -30,26 +30,18 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
     makeDirIfNotExists(diContainer.cacheDir);
     const commonDb = await diContainer.database.openCommonDb();
     let genHash = commonDb.getPrefListGeneratorHash();
-    const extension = process.env.JEST_WORKER_ID ? 'debug' : 'abrg2';
 
-    return path.join(diContainer.cacheDir, `pref_${genHash}.${extension}`);
+    return path.join(diContainer.cacheDir, `pref_${genHash}.abrg2`);
   };
 
   static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
     const cacheFilePath = await PrefTrieFinder.getCacheFilePath(task.diContainer);
 
     // 古いキャッシュファイルを削除
-    if (process.env.JEST_WORKER_ID) {
-      await removeFiles({
-        dir: task.diContainer.cacheDir,
-        filename: 'pref_.*\\.debug',
-      });
-    } else {
-      await removeFiles({
-        dir: task.diContainer.cacheDir,
-        filename: 'pref_.*\\.abrg2',
-      });
-    }
+    await removeFiles({
+      dir: task.diContainer.cacheDir,
+      filename: 'pref_.*\\.abrg2',
+    });
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
     const db = await task.diContainer.database.openCommonDb();

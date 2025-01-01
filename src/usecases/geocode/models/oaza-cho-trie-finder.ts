@@ -92,9 +92,8 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
     makeDirIfNotExists(task.diContainer.cacheDir);
     const commonDb = await task.diContainer.database.openCommonDb();
     const genHash = commonDb.getOazaChomesGeneratorHash();
-    const extension = process.env.JEST_WORKER_ID ? 'debug' : 'abrg2';
 
-    return path.join(task.diContainer.cacheDir, `oaza-cho_${genHash}_${task.data.lg_code}.${extension}`);
+    return path.join(task.diContainer.cacheDir, `oaza-cho_${genHash}_${task.data.lg_code}.abrg2`);
   };
 
   static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
@@ -104,17 +103,10 @@ export class OazaChoTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
     const cacheFilePath = await OazaChoTrieFinder.getCacheFilePath(task);
 
     // 古いキャッシュファイルを削除
-    if (process.env.JEST_WORKER_ID) {
-      await removeFiles({
-        dir: task.diContainer.cacheDir,
-        filename: `oaza-cho_[^_]+_${task.data.lg_code}$\\.debug`,
-      });
-    } else {
-      await removeFiles({
-        dir: task.diContainer.cacheDir,
-        filename: `oaza-cho_[^_]+_${task.data.lg_code}$\\.abrg2`,
-      });
-    }
+    await removeFiles({
+      dir: task.diContainer.cacheDir,
+      filename: `oaza-cho_[^_]+_${task.data.lg_code}$\\.abrg2`,
+    });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する

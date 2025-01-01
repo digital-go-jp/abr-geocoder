@@ -165,6 +165,9 @@ export class OazaChomeTransform extends Transform {
           // Queryの情報を使って、条件式を作成
           // ------------------------------------
           const filteredResult = findResults?.filter(result => {
+            if (result.depth === 0) {
+              return false;
+            }
             if (query.pref_key && result.info?.pref_key !== query.pref_key) {
               return false;
             }
@@ -204,16 +207,16 @@ export class OazaChomeTransform extends Transform {
             const info = result.info!;
             let unmatched = result.unmatched;
 
-            if ((info.chome.includes('丁目') || info.oaza_cho.includes('丁目')) &&
+            if (info.chome && (info.chome.includes('丁目') || info.oaza_cho.includes('丁目')) &&
               result.unmatched?.char === DASH) {
               matchedCnt += 1;
               unmatched = trimDashAndSpace(result.unmatched);
             }
-            if (info.oaza_cho.endsWith('町') && unmatched?.char === '町') {
+            if (info.oaza_cho && info.oaza_cho.endsWith('町') && unmatched?.char === '町') {
               unmatched = unmatched.next?.moveToNext();
               matchedCnt += 1;
             }
-            if (info.chome.endsWith('町') && unmatched?.char === '町') {
+            if (info.chome && info.chome.endsWith('町') && unmatched?.char === '町') {
               unmatched = unmatched.next?.moveToNext();
               matchedCnt += 1;
             }

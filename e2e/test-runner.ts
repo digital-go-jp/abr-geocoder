@@ -45,10 +45,10 @@ const gatheringLgCode = async (targetDir: string): Promise<Set<string>> => {
   const lgCodes = await gatheringLgCode(path.join(__dirname, 'test-data'));
 
   // キャッシュの削除
-  await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
+  // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
   
   // Databaseの削除
-  await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
+  // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
 
   // ダウンロード
   await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${Array.from(lgCodes).join(' ')} -d ${dbPath}`;
@@ -65,8 +65,7 @@ const gatheringLgCode = async (targetDir: string): Promise<Set<string>> => {
       }
     })`node ${cliPath} serve -d ${dbPath}`;
 
-    // --runInBand はファイルを1つずつテストするためのオプション
-    await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js --runInBand`
+    await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js`
     controller.abort();
 
     await serverTaskPromise;

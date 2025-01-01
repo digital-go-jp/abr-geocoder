@@ -35,26 +35,18 @@ export class Tokyo23WardTrieFinder extends TrieAddressFinder2<CityMatchingInfo> 
     makeDirIfNotExists(diContainer.cacheDir);
     const commonDb = await diContainer.database.openCommonDb();
     const genHash = commonDb.getTokyo23WardsGeneratorHash();
-    const extension = process.env.JEST_WORKER_ID ? 'debug' : 'abrg2';
 
-    return path.join(diContainer.cacheDir, `tokyo23-ward_${genHash}.${extension}`);
+    return path.join(diContainer.cacheDir, `tokyo23-ward_${genHash}.abrg2`);
   };
 
   static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
     const cacheFilePath = await Tokyo23WardTrieFinder.getCacheFilePath(task.diContainer);
 
     // 古いキャッシュファイルを削除
-    if (process.env.JEST_WORKER_ID) {
-      await removeFiles({
-        dir: task.diContainer.cacheDir,
-        filename: 'tokyo23-ward_.*\\.debug',
-      });
-    } else {
-      await removeFiles({
-        dir: task.diContainer.cacheDir,
-        filename: 'tokyo23-ward_.*\\.abrg2',
-      });
-    }
+    await removeFiles({
+      dir: task.diContainer.cacheDir,
+      filename: 'tokyo23-ward_.*\\.abrg2',
+    });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する

@@ -207,7 +207,6 @@ if (!isMainThread && parentPort) {
     // メインスレッドからメッセージを受け取る
     parentPort.on('message', async (task: string) => {
       const received = JSON.parse(task) as ThreadJob<CreateCacheTaskData> | ThreadPing;
-      (task as unknown) = null;
       switch (received.kind) {
         case 'ping': {
           parentPort.postMessage(JSON.stringify({
