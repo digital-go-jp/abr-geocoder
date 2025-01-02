@@ -185,7 +185,8 @@ const downloadCommand: CommandModule = {
       container,
       maxConcurrency: numOfThreads,
       // 進捗状況を知らせるコールバック
-      progress: (current: number) => {
+      progress: (current: number, total: number) => {
+        cacheProgressBar?.setTotal(total);
         cacheProgressBar?.update(current);
       },
     })
