@@ -128,7 +128,8 @@ export class Downloader {
     });
 
     // ダウンロード処理を行う
-    const numOfDownloadThreads = Math.min(Math.max(params.numOfThreads >> 1, 1), 6);
+    // SQLite書き込み5コアに対して、ダウンロードを1コア、最大で6コアがダウンロードに割り当てる
+    const numOfDownloadThreads = Math.min(Math.max(params.numOfThreads / 5, 1), 6);
     const downloadTransform = new DownloadTransform({
       container: this.container,
 
