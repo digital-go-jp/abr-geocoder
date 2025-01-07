@@ -42,7 +42,7 @@ const gatheringLgCode = async (targetDir: string): Promise<Set<string>> => {
   await $({ stdout: 'inherit', stderr: 'inherit' })`npm run build`;
 
   // test-dataディレクトリの各jsonファイルから、lg_codeを収集する
-  const lgCodes = await gatheringLgCode(path.join(__dirname, 'test-data'));
+  // const lgCodes = await gatheringLgCode(path.join(__dirname, 'test-data'));
 
   // キャッシュの削除
   // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/cache`;
@@ -51,30 +51,21 @@ const gatheringLgCode = async (targetDir: string): Promise<Set<string>> => {
   // await $({ stdout: 'inherit', stderr: 'inherit' })`npx rimraf ${dbPath}/database`;
 
   // ダウンロード
-  await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${Array.from(lgCodes).join(' ')} -d ${dbPath}`;
+  // await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} download -c ${Array.from(lgCodes).join(' ')} -d ${dbPath}`;
 
-  const controller = new AbortController();
-  try {
-    const serverTaskPromise = $({
-      stdout: 'inherit',
-      stderr: 'inherit',
-      cancelSignal: controller.signal,
-      detached: true,
-      env: {
-        USE_HTTP: 'true',
-      }
-    })`node ${cliPath} serve -d ${dbPath}`;
-
-    await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js`
-    controller.abort();
-
-    await serverTaskPromise;
-
-  } catch (error) {
-    if (controller.signal.aborted) {
-      return;
+  $({
+    all: true,
+    detached: true,
+    env: {
+      USE_HTTP: 'true',
     }
-    throw error;
-  }
+  })`node ${cliPath} serve start -d ${dbPath}`;
+
+  // Executes the e2e tests
+  await $({ stdout: 'inherit', stderr: 'inherit' })`npx jest --config ${rootDir}/jest.e2e.config.js`;
+
+  // shutdown
+  await $({ stdout: 'inherit', stderr: 'inherit' })`node ${cliPath} serve stop`;
+
   
 })();

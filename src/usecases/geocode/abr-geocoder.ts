@@ -116,8 +116,8 @@ export class AbrGeocoder {
     });
   }
   
-  close() {
-    this.workerPool.close();
+  async close() {
+    await this.workerPool.close();
   }
 
   static create = async (params: {

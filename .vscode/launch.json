@@ -154,7 +154,7 @@
         "ts-node/register"
       ],
       "args": [
-        "serve",
+        "serve start",
         "--port 80"
       ],
       "console": "integratedTerminal",

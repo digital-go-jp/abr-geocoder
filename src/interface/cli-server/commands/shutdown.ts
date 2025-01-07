@@ -21,29 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { AbrgMessage } from '@domain/types/messages/abrg-message';
-import { Argv, CommandModule } from 'yargs';
-import serveStartCommand from './serve/serve-start-command';
-import serveStopCommand from './serve/serve-stop-command';
+import yargs, { CommandModule } from 'yargs';
+import { extras } from '../extras';
 
 /**
- * abrg serve
- * REST apiサーバーとしてサービスを提供する
+ * abrg serve start
+ * REST APIサーバーとしてサービスを提供する
  */
-export type ServeCommandArgv = {
-};
-
-const serveCommand: CommandModule = {
-  command: 'serve <command>',
-  describe: AbrgMessage.toString(AbrgMessage.CLI_SERVE_DESC),
-
-  builder: (yargs: Argv): Argv<ServeCommandArgv> => {
-    return yargs
-      .command(serveStartCommand)
-      .command(serveStopCommand)
-      .demandCommand(1);
+const ShutdownCommand: CommandModule<{}, extras> = {
+  command: 'shutdown',
+  handler: async (argv: yargs.ArgumentsCamelCase<extras>) => {
+    argv.response.send('shutdown!');
+    await argv.apiServer.shutdown();
+    await argv.cliServer.shutdown();
   },
-  handler: () => {},
 };
 
-export default serveCommand;
+export default ShutdownCommand;

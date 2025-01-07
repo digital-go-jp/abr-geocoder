@@ -85,7 +85,7 @@ export class FakeWorkerThreadPool extends EventEmitter implements IWorkerThreadP
       });
     });
   }
-  close(): void {
+  async close(): Promise<void> {
     this.reader.push(null);
   }
 }

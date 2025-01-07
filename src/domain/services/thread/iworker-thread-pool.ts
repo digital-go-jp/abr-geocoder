@@ -25,5 +25,5 @@ export interface IWorkerThreadPool<TransformData, ReceiveData> {
 
   run(workerData: TransformData): Promise<ReceiveData>;
 
-  close(): void;
+  close(): Promise<void>;
 }

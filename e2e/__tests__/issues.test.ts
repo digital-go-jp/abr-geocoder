@@ -72,4 +72,7 @@ describe('issues', () => {
   test('#203: 町字が二重で追加される', async () => {
     await jsonTestRunner('issue203');
   });
+  test('#209: 町字の漢数字と同じ数字が消える', async () => {
+    await jsonTestRunner('issue209');
+  });
 });
