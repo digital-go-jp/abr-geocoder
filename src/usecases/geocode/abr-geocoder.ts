@@ -214,7 +214,7 @@ export class AbrGeocoder {
       );
     }
 
-    const workerPool = new WorkerThreadPool<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
+    const workerPool = await WorkerThreadPool.create<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
       // 最大何スレッド生成するか
       maxConcurrency: Math.max(1, params.numOfThreads),
 

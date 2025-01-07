@@ -29,6 +29,12 @@ import path from 'node:path';
 import { Duplex, TransformCallback } from 'node:stream';
 import timers from 'node:timers/promises';
 
+export type DownloadTransformOptions = {
+  maxConcurrency: number;
+  maxTasksPerWorker: number;
+  container: DownloadDiContainer;
+};
+
 export class DownloadTransform extends Duplex {
 
   private receivedFinal: boolean = false;
@@ -36,24 +42,27 @@ export class DownloadTransform extends Duplex {
   private abortCtrl = new AbortController();
 
   // ダウンロードを担当するワーカースレッド
-  private downloader: WorkerThreadPool<
+  private downloader!: WorkerThreadPool<
     DownloadWorkerInitData, 
     DownloadRequest,
     DownloadQueryBase
   >;
+  
+  static create = async (params: Required<DownloadTransformOptions>): Promise<DownloadTransform> => {
+    const downloader = new DownloadTransform();
+    await downloader.initAsync(params);
+    return downloader;
+  }
 
-  constructor(params : Required<{
-    maxConcurrency: number;
-    maxTasksPerWorker: number;
-    container: DownloadDiContainer;
-  }>) {
+  private constructor() {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
-
-    this.downloader = new WorkerThreadPool<
+  }
+  private async initAsync(params : Required<DownloadTransformOptions>) {
+    this.downloader = await WorkerThreadPool.create<
       DownloadWorkerInitData, 
       DownloadRequest,
       DownloadQueryBase

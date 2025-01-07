@@ -1158,7 +1158,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
   }
 
   getCityAndWardListGeneratorHash() : string {
-    return crc32Lib.fromString(this.getCityAndWardList.toString());
+    return this.getCityListGeneratorHash();
   }
 
   // -----------------------------------------

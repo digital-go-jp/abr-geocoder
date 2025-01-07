@@ -130,7 +130,7 @@ export class Downloader {
     // ダウンロード処理を行う
     // SQLite書き込み5コアに対して、ダウンロードを1コア、最大で6コアがダウンロードに割り当てる
     const numOfDownloadThreads = Math.min(Math.max(params.numOfThreads / 5, 1), 6);
-    const downloadTransform = new DownloadTransform({
+    const downloadTransform = await DownloadTransform.create({
       container: this.container,
 
       // スレッド数
@@ -142,7 +142,7 @@ export class Downloader {
 
     // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
     const numOfCsvParserThreads = Math.max(params.numOfThreads - numOfDownloadThreads, 1);
-    const csvParseTransform = new CsvParseTransform({
+    const csvParseTransform = await CsvParseTransform.create({
       // CSV Parserのスレッド数
       maxConcurrency: numOfCsvParserThreads,
 

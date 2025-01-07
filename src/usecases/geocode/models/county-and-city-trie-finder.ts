@@ -80,11 +80,11 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo
         }
       } catch (_e: unknown) {
         // Do nothing here
+        if (process.env.JEST_WORKER_ID) {
+          console.log('Creates catch for CountyAndCityTrieFinder', _e);
+        }
       }
 
-      if (process.env.JEST_WORKER_ID) {
-        console.log('Creates catch for CountyAndCityTrieFinder');
-      }
       // 新しく作成
       if (!await CountyAndCityTrieFinder.createDictionaryFile(task)) {
         return;

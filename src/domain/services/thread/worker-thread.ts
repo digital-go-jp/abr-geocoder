@@ -84,6 +84,7 @@ export class WorkerThread<I, T, R> extends Worker {
       const abortListener = () => {
         signal?.removeEventListener('abort', abortListener);
         reject(new Event('abort'));
+        this.terminate();
       };
       signal?.addEventListener('abort', abortListener, {
         once: true,

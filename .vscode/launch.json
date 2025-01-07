@@ -109,6 +109,22 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "e2e test",
+      "program": "${workspaceFolder}/e2e/test-runner.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeArgs": [
+        "--inspect",
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "download command",
       "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
@@ -119,10 +135,8 @@
       ],
       "args": [
         "download",
-        "--threads 1",
         "-c 210005",
         "-d ${workspaceFolder}/db",
-        "--silent",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"

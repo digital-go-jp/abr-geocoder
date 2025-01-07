@@ -60,7 +60,7 @@ export const countRequests = async (filePath: string) => {
   }
 
   // ファイルが大きい時もあるので、バッググラウンドで処理する
-  const pool = new WorkerThreadPool<undefined, string, number>({
+  const pool = await WorkerThreadPool.create<undefined, string, number>({
     filename: __filename,
     initData: undefined,
     maxConcurrency: 1,

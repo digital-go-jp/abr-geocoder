@@ -29,6 +29,13 @@ import path from 'node:path';
 import { Duplex, TransformCallback } from 'node:stream';
 import { ParseWorkerInitData } from '../workers/csv-parse-worker';
 
+export type CsvParseTransformOptions = {
+  maxConcurrency: number;
+  semaphoreSize: number;
+  container: DownloadDiContainer;
+  lgCodeFilter: Set<string>;
+};
+
 export class CsvParseTransform extends Duplex {
 
   private receivedFinal: boolean = false;
@@ -36,23 +43,27 @@ export class CsvParseTransform extends Duplex {
   private readonly abortCtrl = new AbrAbortController();
 
   // ダウンロードされた zip ファイルを展開して、データベースに登録するワーカースレッド
-  private csvParsers: WorkerThreadPool<
+  private csvParsers!: WorkerThreadPool<
     Required<ParseWorkerInitData>,
     DownloadQuery2,
     DownloadProcessBase
   >;
 
-  constructor(params : {
-    maxConcurrency: number;
-    semaphoreSize: number;
-    container: DownloadDiContainer;
-    lgCodeFilter: Set<string>;
-  }) {
+  static readonly create = async (params : Required<CsvParseTransformOptions>): Promise<CsvParseTransform> => {
+    const transform = new CsvParseTransform();
+    await transform.initAsync(params);
+    return transform;
+  }
+
+  private constructor() {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
+  }
+
+  private async initAsync(params : CsvParseTransformOptions) {
 
     // スレッドごとに割り当てるタスクの数
     // (=同時並行でダウンロードするファイルの数)
@@ -62,7 +73,7 @@ export class CsvParseTransform extends Duplex {
     // 最初の4は、common.sqlite を制御するために用いる。
     const semaphoreSharedMemory = new SharedArrayBuffer(4 + Math.max(params.semaphoreSize - 1, 1) * 4);
 
-    this.csvParsers = new WorkerThreadPool<
+    this.csvParsers = await WorkerThreadPool.create<
       Required<ParseWorkerInitData>,
       DownloadQuery2,
       DownloadProcessBase

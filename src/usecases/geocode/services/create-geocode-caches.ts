@@ -76,7 +76,9 @@ export const createGeocodeCaches = async ({
   await db.close();
 
   // 進捗状況をコールバック
-  progress && progress(0, targets.length);
+  if (progress) {
+    progress(0, targets.length);
+  }
 
   // jest で動かしている場合は、メインスレッドで処理する
   if (process.env.JEST_WORKER_ID) {
@@ -100,7 +102,7 @@ export const createGeocodeCaches = async ({
   }
   const abortCtrl = new AbrAbortController();
   
-  const pool = new WorkerThreadPool<CreateGeocodeCacheWorkerInitData, CreateCacheTaskData, CreateCacheResult>({
+  const pool = await WorkerThreadPool.create<CreateGeocodeCacheWorkerInitData, CreateCacheTaskData, CreateCacheResult>({
     filename: path.join(__dirname, 'worker', 'create-geocode-caches-worker'),
     initData: {
       diContainer: container.toJSON(),

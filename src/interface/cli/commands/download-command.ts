@@ -170,7 +170,6 @@ const downloadCommand: CommandModule = {
     });
     downloadProgressBar?.stop();
 
-
     // jestで実行時 or silent = true のときは、プログレスバーを表示しない
     const cacheProgressBar = process.env.JEST_WORKER_ID || isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
     cacheProgressBar?.start(1, 0);
