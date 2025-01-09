@@ -79,7 +79,6 @@
         "csv",
         "${workspaceFolder}/.vscode/schools-input.txt",
         "${workspaceFolder}/.vscode/schools-output.csv",
-        "--debug",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

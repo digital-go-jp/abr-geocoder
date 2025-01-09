@@ -175,8 +175,8 @@ export class DownloadStep1Transform extends Duplex {
     }
 
     // サーバーからリソース(zipファイル)をダウンロード
-    const csvFilename = path.basename(csvMeta.url.toString());
-    const csvFilePath = path.join(this.params.downloadDir, csvFilename);
+    const zipFilename = path.basename(csvMeta.url.toString());
+    const zipFilePath = path.join(this.params.downloadDir, zipFilename);
 
     // リソースをダウンロードする
     const src = await this.params.client.getReadableStream({
@@ -184,19 +184,19 @@ export class DownloadStep1Transform extends Duplex {
     });
 
     // ファイルに保存する
-    const dst = fs.createWriteStream(csvFilePath);
+    const dst = fs.createWriteStream(zipFilePath);
 
     await pipeline(
       src,
       dst,
     );
-    const fileCrc32 = await crc32.fromFile(csvFilePath)!;
+    const fileCrc32 = await crc32.fromFile(zipFilePath)!;
 
     return {
       taskId: job.taskId,
       data: {
         dataset: job.data.dataset,
-        csvFilePath,
+        zipFilePath,
         status: DownloadProcessStatus.UNSET,
         urlCache: {
           url: csvMeta.url,

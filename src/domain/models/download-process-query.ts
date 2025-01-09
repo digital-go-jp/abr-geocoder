@@ -79,7 +79,7 @@ export type DownloadProcessError = {
 } & DownloadProcessBase;
 
 export type DownloadQuery2 = {
-  csvFilePath: string;
+  zipFilePath: string;
   noUpdate: boolean;
   urlCache: UrlCache;
   dataset: FileGroupKey;
@@ -89,6 +89,7 @@ export type DownloadResult = {
   csvFiles: ICsvFile[];
   urlCache: UrlCache;
   dataset: FileGroupKey;
+  zipFilePath: string;
 } & DownloadQueryBase;
 
 export type CsvLoadQuery = {
@@ -98,5 +99,6 @@ export type CsvLoadQuery = {
     csvFile: ICsvFile,
     datasetFile: PrefDatasetFile | CityDatasetFile | PrefPosDatasetFile | CityPosDatasetFile | TownDatasetFile | TownPosDatasetFile | RsdtdspBlkFile | RsdtdspBlkPosFile | RsdtDspFile | RsdtDspPosFile | ParcelDatasetFile | ParcelPosDatasetFile
   }[];
+  zipFilePath: string;
   urlCache: UrlCache;
 } & DownloadProcessBase;

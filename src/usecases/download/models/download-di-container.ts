@@ -30,6 +30,8 @@ export type DownloadDiContainerParams = {
   cacheDir: string;
   downloadDir: string;
   database: DatabaseParams;
+
+  keepFiles?: boolean;
 };
 
 export class DownloadDiContainer extends CommonDiContainer {
@@ -50,13 +52,22 @@ export class DownloadDiContainer extends CommonDiContainer {
     Object.freeze(this);
   }
 
+  // ダウンロードしたデータセットファイルを削除しないで残すかどうか
+  get keepFiles(): boolean {
+    return this.params.keepFiles || false;
+  }
+
+  // データセットファイル個別の情報を取得するためのエントリーポイント
   getFileShowUrl() {
     return new URL(`https://${this.env.hostname}/rc/api/3/action/package_show`);
   }
+
+  // データセットの一覧を取得するためのエントリーポイント
   getPackageListUrl() {
     return new URL(`https://${this.env.hostname}/rc/api/3/action/package_list`);
   }
 
+  // JSON形式に変換する
   toJSON(): DownloadDiContainerParams {
     return this.params;
   }

@@ -64,6 +64,7 @@ export const parseOnWorkerThread = async (params: Required<{
   const step4 = new CsvLoadStep2Transform({
     databaseCtrl,
     semaphore,
+    keepFiles: container.keepFiles,
   });
 
   const reader = new Readable({

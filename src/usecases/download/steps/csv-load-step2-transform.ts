@@ -22,22 +22,24 @@
  * SOFTWARE.
  */
 
-import { CsvLoadQuery, DownloadProcessStatus, DownloadResult } from '@domain/models/download-process-query';
+import { DatasetFile } from '@domain/models/dataset-file';
+import { CsvLoadQuery, DownloadProcessStatus } from '@domain/models/download-process-query';
+import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import { ThreadJob } from '@domain/services/thread/thread-task';
 import { DownloadDbController } from '@drivers/database/download-db-controller';
 import fs from 'node:fs';
-import { Duplex, Transform, TransformCallback } from 'node:stream';
+import { Duplex, TransformCallback } from 'node:stream';
 import { loadCsvToDatabase } from './load-csv-to-database';
-import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
-import { DatasetFile } from '@domain/models/dataset-file';
 
-
+export type CsvLoadStep2TransformParams = {
+  databaseCtrl: DownloadDbController;
+  semaphore: SemaphoreManager;
+  keepFiles: boolean;  
+};
 
 export class CsvLoadStep2Transform extends Duplex {
-  constructor(private readonly params: Required<{
-    databaseCtrl: DownloadDbController;
-    semaphore: SemaphoreManager;
-  }>) {
+
+  constructor(private readonly params: Required<CsvLoadStep2TransformParams>) {
     super({
       objectMode: true,
       allowHalfOpen: true,
@@ -64,13 +66,15 @@ export class CsvLoadStep2Transform extends Duplex {
     callback: TransformCallback,
   ) {
 
-    // DBに取り込む
     let queue = job.data.files;
     while (queue.length > 0) {
       const fileInfo = queue.shift()!;
 
+      // LGCodeに基づいてセマフォをロックする
       const lockIdx = this.getSemaphoreIdx(fileInfo.datasetFile);
       await this.params.semaphore.enterAwait(lockIdx);
+
+      // DBに取り込む
       try {
         await loadCsvToDatabase({
           datasetFile: fileInfo.datasetFile,
@@ -91,11 +95,14 @@ export class CsvLoadStep2Transform extends Duplex {
           continue;
         }
 
+        // セマフォのロックを解除する
         this.params.semaphore.leave(lockIdx);
         console.error(e);
         callback(e as Error);
         return;
       }
+
+      // セマフォのロックを解除する
       this.params.semaphore.leave(lockIdx);
     }
 
@@ -104,6 +111,12 @@ export class CsvLoadStep2Transform extends Duplex {
       return fs.promises.unlink(file.csvFile.path);
     }));
 
+    // ダウンロードしたデータセットファイルを消す
+    if (!this.params.keepFiles) {
+      await fs.promises.unlink(job.data.zipFilePath);
+    }
+
+    // 次のステップに情報を渡す
     this.push({
       taskId: job.taskId,
       kind: 'task',

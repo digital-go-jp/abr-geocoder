@@ -23,24 +23,22 @@
  */
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { Argv, CommandModule } from 'yargs';
-import serveStartCommand from './serve/serve-start-command';
-import serveStopCommand from './serve/serve-stop-command';
+import invalidCacheCommand from './debug/invalid-cache-command';
 
 /**
- * abrg serve
- * REST apiサーバーとしてサービスを提供する
+ * abrg debug
+ * 開発に必要なデバッグコマンド
  */
-export type ServeCommandArgv = {
+export type DebugCommandArgv = {
 };
 
-const serveCommand: CommandModule = {
-  command: 'serve <command>',
-  describe: AbrgMessage.toString(AbrgMessage.CLI_SERVE_DESC),
+const debugCommand: CommandModule = {
+  command: 'debug <command>',
+  describe: AbrgMessage.toString(AbrgMessage.CLI_DEBUG_DESC),
 
-  builder: (yargs: Argv): Argv<ServeCommandArgv> => {
+  builder: (yargs: Argv): Argv<DebugCommandArgv> => {
     return yargs
-      .command(serveStartCommand)
-      .command(serveStopCommand)
+      .command(invalidCacheCommand)
       .fail(() => {
         yargs.showHelp();
       });
@@ -48,4 +46,4 @@ const serveCommand: CommandModule = {
   handler: () => {},
 };
 
-export default serveCommand;
+export default debugCommand;

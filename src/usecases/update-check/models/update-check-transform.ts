@@ -59,15 +59,17 @@ export class UpdateCheckTransform extends Duplex {
   async _write(packageInfo: PackageInfo, _: BufferEncoding, callback: TransformCallback) {
     this.numOfRunning++;
     
+    // 処理が溜まっている場合は少し待つ
     while (this.numOfRunning > 200) {
       await timers.setTimeout(50 + Math.random() * 100);
       if (this.numOfRunning <= 100) {
         break;
       }
     }
-    callback(null);
+
     // 並行処理でチェックしたいので、先にCallbackを呼ぶ
     // 結果は push() で次に渡す
+    callback(null);
 
     switch (packageInfo.dataset) {
       case 'pref':
@@ -119,6 +121,7 @@ export class UpdateCheckTransform extends Duplex {
     }
     this.numOfRunning--;
 
+    // 全部終了したかチェック
     if (this.receiveFinal && this.numOfRunning === 0) {
       this.client.close();
       this.push(null);
@@ -245,8 +248,6 @@ export class UpdateCheckTransform extends Duplex {
           x.format.toLowerCase().startsWith('csv'),
         );
     }
-    
-
 
     // CSVがない (予防的なコード)
     if (!csvMeta) {

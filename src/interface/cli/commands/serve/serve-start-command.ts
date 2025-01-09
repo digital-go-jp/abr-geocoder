@@ -41,6 +41,7 @@ export type ServeStartCommandArgv = {
   port?: number; // HTTPサーバーのポート
   commandPort?: number; // CLIサーバーのポート
   commandHost?: string; // CLIサーバーのホスト
+  path?: string; // APIのエンドポイント
 };
 
 /**
@@ -95,6 +96,13 @@ const serveStartCommand: CommandModule = {
           throw new Error(`commandPort : ${port} is invalid`);
         }
         return port;
+      })
+      .option('path', {
+        type: 'string',
+        default: 'geocode',
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_SERVE_GEOCODE_PATH_OPTION,
+        ),
       });
   },
 
@@ -146,7 +154,9 @@ const serveStartCommand: CommandModule = {
         });
         
         // APIサーバー
-        const apiServer = new AbrgApiServer(geocoder);
+        const apiServer = new AbrgApiServer(geocoder, {
+          path: argv.path,
+        });
         const apiPort = argv.port || 3000;
         const apiHost = '0.0.0.0';
         await apiServer.listen(apiPort, apiHost);

@@ -25,7 +25,7 @@
 import { CityDatasetFile } from '@domain/models/city-dataset-file';
 import { CityPosDatasetFile } from '@domain/models/city-pos-dataset-file';
 import { DatasetParams, IDatasetFileMeta } from '@domain/models/dataset-file';
-import { CsvLoadQuery, DownloadProcessError, DownloadProcessSkip, DownloadProcessStatus, DownloadResult } from '@domain/models/download-process-query';
+import { CsvLoadQuery, DownloadResult } from '@domain/models/download-process-query';
 import { ParcelDatasetFile } from '@domain/models/parcel-dataset-file';
 import { ParcelPosDatasetFile } from '@domain/models/parcel-pos-dataset-file';
 import { PrefDatasetFile } from '@domain/models/pref-dataset-file';
@@ -41,7 +41,7 @@ import { ThreadJob } from '@domain/services/thread/thread-task';
 import { ICsvFile } from '@domain/types/download/icsv-file';
 import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
-import { Duplex, Transform, TransformCallback } from 'node:stream';
+import { Duplex, TransformCallback } from 'node:stream';
 
 export class CsvLoadStep1Transform extends Duplex {
 
@@ -69,17 +69,7 @@ export class CsvLoadStep1Transform extends Duplex {
         filepath: csvFile.name,
       })!;
 
-      // if (!fileMeta) {
-      //   return this.push({
-      //     taskId: job.taskId,
-      //     kind: job.kind,
-      //     data: {
-      //       message: `Can not parse the filename "${csvFile.name}"`,
-      //       status: DownloadProcessStatus.ERROR,
-      //       dataset: job.data.dataset,
-      //     }
-      //   } as ThreadJob<DownloadProcessError>);
-      // }
+      // DatasetFileに変換する
       const datasetFile = this.toDataset({
         fileMeta,
         csvFile,
@@ -92,6 +82,7 @@ export class CsvLoadStep1Transform extends Duplex {
       });
     }
     
+    // 次のステップにデータを渡す
     this.push({
       taskId: job.taskId,
       kind: job.kind,
@@ -99,6 +90,7 @@ export class CsvLoadStep1Transform extends Duplex {
         urlCache: job.data.urlCache,
         dataset: job.data.dataset,
         files: results,
+        zipFilePath: job.data.zipFilePath,
       },
     } as ThreadJob<CsvLoadQuery>);
 

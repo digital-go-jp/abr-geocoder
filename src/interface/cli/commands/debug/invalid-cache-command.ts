@@ -43,12 +43,12 @@ export type InvalidCacheCommandArgv = {
 };
 
 /**
- * abrg invalid-cache
+ * abrg debug invalid-cache
  * キャッシュを再作成する
  */
 const invalidCacheCommand: CommandModule = {
   command: 'invalid-cache [options]',
-  describe: AbrgMessage.toString(AbrgMessage.CLI_INVALID_CACHE_DESC),
+  describe: AbrgMessage.toString(AbrgMessage.CLI_DEBUG_INVALID_CACHE_DESC),
 
   builder: (yargs: Argv): Argv<InvalidCacheCommandArgv> => {
     return yargs

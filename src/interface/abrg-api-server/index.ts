@@ -24,15 +24,18 @@
 import { AbrGeocoder } from "@usecases/geocode/abr-geocoder";
 import { StatusCodes } from 'http-status-codes';
 import { MiddlewareNext, Request, Response, Router, Server } from "hyper-express";
-import hexpress from "hyper-express";
 import { OnGeocodeRequest } from "./on-geocode-request";
+
+export type AbrgApiServerOptions = {
+  path?: string;
+}
 
 export class AbrgApiServer extends Server {
 
   // アクセスルーター
   private readonly router: Router = new Router();
   
-  constructor(private readonly geocoder: AbrGeocoder) {
+  constructor(private readonly geocoder: AbrGeocoder, private readonly abrgOptions?: AbrgApiServerOptions) {
     super();
 
     const corsMiddleware = (_: Request, response: Response, next: MiddlewareNext) => {
@@ -50,7 +53,7 @@ export class AbrgApiServer extends Server {
     
     // geocode に対するリクエスト
     const onGeocodeRequest = new OnGeocodeRequest(geocoder);
-    this.router.get('/geocode', (request, response) => {
+    this.router.get(`/${this.abrgOptions?.path || 'geocode'}`, (request, response) => {
       onGeocodeRequest.run(request, response)
         .catch((error: string | Error) => {
           this.onInternalServerError(error, response);

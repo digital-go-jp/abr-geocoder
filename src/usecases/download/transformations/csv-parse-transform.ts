@@ -152,7 +152,7 @@ export class CsvParseTransform extends Duplex {
     } catch (e: unknown) {
 
       console.error(e);
-      this.abortCtrl.abort(new Event(`Can not parse the file: ${[downloadResult.csvFilePath]}`));
+      this.abortCtrl.abort(new Event(`Can not parse the file: ${[downloadResult.zipFilePath]}`));
       
       this.close();
     };

@@ -44,6 +44,7 @@ export type DownloadCommandArgv = {
   debug?: boolean;
   silent?: boolean;
   threads?: number;
+  keep?: boolean;
 };
 
 /**
@@ -76,17 +77,26 @@ const downloadCommand: CommandModule = {
         alias: 't',
         type: 'number',
         describe: AbrgMessage.toString(
-          AbrgMessage.CLI_DOWNLOAD_TARGET_LGCODES,
+          AbrgMessage.CLI_DOWNLOAD_THREADS,
+        ),
+      })
+      .option('keep', {
+        type: 'boolean',
+        default: false,
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_DOWNLOAD_KEEP_OPTION,
         ),
       })
       .option('debug', {
         type: 'boolean',
+        default: false,
         describe: AbrgMessage.toString(
           AbrgMessage.CLI_COMMON_DEBUG_OPTION,
         ),
       })
       .option('silent', {
         type: 'boolean',
+        default: false,
         describe: AbrgMessage.toString(
           AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
@@ -139,8 +149,7 @@ const downloadCommand: CommandModule = {
       }
 
       // バックグラウンドスレッドを用いる
-      // (処理が軽いのでCPUのリソースに余裕があるので、スレッド数を少し増やしておく)
-      return Math.floor(container.env.availableParallelism() * 1.5);
+      return container.env.availableParallelism();
     })();
 
     // ダウンロードを行う
@@ -151,6 +160,7 @@ const downloadCommand: CommandModule = {
         type: 'sqlite3',
         dataDir: path.join(abrgDir, 'database'),
       },
+      keepFiles: argv.keep,
     });
     await downloader.download({
       // 進捗状況を知らせるコールバック

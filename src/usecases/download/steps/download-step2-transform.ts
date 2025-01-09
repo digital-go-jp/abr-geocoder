@@ -50,7 +50,7 @@ export class DownloadStep2Transform extends Duplex {
     const csvFiles: ICsvFile[] = [];
 
     await (new Promise((resolve: (_?: void) => void) => {
-      fs.createReadStream((job as ThreadJob<DownloadQuery2>).data.csvFilePath)
+      fs.createReadStream(job.data.zipFilePath)
         .pipe(unzipper.Parse())
         .on('entry', (entry: unzipper.Entry) => {
           if (entry.type === 'Directory') {
@@ -67,7 +67,7 @@ export class DownloadStep2Transform extends Duplex {
             crc32: entry.vars.crc32,
             contentLength: (entry.vars as unknown as {uncompressedSize: number}).uncompressedSize,
             lastModified: entry.vars.lastModifiedTime,
-            noUpdate: (job as ThreadJob<DownloadQuery2>).data.noUpdate,
+            noUpdate: job.data.noUpdate,
           });
           entry
             .pipe(fs.createWriteStream(dstPath))
@@ -86,6 +86,7 @@ export class DownloadStep2Transform extends Duplex {
         urlCache: job.data.urlCache,
         status: 'success',
         dataset: job.data.dataset,
+        zipFilePath: job.data.zipFilePath,
       },
     } as ThreadJob<DownloadResult>);
 

@@ -55,6 +55,9 @@ export type DownloaderOptions = {
   cacheDir: string;
   // zipファイルをダウンロードするディレクトリ
   downloadDir: string;
+
+  // ダウンロードしたデータセットファイルを削除しないで残すかどうか
+  keepFiles?: boolean;
 };
 
 export type DownloadOptions = {
@@ -78,6 +81,7 @@ export class Downloader {
       cacheDir: params.cacheDir,
       downloadDir: params.downloadDir,
       database: params.database,
+      keepFiles: params.keepFiles || false,
     });
   }
 
