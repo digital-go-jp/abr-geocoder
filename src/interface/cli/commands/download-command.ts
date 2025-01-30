@@ -126,7 +126,7 @@ const downloadCommand: CommandModule = {
       });
     }
 
-    // キャッシュの作成
+    // DIコンテナの作成
     const container = new AbrGeocoderDiContainer({
       cacheDir: path.join(abrgDir, 'cache'),
       database: {
