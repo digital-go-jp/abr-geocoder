@@ -27,7 +27,6 @@ import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
 import { Tokyo23TownTrieFinder } from '../models/tokyo23-town-finder';
-import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class Tokyo23TownTranform extends Transform {

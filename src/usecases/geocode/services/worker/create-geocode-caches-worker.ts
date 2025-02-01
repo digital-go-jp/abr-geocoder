@@ -195,7 +195,7 @@ export const createCache = async (params : CreateCacheTaskParams) => {
 
 export type CreateGeocodeCacheWorkerInitData = {
   diContainer: AbrGeocoderDiContainerParams;
-}
+};
 // 作業スレッド
 if (!isMainThread && parentPort) {
 
@@ -250,7 +250,7 @@ if (!isMainThread && parentPort) {
         }
 
         default:
-          console.error('not implemented')
+          console.error('not implemented');
           throw 'not implemented';
       }
     });

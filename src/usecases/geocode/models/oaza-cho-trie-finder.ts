@@ -8,7 +8,6 @@ import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from "../services/to-hankaku-alpha-num";
 import { toHiragana } from '../services/to-hiragana';
-import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { CharNode } from "./trie/char-node";
 import { TrieAddressFinder2 } from "./trie/trie-finder2";
 import { FileTrieWriter } from "./trie/file-trie-writer";

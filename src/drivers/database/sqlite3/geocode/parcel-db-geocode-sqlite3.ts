@@ -77,7 +77,7 @@ export class ParcelDbGeocodeSqlite3 extends Sqlite3Wrapper implements IParcelDbG
         where = {
           town_key: 0,
           prc_id: '', 
-        }
+        };
       }
 
       const rows = this.prepare<GetParcelRowsOptions, ParcelInfo>(sql).all(where);

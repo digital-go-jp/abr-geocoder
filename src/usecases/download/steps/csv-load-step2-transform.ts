@@ -66,7 +66,7 @@ export class CsvLoadStep2Transform extends Duplex {
     callback: TransformCallback,
   ) {
 
-    let queue = job.data.files;
+    const queue = job.data.files;
     while (queue.length > 0) {
       const fileInfo = queue.shift()!;
 

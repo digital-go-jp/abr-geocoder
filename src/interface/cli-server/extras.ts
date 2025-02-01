@@ -1,4 +1,4 @@
-import { AbrgApiServer } from "@interface/abrg-api-server"
+import { AbrgApiServer } from "@interface/abrg-api-server";
 import { CliServer } from ".";
 import { Request, Response } from "hyper-express";
 

@@ -61,10 +61,10 @@ export class RsdtDspTrieFinder extends TrieAddressFinder2<RsdtDspInfo> {
       const key = [
         row.rsdtblk_key.toString() || '',
         row.rsdt_num || '',
-        row.rsdt_num2 || ''
+        row.rsdt_num2 || '',
       ]
-      .filter(x => x !== '')
-      .join(':');
+        .filter(x => x !== '')
+        .join(':');
       // if (!allows.has(key)) {
       //   continue;
       // }

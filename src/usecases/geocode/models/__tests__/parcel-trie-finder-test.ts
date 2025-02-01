@@ -24,7 +24,7 @@ import { CharNode } from "../trie/char-node";
   });
   await ParcelTrieFinder.createDictionaryFile({
     diContainer: container,
-    lg_code
+    lg_code,
   });
 
   const finderData = await ParcelTrieFinder.loadDataFile({
@@ -47,14 +47,14 @@ import { CharNode } from "../trie/char-node";
       (row.prc_num2 || '').toString().padStart(PARCEL_LENGTH, '0'),
       (row.prc_num3 || '').toString().padStart(PARCEL_LENGTH, '0'),
     ]
-    .join('');
-    let result = finder.find({
+      .join('');
+    const result = finder.find({
       target: CharNode.create(key)!,
       partialMatches: true,
     });
     if (!result) {
       console.log(`${key}`, row);
     }
-  })
+  });
 
 })();

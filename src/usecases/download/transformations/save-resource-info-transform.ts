@@ -9,7 +9,7 @@ export class SaveResourceInfoTransform extends Transform {
   }) {
     super({
       objectMode: true,
-    })
+    });
   }
 
   async _transform(chunk: DownloadProcessBase, _: BufferEncoding, callback: TransformCallback) {

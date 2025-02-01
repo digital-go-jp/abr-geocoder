@@ -170,7 +170,9 @@ export class Downloader {
     // 終了したタスク数のカウント
     const dst = new CounterWritable<DownloadResult>({
       write: (_: DownloadResult | DownloadProcessError, __, callback) => {
-        params.progress && params.progress(dst.count, total + 1);
+        if (params.progress) {
+          params.progress(dst.count, total + 1);
+        }
         callback();
       },
     });

@@ -198,7 +198,7 @@ const downloadCommand: CommandModule = {
         cacheProgressBar?.setTotal(total);
         cacheProgressBar?.update(current);
       },
-    })
+    });
     cacheProgressBar?.stop();
     if (progressTimer) {
       clearInterval(progressTimer);

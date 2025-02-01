@@ -21,16 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { EnvProvider } from "@domain/models/env-provider";
-import { OutputFormat } from "@domain/types/output-format";
-import { SearchTarget } from "@domain/types/search-target";
 import { AbrgApiServer } from "@interface/abrg-api-server";
-import { FormatterProvider } from "@interface/format/formatter-provider";
-import { AbrGeocoder } from "@usecases/geocode/abr-geocoder";
-import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "hyper-express";
-import { CliServer } from ".";
 import yargs from "yargs";
+import { CliServer } from ".";
 import ShutdownCommand from "./commands/shutdown";
 import { extras } from "./extras";
 
@@ -47,7 +41,7 @@ export class OnCommandRequest {
     console.debug('received: ', command);
 
     // yargsに分析させる
-    yargs(command.split(' '))
+    void yargs(command.split(' '))
       .middleware((argv: yargs.ArgumentsCamelCase<{}>) => {
         (argv as yargs.ArgumentsCamelCase<extras>).apiServer = this.apiServer;
         (argv as yargs.ArgumentsCamelCase<extras>).cliServer = this.cliServer;

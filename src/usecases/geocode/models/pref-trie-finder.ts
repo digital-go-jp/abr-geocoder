@@ -29,7 +29,7 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
   private static readonly getCacheFilePath = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
     const commonDb = await diContainer.database.openCommonDb();
-    let genHash = commonDb.getPrefListGeneratorHash();
+    const genHash = commonDb.getPrefListGeneratorHash();
 
     return path.join(diContainer.cacheDir, `pref_${genHash}.abrg2`);
   };
@@ -49,7 +49,7 @@ export class PrefTrieFinder extends TrieAddressFinder2<PrefInfo> {
       return false;
     }
 
-    const rows = await db.getPrefList()
+    const rows = await db.getPrefList();
     const writer = await FileTrieWriter.create(cacheFilePath);
     let i = 0;
     while (i < rows.length) {

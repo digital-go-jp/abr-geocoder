@@ -10,7 +10,7 @@ export type CreateCacheTaskData = {
 export type CreateCacheTaskParams = {
   diContainer: AbrGeocoderDiContainer;
   data: CreateCacheTaskData;
-}
+};
 
 export type CreateCacheResult = {
   result: boolean;

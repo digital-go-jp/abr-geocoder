@@ -21,7 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { getUrlHash } from "@domain/services/get-url-hash";
 import { PackageInfo } from "@domain/services/parse-package-id";
 import { CkanPackageResponse, CkanResource } from "@domain/types/download/ckan-package";
 import { isPrefLgCode } from "@domain/types/pref-lg-code";
@@ -255,10 +254,9 @@ export class UpdateCheckTransform extends Duplex {
     }
     
     // URLに対するハッシュ文字列の生成
-    // キャッシュを利用できるか確認する
-    csvMeta.url
+    // キャッシュを利用できるか確認するcd
     const datasetDb = await this.container.database.openDatasetDb();
-    const cache = await datasetDb.readUrlCache(csvMeta.url);;
+    const cache = await datasetDb.readUrlCache(csvMeta.url);
     if (!cache || !cache.etag) {
       // キャッシュファイルが見つからないので、アップデートが必要
       return true;

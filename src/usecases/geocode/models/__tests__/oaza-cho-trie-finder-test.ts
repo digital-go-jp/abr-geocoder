@@ -1,12 +1,11 @@
 import { AbrGeocoderDiContainer } from "../abr-geocoder-di-container";
-import path from 'node:path';
 import { CharNode } from "../trie/char-node";
 import { removeFiles } from "@domain/services/remove-files";
 import { OazaChoTrieFinder } from "../oaza-cho-trie-finder";
 
 (async () => {
   // const rootDir = path.normalize(path.join(__dirname, '..', '..', '..', '..', '..', 'db));
-  const rootDir = '/Users/maskatsum/.abr-geocoder'
+  const rootDir = '/Users/maskatsum/.abr-geocoder';
 
   const container = new AbrGeocoderDiContainer({
     cacheDir: `${rootDir}/cache`,
@@ -42,7 +41,7 @@ import { OazaChoTrieFinder } from "../oaza-cho-trie-finder";
   // const rows = await dbCtrl.getOazaChomes();
   const rows = [{
     key: "木造大畑座八１",
-  }]
+  }];
   rows.forEach(row => {
     // let key = [
     //   row.oaza_cho || '',
@@ -50,7 +49,7 @@ import { OazaChoTrieFinder } from "../oaza-cho-trie-finder";
     //   row.koaza || '',
     // ].join('');
     
-    let result = finder.find({
+    const result = finder.find({
       target: CharNode.create(OazaChoTrieFinder.normalize(row.key)),
       partialMatches: true,
     });

@@ -1,9 +1,8 @@
 import { removeFiles } from "@domain/services/remove-files";
 import path from 'node:path';
 import { AbrGeocoderDiContainer } from "../abr-geocoder-di-container";
-import { RsdtBlkTrieFinder } from "../rsdt-blk-trie-finder";
-import { CharNode } from "../trie/char-node";
 import { RsdtDspTrieFinder } from "../rsdt-dsp-trie-finder";
+import { CharNode } from "../trie/char-node";
 
 (async () => {
   const rootDir = path.normalize(path.join(__dirname, '..', '..', '..', '..', '..'));
@@ -24,12 +23,12 @@ import { RsdtDspTrieFinder } from "../rsdt-dsp-trie-finder";
   });
   await RsdtDspTrieFinder.createDictionaryFile({
     diContainer: container,
-    lg_code: '012068'
+    lg_code: '012068',
   });
 
   const finderData = await RsdtDspTrieFinder.loadDataFile({
     diContainer: container,
-    lg_code: '012068'
+    lg_code: '012068',
   });
   if (!finderData) {
     throw `can not load the finder data`;
@@ -39,29 +38,21 @@ import { RsdtDspTrieFinder } from "../rsdt-dsp-trie-finder";
     lg_code: '012068',
     createIfNotExists: false,
   });
-  const rows = (await db!.getRsdtDspRows())
-  const allows = new Set([
-    '3017300559:1',
-    '3017300559:2',
-    '3017300559:20',
-  ])
+  const rows = (await db!.getRsdtDspRows());
   rows?.forEach(row => {
     const key = [
       row.rsdtblk_key.toString() || '',
       row.rsdt_num || '',
-      row.rsdt_num2 || ''
+      row.rsdt_num2 || '',
     ]
-    .filter(x => x !== '')
-    .join(':');
-    // if (!allows.has(key)) {
-    //   return;
-    // }
-    let result = finder.find({
+      .filter(x => x !== '')
+      .join(':');
+    const result = finder.find({
       target: CharNode.create(key)!,
     });
     if (result.length === 0) {
       console.log(`${key}`, result);
     }
-  })
+  });
 
 })();

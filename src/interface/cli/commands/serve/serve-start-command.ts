@@ -108,68 +108,68 @@ const serveStartCommand: CommandModule = {
 
   handler: async (argv: ArgumentsCamelCase<ServeStartCommandArgv>) => {
     
-        const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
+    const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
     
-        // ThreadGeocodeTransformで 各スレッドがstdout を使用しようとして、
-        // イベントリスナーを取り合いになるため、以下の警告が発生する模様。
-        // 動作的には問題ないので、 process.stdout.setMaxListeners(0) として警告を殺す。
-        //
-        // (node:62246) MaxListenersExceededWarning: Possible EventEmitter memory leak detected.
-        // 11 unpipe listeners added to [WriteStream]. Use emitter.setMaxListeners() to increase limit
-        process.stdout.setMaxListeners(0);
+    // ThreadGeocodeTransformで 各スレッドがstdout を使用しようとして、
+    // イベントリスナーを取り合いになるため、以下の警告が発生する模様。
+    // 動作的には問題ないので、 process.stdout.setMaxListeners(0) として警告を殺す。
+    //
+    // (node:62246) MaxListenersExceededWarning: Possible EventEmitter memory leak detected.
+    // 11 unpipe listeners added to [WriteStream]. Use emitter.setMaxListeners() to increase limit
+    process.stdout.setMaxListeners(0);
     
-        const rootDir = upwardFileSearch(__dirname, 'build');
-        if (!rootDir) {
-          throw new AbrgError({
-            messageId: AbrgMessage.CANNOT_FIND_THE_ROOT_DIR,
-            level: AbrgErrorLevel.ERROR,
-          });
-        }
+    const rootDir = upwardFileSearch(__dirname, 'build');
+    if (!rootDir) {
+      throw new AbrgError({
+        messageId: AbrgMessage.CANNOT_FIND_THE_ROOT_DIR,
+        level: AbrgErrorLevel.ERROR,
+      });
+    }
         
-        // ジオコーダ作成のためのパラメータ
-        const container = new AbrGeocoderDiContainer({
-          database: {
-            type: 'sqlite3',
-            dataDir: path.join(abrgDir, 'database'),
-          },
-          cacheDir: path.join(abrgDir, 'cache'),
-          debug: EnvProvider.isDebug,
-        });
+    // ジオコーダ作成のためのパラメータ
+    const container = new AbrGeocoderDiContainer({
+      database: {
+        type: 'sqlite3',
+        dataDir: path.join(abrgDir, 'database'),
+      },
+      cacheDir: path.join(abrgDir, 'cache'),
+      debug: EnvProvider.isDebug,
+    });
     
-        // スレッド数を決める
-        const numOfThreads = (() => {
-          if (process.env.JEST_WORKER_ID) {
-            // メインスレッドで処理を行う
-            return 1;
-          }
-          // バックグラウンドスレッドを用いる
-          return container.env.availableParallelism();
-        })();
+    // スレッド数を決める
+    const numOfThreads = (() => {
+      if (process.env.JEST_WORKER_ID) {
+        // メインスレッドで処理を行う
+        return 1;
+      }
+      // バックグラウンドスレッドを用いる
+      return container.env.availableParallelism();
+    })();
     
-        // ジオコーダ
-        const geocoder = await AbrGeocoder.create({
-          container,
-          numOfThreads,
-          isSilentMode: false,
-        });
+    // ジオコーダ
+    const geocoder = await AbrGeocoder.create({
+      container,
+      numOfThreads,
+      isSilentMode: false,
+    });
         
-        // APIサーバー
-        const apiServer = new AbrgApiServer(geocoder, {
-          path: argv.path,
-        });
-        const apiPort = argv.port || 3000;
-        const apiHost = '0.0.0.0';
-        await apiServer.listen(apiPort, apiHost);
-        console.log(`api server: at ${apiHost}:${apiPort}`);
+    // APIサーバー
+    const apiServer = new AbrgApiServer(geocoder, {
+      path: argv.path,
+    });
+    const apiPort = argv.port || 3000;
+    const apiHost = '0.0.0.0';
+    await apiServer.listen(apiPort, apiHost);
+    console.log(`api server: at ${apiHost}:${apiPort}`);
     
-        // コマンドサーバー
-        // API用のポートは公開し、コマンド制御を行うためのポートは原則公開しないことで、セキュリティを担保する。
-        // 将来的には管理画面用のコマンドなどを実装する
-        const commandServer = new CliServer(apiServer);
-        const commandPort = argv.commandPort || CLI_SERVER_PORT;
-        const commandHost = argv.commandHost || '0.0.0.0';
-        await commandServer.listen(commandPort, commandHost);
-        console.log(`command server: at ${commandHost}:${commandPort}`);
+    // コマンドサーバー
+    // API用のポートは公開し、コマンド制御を行うためのポートは原則公開しないことで、セキュリティを担保する。
+    // 将来的には管理画面用のコマンドなどを実装する
+    const commandServer = new CliServer(apiServer);
+    const commandPort = argv.commandPort || CLI_SERVER_PORT;
+    const commandHost = argv.commandHost || '0.0.0.0';
+    await commandServer.listen(commandPort, commandHost);
+    console.log(`command server: at ${commandHost}:${commandPort}`);
   },
 };
 

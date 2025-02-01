@@ -71,7 +71,7 @@ export const createGeocodeCaches = async ({
     targets.push({
       type: 'oaza-cho',
       lg_code: prefInfo.lg_code,
-    })
+    });
   }
   await db.close();
 
@@ -92,7 +92,9 @@ export const createGeocodeCaches = async ({
       current++;
 
       // 進捗状況をコールバック
-      progress && progress(current, targets.length);
+      if (progress) {
+        progress(current, targets.length);
+      }
       
       if (!result) {
         throw `Can not create the cache file for ${task}`;
@@ -126,7 +128,9 @@ export const createGeocodeCaches = async ({
         current++;
 
         // 進捗状況をコールバック
-        progress && progress(current, targets.length);
+        if (progress) {
+          progress(current, targets.length);
+        }
         
         if (!result) {
           reject(`Can not create the cache file for ${task})`);

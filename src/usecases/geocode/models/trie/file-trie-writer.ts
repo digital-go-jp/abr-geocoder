@@ -44,7 +44,7 @@ import {
   TRIE_NODE_SIZE_FIELD,
   TrieHashListNode,
   VERSION_BYTES,
-  WriteTrieNode
+  WriteTrieNode,
 } from './abrg-file-structure';
 import { TrieTreeBuilderBase } from './trie-tree-builder-base';
 
@@ -200,7 +200,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
     trieNode : WriteTrieNode;
   }) {
     if (!trieNode.offset) {
-      console.error(`trieNode.offset is required`)
+      console.error(`trieNode.offset is required`);
       throw `trieNode.offset is required`;
     }
 
@@ -218,7 +218,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
     trieNode : WriteTrieNode;
   }) {
     if (!trieNode.offset) {
-      console.error(`trieNode.offset is required`)
+      console.error(`trieNode.offset is required`);
       throw `trieNode.offset is required`;
     }
 
@@ -386,26 +386,26 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
       //   tailValueList.next = this.trieHashListNodeMap.get(nextOffset)!;
       //   nextOffset = tailValueList.next.offset || 0;
       // } else {
-        // nextOffsetの位置のハッシュリンクを読み込む
-        bytesRead = await this.copyTo(nextOffset, hashLinkNodeBuffer);
-        if (bytesRead < hashLinkNodeBuffer.length) {
-          console.error(`Can not read the hashLinkNode correctly.`)
-          throw `Can not read the hashLinkNode correctly.`;
-        }
-        parentHashOffsetNodeOffset = nextOffset;
+      // nextOffsetの位置のハッシュリンクを読み込む
+      bytesRead = await this.copyTo(nextOffset, hashLinkNodeBuffer);
+      if (bytesRead < hashLinkNodeBuffer.length) {
+        console.error(`Can not read the hashLinkNode correctly.`);
+        throw `Can not read the hashLinkNode correctly.`;
+      }
+      parentHashOffsetNodeOffset = nextOffset;
   
-        // 次のハッシュオフセットノードへのオフセット値
-        nextOffset = hashLinkNodeBuffer.readUInt32BE(HASH_LINK_NODE_NEXT_OFFSET.offset);
-        // 保存されているハッシュ値へのオフセット値
-        storedHashValueOffset = hashLinkNodeBuffer.readUInt32BE(HASH_LINK_NODE_OFFSET_VALUE.offset);
+      // 次のハッシュオフセットノードへのオフセット値
+      nextOffset = hashLinkNodeBuffer.readUInt32BE(HASH_LINK_NODE_NEXT_OFFSET.offset);
+      // 保存されているハッシュ値へのオフセット値
+      storedHashValueOffset = hashLinkNodeBuffer.readUInt32BE(HASH_LINK_NODE_OFFSET_VALUE.offset);
 
-        // リストを構築していく
-        tailValueList.next = {
-          hashValueOffset: storedHashValueOffset,
-          offset: parentHashOffsetNodeOffset,
-          next: undefined,
-        };
-        this.trieHashListNodeMap.set(parentHashOffsetNodeOffset, tailValueList.next);
+      // リストを構築していく
+      tailValueList.next = {
+        hashValueOffset: storedHashValueOffset,
+        offset: parentHashOffsetNodeOffset,
+        next: undefined,
+      };
+      this.trieHashListNodeMap.set(parentHashOffsetNodeOffset, tailValueList.next);
       // }
       // 既に同じハッシュ値へのオフセット値が保存されているか判定
       hasSameHashValueOffset = hasSameHashValueOffset || (storedHashValueOffset === hashValueOffset);
@@ -437,7 +437,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
       hashValueOffset,
       offset: writeOffset,
       next: undefined,
-    }
+    };
     this.trieHashListNodeMap.set(writeOffset, tailValueList.next);
     if (this.debug) {
       console.log(`              (save)${JSON.stringify(headValueList)}`);
@@ -561,7 +561,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
     value: any;
   }) {
     if (!this.header?.trieNodeOffset) {
-      console.error(`Can not find the root node`)
+      console.error(`Can not find the root node`);
       throw `Can not find the root node`;
     }
 
@@ -569,7 +569,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
     await this.semaphore.enterAwait(0);
 
     // 新しいハッシュ値ならファイルに書き込む
-    let hashValueOffset = await this.storeData(value);
+    const hashValueOffset = await this.storeData(value);
 
     // ルートノードの読み取り
     const offset = this.header.trieNodeOffset;
@@ -581,7 +581,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
       this.trieNodeMap.set(offset, rootNode);
     }
     if (!rootNode) {
-      console.error(`Can not find the root node`)
+      console.error(`Can not find the root node`);
       throw `Can not find the root node`;
     }
     
@@ -614,7 +614,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
           // 兄弟ノードを読み込む
           const siblingNode = await this.readTrieNode(task.node.siblingOffset);
           if (!siblingNode) {
-            console.error(`Can not read the sibling node at ${task.node.siblingOffset}`)
+            console.error(`Can not read the sibling node at ${task.node.siblingOffset}`);
             throw `Can not read the sibling node at ${task.node.siblingOffset}`;
           }
           queue.push({
@@ -675,7 +675,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
         // 子ノードがある場合は、子ノードに進む
         childNode = await this.readTrieNode(task.node.childOffset);
         if (!childNode) {
-          console.error(`Cannot load the child node at ${task.node.childOffset}`)
+          console.error(`Cannot load the child node at ${task.node.childOffset}`);
           throw `Cannot load the child node at ${task.node.childOffset}`;
         }
       } else {
@@ -690,7 +690,7 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
         task.node.childOffset = childNode.offset;
         await this.writeChildOffsetFieldOnTrieNode({
           trieNode: task.node,
-        })
+        });
       }
       if (this.debug) {
         console.log(`   [child] ${task.node.name} => ${childNode.name}`);
@@ -712,8 +712,8 @@ export class FileTrieWriter extends TrieTreeBuilderBase {
 
     let hash = FNV_OFFSET_BASIS;
     for (let i = 0; i < data.length; i++) {
-        hash ^= BigInt(data.at(i)!);               // XOR
-        hash = (hash * FNV_PRIME) & BigInt("0xffffffffffffffff"); // 64ビットの範囲内に収める
+      hash ^= BigInt(data.at(i)!);               // XOR
+      hash = (hash * FNV_PRIME) & BigInt("0xffffffffffffffff"); // 64ビットの範囲内に収める
     }
     return hash;
   }

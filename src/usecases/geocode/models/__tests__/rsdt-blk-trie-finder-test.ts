@@ -41,13 +41,13 @@ import { CharNode } from "../trie/char-node";
   });
   const rows = await db?.getBlockNumRows();
   rows?.forEach(row => {
-    let result = finder.find({
+    const result = finder.find({
       target: CharNode.create(`${row.town_key}:${row.blk_num}`)!,
       partialMatches: true,
     });
     if (result.length === 0) {
       console.log(`${row.town_key}:${row.blk_num}`, row);
     }
-  })
+  });
 
 })();

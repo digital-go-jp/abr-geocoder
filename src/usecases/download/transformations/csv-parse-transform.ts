@@ -53,7 +53,7 @@ export class CsvParseTransform extends Duplex {
     const transform = new CsvParseTransform();
     await transform.initAsync(params);
     return transform;
-  }
+  };
 
   private constructor() {
     super({

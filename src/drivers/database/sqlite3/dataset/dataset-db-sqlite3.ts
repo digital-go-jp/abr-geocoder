@@ -31,25 +31,25 @@ import timers from 'node:timers/promises';
 export class DatasetDbSqlite3 
   extends Sqlite3Wrapper
   implements IDatasetDb {
-    async deleteUrlCache(url: URL): Promise<void> {
-      const sql = `
+  async deleteUrlCache(url: URL): Promise<void> {
+    const sql = `
         DELETE FROM
           ${DbTableName.DATASET}
         WHERE
           ${DataField.URL_KEY.dbColumn} = @url_key
       `;
-      await this.createDatasetTable();
+    await this.createDatasetTable();
 
-      this.prepare<{ url_key: string; }, unknown>(sql).run({
-        url_key: TableKeyProvider.getUrlHashKey(url),
-      });
-    }
-    async close(): Promise<void> {
-      this.driver.close();
-    }
+    this.prepare<{ url_key: string; }, unknown>(sql).run({
+      url_key: TableKeyProvider.getUrlHashKey(url),
+    });
+  }
+  async close(): Promise<void> {
+    this.driver.close();
+  }
 
-    async readUrlCache(url: URL): Promise<UrlCache | undefined> {
-      const sql = `
+  async readUrlCache(url: URL): Promise<UrlCache | undefined> {
+    const sql = `
         SELECT
           ${DataField.URL_KEY.dbColumn} as url_key,
           ${DataField.FILE_URL.dbColumn} as url,
@@ -62,17 +62,17 @@ export class DatasetDbSqlite3
         WHERE
           ${DataField.URL_KEY.dbColumn} = @url_key
       `;
-      await this.createDatasetTable();
+    await this.createDatasetTable();
 
-      return Promise.resolve(
-        this.prepare<{ url_key: string; }, UrlCache>(sql).get({
-          url_key: TableKeyProvider.getUrlHashKey(url),
-        })
-      );
-    }
+    return Promise.resolve(
+      this.prepare<{ url_key: string; }, UrlCache>(sql).get({
+        url_key: TableKeyProvider.getUrlHashKey(url),
+      }),
+    );
+  }
 
-    async createDatasetTable() {
-      this.driver.exec(`
+  async createDatasetTable() {
+    this.driver.exec(`
         CREATE TABLE IF NOT EXISTS "${DbTableName.DATASET}" (
           "${DataField.URL_KEY.dbColumn}" TEXT PRIMARY KEY,
           "${DataField.FILE_URL.dbColumn}" TEXT,
@@ -82,11 +82,11 @@ export class DatasetDbSqlite3
           "${DataField.CRC32.dbColumn}" TEXT
         );
       `);
-    }
+  }
   
-    // Datasetテーブルにデータを挿入する
-    async saveUrlCache(urlCache: Omit<UrlCache, 'url_key'>) {
-      const sql = `
+  // Datasetテーブルにデータを挿入する
+  async saveUrlCache(urlCache: Omit<UrlCache, 'url_key'>) {
+    const sql = `
         INSERT INTO ${DbTableName.DATASET} (
           ${DataField.URL_KEY.dbColumn},
           ${DataField.FILE_URL.dbColumn},
@@ -111,32 +111,32 @@ export class DatasetDbSqlite3
           ${DataField.URL_KEY.dbColumn} = @url_key
       `;
   
-      await this.createDatasetTable();
+    await this.createDatasetTable();
       
-      while (true) {
-        try {
-          return await new Promise((resolve: (_?: void) => void) => {
-            this.driver.transaction(() => {
-              const url_key = TableKeyProvider.getUrlHashKey(urlCache.url);
-              this.prepare(sql).run({
-                url_key,
-                url: urlCache.url.toString(),
-                etag: urlCache.etag || '',
-                last_modified: urlCache.last_modified || '',
-                content_length: urlCache.content_length,
-                crc32: urlCache.crc32,
-              });
-              resolve();
-            })();
-          });
-        } catch (e: unknown) {
-          if (e && typeof e === 'object' && 'code' in e && e.code === 'SQLITE_BUSY') {
-            await timers.setTimeout(100);
-          } else {
-            throw e;
-          }
+    while (true) {
+      try {
+        return await new Promise((resolve: (_?: void) => void) => {
+          this.driver.transaction(() => {
+            const url_key = TableKeyProvider.getUrlHashKey(urlCache.url);
+            this.prepare(sql).run({
+              url_key,
+              url: urlCache.url.toString(),
+              etag: urlCache.etag || '',
+              last_modified: urlCache.last_modified || '',
+              content_length: urlCache.content_length,
+              crc32: urlCache.crc32,
+            });
+            resolve();
+          })();
+        });
+      } catch (e: unknown) {
+        if (e && typeof e === 'object' && 'code' in e && e.code === 'SQLITE_BUSY') {
+          await timers.setTimeout(100);
+        } else {
+          throw e;
         }
       }
     }
+  }
   
 }

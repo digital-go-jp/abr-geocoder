@@ -54,7 +54,7 @@ export type TrieFinderResult<T> = {
   depth: number;
   ambiguousCnt: number;
   path: CharNode | undefined;
-}
+};
 
 export type TraverseQuery = {
   next: TraverseQuery | undefined;
@@ -140,7 +140,7 @@ export class TrieAddressFinder2<T> {
     offset += DATA_NODE_NEXT_OFFSET.size;
 
     // データノードのサイズ
-    let nodeSize = this.fileBuffer.readUInt16BE(offset);
+    const nodeSize = this.fileBuffer.readUInt16BE(offset);
     offset += DATA_NODE_SIZE_FIELD.size;
 
     // データに対するハッシュ値

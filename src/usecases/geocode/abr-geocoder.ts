@@ -165,7 +165,7 @@ export class AbrGeocoder {
             type: "oaza-cho",
             lg_code: prefInfo.lg_code as PrefLgCode,
           },
-        }))!)
+        }))!),
       });
     }
 

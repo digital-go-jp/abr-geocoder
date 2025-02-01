@@ -74,7 +74,7 @@ const serveStopCommand: CommandModule = {
     const response = await fetch(`http://${commandHost}:${commandPort}/command`,  {
       method: 'POST',
       headers,
-      body: 'shutdown'
+      body: 'shutdown',
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

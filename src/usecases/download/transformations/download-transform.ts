@@ -52,7 +52,7 @@ export class DownloadTransform extends Duplex {
     const downloader = new DownloadTransform();
     await downloader.initAsync(params);
     return downloader;
-  }
+  };
 
   private constructor() {
     super({

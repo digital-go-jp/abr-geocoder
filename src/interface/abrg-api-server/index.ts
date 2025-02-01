@@ -28,7 +28,7 @@ import { OnGeocodeRequest } from "./on-geocode-request";
 
 export type AbrgApiServerOptions = {
   path?: string;
-}
+};
 
 export class AbrgApiServer extends Server {
 

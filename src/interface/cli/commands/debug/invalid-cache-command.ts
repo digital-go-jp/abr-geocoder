@@ -120,7 +120,7 @@ const invalidCacheCommand: CommandModule = {
     // キャッシュファイルを消す
     await removeFiles({
       dir: container.cacheDir,
-      filename: RegExpEx.create(`.*\.abrg2`),
+      filename: RegExpEx.create(`.*\\.abrg2`),
     });
 
     // 処理が遅延してプログレスバーが変化しなくなると止まってしまったように思えてしまうので、
@@ -137,7 +137,7 @@ const invalidCacheCommand: CommandModule = {
         cacheProgressBar?.setTotal(total);
         cacheProgressBar?.update(current);
       },
-    })
+    });
     cacheProgressBar?.update(cacheProgressBar.getTotal());
     cacheProgressBar?.stop();
     if (progressTimer) {

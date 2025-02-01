@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DownloadProcessBase, DownloadProcessError, DownloadProcessSkip, DownloadProcessStatus, DownloadQuery2, DownloadQueryBase } from '@domain/models/download-process-query';
+import { DownloadProcessBase, DownloadProcessError, DownloadProcessSkip, DownloadProcessStatus, DownloadQuery2 } from '@domain/models/download-process-query';
 import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
 import { Readable, Transform, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
@@ -29,8 +29,6 @@ import { DownloadDiContainer, DownloadDiContainerParams } from '../models/downlo
 import { CsvLoadStep1Transform } from '../steps/csv-load-step1-transform';
 import { CsvLoadStep2Transform } from '../steps/csv-load-step2-transform';
 import { DownloadStep2Transform } from '../steps/download-step2-transform';
-import { DownloadStep1Transform } from '../steps/download-step1-transform';
-import { HttpRequestAdapter } from '@interface/http-request-adapter';
 import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 
 export type ParseWorkerInitData = {

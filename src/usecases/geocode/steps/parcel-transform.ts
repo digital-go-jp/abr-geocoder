@@ -140,7 +140,7 @@ export class ParcelTransform extends Transform {
             lg_code: query.lg_code,
           }),
           prc_id: queryInfo.parcelId, 
-        })
+        });
         
         findResults.forEach(info => {
           anyHit = true;
@@ -246,7 +246,7 @@ export class ParcelTransform extends Transform {
       }
 
       // numOfParcelNumsの数値を取ったらループを抜ける
-      // (〇〇番地△△　の「番地△△」を残す)
+      // (〇〇番地△△ の「番地△△」を残す)
       if (buffer.length === numOfParcelNums) {
         break;
       }

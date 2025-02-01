@@ -1,12 +1,11 @@
 import { removeFiles } from "@domain/services/remove-files";
-import path from 'node:path';
 import { AbrGeocoderDiContainer } from "../../abr-geocoder-di-container";
 import { CityAndWardTrieFinder } from "../../city-and-ward-trie-finder";
 import { CharNode } from "../char-node";
 
 (async () => {
   // const rootDir = path.normalize(path.join(__dirname, '..', '..', '..', '..', '..', 'db'));
-  const rootDir = '/Users/maskatsum/.abr-geocoder'
+  const rootDir = '/Users/maskatsum/.abr-geocoder';
 
   const container = new AbrGeocoderDiContainer({
     cacheDir: `${rootDir}/cache`,

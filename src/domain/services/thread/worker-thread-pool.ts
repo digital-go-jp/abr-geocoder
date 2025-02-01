@@ -116,8 +116,8 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
   static readonly create = async <InitData, TransformData, ReceiveData> (params: WorkerThreadPoolOptions<InitData>): Promise<WorkerThreadPool<InitData, TransformData, ReceiveData>> =>  {
     const pool = new WorkerThreadPool<InitData, TransformData, ReceiveData>(params);
     await pool.initAsync();
-    return pool
-  }
+    return pool;
+  };
 
   private async createWorker(params: {
     filename: string;

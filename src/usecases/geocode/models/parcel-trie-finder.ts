@@ -63,7 +63,7 @@ export class ParcelTrieFinder extends TrieAddressFinder2<ParcelInfo> {
         (row.prc_num2 || '').toString().padStart(PARCEL_LENGTH, '0'),
         (row.prc_num3 || '').toString().padStart(PARCEL_LENGTH, '0'),
       ]
-      .join('');
+        .join('');
 
       await writer.addNode({
         key,

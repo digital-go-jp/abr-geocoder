@@ -75,7 +75,7 @@ export class DownloadStep1Transform extends Duplex {
     const urlStr = [
       this.params.fileShowUrl.origin,
       this.params.fileShowUrl.pathname,
-      `?id=${job.data.packageId}`
+      `?id=${job.data.packageId}`,
     ].join('');
     const packageInfoUrl = new URL(urlStr);
     
@@ -204,7 +204,7 @@ export class DownloadStep1Transform extends Duplex {
           last_modified: headResponse.header.lastModified,
           content_length: headResponse.header.contentLength,
           crc32: fileCrc32,
-        }
+        },
       },
     } as ThreadJobResult<DownloadQuery2>;
   }

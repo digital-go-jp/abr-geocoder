@@ -99,7 +99,7 @@ export class TrieTreeBuilderBase {
         size,
         // position
         position,
-      )
+      );
       return result;
     }
 
@@ -279,7 +279,7 @@ export class TrieTreeBuilderBase {
 
 
 
-  protected async readDataNode(hashValueOffset: number, expectHashValue?: BigInt): Promise<DataNode | undefined> {
+  protected async readDataNode(hashValueOffset: number, expectHashValue?: bigint): Promise<DataNode | undefined> {
     let offset = 0;
     if (hashValueOffset === 0) {
       return undefined;
@@ -290,7 +290,7 @@ export class TrieTreeBuilderBase {
     offset += DATA_NODE_NEXT_OFFSET.size;
 
     // データノードのサイズ
-    let nodeSize = await this.readUInt16BE(offset + hashValueOffset);
+    const nodeSize = await this.readUInt16BE(offset + hashValueOffset);
     offset += DATA_NODE_SIZE_FIELD.size;
 
     // データに対するハッシュ値
@@ -302,7 +302,7 @@ export class TrieTreeBuilderBase {
     }
 
     // 実データ
-    let data = Buffer.alloc(0);
+    const data = Buffer.alloc(0);
     const result: DataNode = {
       data,
       nodeSize,

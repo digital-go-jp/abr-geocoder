@@ -59,7 +59,7 @@ export class RsdtBlkTrieFinder extends TrieAddressFinder2<RsdtBlkInfo> {
       const row = rows[i++];
       const key = [
         row.town_key,
-        row.blk_num
+        row.blk_num,
       ].join(':');
 
       await writer.addNode({

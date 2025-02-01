@@ -64,7 +64,7 @@ export const countRequests = async (filePath: string) => {
     filename: __filename,
     initData: undefined,
     maxConcurrency: 1,
-    maxTasksPerWorker: 1
+    maxTasksPerWorker: 1,
   });
   const total = await pool.run(filePath);
   await pool.close();

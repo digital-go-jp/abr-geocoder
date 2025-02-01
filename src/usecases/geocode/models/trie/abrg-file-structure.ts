@@ -17,7 +17,7 @@ export type DataNode = {
   offset: number;
   nextDataNodeOffset: number;
   next?: DataNode;
-}
+};
 
 export type ReadTrieNode = {
   name: string;

@@ -24,7 +24,7 @@
 import { AMBIGUOUS_RSDT_ADDR_FLG } from "@config/constant-values";
 import { DataField } from "@config/data-field";
 import { DbTableName } from "@config/db-table-name";
-import { RegExpEx } from "@domain/services/reg-exp-ex";
+import crc32Lib from "@domain/services/crc32-lib";
 import { TableKeyProvider } from "@domain/services/table-key-provider";
 import { ChomeMachingInfo } from "@domain/types/geocode/chome-info";
 import { CityInfo, CityMatchingInfo } from "@domain/types/geocode/city-info";
@@ -33,19 +33,13 @@ import { MatchLevel } from "@domain/types/geocode/match-level";
 import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 import { WardMatchingInfo } from "@domain/types/geocode/ward-info";
+import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
 import { PrefLgCode } from "@domain/types/pref-lg-code";
+import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { ICommonDbGeocode } from "../../common-db";
 import { Sqlite3Wrapper } from "../better-sqlite3-wrap";
-import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
-import { CharNode } from "@usecases/geocode/models/trie/char-node";
-import { WardAndOazaMatchingInfo } from "@domain/types/geocode/ward-oaza-info";
-import crc32Lib from "@domain/services/crc32-lib";
 
-type GetKoazaRowsOptions = {
-  city_key: number;
-  oaza_cho: string;
-  chome: string;
-};
 type GetChomeRowsOptions = {
   pref_key: number;
   city_key: number;
@@ -375,7 +369,7 @@ export class CommonDbGeocodeSqlite3 extends Sqlite3Wrapper implements ICommonDbG
         p.${DataField.LG_CODE.dbColumn} = @lg_code
       GROUP BY
         pkey
-    `
+    `;
   }
   
   private getOazaChomesSQL2() {
