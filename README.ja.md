@@ -2,9 +2,10 @@
 
 - [English version](./README.md)
 
-## 🚨 Version 2.0 から Version 2.1 へのアップグレード
+## 🚨 Version 2.1 から Version 2.2 へのアップグレード
 
-- データベースの構造に大きな変更があり下位互換性がないため、`abrgディレクトリ` (デフォルトでは `~/.abr-geocoder`) を削除して、もう一度 `abrg download` を行ってください。
+- `abrg serve`コマンドは、`abrg serve start`と `abrg serve stop`コマンドになりました
+
 
 ## 説明
 
@@ -295,12 +296,12 @@
 
     </details>
 
-## `abrg serve`コマンド
+## `abrg serve start`コマンド
 
   ジオコーダをREST APIサーバーとして起動します。
 
   ```sh
-  abrg serve [options]
+  abrg serve start [options]
   ```
 
   リクエスト方法
@@ -315,7 +316,7 @@
     REST APIサーバーのポート番号を変更します。デフォルトは `3000` です。
 
     ```sh
-    abrg serve -p 8080
+    abrg serve start -p 8080
     ```
   </details>
 
@@ -325,7 +326,7 @@
     データベースを保存するディレクトリを指定します。デフォルトでは `$HOME/.abr-geocoder` です。
 
     ```sh
-    abrg serve  -d (データを保存するディレクトリへのパス)
+    abrg serve start -d (データを保存するディレクトリへのパス)
     ```
   </details>
 
@@ -342,3 +343,11 @@
     | fuzzy       |      | ワイルドカードとして使用する1文字             |
 
   </details>
+
+## `abrg serve stop`コマンド
+
+  ジオコーダをREST APIサーバーを終了します
+
+  ```sh
+  abrg serve stop
+  ```
