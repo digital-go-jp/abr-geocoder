@@ -684,7 +684,7 @@ export class CharNode {
         p = p.next;
       }
       // https://github.com/digital-go-jp/abr-geocoder/issues/210
-      // "千葉県船橋市浜町３丁目３ー１　（株）会　社"で無限ループになる
+      // 無限ループになる
       // 理由は不明。
       if (p === p.next) {
         p.next = undefined;
