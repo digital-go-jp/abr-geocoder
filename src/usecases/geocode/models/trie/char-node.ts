@@ -276,6 +276,8 @@ export class CharNode {
         ignore: node.ignore,
       });
       tail = tail?.next;
+      tail.next = undefined;
+
       node = node.next;
     }
     return root.next!;
@@ -678,8 +680,14 @@ export class CharNode {
         p = p.next;
       }
       p.next = targets.shift();
-      while (p?.next) {
+      while (p?.next && p !== p.next) {
         p = p.next;
+      }
+      // https://github.com/digital-go-jp/abr-geocoder/issues/210
+      // "千葉県船橋市浜町３丁目３ー１　（株）会　社"で無限ループになる
+      // 理由は不明。
+      if (p === p.next) {
+        p.next = undefined;
       }
     }
     return head;
