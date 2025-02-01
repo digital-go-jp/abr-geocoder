@@ -7,48 +7,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "invalid-cache",
+      "name": "geocoding(test.txt)",
       "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
-      "runtimeArgs": [
-        "--trace-warnings",
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "invalid-cache",
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "geocoding | column",
-      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeExecutable" : "${workspaceFolder}/.vscode/debug-with-column.sh",
-      "runtimeArgs": [
-        "--trace-warnings",
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/.vscode/test.txt",
-        "-f simplified",
-        "--silent",
-        "--debug"
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "geocoding | jq",
-      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeExecutable" : "${workspaceFolder}/.vscode/debug-with-jq.sh",
       "runtimeArgs": [
         "--trace-warnings",
         "--require",

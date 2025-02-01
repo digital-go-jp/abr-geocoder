@@ -42,6 +42,7 @@ import { WardTrieFinder } from "./models/ward-trie-finder";
 import { GeocodeWorkerInitData } from "./worker/geocode-worker-init-data";
 import { AbrAbortSignal } from "@domain/models/abr-abort-controller";
 import { PrefLgCode } from "@domain/types/pref-lg-code";
+import { PrefInfo } from "@domain/types/geocode/pref-info";
 
 export class AbrGeocoder {
   private taskHead: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
@@ -127,7 +128,7 @@ export class AbrGeocoder {
     isSilentMode: boolean;
   }) => {
     const db = await params.container.database.openCommonDb();
-    const prefList = await db.getPrefList();
+    const prefList: PrefInfo[] = await db.getPrefList();
 
     // トライ木を作成するために必要な辞書データの読み込み
     const pref = toSharedMemory((await PrefTrieFinder.loadDataFile({

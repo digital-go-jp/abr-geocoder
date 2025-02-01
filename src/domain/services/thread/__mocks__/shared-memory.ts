@@ -21,37 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DatabaseParams } from '@domain/types/database-params';
 import { jest } from '@jest/globals';
 
-// @domain/services/__mocks__/url-cache-manager
-jest.mock('@domain/services/url-cache-manager');
+export const toSharedMemory = jest.fn();
 
-// @drivers/database/__mocks__/download-db-controller
-jest.mock('@drivers/database/download-db-controller');
+export const fromSharedMemory = jest.fn().mockReturnValue(Buffer.alloc(0));
 
-// @domain/models/__mocks__/env-provider
-jest.mock('@domain/models/env-provider');
-
-export type DownloadDiContainerParams = {
-  cacheDir: string;
-  downloadDir: string;
-  database: DatabaseParams;
-};
-
-const UrlCacheManager = jest.fn((cacheDir: string) => {
-  
-  return {
-    cacheDir,
-    readCache: jest.fn(async (_params: { key: string; }) => {
-      return {
-        dummy: 'data',
-      };
-    }),
-    writeCache: jest.fn(),
-    deleteCache: jest.fn(),
-  };
-});
-module.exports = {
-  UrlCacheManager,
-};

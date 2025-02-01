@@ -37,8 +37,8 @@ describe("parsePackageJson", () => {
   test("test1", () => {
     mockReadFileSync.mockReturnValue(`
     {
-      "version": "dummy",
-      "description": "dummy description"
+      "version": "dummy_version",
+      "description": "dummy_description"
     }
     `);
 
@@ -46,8 +46,8 @@ describe("parsePackageJson", () => {
       filePath: 'dummy.json',
     });
     expect(result).toEqual({
-      version: 'dummy',
-      description: 'dummy description',
+      version: 'dummy_version',
+      description: 'dummy_description',
     });
   });
 

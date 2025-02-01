@@ -24,9 +24,10 @@
 import { DownloadRequest } from '@domain/models/download-process-query';
 import { EnvProvider } from '@domain/models/env-provider';
 import * as geocodeDbControllerModule from '@drivers/database/geocode-db-controller';
-import { describe, expect, jest, test } from '@jest/globals';
+import { beforeAll, describe, expect, jest, test } from '@jest/globals';
 import * as CsvParserTransformMockModule from '@usecases/download/transformations/__mocks__/csv-parse-transform';
 import * as DownloadTransformMockModule from '@usecases/download/transformations/__mocks__/download-transform';
+import { Downloader } from '../download-process';
 
 // @@drivers/database/__mocks__/geocode-db-controller
 jest.mock('@drivers/database/geocode-db-controller');
@@ -43,18 +44,26 @@ jest.mock('@usecases/download/models/download-di-container');
 // @interface/__mocks__/http-request-adapter
 jest.mock('@interface/http-request-adapter');
 
-const mockedModules = {
+// @usecases/download/transformations/__mocks__/save-resource-info-transform
+jest.mock('@usecases/download/transformations/save-resource-info-transform');
+
+const _mockedModules = {
   geocodeDbController: jest.requireMock<typeof geocodeDbControllerModule>('@drivers/database/geocode-db-controller'),
   downloadDiContainer: jest.requireMock('@usecases/download/models/download-di-container'),
   downloadTransform: jest.requireMock<typeof DownloadTransformMockModule>('@usecases/download/transformations/download-transform'),
   csvParserTransform: jest.requireMock<typeof CsvParserTransformMockModule>('@usecases/download/transformations/csv-parse-transform'),
   httpRequestAdapter: jest.requireMock('@interface/http-request-adapter'),
 };
-jest.spyOn(EnvProvider.prototype, 'availableParallelism').mockReturnValue(5);
 
+const MOCK_ENV_CPU_CORES = 10;
+jest.spyOn(EnvProvider.prototype, 'availableParallelism').mockReturnValue(MOCK_ENV_CPU_CORES);
 
-// TODO: 実装し直す
-describe.skip('Downloader', () => {
+const testSettings = {
+  concurrentDownloads: 7,
+  numOfThreads: 1,
+};
+
+describe('Downloader', () => {
   const progressSpy = jest.fn();
   let aggregaterSpy: jest.SpiedFunction<(params: string[] | undefined) => Set<string>>;
   let createDownloadRequestsSpy: jest.SpiedFunction<(downloadTargetLgCodes: Set<string>) => Promise<DownloadRequest[]>>;
@@ -285,35 +294,35 @@ describe.skip('Downloader', () => {
     },
   ];
 
-  // beforeAll(async () => {
-  //   const instance = new Downloader({
-  //     database: {
-  //       type: 'sqlite3',
-  //       dataDir: 'dataDir_somewhere',
-  //       schemaDir: 'schemaDir_somewhere',
-  //     },
-  //     cacheDir: 'cacheDir_somewhere',
-  //     downloadDir: 'downloadDir_somewhere',
-  //   });
+  beforeAll(async () => {
+    const instance = new Downloader({
+      database: {
+        type: 'sqlite3',
+        dataDir: 'dataDir_somewhere',
+      },
+      cacheDir: 'cacheDir_somewhere',
+      downloadDir: 'downloadDir_somewhere',
+    });
 
-  //   expect(instance).not.toBeNull();
+    expect(instance).not.toBeNull();
 
-  //   // privateメソッドなので、instance as any にしてアクセスする
-  //   aggregaterSpy = jest.spyOn(instance as any, 'aggregateLGcodes');
+    // privateメソッドなので、instance as any にしてアクセスする
+    aggregaterSpy = jest.spyOn(instance as any, 'aggregateLGcodes');
 
-  //   // privateメソッドなので、instance as any にしてアクセスする
-  //   createDownloadRequestsSpy = jest.spyOn(instance as any, 'createDownloadRequests');
+    // privateメソッドなので、instance as any にしてアクセスする
+    createDownloadRequestsSpy = jest.spyOn(instance as any, 'createDownloadRequests');
 
-  //   await instance.download({
-  //     lgCodes: [
-  //       '131016', // 東京都千代田区
-  //       '262013', // 京都府福知山市
-  //       '260002', // 京都府
-  //     ],
-  //     progress: progressSpy,
-  //     concurrentDownloads: 7,
-  //   });
-  // });
+    await instance.download({
+      lgCodes: [
+        '131016', // 東京都千代田区
+        '262013', // 京都府福知山市
+        '260002', // 京都府
+      ],
+      progress: progressSpy,
+      concurrentDownloads: testSettings.concurrentDownloads,
+      numOfThreads: testSettings.numOfThreads,
+    });
+  });
 
   test('aggregateLGcodes() should aggregate LG codes ', () => {
 
@@ -337,52 +346,11 @@ describe.skip('Downloader', () => {
     expect(values).toEqual(expect.arrayContaining(expectRequests));
   });
 
-  test('DownloadTransform should use 6 threads, and CsvParseTransform should use 8 threads', () => {
-
-    // EnvProviderのモックで、実行環境には14コアがあると定義している
-    // この半分(最大6)をダウンロードスレッドに割り当てるので、
-    // DownloadTransformに割り当てられるスレッド数は6となる。
-    // 残り14-6=8 がCsvParserTransformに割り当てられる
-    expect(mockedModules.downloadTransform.DownloadTransform).toHaveBeenCalledWith(
-      expect.objectContaining({
-        maxConcurrency: 6,
-
-        // 1スレッド数当たりの並列ダウンロードファイル数
-        maxTasksPerWorker: 7,
-      }),
-    );
-    expect(mockedModules.csvParserTransform.CsvParseTransform).toHaveBeenCalledWith(
-      expect.objectContaining({
-        maxConcurrency: 8,
-      }),
-    );
-  });
 
   test('progress() should be called', () => {
     // ダウンロードリクエストの回数分だけコールバックが呼ばれるはず
     expect(progressSpy).toBeCalledTimes(expectRequests.length);
   });
 
-  // test('removeGeocoderCommonDataCache should be called', () => {
-  //   // removeGeocoderCommonDataCacheが呼ばれるはず
-  //   expect(mockedModules.loadGeocoderCommonData.removeGeocoderCommonDataCache).toBeCalledWith({
-  //     cacheDir: 'cacheDir_somewhere',
-  //   });
-  // });
-
-  // test('loadGeocoderCommonData() should be called', () => {
-  //   // GeocodeDbController
-  //   expect(mockedModules.geocodeDbController.GeocodeDbController).toBeCalledWith({
-  //     connectParams: {
-  //       type: 'sqlite3',
-  //       dataDir: 'dataDir_somewhere',
-  //       schemaDir: 'schemaDir_somewhere',
-  //     },
-  //   });
-
-  //   expect(mockedModules.loadGeocoderCommonData.loadGeocoderCommonData).toBeCalledWith(expect.objectContaining({
-  //     cacheDir: 'cacheDir_somewhere',
-  //   }));
-  // });
 
 });
