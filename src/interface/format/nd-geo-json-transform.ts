@@ -87,7 +87,7 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
       // Because we output string as Buffer.
       readableObjectMode: false,
 
-      highWaterMark: 3000,
+      highWaterMark: 2048,
     });
   }
 
@@ -101,7 +101,7 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
     return {
       lon: parseFloat(result.rep_lon),
       lat: parseFloat(result.rep_lat),
-    }
+    };
   }
 
   _transform(

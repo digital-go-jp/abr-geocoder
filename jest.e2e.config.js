@@ -41,5 +41,10 @@ module.exports = {
     "build/",
     "node_modules/", 
     "\\.skip\\.ts$",
+    "debug.test.ts",
   ],
+
+  // タイムアウト: 5分
+  // (ダウンロードをするので時間がかかる可能性がある)
+  testTimeout: 5 * 60 * 1000, 
 };

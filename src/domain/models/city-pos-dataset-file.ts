@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { DataField } from '@config/data-field';
-import { ICommonDbDownload } from '@interface/database/common-db';
+import { ICommonDbDownload } from '@drivers/database/common-db';
 import { DataForPosFile, IDatasetFileMeta, ProcessOptions } from './dataset-file';
 
 export class CityPosDatasetFile

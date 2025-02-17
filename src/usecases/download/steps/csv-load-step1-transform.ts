@@ -25,7 +25,7 @@
 import { CityDatasetFile } from '@domain/models/city-dataset-file';
 import { CityPosDatasetFile } from '@domain/models/city-pos-dataset-file';
 import { DatasetParams, IDatasetFileMeta } from '@domain/models/dataset-file';
-import { CsvLoadQuery2, DownloadProcessError, DownloadProcessStatus, DownloadResult, isDownloadProcessError } from '@domain/models/download-process-query';
+import { CsvLoadQuery, DownloadResult } from '@domain/models/download-process-query';
 import { ParcelDatasetFile } from '@domain/models/parcel-dataset-file';
 import { ParcelPosDatasetFile } from '@domain/models/parcel-pos-dataset-file';
 import { PrefDatasetFile } from '@domain/models/pref-dataset-file';
@@ -44,7 +44,6 @@ import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { Duplex, TransformCallback } from 'node:stream';
 
 export class CsvLoadStep1Transform extends Duplex {
-  public timeAmount = 0;
 
   constructor(private readonly params : {
     lgCodeFilter: Set<string>;
@@ -57,17 +56,10 @@ export class CsvLoadStep1Transform extends Duplex {
   }
 
   _write(
-    job: ThreadJob<DownloadResult | DownloadProcessError>,
+    job: ThreadJob<DownloadResult>,
     _: BufferEncoding,
     callback: TransformCallback,
   ) {
-    callback();
-    // エラーになったQueryはスキップする
-    if (isDownloadProcessError(job.data)) {
-      this.push(job as ThreadJob<DownloadProcessError>);
-      return;
-    }
-    const start = Date.now();
 
     const results = [];
     for (const csvFile of job.data.csvFiles) {
@@ -77,17 +69,7 @@ export class CsvLoadStep1Transform extends Duplex {
         filepath: csvFile.name,
       })!;
 
-      // if (!fileMeta) {
-      //   return this.push({
-      //     taskId: job.taskId,
-      //     kind: job.kind,
-      //     data: {
-      //       message: `Can not parse the filename "${csvFile.name}"`,
-      //       status: DownloadProcessStatus.ERROR,
-      //       dataset: job.data.dataset,
-      //     }
-      //   } as ThreadJob<DownloadProcessError>);
-      // }
+      // DatasetFileに変換する
       const datasetFile = this.toDataset({
         fileMeta,
         csvFile,
@@ -100,16 +82,19 @@ export class CsvLoadStep1Transform extends Duplex {
       });
     }
     
+    // 次のステップにデータを渡す
     this.push({
       taskId: job.taskId,
       kind: job.kind,
       data: {
+        urlCache: job.data.urlCache,
         dataset: job.data.dataset,
         files: results,
-        status: DownloadProcessStatus.UNSET,
+        zipFilePath: job.data.zipFilePath,
       },
-    } as ThreadJob<CsvLoadQuery2>);
-    this.timeAmount += Date.now() - start;
+    } as ThreadJob<CsvLoadQuery>);
+
+    callback();
   }
 
   private toDataset(params : {

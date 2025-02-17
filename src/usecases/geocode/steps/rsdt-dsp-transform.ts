@@ -26,17 +26,17 @@ import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { RsdtDspInfo } from '@domain/types/geocode/rsdt-dsp-info';
 import { SearchTarget } from '@domain/types/search-target';
-import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { TrieAddressFinder } from "@usecases/geocode/models/trie/trie-finder";
 import { Transform, TransformCallback } from 'node:stream';
+import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
 import { QuerySet } from '../models/query-set';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class RsdtDspTransform extends Transform {
 
   constructor(
-    private readonly dbCtrl: GeocodeDbController,
+    private readonly diContainer: AbrGeocoderDiContainer,
   ) {
     super({
       objectMode: true,
@@ -49,10 +49,10 @@ export class RsdtDspTransform extends Transform {
     callback: TransformCallback,
   ) {
 
+    const trieCache = new Map<number, TrieAddressFinder<RsdtDspInfo>>();
     // ------------------------
     // 住居番号で当たるものがあるか
     // ------------------------
-    const trie = new TrieAddressFinder<RsdtDspInfo>();
     for await (const query of queries.values()) {
       if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key) {
         continue;
@@ -66,7 +66,10 @@ export class RsdtDspTransform extends Transform {
         // 地番検索が指定されている場合、このステップはスキップする
         continue;
       }
-      const db = await this.dbCtrl.openRsdtDspDb({
+      if (trieCache.has(query.rsdtblk_key)) {
+        continue;
+      }
+      const db = await this.diContainer.database.openRsdtDspDb({
         lg_code: query.lg_code!,
         createIfNotExists: false,
       });
@@ -74,17 +77,22 @@ export class RsdtDspTransform extends Transform {
         continue;
       }
       const rows = await db.getRsdtDspRows({
-        rsdtblk_key: query.rsdtblk_key!,
+        rsdtblk_key: query.rsdtblk_key,
       });
       db.close();
 
+      const trie = new TrieAddressFinder<RsdtDspInfo>();
       for (const row of rows) {
-        const key = [row.rsdt_num, row.rsdt_num2].filter(x => x !== null).join(DASH);
+        const key = [
+          row.rsdt_num,
+          row.rsdt_num2,
+        ].filter(x => x !== null).join(DASH);
         trie.append({
           key,
           value: row,
         });
       }
+      trieCache.set(query.rsdtblk_key, trie);
     }
 
     const results = new QuerySet();
@@ -117,10 +125,11 @@ export class RsdtDspTransform extends Transform {
       }
 
       // rest_abr_flg = 0のものは地番を検索する
-      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key) {
+      if (query.rsdt_addr_flg === 0 || !query.rsdtblk_key || !trieCache.has(query.rsdtblk_key)) {
         results.add(query);
         continue;
       }
+      const trie = trieCache.get(query.rsdtblk_key)!;
       const findResults = trie.find({
         target,
         fuzzy: DEFAULT_FUZZY_CHAR,
@@ -146,7 +155,7 @@ export class RsdtDspTransform extends Transform {
       
         // 番地がヒットした
         const info = findResult.info! as RsdtDspInfo;
-        anyAmbiguous = anyAmbiguous || findResult.ambiguous;
+        anyAmbiguous = anyAmbiguous || findResult.ambiguousCnt > 0;
         const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
           rsdtdsp_key: info.rsdtdsp_key,
           rsdtblk_key: info.rsdtblk_key,
@@ -157,7 +166,7 @@ export class RsdtDspTransform extends Transform {
           tempAddress: findResult.unmatched,
           match_level: MatchLevel.RESIDENTIAL_DETAIL,
           matchedCnt: query.matchedCnt + findResult.depth,
-          ambiguousCnt: query.ambiguousCnt + (findResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + findResult.ambiguousCnt, 
           rsdt_addr_flg: 1,
         };
         if (info.rep_lat && info.rep_lon) {
@@ -174,6 +183,7 @@ export class RsdtDspTransform extends Transform {
     }
 
     queries.clear();
+    trieCache.clear();
 
     callback(null, results);
   }

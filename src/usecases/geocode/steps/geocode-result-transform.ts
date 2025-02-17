@@ -30,37 +30,43 @@ import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 
+type WithScore = {
+  query: Query;
+  score: number;
+  debug: string[];
+};
+
 export class GeocodeResultTransform extends Transform {
 
   private readonly matchLevelToScroe = new Map<string, number>([
-    [`${SearchTarget.ALL}:${MatchLevel.UNKNOWN}`, -2],
-    [`${SearchTarget.ALL}:${MatchLevel.PREFECTURE}`, 1],
-    [`${SearchTarget.ALL}:${MatchLevel.CITY}`, 2],
-    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA}`, 3],
-    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
-    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+    [`${SearchTarget.ALL}:${MatchLevel.UNKNOWN.str}`, -2],
+    [`${SearchTarget.ALL}:${MatchLevel.PREFECTURE.str}`, 1],
+    [`${SearchTarget.ALL}:${MatchLevel.CITY.str}`, 2],
+    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA.str}`, 3],
+    [`${SearchTarget.ALL}:${MatchLevel.MACHIAZA_DETAIL.str}`, 4],
+    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_BLOCK.str}`, 5],
+    [`${SearchTarget.ALL}:${MatchLevel.RESIDENTIAL_DETAIL.str}`, 6],
     
     // rsdt_addr_flgが間違えている可能性もあるので、MACHIAZA_DETAILより僅かに上の価値、というスコアにしておく
     [`${SearchTarget.ALL}:${MatchLevel.PARCEL}`, 4.5],
 
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN}`, -2],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE}`, 1],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.CITY}`, 2],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA}`, 3],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_BLOCK}`, 5],
-    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_DETAIL}`, 6],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.UNKNOWN.str}`, -2],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PREFECTURE.str}`, 1],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.CITY.str}`, 2],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA.str}`, 3],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.MACHIAZA_DETAIL.str}`, 4],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_BLOCK.str}`, 5],
+    [`${SearchTarget.RESIDENTIAL}:${MatchLevel.RESIDENTIAL_DETAIL.str}`, 6],
     [`${SearchTarget.RESIDENTIAL}:${MatchLevel.PARCEL}`, -1],
 
-    [`${SearchTarget.PARCEL}:${MatchLevel.UNKNOWN}`, -2],
-    [`${SearchTarget.PARCEL}:${MatchLevel.PREFECTURE}`, 1],
-    [`${SearchTarget.PARCEL}:${MatchLevel.CITY}`, 2],
-    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA}`, 3],
-    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA_DETAIL}`, 4],
-    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_BLOCK}`, -1],
-    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_DETAIL}`, -1],
-    [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL}`, 6],
+    [`${SearchTarget.PARCEL}:${MatchLevel.UNKNOWN.str}`, -2],
+    [`${SearchTarget.PARCEL}:${MatchLevel.PREFECTURE.str}`, 1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.CITY.str}`, 2],
+    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA.str}`, 3],
+    [`${SearchTarget.PARCEL}:${MatchLevel.MACHIAZA_DETAIL.str}`, 4],
+    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_BLOCK.str}`, -1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.RESIDENTIAL_DETAIL.str}`, -1],
+    [`${SearchTarget.PARCEL}:${MatchLevel.PARCEL.str}`, 6],
   ]);
 
   constructor() {
@@ -116,76 +122,19 @@ export class GeocodeResultTransform extends Transform {
       return query;
     });
 
-    const withScore: {
-      query: Query;
-      score: number;
-      debug: string[];
-    }[] = queryList.map(query => {
-      const debug: string[] = [];
-      
-      // match_level をスコアにする
-      let key = `${query.searchTarget}:${query.match_level.str}`;
-      if (query.koaza_aka_code === 2) {
-        // 京都通り名で Parcelになっているときは Parcelを参照
-        key = `${SearchTarget.PARCEL}:${query.match_level.str}`;
-      }
-      const matchScore = this.matchLevelToScroe.get(key)!;
-      debug.push(`match_level: ${key} -> ${matchScore}`);
-
-      // coordinate_leve をスコアにする
-      key = `${query.searchTarget}:${query.coordinate_level.str}`;
-      if (query.koaza_aka_code === 2) {
-        // 京都通り名で Parcelになっているときは Parcelを参照
-        key = `${SearchTarget.PARCEL}:${query.coordinate_level.str}`;
-      }
-      const coordinateScore = this.matchLevelToScroe.get(key)!;
-      debug.push(`coordinate_level: ${key} -> ${coordinateScore}`);
-
-      // matched_cnt (多いほど良い)
-      const matchedCntScore = query.matchedCnt;
-      debug.push(`matchedCnt: ${matchedCntScore}`);
-
-      // unmatched_cnt (少ないほど良い)
-      const unmatchedCnt = query.unmatched.reduce((total, word) => total + word.length, 0);
-      const unmatchedCntScore = orgInput.data.address.length - unmatchedCnt;
-      debug.push(`unmatchedCnt: ${unmatchedCntScore}`);
-
-      // 残り文字数 (少ないほど良い)
-      const remainLen = query.tempAddress?.toOriginalString().length || 0;
-      const remainScore = -remainLen;
-      debug.push(`remainLen: ${remainScore}`);
-
-      // 不明瞭な文字 (少ないほど良い)
-      const ambiguousScore = -query.ambiguousCnt;
-      debug.push(`ambiguousCnt: ${ambiguousScore}`);
-
-      // 類似度 (1.0になるほど良い)
-      const similarScore = query.formatted.score;
-      debug.push(`formatted.score: ${similarScore}`);
-
-      // match_level と coordinate_level の差
-      // (差が少ないほど良い)
-      const diffScore = -Math.abs(matchScore - coordinateScore) * 2;
-      debug.push(`diff of two levels: -${diffScore}`);
-
-      const score = matchScore +
-        coordinateScore +
-        matchedCntScore + 
-        unmatchedCntScore +
-        remainScore +
-        ambiguousScore +
-        similarScore +
-        diffScore;
-
-      return {
-        score,
-        query,
-        debug,
-      };
-    });
+    const withScore: WithScore[] = queryList.map(query => this.toWithScore(query));
 
     // スコアを降順にソート
-    withScore.sort((a, b) => b.score - a.score);
+    withScore.sort((a, b) => {
+      // スコアが高い方を優先
+      const diff = b.score - a.score;
+      if (diff !== 0) {
+        return diff;
+      }
+      // 2つの結果のスコアが同じだったら、マッチした文字数が長い方を採用
+      // (それも一緒だったら、もうどちらでも同じとみなす)
+      return b.query.matchedCnt - a.query.matchedCnt;
+    });
 
     // targetオプションの期待に沿うように結果を返す
     // ただしallの場合、rsdt_addr_flg が間違えている可能性もあるので
@@ -193,26 +142,7 @@ export class GeocodeResultTransform extends Transform {
     const {
       topRSDT,
       topParcel,
-    } = (() => {
-      let topRSDT;
-      let topParcel;
-
-      for (const result of withScore) {
-        if (!topRSDT && result.query.rsdt_addr_flg === 1) {
-          topRSDT = result;
-        }
-        if (!topParcel && result.query.rsdt_addr_flg === 0) {
-          topParcel = result;
-        }
-        if (topParcel && topRSDT) {
-          break;
-        }
-      }
-      return {
-        topParcel,
-        topRSDT,
-      };
-    })();
+    } = this.chooseTopRSDTandParcel(withScore);
     if (!topParcel && !topRSDT) {
       callback(null, withScore[0].query);
       return;
@@ -236,8 +166,10 @@ export class GeocodeResultTransform extends Transform {
           // RSDTのがスコアが高ければRSDTを返す
           topRSDT.score >= topParcel.score ||
 
-          // Parcelのがスコアが高くても RSDTと差が少なければRSDTを返す
-          topParcel.score - topRSDT.score <= 5
+          // スコアの差が小さくて、original_rsdt_addr_flg = 1 のときは、RSDTを返す
+          topParcel.score - topRSDT.score <= 2 &&
+          topRSDT.query.match_level.num >= MatchLevel.MACHIAZA.num &&
+          topRSDT.query.original_rsdt_addr_flg === 1
         ) {
           callback(null, topRSDT.query);
           queries.clear();
@@ -266,6 +198,99 @@ export class GeocodeResultTransform extends Transform {
       default:
         throw `unexpected case`;
     }
+  }
+  
+  private toWithScore(query: Query): any {
+    const debug: string[] = [];
+    
+    // match_level をスコアにする
+    let key = `${query.searchTarget}:${query.match_level.str}`;
+    if (query.koaza_aka_code === 2) {
+      // 京都通り名で Parcelになっているときは Parcelを参照
+      key = `${SearchTarget.PARCEL}:${query.match_level.str}`;
+    }
+    const matchScore = this.matchLevelToScroe.get(key)!;
+    debug.push(`match_level: ${key} -> ${matchScore}`);
+
+    // coordinate_leve をスコアにする
+    key = `${query.searchTarget}:${query.coordinate_level.str}`;
+    if (query.koaza_aka_code === 2) {
+      // 京都通り名で Parcelになっているときは Parcelを参照
+      key = `${SearchTarget.PARCEL}:${query.coordinate_level.str}`;
+    }
+    const coordinateScore = this.matchLevelToScroe.get(key)!;
+    debug.push(`coordinate_level: ${key} -> ${coordinateScore}`);
+
+    // matched_cnt (多いほど良い)
+    const matchedCntScore = query.matchedCnt;
+    debug.push(`matchedCnt: ${matchedCntScore}`);
+
+    // unmatched_cnt (少ないほど良い)
+    const unmatchedCnt = query.unmatched.reduce((total, word) => total + word.length, 0);
+    const unmatchedCntScore = -unmatchedCnt;
+    debug.push(`unmatchedCnt: ${unmatchedCntScore}`);
+
+    // 残り文字数 (少ないほど良い)
+    const remainLen = query.tempAddress?.toOriginalString().length || 0;
+    const remainScore = -remainLen;
+    debug.push(`remainLen: ${remainScore}`);
+
+    // 不明瞭な文字 (少ないほど良い)
+    const ambiguousScore = -query.ambiguousCnt;
+    debug.push(`ambiguousCnt: ${ambiguousScore}`);
+
+    // 類似度 (1.0になるほど良い)
+    const similarScore = query.formatted.score;
+    debug.push(`formatted.score: ${similarScore}`);
+
+    // match_level と coordinate_level の差
+    // (差が少ないほど良い)
+    const diffScore = -Math.abs(matchScore - coordinateScore) * 2;
+    debug.push(`diff of two levels: -${diffScore}`);
+
+    // townレコードに指定されていたrsdt_addr_flgと最終結果のrsdt_addr_flgが一致している場合は、信頼度アップ
+    const rsdtFlgScore = (
+      query.original_rsdt_addr_flg === 1 && query.rsdt_addr_flg  === 1 ||
+      query.original_rsdt_addr_flg === 2 && query.rsdt_addr_flg  === 0 ||
+      query.original_rsdt_addr_flg === 0 && query.rsdt_addr_flg  === 0) ? 1 : 0;
+    debug.push(`rsdtFlgScore: ${rsdtFlgScore}`);
+
+    const score = matchScore +
+      coordinateScore +
+      matchedCntScore + 
+      unmatchedCntScore +
+      remainScore +
+      ambiguousScore +
+      similarScore +
+      diffScore +
+      rsdtFlgScore;
+
+    return {
+      score,
+      query,
+      debug,
+    };
+  }
+
+  private chooseTopRSDTandParcel(withScore: WithScore[]) {
+    let topRSDT: WithScore | undefined;
+    let topParcel: WithScore | undefined;
+
+    for (const result of withScore) {
+      if (!topRSDT && result.query.rsdt_addr_flg === 1) {
+        topRSDT = result;
+      }
+      if (!topParcel && result.query.rsdt_addr_flg === 0) {
+        topParcel = result;
+      }
+      if (topParcel && topRSDT) {
+        break;
+      }
+    }
+    return {
+      topParcel,
+      topRSDT,
+    };
   }
 
   private restoreCharNode(query: Query): Query {

@@ -23,19 +23,19 @@
  */
 import { CommonDiContainer } from '@domain/models/common-di-container';
 import { makeDirIfNotExists } from '@domain/services/make-dir-if-not-exists';
-import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { DatabaseParams } from '@domain/types/database-params';
-import { DownloadDbController } from '@interface/database/download-db-controller';
+import { DownloadDbController } from '@drivers/database/download-db-controller';
 
 export type DownloadDiContainerParams = {
   cacheDir: string;
   downloadDir: string;
   database: DatabaseParams;
+
+  keepFiles?: boolean;
 };
 
 export class DownloadDiContainer extends CommonDiContainer {
 
-  public readonly urlCacheMgr: UrlCacheManager;
   public readonly downloadDir: string;
   public readonly database: DownloadDbController;
 
@@ -47,20 +47,27 @@ export class DownloadDiContainer extends CommonDiContainer {
 
     // ダウンロードディレクトリにキャッシュファイルを保存する
     makeDirIfNotExists(params.cacheDir);
-    this.urlCacheMgr = new UrlCacheManager(params.cacheDir);
-
     this.database = new DownloadDbController(params.database);
 
     Object.freeze(this);
   }
 
-  getFileShowUrl() {
-    return `https://${this.env.hostname}/rc/api/3/action/package_show`;
-  }
-  getPackageListUrl() {
-    return `https://${this.env.hostname}/rc/api/3/action/package_list`;
+  // ダウンロードしたデータセットファイルを削除しないで残すかどうか
+  get keepFiles(): boolean {
+    return this.params.keepFiles || false;
   }
 
+  // データセットファイル個別の情報を取得するためのエントリーポイント
+  getFileShowUrl() {
+    return new URL(`https://${this.env.hostname}/rc/api/3/action/package_show`);
+  }
+
+  // データセットの一覧を取得するためのエントリーポイント
+  getPackageListUrl() {
+    return new URL(`https://${this.env.hostname}/rc/api/3/action/package_list`);
+  }
+
+  // JSON形式に変換する
   toJSON(): DownloadDiContainerParams {
     return this.params;
   }

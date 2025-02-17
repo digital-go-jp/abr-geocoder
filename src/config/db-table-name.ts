@@ -28,4 +28,5 @@ export enum DbTableName {
   RSDT_BLK = 'rsdt_blk',
   RSDT_DSP = 'rsdt_dsp',
   PARCEL = 'parcel',
+  DATASET = 'dataset',
 }

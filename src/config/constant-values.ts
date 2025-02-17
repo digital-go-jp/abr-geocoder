@@ -127,3 +127,6 @@ export const MAX_CONCURRENT_DOWNLOAD = 100;
 // 混合する可能性がある。
 // そこで、 -1 を出力する
 export const AMBIGUOUS_RSDT_ADDR_FLG = -1;
+
+// REST APIをコントロールするためのデフォルトポート
+export const CLI_SERVER_PORT = 8143;

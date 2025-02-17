@@ -75,7 +75,7 @@ export class WardTransform extends Transform {
         if (query.pref_key && query.pref_key !== mResult.info?.pref_key) {
           continue;
         }
-        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+        anyAmbiguous = anyAmbiguous || mResult.ambiguousCnt > 0;
         anyHit = true;
 
         results.add(query.copy({
@@ -92,7 +92,7 @@ export class WardTransform extends Transform {
           rep_lat: mResult.info!.rep_lat,
           rep_lon: mResult.info!.rep_lon,
           coordinate_level: MatchLevel.CITY,
-          ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + mResult.ambiguousCnt, 
         }));
       }
 

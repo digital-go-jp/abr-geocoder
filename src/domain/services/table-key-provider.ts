@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import stringify from "json-stable-stringify";
 import { LRUCache } from "lru-cache";
 import stringHash from "string-hash";
 
@@ -39,6 +40,13 @@ export class TableKeyProvider {
     return result;
   };
 
+  static readonly getUrlHashKey = (url: URL): string => {
+    // クエリパラメータをソートしてハッシュ値を生成する
+    const params = url.searchParams && Array.from(url.searchParams.entries()).toSorted() || '';
+    const urlStr = `${url.origin}${url.pathname}?${stringify(params)}`;
+    return this.generateKey(urlStr).toString(16);
+  };
+  
   static readonly getPrefKey = (params: Required<{
     lg_code: string;
   }>): number => {

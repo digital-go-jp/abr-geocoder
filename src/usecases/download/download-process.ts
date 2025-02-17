@@ -21,8 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { MAX_CONCURRENT_DOWNLOAD } from '@config/constant-values';
-import { CsvLoadResult, DownloadProcessError, DownloadRequest } from '@domain/models/download-process-query';
+import { ProgressCallback } from '@config/progress-bar-formats';
+import { DownloadProcessError, DownloadRequest, DownloadResult } from '@domain/models/download-process-query';
 import { CounterWritable } from '@domain/services/counter-writable';
 import { createPackageTree } from '@domain/services/create-package-tree';
 import { DatabaseParams } from '@domain/types/database-params';
@@ -31,14 +31,22 @@ import { AbrgError, AbrgErrorLevel } from '@domain/types/messages/abrg-error';
 import { AbrgMessage } from '@domain/types/messages/abrg-message';
 import { PrefLgCode, isPrefLgCode } from '@domain/types/pref-lg-code';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
-import { loadGeocoderTrees, removeGeocoderCaches } from '@usecases/geocode/services/load-geoder-trees';
+import { CityAndWardTrieFinder } from '@usecases/geocode/models/city-and-ward-trie-finder';
+import { CountyAndCityTrieFinder } from '@usecases/geocode/models/county-and-city-trie-finder';
+import { KyotoStreetTrieFinder } from '@usecases/geocode/models/kyoto-street-trie-finder';
+import { OazaChoTrieFinder } from '@usecases/geocode/models/oaza-cho-trie-finder';
+import { PrefTrieFinder } from '@usecases/geocode/models/pref-trie-finder';
+import { Tokyo23TownTrieFinder } from '@usecases/geocode/models/tokyo23-town-finder';
+import { Tokyo23WardTrieFinder } from '@usecases/geocode/models/tokyo23-ward-trie-finder';
+import { WardAndOazaTrieFinder } from '@usecases/geocode/models/ward-and-oaza-trie-finder';
+import { WardTrieFinder } from '@usecases/geocode/models/ward-trie-finder';
 import { StatusCodes } from 'http-status-codes';
-import { Readable, Transform } from 'node:stream';
+import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import timers from 'node:timers/promises';
 import { DownloadDiContainer } from './models/download-di-container';
 import { CsvParseTransform } from './transformations/csv-parse-transform';
 import { DownloadTransform } from './transformations/download-transform';
+import { SaveResourceInfoTransform } from './transformations/save-resource-info-transform';
 
 export type DownloaderOptions = {
   // データベース接続に関する情報
@@ -47,18 +55,22 @@ export type DownloaderOptions = {
   cacheDir: string;
   // zipファイルをダウンロードするディレクトリ
   downloadDir: string;
-};
 
-export type DownloadOptionsProgressCallback = (current: number, total: number) => void;
+  // ダウンロードしたデータセットファイルを削除しないで残すかどうか
+  keepFiles?: boolean;
+};
 
 export type DownloadOptions = {
   // ダウンロードするデータの対象を示す都道府県コード
   lgCodes?: string[];
   // 進み具合を示すプログレスのコールバック
-  progress?: DownloadOptionsProgressCallback;
+  progress?: ProgressCallback;
 
   //同時ダウンロード数
   concurrentDownloads: number;
+
+  // 使用するスレッド数
+  numOfThreads: number;
 };
 
 export class Downloader {
@@ -69,15 +81,17 @@ export class Downloader {
       cacheDir: params.cacheDir,
       downloadDir: params.downloadDir,
       database: params.database,
+      keepFiles: params.keepFiles || false,
     });
   }
 
-  private async getJSON(url: string) {
-    const urlObj = new URL(url);
+  private async getJSON(url: URL) {
 
     const client = new HttpRequestAdapter({
-      hostname: urlObj.hostname,
+      hostname: url.hostname,
+      // User-Agent
       userAgent: this.container.env.userAgent,
+      // 同時並行数(すぐに閉じるので1で良い)
       peerMaxConcurrentStreams: 1,
     });
   
@@ -92,42 +106,70 @@ export class Downloader {
     // --------------------------------------
     // ダウンロード開始
     // --------------------------------------
+    
+    const createDictionaryFileFunctions = [
+      PrefTrieFinder.loadDataFile,
+      CountyAndCityTrieFinder.loadDataFile,
+      CityAndWardTrieFinder.loadDataFile,
+      KyotoStreetTrieFinder.loadDataFile,
+      OazaChoTrieFinder.loadDataFile,
+      WardAndOazaTrieFinder.loadDataFile,
+      WardTrieFinder.loadDataFile,
+      Tokyo23WardTrieFinder.loadDataFile,
+      Tokyo23TownTrieFinder.loadDataFile,
+    ];
 
     // LGCodeを整理する
     const lgCodeFilter = this.aggregateLGcodes(params.lgCodes);
     
     // ダウンロードリクエストを作成する
     const requests = await this.createDownloadRequests(lgCodeFilter);
-    const total = requests.length;
+    const total = requests.length + createDictionaryFileFunctions.length;
 
     // ランダムに入れ替える（DBの書き込みを分散させるため）
     requests.sort(() => {
       return -1 + Math.random() * 3;
     });
-    
-    const reader = Readable.from(requests);
-    const parallel = this.container.env.availableParallelism();
 
     // ダウンロード処理を行う
-    // 最大6コネクション
-    const numOfDownloadThreads = Math.min(Math.max(Math.floor(parallel / 3 * 2), 1), 6);
-    const downloadTransform = new DownloadTransform({
+    // SQLite書き込み5コアに対して、ダウンロードを1コア、最大で6コアがダウンロードに割り当てる
+    const numOfDownloadThreads = Math.min(Math.max(params.numOfThreads / 5, 1), 6);
+    const downloadTransform = await DownloadTransform.create({
       container: this.container,
+
+      // スレッド数
       maxConcurrency: numOfDownloadThreads,
+
+      // 1スレッド(1HTTPクライアント)で何ファイル同時並行でダウンロードするか
       maxTasksPerWorker: Math.max(params.concurrentDownloads || 1),
     });
 
     // ダウンロードしたzipファイルからcsvファイルを取り出してデータベースに登録する
-    const numOfCsvParserThreads = Math.max(parallel - numOfDownloadThreads, 1);
-    const csvParseTransform = new CsvParseTransform({
+    const numOfCsvParserThreads = Math.max(params.numOfThreads - numOfDownloadThreads, 1);
+    const csvParseTransform = await CsvParseTransform.create({
+      // CSV Parserのスレッド数
       maxConcurrency: numOfCsvParserThreads,
+
+      // DB書き込みを分散ロックするためのセマフォのサイズ
+      // Primary numberであるほうが望ましい
+      // 101で適度に分散されるので、固定しておく
+      semaphoreSize: 101,
+
       container: this.container,
+
+      // ダウンロードするターゲットのLGCode
       lgCodeFilter,
     });
 
-    // プログレスバーに進捗を出力する
-    const dst = new CounterWritable<CsvLoadResult>({
-      write: (_: CsvLoadResult | DownloadProcessError, __, callback) => {
+    // zipファイルのメタ情報(ETagとか)を記録するDB
+    const datasetDb = await this.container.database.openDatasetDb();
+    const saveResourceInfoTransform = new SaveResourceInfoTransform({
+      datasetDb,
+    });
+
+    // 終了したタスク数のカウント
+    const dst = new CounterWritable<DownloadResult>({
+      write: (_: DownloadResult | DownloadProcessError, __, callback) => {
         if (params.progress) {
           params.progress(dst.count, total + 1);
         }
@@ -135,52 +177,21 @@ export class Downloader {
       },
     });
 
-    let inputCnt = 0;
+    const srcStream = Readable.from(requests);
+
     await pipeline(
-      reader,
-      new Transform({
-        objectMode: true,
-        async transform(chunk, _, callback) {
-          inputCnt++;
-
-          const waitingCnt = inputCnt - dst.count;
-          if (waitingCnt < MAX_CONCURRENT_DOWNLOAD) {
-            return callback(null, chunk);
-          }
-
-          // Out of memory を避けるために、受け入れを一時停止
-          // 処理済みが追いつくまで、待機する
-          const half = MAX_CONCURRENT_DOWNLOAD >> 1;
-          while (inputCnt - dst.count > half) {
-            await timers.setTimeout(100);
-          }
-      
-          // 再開する
-          callback(null, chunk);
-        },
-      }),
+      srcStream,
       downloadTransform,
       csvParseTransform,
+      saveResourceInfoTransform,
       dst,
     ).catch((e: unknown) => {
       console.error(e);
     });
     await downloadTransform.close();
     await csvParseTransform.close();
-
-    // キャッシュの削除
-    await removeGeocoderCaches({
-      cacheDir: this.container.urlCacheMgr.cacheDir,
-    });
-    // キャッシュの作成
-    await loadGeocoderTrees({
-      cacheDir: this.container.urlCacheMgr.cacheDir,
-      database: this.container.database.connectParams,
-      debug: false,
-    });
   }
   
-
   private async createDownloadRequests(downloadTargetLgCodes: Set<string>): Promise<DownloadRequest[]> {
     // レジストリ・カタログサーバーから、パッケージの一覧を取得する
     const packageListUrl = this.container.getPackageListUrl();

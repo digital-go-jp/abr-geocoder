@@ -21,17 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { serialize, deserialize } from "node:v8";
-
-export function toSharedMemory<T>(target: T): Uint8Array {
-  const buffer = serialize(target);
+export function toSharedMemory(buffer: Buffer): Uint8Array {
   const sharedMemory = new SharedArrayBuffer(buffer.byteLength);
   const uint8Array = new Uint8Array(sharedMemory);
   uint8Array.set(buffer);
   return uint8Array;
 };
 
-export function fromSharedMemory<T>(memory: Uint8Array): T {
-  const decodedBuffer = Buffer.from(memory);
-  return deserialize(decodedBuffer) as T;
+export function fromSharedMemory(memory: Uint8Array): Buffer {
+  return Buffer.from(memory);
 };

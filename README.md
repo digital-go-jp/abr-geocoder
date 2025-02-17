@@ -3,9 +3,9 @@
 
 - [日本語版](./README.ja.md)
 
-## 🚨 Upgrade to version 2.1 from v2.0
+## 🚨 Upgrade to version 2.2 from v2.1
 
-- Due to the significant changes for the database structure, removes `the database directory` (default: `~/.abr-geocoder`), then runs the `abrg download` command.
+- The `abrg serve` command is splitted into `abrg serve start` and `abrg serve stop` commands.
 
 ## Description
 
@@ -288,12 +288,12 @@ $ abrg <inputFile> [<outputFile>] [options]
   | parcel      | Searches only the parcel number data.                                                                                |
   </details>
 
-## `abrg serve` command
+## `abrg serve start` command
 
 Starts the geocoder as a REST API server.
 
 ```sh
-abrg serve [options]
+abrg serve start [options]
 ```
 
 Example:
@@ -308,7 +308,7 @@ curl http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3
   Changes the port number for the REST API server. The default is `3000`.
 
   ```sh
-  abrg serve -p 8080
+  abrg serve start -p 8080
   ```
 </details>
 
@@ -318,7 +318,7 @@ curl http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3
   Specifies the directory to save the database. The default is `$HOME/.abr-geocoder`.
 
   ```sh
-  abrg serve  -d (path to directory to save data)
+  abrg serve start -d (path to directory to save data)
   ```
 </details>
 
@@ -334,3 +334,12 @@ curl http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3
   | format      |          | Output format for the result.                          |
   | fuzzy       |          | A single character used as a wildcard.                 |
 </details>
+
+
+## `abrg serve stop` command
+
+Stop the geocoder as a REST API server.
+
+```sh
+abrg serve stop
+```

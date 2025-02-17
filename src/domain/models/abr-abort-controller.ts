@@ -133,8 +133,8 @@ export class AbrAbortController implements AbortController {
     return this.abrSignal;
   }
 
-  abort() {
+  abort(event?: Event) {
     this.abrSignal.throwIfAborted();
-    this.abrSignal.dispatchEvent(new Event('abort'));
+    this.abrSignal.dispatchEvent(event || new Event('abort'));
   }
 }

@@ -21,12 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DownloadProcessError, DownloadProcessStatus, DownloadQuery1, DownloadQuery2 } from '@domain/models/download-process-query';
+import { DownloadProcessError, DownloadProcessSkip, DownloadProcessStatus, DownloadQuery1, DownloadQuery2 } from '@domain/models/download-process-query';
 import crc32 from '@domain/services/crc32-lib';
-import { getUrlHash } from '@domain/services/get-url-hash';
 import { ThreadJob, ThreadJobResult } from '@domain/services/thread/thread-task';
-import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { CkanPackageResponse, CkanResource } from '@domain/types/download/ckan-package';
+import { IDatasetDb } from '@drivers/database/dataset-db';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
 import { StatusCodes } from 'http-status-codes';
 import fs from 'node:fs';
@@ -38,9 +37,9 @@ export class DownloadStep1Transform extends Duplex {
 
   constructor(private readonly params: Required<{
     client: HttpRequestAdapter;
-    urlCacheMgr: UrlCacheManager;
+    datasetDb: IDatasetDb;
     downloadDir: string;
-    fileShowUrl: string;
+    fileShowUrl: URL;
     highWaterMark: number;
   }>) {
     super({
@@ -58,7 +57,7 @@ export class DownloadStep1Transform extends Duplex {
   ) {
     // 次のリクエストをもらうために、先にCallbackを呼ぶ
     callback();
-
+    
     // 同時並行ダウンロード
     const response = await this.downloadResource({
       job,
@@ -70,10 +69,15 @@ export class DownloadStep1Transform extends Duplex {
     job,
   }: {
     job: ThreadJob<DownloadQuery1>,
-  }): Promise<ThreadJobResult<DownloadProcessError | DownloadQuery2>> {
+  }): Promise<ThreadJobResult<DownloadProcessError | DownloadQuery2 | DownloadProcessSkip>> {
 
     // リソースのURL
-    const packageInfoUrl = `${this.params.fileShowUrl}?id=${job.data.packageId}`;
+    const urlStr = [
+      this.params.fileShowUrl.origin,
+      this.params.fileShowUrl.pathname,
+      `?id=${job.data.packageId}`,
+    ].join('');
+    const packageInfoUrl = new URL(urlStr);
     
     // メタデータを取得
     const packageResponse = await this.params.client.getJSON({
@@ -95,11 +99,19 @@ export class DownloadStep1Transform extends Duplex {
     }
 
     // CSVファイルのURLを抽出する
-    const packageInfo = packageResponse.body as unknown as CkanPackageResponse;
-    const csvMeta: CkanResource | undefined = packageInfo.result!.resources
-      .find(x =>
-        x.format.toLowerCase().startsWith('csv'),
-      );
+    const packageInfo = packageResponse.body as unknown as CkanPackageResponse<string>;
+    let csvMeta: CkanResource<URL> | undefined;
+    if (packageInfo && packageInfo.result) {
+      csvMeta = packageInfo.result.resources
+        .map(x => {
+          return Object.assign(x, {
+            url: new URL(x.url),
+          });
+        })
+        .find(x =>
+          x.format.toLowerCase().startsWith('csv'),
+        );
+    }
 
     // CSVがない (予防的なコード)
     if (!csvMeta) {
@@ -115,57 +127,56 @@ export class DownloadStep1Transform extends Duplex {
     }
     
     // URLに対するハッシュ文字列の生成
-    const urlHash = getUrlHash(csvMeta.url);
     const headers: {
       'if-none-match': string | undefined;
     } = {
       'if-none-match': '',
     };
 
+    // DBからキャッシュ情報の読込
+    const cache = await this.params.datasetDb.readUrlCache(csvMeta.url);
+
     // キャッシュを利用する場合、利用できるか確認する
-    if (job.data.useCache) {
+    if (job.data.useCache && cache) {
       // DBからキャッシュ情報の読込
-      const cache = await this.params.urlCacheMgr.readCache({
-        key: urlHash,
-      });
-      headers['if-none-match'] = cache?.etag;
+      headers['if-none-match'] = cache.etag;
     }
 
-    // ETagによるチェック
+    // URIに対するHEADリクエスト
     const headResponse = await this.params.client.headRequest({
       url: csvMeta.url,
       headers,
     });
 
-    if (job.data.useCache) {
-      // DBからキャッシュ情報の読込
-      const cache = await this.params.urlCacheMgr.readCache({
-        key: urlHash,
-      });
+    if (job.data.useCache && cache) {
+      if (headResponse.header.statusCode === StatusCodes.NOT_MODIFIED) {
+        return {
+          taskId: job.taskId,
+          kind: 'result',
+          data: {
+            dataset: job.data.dataset,
+            status: DownloadProcessStatus.SKIP,
+            message: 'skipped',
+          },
+        } as ThreadJobResult<DownloadProcessSkip>;
+      };
+    }
 
-      if (cache && headResponse.header.statusCode === StatusCodes.NOT_MODIFIED) {
-
-        const cacheFilePath = path.join(this.params.downloadDir, cache.cache_file);
-
-        // キャッシュファイルのcrc32 が一致する場合、コンテンツとして返す
-        const cacheFileHash = await crc32.fromFile(cacheFilePath);
-        if (cache.crc32 === cacheFileHash) {
-          return {
-            taskId: job.taskId,
-            data: {
-              dataset: job.data.dataset,
-              csvFilePath: cacheFilePath,
-              noUpdate: true,
-              status: DownloadProcessStatus.UNSET,
-            },
-          } as ThreadJobResult<DownloadQuery2>;
-        }
-      }
+    if (headResponse.header.statusCode !== StatusCodes.OK) {
+      return {
+        taskId: job.taskId,
+        kind: 'result',
+        data: {
+          dataset: job.data.dataset,
+          status: DownloadProcessStatus.ERROR,
+          message: `status: ${packageResponse.header.statusCode}`,
+        },
+      } as ThreadJobResult<DownloadProcessError>;
     }
 
     // サーバーからリソース(zipファイル)をダウンロード
-    const csvFilename = path.basename(csvMeta.url);
-    const csvFilePath = path.join(this.params.downloadDir, csvFilename);
+    const zipFilename = path.basename(csvMeta.url.toString());
+    const zipFilePath = path.join(this.params.downloadDir, zipFilename);
 
     // リソースをダウンロードする
     const src = await this.params.client.getReadableStream({
@@ -173,32 +184,27 @@ export class DownloadStep1Transform extends Duplex {
     });
 
     // ファイルに保存する
-    const dst = fs.createWriteStream(csvFilePath);
+    const dst = fs.createWriteStream(zipFilePath);
 
     await pipeline(
       src,
       dst,
     );
-    const fileCrc32 = await crc32.fromFile(csvFilePath)!;
+    const fileCrc32 = await crc32.fromFile(zipFilePath)!;
 
-    // キャッシュに情報を保存する
-    await this.params.urlCacheMgr.writeCache({
-      key: urlHash,
-      url: csvMeta.url,
-      cache_file: csvFilename,
-      etag: headResponse.header.eTag,
-      last_modified: headResponse.header.lastModified,
-      content_length: headResponse.header.contentLength,
-      crc32: fileCrc32,
-    });
-    
     return {
       taskId: job.taskId,
       data: {
         dataset: job.data.dataset,
-        csvFilePath,
-        noUpdate: false,
+        zipFilePath,
         status: DownloadProcessStatus.UNSET,
+        urlCache: {
+          url: csvMeta.url,
+          etag: headResponse.header.eTag,
+          last_modified: headResponse.header.lastModified,
+          content_length: headResponse.header.contentLength,
+          crc32: fileCrc32,
+        },
       },
     } as ThreadJobResult<DownloadQuery2>;
   }

@@ -86,7 +86,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
       // Because we output string as Buffer.
       readableObjectMode: false,
 
-      highWaterMark: 3000,
+      highWaterMark: 2048,
     });
   }
 
@@ -100,7 +100,7 @@ export class NdJsonTransform extends Stream.Transform implements IFormatTransfor
     return {
       lon: parseFloat(result.rep_lon),
       lat: parseFloat(result.rep_lat),
-    }
+    };
   }
   _transform(
     result: Query,

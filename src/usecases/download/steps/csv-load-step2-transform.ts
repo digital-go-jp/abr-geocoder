@@ -22,66 +22,110 @@
  * SOFTWARE.
  */
 
-import { CsvLoadQuery2, CsvLoadResult, DownloadProcessError, DownloadProcessStatus, isDownloadProcessError } from '@domain/models/download-process-query';
+import { DatasetFile } from '@domain/models/dataset-file';
+import { CsvLoadQuery, DownloadProcessStatus } from '@domain/models/download-process-query';
 import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 import { ThreadJob } from '@domain/services/thread/thread-task';
-import { DownloadDbController } from '@interface/database/download-db-controller';
+import { DownloadDbController } from '@drivers/database/download-db-controller';
 import fs from 'node:fs';
 import { Duplex, TransformCallback } from 'node:stream';
 import { loadCsvToDatabase } from './load-csv-to-database';
 
+export type CsvLoadStep2TransformParams = {
+  databaseCtrl: DownloadDbController;
+  semaphore: SemaphoreManager;
+  keepFiles: boolean;  
+};
+
 export class CsvLoadStep2Transform extends Duplex {
-  constructor(private readonly params: Required<{
-    databaseCtrl: DownloadDbController;
-    semaphore: SemaphoreManager;
-  }>) {
+
+  constructor(private readonly params: Required<CsvLoadStep2TransformParams>) {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
   }
+
+  getSemaphoreIdx(datasetFile: DatasetFile): number {
+    if (datasetFile.type === 'pref' ||
+      datasetFile.type === 'pref_pos' ||
+      datasetFile.type === 'city' ||
+      datasetFile.type === 'city_pos' ||
+      datasetFile.type === 'town' ||
+      datasetFile.type === 'town_pos') {
+      return 0;
+    }
+  
+    return (parseInt(datasetFile.lgCode) % (this.params.semaphore.size - 1)) + 1;
+  };
   
   async _write(
-    job: ThreadJob<CsvLoadQuery2 | DownloadProcessError>,
+    job: ThreadJob<CsvLoadQuery>,
     _: BufferEncoding,
     callback: TransformCallback,
   ) {
 
-    callback();
-    
-    // エラーになったQueryはスキップする
-    if (isDownloadProcessError(job.data)) {
-      this.push(job);
-      return;
+    const queue = job.data.files;
+    while (queue.length > 0) {
+      const fileInfo = queue.shift()!;
+
+      // LGCodeに基づいてセマフォをロックする
+      const lockIdx = this.getSemaphoreIdx(fileInfo.datasetFile);
+      await this.params.semaphore.enterAwait(lockIdx);
+
+      // DBに取り込む
+      try {
+        await loadCsvToDatabase({
+          datasetFile: fileInfo.datasetFile,
+          databaseCtrl: this.params.databaseCtrl,
+        });
+      } catch (e: unknown) {
+        if (e &&
+          typeof e === 'object' &&
+          ('code' in e) &&
+          e.code === 'SQLITE_BUSY'
+        ) {
+          this.params.semaphore.leave(lockIdx);
+
+          // キューの末尾に追加（先に他のタスクを処理する）
+          setTimeout(() => {
+            queue.push(fileInfo);
+          }, 10 + Math.random() * 200);
+          continue;
+        }
+
+        // セマフォのロックを解除する
+        this.params.semaphore.leave(lockIdx);
+        console.error(e);
+        callback(e as Error);
+        return;
+      }
+
+      // セマフォのロックを解除する
+      this.params.semaphore.leave(lockIdx);
     }
 
-    // DBに取り込む
-    const tasks = job.data.files.map(fileInfo => {
-      return loadCsvToDatabase({
-        semaphore: this.params.semaphore,
-        datasetFile: fileInfo.datasetFile,
-        databaseCtrl: this.params.databaseCtrl,
-      });
-    });
+    // 展開したcsvファイルを消す
+    await Promise.all((job as ThreadJob<CsvLoadQuery>).data.files.map(file => {
+      return fs.promises.unlink(file.csvFile.path);
+    }));
 
-    // await promise.all() で DBへの取り込み処理が完了するまで待つ
-    await Promise.all(tasks).catch(e => {
-      console.error(`[error]`, e);
-    });
+    // ダウンロードしたデータセットファイルを消す
+    if (!this.params.keepFiles) {
+      await fs.promises.unlink(job.data.zipFilePath);
+    }
 
+    // 次のステップに情報を渡す
     this.push({
       taskId: job.taskId,
       kind: 'task',
       data: {
         dataset: job.data.dataset,
         status: DownloadProcessStatus.SUCCESS,
+        urlCache: job.data.urlCache,
       },
-    } as ThreadJob<CsvLoadResult>);
-
-    // 展開したcsvファイルを消す
-    await Promise.all((job as ThreadJob<CsvLoadQuery2>).data.files.map(file => {
-      return fs.promises.unlink(file.csvFile.path);
-    }));
+    });
+    callback();
   }
 }

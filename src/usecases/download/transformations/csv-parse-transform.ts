@@ -21,49 +21,62 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */;
-import { DownloadProcessError, DownloadQuery2, DownloadResult } from '@domain/models/download-process-query';
+import { AbrAbortController } from '@domain/models/abr-abort-controller';
+import { DownloadProcessBase, DownloadProcessStatus, DownloadQuery2 } from '@domain/models/download-process-query';
 import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
 import path from 'node:path';
 import { Duplex, TransformCallback } from 'node:stream';
-import timers from 'node:timers/promises';
 import { ParseWorkerInitData } from '../workers/csv-parse-worker';
+
+export type CsvParseTransformOptions = {
+  maxConcurrency: number;
+  semaphoreSize: number;
+  container: DownloadDiContainer;
+  lgCodeFilter: Set<string>;
+};
 
 export class CsvParseTransform extends Duplex {
 
   private receivedFinal: boolean = false;
   private runningTasks = 0;
-  private abortCtrl = new AbortController();
+  private readonly abortCtrl = new AbrAbortController();
 
   // ダウンロードされた zip ファイルを展開して、データベースに登録するワーカースレッド
-  private csvParsers: WorkerThreadPool<
+  private csvParsers!: WorkerThreadPool<
     Required<ParseWorkerInitData>,
     DownloadQuery2,
-    DownloadResult | DownloadProcessError
+    DownloadProcessBase
   >;
 
-  constructor(params : Required<{
-    maxConcurrency: number;
-    container: DownloadDiContainer;
-    lgCodeFilter: Set<string>;
-  }>) {
+  static readonly create = async (params : Required<CsvParseTransformOptions>): Promise<CsvParseTransform> => {
+    const transform = new CsvParseTransform();
+    await transform.initAsync(params);
+    return transform;
+  };
+
+  private constructor() {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
+  }
+
+  private async initAsync(params : CsvParseTransformOptions) {
+
+    // スレッドごとに割り当てるタスクの数
+    // (=同時並行でダウンロードするファイルの数)
+    const maxTasksPerWorker = 5;
 
     // 4  = Int32Array を使用するため (32 bits = 4 bytes)
     // 最初の4は、common.sqlite を制御するために用いる。
-    // params.maxConcurrency * 4 は、スレッドごとに割り当てる。
-    // もし全てのスレッドが異なるlgCodeの場合
-    // ブロックする必要がないので、maxConcurrency * 4となる
-    const semaphoreSharedMemory = new SharedArrayBuffer(4 + params.maxConcurrency * 4);
+    const semaphoreSharedMemory = new SharedArrayBuffer(4 + Math.max(params.semaphoreSize - 1, 1) * 4);
 
-    this.csvParsers = new WorkerThreadPool<
+    this.csvParsers = await WorkerThreadPool.create<
       Required<ParseWorkerInitData>,
       DownloadQuery2,
-      DownloadResult | DownloadProcessError
+      DownloadProcessBase
     >({
       // csv-parse-worker へのパス
       filename: path.join(__dirname, '..', 'workers', 'csv-parse-worker'),
@@ -71,16 +84,15 @@ export class CsvParseTransform extends Duplex {
       // スレッドを最大でいくつまで生成するか
       maxConcurrency: params.maxConcurrency,
 
-      // スレッドごとに割り当てるタスクの数
-      // (いくつにしても、そんなに変化はなかった)
-      maxTasksPerWorker: 5,
+      maxTasksPerWorker,
 
       // スレッド側に渡すデータ
       // プリミティブな値しか渡せない（インスタンスは渡せない）
       initData: {
         containerParams: params.container.toJSON(),
-        semaphoreSharedMemory,
         lgCodeFilter: Array.from(params.lgCodeFilter),
+        semaphoreSharedMemory,
+        maxTasksPerWorker,
       },
 
       signal: this.abortCtrl.signal,
@@ -94,6 +106,14 @@ export class CsvParseTransform extends Duplex {
     this.csvParsers?.close();
   }
 
+  private closer() {
+    if (!this.receivedFinal || this.runningTasks > 0 || this.closed) {
+      return;
+    }
+    // 全タスクが処理したので終了
+    this.push(null);
+  }
+
   // 前のstreamからデータが渡されてくる
   async _write(
     downloadResult: DownloadQuery2,
@@ -102,34 +122,46 @@ export class CsvParseTransform extends Duplex {
     callback: TransformCallback,
   ) {
 
-    while (!this.csvParsers) {
-      await timers.setTimeout(100);
-    }
-    
     // 次のタスクをもらうために、先にCallbackを呼ぶ
     callback();
+
+    // リソースファイル(zipファイル)に変更がないので、スキップする
+    if (downloadResult.status === DownloadProcessStatus.SKIP) {
+      this.push({
+        dataset: downloadResult.dataset,
+        csvFiles: [],
+        urlCache: undefined,
+        status: DownloadProcessStatus.SKIP,
+      } as DownloadProcessBase);
+
+      // 全てタスクが完了したかをチェック
+      this.closer();
+      return;
+    }
+
     this.runningTasks++;
 
-    // CSVファイルを分析して、データベースに登録する
-    this.csvParsers.run(downloadResult).then((parseResult) => {
+    try {
+      // CSVファイルを分析して、データベースに登録する
+      const parseResult = await this.csvParsers.run(downloadResult);
       this.push(parseResult);
-      this.runningTasks--;
-      
-      // 全てタスクが完了したかをチェック
-      if (this.runningTasks === 0 && this.receivedFinal) {
-        if (!this.closed) {
-          this.push(null);
-        }
-      }
-    }).catch((_) => {
 
-      this.abortCtrl.abort(`Can not parse the file: ${[downloadResult.csvFilePath]}`);
+      this.runningTasks--;
+      // 全てタスクが完了したかをチェック
+      this.closer();
+    } catch (e: unknown) {
+
+      console.error(e);
+      this.abortCtrl.abort(new Event(`Can not parse the file: ${[downloadResult.zipFilePath]}`));
+      
       this.close();
-    });
+    };
   }
 
   _final(callback: (error?: Error | null) => void): void {
     this.receivedFinal = true;
     callback();
+    // 全てタスクが完了したかをチェック
+    this.closer();
   }
 }

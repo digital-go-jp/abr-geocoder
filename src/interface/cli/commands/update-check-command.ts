@@ -72,6 +72,13 @@ const updateCheckCommand: CommandModule = {
           AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
       })
+      .option('threads', {
+        alias: 't',
+        type: 'number',
+        describe: AbrgMessage.toString(
+          AbrgMessage.CLI_DOWNLOAD_THREADS,
+        ),
+      })
       .option('yes', {
         alias: 'y',
         type: 'boolean',

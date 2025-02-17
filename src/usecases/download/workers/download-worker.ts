@@ -47,10 +47,12 @@ export const downloadOnWorkerThread = async (params: Required<{
     peerMaxConcurrentStreams: params.initData.maxTasksPerWorker,
   });
 
+  const datasetDb = await container.database.openDatasetDb();
+
   // CKANからダウンロードを行う
   const downloader = new DownloadStep1Transform({
     client,
-    urlCacheMgr: container.urlCacheMgr,
+    datasetDb,
     downloadDir: container.downloadDir,
     fileShowUrl: container.getFileShowUrl(),
     highWaterMark: params.initData.maxTasksPerWorker,

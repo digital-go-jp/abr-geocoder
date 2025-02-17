@@ -88,7 +88,7 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
       // Because we output string as Buffer.
       readableObjectMode: false,
 
-      highWaterMark: 3000,
+      highWaterMark: 2048,
     });
   }
 
@@ -102,7 +102,7 @@ export class GeoJsonTransform extends Stream.Transform implements IFormatTransfo
     return {
       lon: parseFloat(result.rep_lon),
       lat: parseFloat(result.rep_lat),
-    }
+    };
   }
 
   _transform(

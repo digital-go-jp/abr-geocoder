@@ -27,7 +27,6 @@ import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
 import { QuerySet } from '../models/query-set';
 import { Tokyo23TownTrieFinder } from '../models/tokyo23-town-finder';
-import { toHankakuAlphaNum } from '../services/to-hankaku-alpha-num';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
 
 export class Tokyo23TownTranform extends Transform {
@@ -75,28 +74,32 @@ export class Tokyo23TownTranform extends Transform {
         if (!searchResult.info) {
           throw new Error('searchResult.info is empty');
         }
-        anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
-        anyHit = true;
 
+        // ここで大字・丁目・小字まで確定させると、oaza-chome-transformとの整合性が合わなくなるので無視する。
+        // partialMatches = trueなので、〇〇区〇〇市が必ずヒットする
+        if (searchResult.info.oaza_cho || searchResult.info.chome || searchResult.info.koaza) {
+          return;
+        }
+        anyAmbiguous = anyAmbiguous || searchResult.ambiguousCnt > 0;
+        anyHit = true;
+        
         const params: Record<string, CharNode | number | string | MatchLevel | undefined | null> = {
           pref_key: searchResult.info.pref_key,
           city_key: searchResult.info.city_key,
           town_key: searchResult.info.town_key,
+          original_rsdt_addr_flg: searchResult.info.rsdt_addr_flg,
           rsdt_addr_flg: searchResult.info.rsdt_addr_flg,
           tempAddress: searchResult.unmatched,
           matchedCnt: query.matchedCnt + searchResult.depth,
-          koaza: toHankakuAlphaNum(searchResult.info.koaza),
           pref: searchResult.info.pref,
           county: searchResult.info.county,
           city: searchResult.info.city,
           ward: searchResult.info.ward,
           lg_code: searchResult.info.lg_code,
-          oaza_cho: searchResult.info.oaza_cho,
           machiaza_id: searchResult.info.machiaza_id,
-          chome: searchResult.info.chome,
-          ambiguousCnt: query.ambiguousCnt + (searchResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + searchResult.ambiguousCnt, 
         };
-        if (searchResult.info.machiaza_id.endsWith('000')) {
+        if (searchResult.info.machiaza_id && searchResult.info.machiaza_id.endsWith('000')) {
           params.match_level = MatchLevel.MACHIAZA;
         } else {
           params.match_level = MatchLevel.MACHIAZA_DETAIL;

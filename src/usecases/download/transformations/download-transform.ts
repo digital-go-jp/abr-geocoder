@@ -21,13 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */;
-import { DownloadQueryBase, DownloadRequest, isDownloadProcessError } from '@domain/models/download-process-query';
+import { DownloadProcessStatus, DownloadQueryBase, DownloadRequest } from '@domain/models/download-process-query';
 import { WorkerThreadPool } from '@domain/services/thread/worker-thread-pool';
 import { DownloadDiContainer } from '@usecases/download/models/download-di-container';
 import { DownloadWorkerInitData } from '@usecases/download/workers/download-worker';
 import path from 'node:path';
 import { Duplex, TransformCallback } from 'node:stream';
 import timers from 'node:timers/promises';
+
+export type DownloadTransformOptions = {
+  maxConcurrency: number;
+  maxTasksPerWorker: number;
+  container: DownloadDiContainer;
+};
 
 export class DownloadTransform extends Duplex {
 
@@ -36,24 +42,27 @@ export class DownloadTransform extends Duplex {
   private abortCtrl = new AbortController();
 
   // ダウンロードを担当するワーカースレッド
-  private downloader?: WorkerThreadPool<
+  private downloader!: WorkerThreadPool<
     DownloadWorkerInitData, 
     DownloadRequest,
     DownloadQueryBase
   >;
+  
+  static create = async (params: Required<DownloadTransformOptions>): Promise<DownloadTransform> => {
+    const downloader = new DownloadTransform();
+    await downloader.initAsync(params);
+    return downloader;
+  };
 
-  constructor(params : Required<{
-    maxConcurrency: number;
-    maxTasksPerWorker: number;
-    container: DownloadDiContainer;
-  }>) {
+  private constructor() {
     super({
       objectMode: true,
       allowHalfOpen: true,
       read() {},
     });
-
-    this.downloader = new WorkerThreadPool<
+  }
+  private async initAsync(params : Required<DownloadTransformOptions>) {
+    this.downloader = await WorkerThreadPool.create<
       DownloadWorkerInitData, 
       DownloadRequest,
       DownloadQueryBase
@@ -87,13 +96,8 @@ export class DownloadTransform extends Duplex {
   async _write(
     params: DownloadRequest,
     _: BufferEncoding,
-    // callback: (error?: Error | null | undefined) => void,
     callback: TransformCallback,
   ) {
-    while (!this.downloader) {
-      await timers.setTimeout(100);
-    }
-    
     this.runningTasks++;
 
     // 次のタスクをもらうために、callbackを呼び出す
@@ -109,7 +113,7 @@ export class DownloadTransform extends Duplex {
         const downloadResult = await this.downloader.run(params);
         this.runningTasks--;
 
-        if (isDownloadProcessError(downloadResult)) {
+        if (downloadResult.status === DownloadProcessStatus.ERROR) {
           this.push(downloadResult);
           if (this.runningTasks === 0 && this.receivedFinal) {
             this.push(null);

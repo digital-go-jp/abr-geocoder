@@ -7,31 +7,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "geocoding | column",
+      "name": "geocoding(test.txt)",
       "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
-      "runtimeExecutable" : "${workspaceFolder}/.vscode/debug-with-column.sh",
-      "runtimeArgs": [
-        "--trace-warnings",
-        "--require",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/.vscode/test.txt",
-        "-f simplified",
-        "--silent",
-        "--debug"
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "geocoding | jq",
-      "program": "${workspaceFolder}/src/interface/cli/cli.ts",
-      "preLaunchTask": "npm: build",
-      "runtimeExecutable" : "${workspaceFolder}/.vscode/debug-with-jq.sh",
       "runtimeArgs": [
         "--trace-warnings",
         "--require",
@@ -62,7 +40,6 @@
         "csv",
         "${workspaceFolder}/.vscode/schools-input.txt",
         "${workspaceFolder}/.vscode/schools-output.csv",
-        "--debug",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -92,6 +69,22 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "e2e test",
+      "program": "${workspaceFolder}/e2e/test-runner.ts",
+      "preLaunchTask": "npm: build",
+      "runtimeArgs": [
+        "--inspect",
+        "--require",
+        "ts-node/register"
+      ],
+      "args": [
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "download command",
       "program": "${workspaceFolder}/src/interface/cli/cli.ts",
       "preLaunchTask": "npm: build",
@@ -102,9 +95,8 @@
       ],
       "args": [
         "download",
-        "--silent",
-        "-c 131016 033812 082082 122246 122297 213624",
-        "-d ./db"
+        "-c 210005",
+        "-d ${workspaceFolder}/db",
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
@@ -122,7 +114,7 @@
         "ts-node/register"
       ],
       "args": [
-        "serve",
+        "serve start",
         "--port 80"
       ],
       "console": "integratedTerminal",

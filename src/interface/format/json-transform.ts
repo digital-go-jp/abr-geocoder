@@ -86,7 +86,7 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
       // Because we output string as Buffer.
       readableObjectMode: false,
 
-      highWaterMark: 3000,
+      highWaterMark: 2048,
     });
   }
 
@@ -100,7 +100,7 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
     return {
       lon: parseFloat(result.rep_lon),
       lat: parseFloat(result.rep_lat),
-    }
+    };
   }
 
   _transform(
@@ -109,7 +109,7 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
     callback: TransformCallback,
   ): void {
 
-    const unmatched: string[] = [...result.unmatched];
+    const unmatched: string[] = [...result.unmatched || []];
     if (result.tempAddress) {
       unmatched.push(result.tempAddress?.toOriginalString()?.trim());
     }

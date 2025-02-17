@@ -36,12 +36,15 @@ export class AbrGeocoderStream extends Duplex {
   private searchTarget: SearchTarget;
   private fuzzy: string | undefined;
   private pausing: boolean = false;
+  private highWatermark: number;
+  private halfWatermark: number;
 
-  constructor(params: Required<{
+  constructor(params: {
     geocoder: AbrGeocoder,
     fuzzy: string;
     searchTarget?: SearchTarget;
-  }>) {
+    highWatermark?: number;
+  }) {
     super({
       objectMode: true,
       allowHalfOpen: true,
@@ -49,6 +52,8 @@ export class AbrGeocoderStream extends Duplex {
     this.geocoder = params.geocoder;
     this.fuzzy = params.fuzzy || DEFAULT_FUZZY_CHAR;
     this.searchTarget = params.searchTarget || SearchTarget.ALL;
+    this.highWatermark = params.highWatermark || 8192;
+    this.halfWatermark = this.highWatermark >> 1;
 
     this.once('close', async () => {
       await params.geocoder.close();
@@ -58,7 +63,7 @@ export class AbrGeocoderStream extends Duplex {
   _read(): void {}
 
   private closer() {
-    if (this.pausing && this.writeIdx - this.nextIdx < 1024) {
+    if (this.pausing && this.writeIdx - this.nextIdx < this.halfWatermark) {
       this.emit('resume');
       this.pausing = false;
     }
@@ -70,11 +75,11 @@ export class AbrGeocoderStream extends Duplex {
     this.push(null);
   }
 
-  private async waiter() {
+  private waiter() {
     // Out of memory を避けるために、受け入れを一時停止
     // 処理済みが追いつくまで、待機する
     const waitingCnt = this.writeIdx - this.nextIdx;
-    if (waitingCnt < 8192 || this.pausing) {
+    if (waitingCnt < this.highWatermark || this.pausing) {
       return;
     }
 
@@ -90,7 +95,7 @@ export class AbrGeocoderStream extends Duplex {
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
-    await this.waiter();
+    this.waiter();
 
     const lineId = ++this.writeIdx;
 

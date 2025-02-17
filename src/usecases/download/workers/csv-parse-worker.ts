@@ -21,27 +21,31 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DownloadQuery2, DownloadQueryBase } from '@domain/models/download-process-query';
-import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
-import { ThreadJob, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
-import { Readable, Writable } from "stream";
+import { DownloadProcessBase, DownloadProcessError, DownloadProcessSkip, DownloadProcessStatus, DownloadQuery2 } from '@domain/models/download-process-query';
+import { ThreadJob, ThreadJobResult, ThreadPing, ThreadPong } from '@domain/services/thread/thread-task';
+import { Readable, Transform, Writable } from "stream";
 import { MessagePort, isMainThread, parentPort, workerData } from "worker_threads";
 import { DownloadDiContainer, DownloadDiContainerParams } from '../models/download-di-container';
 import { CsvLoadStep1Transform } from '../steps/csv-load-step1-transform';
 import { CsvLoadStep2Transform } from '../steps/csv-load-step2-transform';
 import { DownloadStep2Transform } from '../steps/download-step2-transform';
+import { SemaphoreManager } from '@domain/services/thread/semaphore-manager';
 
 export type ParseWorkerInitData = {
   containerParams: DownloadDiContainerParams,
   lgCodeFilter: string[];
+  maxTasksPerWorker: number;
   semaphoreSharedMemory: SharedArrayBuffer;
 };
 
-export const parseOnWorkerThread = (params: Required<{
+export const parseOnWorkerThread = async (params: Required<{
   port: MessagePort;
   initData: ParseWorkerInitData;
 }>) => {
   const container = new DownloadDiContainer(params.initData.containerParams);
+  
+  // データベース書き込みのためのセマフォ
+  const semaphore = new SemaphoreManager(params.initData.semaphoreSharedMemory);
 
   // ZIPファイルを展開する
   const step2 = new DownloadStep2Transform({
@@ -53,37 +57,60 @@ export const parseOnWorkerThread = (params: Required<{
     lgCodeFilter: new Set(params.initData.lgCodeFilter),
   });
 
-  // データベース書き込みのためのセマフォ
-  const semaphore = new SemaphoreManager(params.initData.semaphoreSharedMemory);
-
   // データベースに書き込みを行う
   const databaseCtrl = container.database;
   const step4 = new CsvLoadStep2Transform({
     databaseCtrl,
     semaphore,
+    keepFiles: container.keepFiles,
   });
 
   const reader = new Readable({
     objectMode: true,
     read() {},
   });
-
+  
   // メインスレッドに結果を送信する
+  const returnTheResult = (job: ThreadJob<DownloadProcessBase>) => {
+    const jsonStr = JSON.stringify({
+      taskId: job.taskId,
+      kind: 'result',
+      data: job.data,
+    });
+    params.port.postMessage(jsonStr);
+  };
+
   const dst = new Writable({
     objectMode: true,
-    write(job: ThreadJob<DownloadQueryBase>, _, callback) {
-      const sharedMemory = JSON.stringify({
-        taskId: job.taskId,
-        kind: 'result',
-        data: job.data,
-      });
-      params.port.postMessage(sharedMemory);
-
+    write(job: ThreadJob<DownloadProcessBase>, _, callback) {
+      returnTheResult(job);
       callback();
     },
   });
   
   reader
+    .pipe(new Transform({
+      objectMode: true,
+      allowHalfOpen: true,
+      transform(job: ThreadJobResult<DownloadProcessError | DownloadQuery2 | DownloadProcessSkip>, _, callback) {
+
+        // エラーになったQuery or 変更がないZIPファイルはスキップする
+        if (
+          job.data.status === DownloadProcessStatus.ERROR || 
+          job.data.status === DownloadProcessStatus.SKIP
+        ) {
+          returnTheResult({
+            ...job,
+            kind: 'task',
+          });
+          callback();
+          return;
+        }
+
+        // ダウンロードされたファイル
+        callback(null, job);
+      },
+    }))
     .pipe(step2)
     .pipe(step3)
     .pipe(step4)

@@ -1,12 +1,15 @@
 import { jest } from '@jest/globals';
 import { Transform, TransformCallback } from 'node:stream';
+import { DownloadTransformOptions } from '../download-transform';
 
-export class MockDownloadTransform extends Transform {
-  constructor(public params: any) {
+export class DownloadTransform extends Transform {
+  private constructor() {
     super({
       objectMode: true,
     });
   }
+  initAsync = jest.fn();
+
   _transform(_: any, __: BufferEncoding, callback: TransformCallback): void {   
     callback(null, {
       kind: 'download',
@@ -29,8 +32,10 @@ export class MockDownloadTransform extends Transform {
   }
 
   close() {}
-}
 
-export const DownloadTransform = jest.fn((params: any) => {
-  return new MockDownloadTransform(params);
-});
+  static create = async (params: Required<DownloadTransformOptions>): Promise<DownloadTransform> => {
+    const downloader = new DownloadTransform();
+    await downloader.initAsync(params);
+    return downloader;
+  };
+}
