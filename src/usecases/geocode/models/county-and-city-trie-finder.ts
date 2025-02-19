@@ -6,16 +6,14 @@ import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHiragana } from '../services/to-hiragana';
 import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
-import { TrieAddressFinder } from "./trie/trie-finder";
 import { removeFiles } from "@domain/services/remove-files";
+import { TrieAddressFinder2 } from "./trie/trie-finder2";
+import { FileTrieWriter } from "./trie/file-trie-writer";
+import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
 
-export class CountyAndCityTrieFinder extends TrieAddressFinder<CityMatchingInfo> {
+export class CountyAndCityTrieFinder extends TrieAddressFinder2<CityMatchingInfo> {
 
-  private constructor() {
-    super();
-  }
-
-  private static normalizeStr(value: string): string {
+  static normalize(value: string): string {
     // 半角カナ・全角カナ => 平仮名
     value = toHiragana(value);
 
@@ -28,48 +26,71 @@ export class CountyAndCityTrieFinder extends TrieAddressFinder<CityMatchingInfo>
     return value;
   }
 
-  static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
+  private static readonly getCacheFilePath = async (diContainer: AbrGeocoderDiContainer) => {
     makeDirIfNotExists(diContainer.cacheDir);
-
     const commonDb = await diContainer.database.openCommonDb();
     const genHash = commonDb.getCountyAndCityListGeneratorHash();
 
-    const tree = new CountyAndCityTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, `county-and-city_${genHash}.v8`);
-    const isExist = fs.existsSync(cacheFilePath);
-    try {
-      if (isExist) {
-        // キャッシュがあれば、キャッシュから読み込む
-        const encoded = await fs.promises.readFile(cacheFilePath);
-        tree.import(encoded);
-        return tree;
-      }
-    } catch (_e: unknown) {
-      // インポートエラーが発生した場合は、キャッシュを作り直すので、
-      // ここではエラーを殺すだけで良い
-    }
+    return path.join(diContainer.cacheDir, `county-and-city_${genHash}.abrg2`);
+  };
+
+  static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await CountyAndCityTrieFinder.getCacheFilePath(task.diContainer);
 
     // 古いキャッシュファイルを削除
     await removeFiles({
-      dir: diContainer.cacheDir,
-      filename: 'county-and-city_.*\\.v8',
+      dir: task.diContainer.cacheDir,
+      filename: 'county-and-city_.*\\.abrg2',
     });
     
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const rows = await commonDb.getCountyAndCityList();
+    const db = await task.diContainer.database.openCommonDb();
+    if (!db) {
+      return false;
+    }
 
-    for (const row of rows) {
-      tree.append({
-        key: CountyAndCityTrieFinder.normalizeStr(row.key),
+    const rows = await db.getCountyAndCityList();
+    const writer = await FileTrieWriter.create(cacheFilePath);
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
+      await writer.addNode({
+        key: CountyAndCityTrieFinder.normalize(row.key),
         value: row,
       });
     }
+    await writer.close();
+    await db.close();
+    return true;
+  };
 
-    // キャッシュファイルに保存
-    const encoded = tree.export();
-    await fs.promises.writeFile(cacheFilePath, encoded);
+  static readonly loadDataFile = async (task: CreateCacheTaskParams) => {
+    const cacheFilePath = await CountyAndCityTrieFinder.getCacheFilePath(task.diContainer);
+    let data: Buffer | undefined;
+    let numOfTry: number = 0;
+    while (!data && numOfTry < 3) {
+      try {
+        // TrieFinderが作成できればOK
+        if (fs.existsSync(cacheFilePath)) {
+          data = await fs.promises.readFile(cacheFilePath);
+          const first100bytes = data.subarray(0, 100);
+          new CountyAndCityTrieFinder(first100bytes);
+          return data;
+        }
+      } catch (_e: unknown) {
+        // Do nothing here
+        if (process.env.JEST_WORKER_ID) {
+          console.log('Creates catch for CountyAndCityTrieFinder', _e);
+        }
+      }
 
-    return tree;
+      // 新しく作成
+      if (!await CountyAndCityTrieFinder.createDictionaryFile(task)) {
+        return;
+      }
+      numOfTry++;
+    }
+    return data;
   };
 }

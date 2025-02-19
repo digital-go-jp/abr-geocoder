@@ -77,21 +77,12 @@ jobs:
           tgz=$(npm pack | tail -n1 | tr -d '\n')
           echo "tgz=$tgz" >> $GITHUB_OUTPUT
           
-      #
-      # pull_requestの場合は、npm publish . --dry-run
-      # workflow_dispatch(手動)の場合は、npm publish .
-      #
-      - name: npm release  (trigger / workflow_dispatch)
+      - name: npm release
         run: |
-          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-            npm publish . --dry-run
-            gh release create ${{ steps.prepare.outputs.version }}-${{ env.commit_id }} ${{ steps.prepare.outputs.tgz }}
-
-          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            gh release create ${{ steps.prepare.outputs.version }} ${{ steps.prepare.outputs.tgz }} 
-            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-            npm publish . --access public
-          fi
+          npm publish . --dry-run
+          gh release create ${{ steps.prepare.outputs.version }}-${{ env.commit_id }} ${{ steps.prepare.outputs.tgz }}
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          npm publish . --access public
         env:
           # GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}

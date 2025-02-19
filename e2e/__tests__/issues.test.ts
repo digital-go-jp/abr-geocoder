@@ -47,4 +47,32 @@ describe('issues', () => {
   test('#166: 半角カタカナの「ｹ」がマッチしない', async () => {
     await jsonTestRunner('issue166');
   });
+  
+  test('#186: 「部」が重複', async () => {
+    await jsonTestRunner('issue186');
+  });
+  
+  test('#187: 「丁」が重複', async () => {
+    await jsonTestRunner('issue187');
+  });
+  
+  test('#188: 「条」が重複', async () => {
+    await jsonTestRunner('issue188');
+  });
+  
+  test('#189: 「丁目」が省略される', async () => {
+    await jsonTestRunner('issue189');
+  });
+  test('#197: 「町」が重複', async () => {
+    await jsonTestRunner('issue197');
+  });
+  test('#201: 末尾の漢数字が重複する', async () => {
+    await jsonTestRunner('issue201');
+  });
+  test('#203: 町字が二重で追加される', async () => {
+    await jsonTestRunner('issue203');
+  });
+  test('#209: 町字の漢数字と同じ数字が消える', async () => {
+    await jsonTestRunner('issue209');
+  });
 });

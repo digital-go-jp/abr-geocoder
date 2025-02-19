@@ -24,6 +24,7 @@
 
 export type ParcelInfo = {
   parcel_key: number;
+  town_key: number;
   prc_id: string;
   prc_num1: string;
   prc_num2: string;

@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import { DownloadProcessError, DownloadQuery2, DownloadResult, isDownloadProcessError } from '@domain/models/download-process-query';
+import { DownloadQuery2, DownloadResult } from '@domain/models/download-process-query';
 import { ThreadJob } from '@domain/services/thread/thread-task';
 import { ICsvFile } from '@domain/types/download/icsv-file';
 import fs from 'node:fs';
@@ -43,21 +43,14 @@ export class DownloadStep2Transform extends Duplex {
   }
 
   async _write(
-    job: ThreadJob<DownloadQuery2 | DownloadProcessError>,
+    job: ThreadJob<DownloadQuery2>,
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
-    callback();
-    // エラーになったQueryはスキップする
-    if (isDownloadProcessError(job.data)) {
-      this.push(job as ThreadJob<DownloadProcessError>);
-      return;
-    }
-
     const csvFiles: ICsvFile[] = [];
 
     await (new Promise((resolve: (_?: void) => void) => {
-      fs.createReadStream((job as ThreadJob<DownloadQuery2>).data.csvFilePath)
+      fs.createReadStream(job.data.zipFilePath)
         .pipe(unzipper.Parse())
         .on('entry', (entry: unzipper.Entry) => {
           if (entry.type === 'Directory') {
@@ -74,23 +67,30 @@ export class DownloadStep2Transform extends Duplex {
             crc32: entry.vars.crc32,
             contentLength: (entry.vars as unknown as {uncompressedSize: number}).uncompressedSize,
             lastModified: entry.vars.lastModifiedTime,
-            noUpdate: (job as ThreadJob<DownloadQuery2>).data.noUpdate,
+            noUpdate: job.data.noUpdate,
           });
           entry
             .pipe(fs.createWriteStream(dstPath))
             .once('finish', resolve);
         });
     }));
+
+    // zipファイルを消去する
+    // await fs.promises.unlink((job as ThreadJob<DownloadQuery2>).data.csvFilePath);
     
     this.push({
       taskId: job.taskId,
       kind: 'task',
       data: {
         csvFiles,
+        urlCache: job.data.urlCache,
         status: 'success',
         dataset: job.data.dataset,
+        zipFilePath: job.data.zipFilePath,
       },
     } as ThreadJob<DownloadResult>);
+
+    callback();
   }
 
 }

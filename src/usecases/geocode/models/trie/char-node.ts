@@ -276,6 +276,8 @@ export class CharNode {
         ignore: node.ignore,
       });
       tail = tail?.next;
+      tail.next = undefined;
+
       node = node.next;
     }
     return root.next!;
@@ -620,6 +622,12 @@ export class CharNode {
     }
     return pointer;
   }
+
+  release() {
+    const nextChar = this.next;
+    this.next = undefined;
+    nextChar?.release();
+  }
   
   static readonly fromString = (value: string): CharNode | undefined => {
     try {
@@ -672,8 +680,14 @@ export class CharNode {
         p = p.next;
       }
       p.next = targets.shift();
-      while (p?.next) {
+      while (p?.next && p !== p.next) {
         p = p.next;
+      }
+      // https://github.com/digital-go-jp/abr-geocoder/issues/210
+      // 無限ループになる
+      // 理由は不明。
+      if (p === p.next) {
+        p.next = undefined;
       }
     }
     return head;
@@ -701,4 +715,5 @@ export class CharNode {
     }
     return head;
   }
+  
 }

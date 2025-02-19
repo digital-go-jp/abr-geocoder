@@ -23,9 +23,8 @@
  */
 import { CommonDiContainer } from '@domain/models/common-di-container';
 import { makeDirIfNotExists } from '@domain/services/make-dir-if-not-exists';
-import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { DatabaseParams } from '@domain/types/database-params';
-import { UpdateCheckDbController } from '@interface/database/update-check-db-controller';
+import { UpdateCheckDbController } from '@drivers/database/update-check-db-controller';
 
 export type UpdateCheckDiContainerParams = {
   cacheDir: string;
@@ -35,7 +34,6 @@ export type UpdateCheckDiContainerParams = {
 
 export class UpdateCheckDiContainer extends CommonDiContainer {
 
-  public readonly urlCacheMgr: UrlCacheManager;
   public readonly downloadDir: string;
   public readonly database: UpdateCheckDbController;
 
@@ -47,25 +45,24 @@ export class UpdateCheckDiContainer extends CommonDiContainer {
 
     // ダウンロードディレクトリにキャッシュファイルを保存する
     makeDirIfNotExists(params.cacheDir);
-    this.urlCacheMgr = new UrlCacheManager(params.cacheDir);
 
     this.database = new UpdateCheckDbController(params.database);
 
     Object.freeze(this);
   }
 
-  getFileShowUrl() {
-    return `https://${this.env.hostname}/rc/api/3/action/package_show`;
+  getFileShowUrl(): URL {
+    return new URL(`https://${this.env.hostname}/rc/api/3/action/package_show`);
   }
-  getPackageListUrl() {
-    return `https://${this.env.hostname}/rc/api/3/action/package_list`;
+  getPackageListUrl(): URL {
+    return new URL(`https://${this.env.hostname}/rc/api/3/action/package_list`);
   }
 
   toJSON(): UpdateCheckDiContainerParams {
     return {
       ...this.params,
       downloadDir: this.downloadDir,
-      cacheDir: this.urlCacheMgr.cacheDir,
+      cacheDir: this.params.cacheDir,
     };
   }
 }

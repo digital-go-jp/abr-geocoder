@@ -21,10 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { SPACE, KANJI_NUMS, DASH } from "@config/constant-values";
+import { SPACE, DASH } from "@config/constant-values";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { isDigit } from "./is-number";
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
+import { isKanjiNums } from "./is-kanji-nums";
 
 export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): CharNode | undefined => {
   if (!address) {
@@ -33,8 +34,6 @@ export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): 
 
   // 最初に空白がある位置より前と後に分ける
   const [before, ...after] = address.split(RegExpEx.create(SPACE, 'g'));
-
-  const kanjiNums = RegExpEx.create(`[${KANJI_NUMS}]`);
 
   const stack: CharNode[] = before.split('');
   const head: CharNode = new CharNode({
@@ -79,12 +78,12 @@ export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): 
     // (数字) + 「の」+ (数字」)の場合、「の」をDASHにする
     if (
       (
-        kanjiNums.test(stack.at(-2)?.originalChar || '') ||
+        isKanjiNums(stack.at(-2)?.originalChar || '') ||
         isDigit(stack.at(-2))
       ) &&
       RegExpEx.create('[のノ丿之]').test(stack.at(-1)?.char || '') &&
       (
-        kanjiNums.test(top?.originalChar || '') ||
+        isKanjiNums(top?.originalChar || '') ||
         isDigit(top)
       )
     ) {
@@ -102,9 +101,9 @@ export const insertSpaceBeforeRoomOrFacility = (address: CharNode | undefined): 
     }
 
     // 算用数字と漢数字の間にスペースを入れる
-    if (isDigit(top) && !kanjiNums.test(top.originalChar!) &&
+    if (isDigit(top) && !isKanjiNums(top.originalChar!) &&
       head.next?.moveToNext()?.char !== DASH &&  // (数字)+(漢数字の「一」)+(数字)の場合、「一」をDashに置き換えるため
-      kanjiNums.test(head.next?.moveToNext()?.originalChar || '')) {
+      isKanjiNums(head.next?.moveToNext()?.originalChar || '')) {
       const space = new CharNode({
         char: SPACE,
       });

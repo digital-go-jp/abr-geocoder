@@ -32,30 +32,33 @@ export class SemaphoreManager {
   constructor(
     shared: SharedArrayBuffer,
   ) {
-    
+    if (shared.byteLength % Int32Array.BYTES_PER_ELEMENT !== 0) {
+      throw new Error("SharedArrayBuffer size must be a multiple of Int32Array element size");
+    }
     this.semaphore = new Int32Array(shared);
-    this.size = this.semaphore.byteLength;
+    this.size = this.semaphore.length;  // = this.semaphore.byteLength / 4
   }
 
-  enterAwait(idx: number): Promise<number> {
+  async enterAwait(idx: number): Promise<number> {
 
-    idx = idx % this.semaphore.byteLength;
+    // idx = idx % this.semaphore.byteLength;
+    idx = idx % this.size;
 
-    return new Promise((resolve: (idx: number) => void) => {
-      while (true) {
-        if (Atomics.compareExchange(this.semaphore, idx, SemaphoreManager.UNLOCKED, SemaphoreManager.LOCKED) === SemaphoreManager.UNLOCKED) {
-          resolve(idx);
-          return;
-        }
-        Atomics.wait(this.semaphore, idx, SemaphoreManager.LOCKED);
+    while (true) {
+      if (Atomics.compareExchange(this.semaphore, idx, SemaphoreManager.UNLOCKED, SemaphoreManager.LOCKED) === SemaphoreManager.UNLOCKED) {
+        break;
       }
-    });
+      await Atomics.wait(this.semaphore, idx, SemaphoreManager.LOCKED);
+    }
+    return idx;
   }
 
   leave(idx: number) {
-    idx = idx % this.semaphore.byteLength;
+    // idx = idx % this.semaphore.byteLength;
+    idx = idx % this.size;
     
-    Atomics.compareExchange(this.semaphore, idx, SemaphoreManager.LOCKED, SemaphoreManager.UNLOCKED);
+    Atomics.store(this.semaphore, idx, SemaphoreManager.UNLOCKED);
+    // Atomics.compareExchange(this.semaphore, idx, SemaphoreManager.LOCKED, SemaphoreManager.UNLOCKED);
     Atomics.notify(this.semaphore, idx, 1);
   }
 }

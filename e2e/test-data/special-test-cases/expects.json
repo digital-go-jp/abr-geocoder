@@ -32,5 +32,171 @@
       "prc_num2": null,
       "prc_num3": null
     }
+  },
+  {
+    "query": {
+      "input": "秋田県大仙市神宮寺字中瀬古川敷３１－４"
+    },
+    "result": {
+      "output": "秋田県大仙市神宮寺字中瀬古川敷31-4",
+      "others": [],
+      "match_level": "parcel",
+      "coordinate_level": "parcel",
+      "lat": 39.493896079,
+      "lon": 140.418779517,
+      "lg_code": "052124",
+      "machiaza_id": "0081213",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": "000310000400000",
+      "pref": "秋田県",
+      "county": null,
+      "city": "大仙市",
+      "ward": null,
+      "oaza_cho": "神宮寺",
+      "chome": null,
+      "koaza": "字中瀬古川敷",
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": "31",
+      "prc_num2": "4",
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "茨城県古河市中田１２２１"
+    },
+    "result": {
+      "output": "茨城県古河市中田1221",
+      "others": [
+        "1221"
+      ],
+      "match_level": "machiaza",
+      "coordinate_level": "machiaza",
+      "lat": 36.144816,
+      "lon": 139.710968,
+      "lg_code": "082040",
+      "machiaza_id": "0089000",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "茨城県",
+      "county": null,
+      "city": "古河市",
+      "ward": null,
+      "oaza_cho": "中田",
+      "chome": null,
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "埼玉県坂戸市泉町三丁目25-8"
+    },
+    "result": {
+      "output": "埼玉県坂戸市泉町三丁目25-8",
+      "others": [],
+      "match_level": "parcel",
+      "coordinate_level": "parcel",
+      "lat": 35.97098949,
+      "lon": 139.387918982,
+      "lg_code": "112399",
+      "machiaza_id": "0013003",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": "000250000800000",
+      "pref": "埼玉県",
+      "county": null,
+      "city": "坂戸市",
+      "ward": null,
+      "oaza_cho": "泉町",
+      "chome": "三丁目",
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": "25",
+      "prc_num2": "8",
+      "prc_num3": null
+    }
+  },  {
+    "query": {
+      "input": "埼玉県坂戸市八幡２丁目７－３"
+    },
+    "result": {
+      "output": "埼玉県坂戸市八幡二丁目7-3",
+      "others": [],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.959621414,
+      "lon": 139.402013236,
+      "lg_code": "112399",
+      "machiaza_id": "0010002",
+      "rsdt_addr_flg": 1,
+      "blk_id": "007",
+      "rsdt_id": "003",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "埼玉県",
+      "county": null,
+      "city": "坂戸市",
+      "ward": null,
+      "oaza_cho": "八幡",
+      "chome": "二丁目",
+      "koaza": null,
+      "blk_num": "7",
+      "rsdt_num": "3",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "埼玉県坂戸市日の出町１２－４"
+    },
+    "result": {
+      "output": "埼玉県坂戸市日の出町12-4",
+      "others": [],
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.959087433,
+      "lon": 139.393371531,
+      "lg_code": "112399",
+      "machiaza_id": "0026000",
+      "rsdt_addr_flg": 1,
+      "blk_id": "012",
+      "rsdt_id": "004",
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "埼玉県",
+      "county": null,
+      "city": "坂戸市",
+      "ward": null,
+      "oaza_cho": "日の出町",
+      "chome": null,
+      "koaza": null,
+      "blk_num": "12",
+      "rsdt_num": "4",
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
   }
 ]

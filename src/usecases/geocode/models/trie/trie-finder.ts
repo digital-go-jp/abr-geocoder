@@ -24,31 +24,14 @@
 import crc32Lib from "@domain/services/crc32-lib";
 import { deserialize, serialize } from "node:v8";
 import { CharNode } from "./char-node";
+import { TrieFinderResult } from "./trie-finder2";
+
 
 export interface ITrieNode<T> {
   itemHashes: Set<string> | undefined;
   children: Map<string, ITrieNode<T>>;
 }
 
-export class TrieFinderResult<T> {
-  public readonly info: T | undefined;
-  public readonly unmatched: CharNode | undefined;
-  public readonly depth: number;
-  public readonly ambiguous: boolean;
-
-  constructor(params: {
-    info: T | undefined;
-    unmatched: CharNode | undefined;
-    depth: number;
-    ambiguous: boolean;
-  }) {
-    this.info = params.info;
-    this.unmatched = params.unmatched;
-    this.depth = params.depth;
-    this.ambiguous = params.ambiguous;
-    Object.freeze(this);
-  }
-}
 
 type InternalResult<T> = {
   info: T | undefined;
@@ -58,6 +41,7 @@ type InternalResult<T> = {
   // fuzzy や extraChallenges を使った場合
   // 結果が間違えている可能性があるとき true
   ambiguous: boolean;
+  path: string;
 };
 
 function createTrieNode<T extends {}>(): ITrieNode<T[]> {
@@ -73,6 +57,7 @@ export class TrieAddressFinder<T> {
   protected items: Map<string, T> = new Map();
 
   export(): Buffer {
+    
     return serialize({
       tree: this.root,
       items: this.items,
@@ -154,6 +139,7 @@ export class TrieAddressFinder<T> {
       extraChallenges,
       fuzzy,
       depth: 0,
+      path: '',
     });
     if (!searchResults || searchResults.size === 0) {
       return [];
@@ -165,14 +151,13 @@ export class TrieAddressFinder<T> {
       if (internalResult.depth === 0) {
         continue;
       }
-      results.push(
-        new TrieFinderResult<T>({
-          info: internalResult.info,
-          unmatched: internalResult.unmatched,
-          depth: internalResult.depth,
-          ambiguous: internalResult.ambiguous,
-        }),
-      );
+      results.push({
+        info: internalResult.info,
+        unmatched: internalResult.unmatched,
+        depth: internalResult.depth,
+        ambiguousCnt: internalResult.ambiguous ? 1 : 0,
+        path: CharNode.create(internalResult.path),
+      });
     }
 
     return results;
@@ -185,6 +170,7 @@ export class TrieAddressFinder<T> {
     extraChallenges,
     fuzzy,
     depth,
+    path,
   }: {
     fuzzy: string | undefined;
     parent: ITrieNode<T[]> | undefined;
@@ -192,6 +178,7 @@ export class TrieAddressFinder<T> {
     partialMatches: boolean;
     extraChallenges?: string[];
     depth: number;
+    path: string;
   }): Map<string, InternalResult<T>> | undefined {
 
     // ignoreフラグが指定されている場合、スキップする
@@ -204,6 +191,7 @@ export class TrieAddressFinder<T> {
         extraChallenges,
         fuzzy,
         depth,
+        path,
       });
     }
 
@@ -222,6 +210,7 @@ export class TrieAddressFinder<T> {
         partialMatches,
         extraChallenges,
         depth: depth + 1,
+        path: path + node.char,
       }) || new Map();
 
       // 中間結果を含まない場合は、情報を返す
@@ -257,6 +246,7 @@ export class TrieAddressFinder<T> {
           partialMatches,
           extraChallenges,
           depth: depth + 1,
+          path: path + node.char,
         });
         others?.forEach((other: InternalResult<T>, itemHash: string) => {
           if (results.has(itemHash)) {
@@ -283,6 +273,7 @@ export class TrieAddressFinder<T> {
             unmatched: node,
             depth,
             ambiguous: false,
+            path,
           });
         });
       }
@@ -301,6 +292,7 @@ export class TrieAddressFinder<T> {
           unmatched: node,
           depth,
           ambiguous: false,
+          path,
         });
       });
       return results;
@@ -325,6 +317,7 @@ export class TrieAddressFinder<T> {
           partialMatches,
           extraChallenges: newChallenges.length > 0 ? newChallenges : undefined,
           depth: depth + 1,
+          path: path + extraWord.at(0) || '',
         });
 
         others?.forEach((other, itemHash) => {

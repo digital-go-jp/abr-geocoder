@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "@jest/globals";
+import { beforeAll, describe, expect, jest, test } from "@jest/globals";
 import { CsvTransform } from '../csv-transform';
 import { SearchTarget } from "../../../domain/types/search-target";
 import { MatchLevel } from "../../../domain/types/geocode/match-level";
@@ -108,6 +108,8 @@ class MockQuery {
       this.rsdtdsp_key = data.rsdtdsp_key;
     }
   }
+
+  release = jest.fn();
 }
 
 describe('CsvTransform', () => {

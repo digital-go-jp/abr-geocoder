@@ -72,7 +72,6 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
 
   mimetype: string = 'application/json';
 
-  private buffer: string = '';
   private lineNum: number = 0;
 
   constructor(private readonly options: {
@@ -86,7 +85,22 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
       // Data format to the next stream is non-object mode.
       // Because we output string as Buffer.
       readableObjectMode: false,
+
+      highWaterMark: 2048,
     });
+  }
+
+  private toCoordinate(result: Query): { lat: number; lon: number; } | { lat: null; lon: null; } {
+    if (!result.rep_lat || !result.rep_lon) {
+      return {
+        lon: null,
+        lat: null,
+      };
+    }
+    return {
+      lon: parseFloat(result.rep_lon),
+      lat: parseFloat(result.rep_lat),
+    };
   }
 
   _transform(
@@ -94,18 +108,20 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
     _: BufferEncoding,
     callback: TransformCallback,
   ): void {
-    const out = this.buffer;
 
-    const unmatched: string[] = [...result.unmatched];
+    const unmatched: string[] = [...result.unmatched || []];
     if (result.tempAddress) {
       unmatched.push(result.tempAddress?.toOriginalString()?.trim());
     }
 
+    let out = '';
     if (this.lineNum > 0) {
-      this.buffer = ',';
+      out = ',';
     } else {
-      this.buffer = '[';
+      out = '[';
     }
+
+    const coordinates = this.toCoordinate(result);
     this.lineNum++;
     const output: JsonOutput = {
       query: {
@@ -117,8 +133,8 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
         score: result.formatted.score,
         match_level: result.match_level.str,
         coordinate_level: result.coordinate_level.str,
-        lat: result.rep_lat && parseFloat(result.rep_lat) || null,
-        lon: result.rep_lon && parseFloat(result.rep_lon) || null,
+        lat: coordinates.lat,
+        lon: coordinates.lon,
         lg_code: result.lg_code ? result.lg_code : BLANK_CHAR,
         machiaza_id: result.machiaza_id || BLANK_CHAR,
         rsdt_addr_flg: result.rsdt_addr_flg,
@@ -151,13 +167,11 @@ export class JsonTransform extends Stream.Transform implements IFormatTransform 
         rsdtdsp_key: result.rsdtdsp_key,
       };
     }
-    this.buffer += JSON.stringify(output);
-    callback(null);
-    this.push(out);
+    callback(null, `${out}${JSON.stringify(output)}`);
+    result.release();
   }
 
   _final(callback: (error?: Error | null | undefined) => void): void {
-    this.push(this.buffer);
     this.push(']');
     this.push(BREAK_AT_EOF); // ファイルの最後に改行を入れる
     // this.push(null);

@@ -22,24 +22,37 @@
  * SOFTWARE.
  */
 import { IWorkerThreadPool } from "@domain/services/thread/iworker-thread-pool";
+import { toSharedMemory } from "@domain/services/thread/shared-memory";
 import { WorkerThreadPool } from "@domain/services/thread/worker-thread-pool";
 import { WorkerPoolTaskInfo } from "@domain/services/thread/worker-thread-pool-task-info";
 import { GeocodeTransform } from '@usecases/geocode/worker/geocode-worker';
 import path from 'node:path';
-import { AbrGeocoderDiContainer, AbrGeocoderDiContainerParams } from "./models/abr-geocoder-di-container";
-import { AbrGeocoderInput } from "./models/abrg-input-data";
-import { Query, QueryJson } from "./models/query";
 import { FakeWorkerThreadPool } from "./fake-worker-thread-pool";
+import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
+import { AbrGeocoderInput } from "./models/abrg-input-data";
+import { CityAndWardTrieFinder } from "./models/city-and-ward-trie-finder";
+import { CountyAndCityTrieFinder } from "./models/county-and-city-trie-finder";
+import { KyotoStreetTrieFinder } from "./models/kyoto-street-trie-finder";
+import { OazaChoTrieFinder } from "./models/oaza-cho-trie-finder";
+import { PrefTrieFinder } from "./models/pref-trie-finder";
+import { Query, QueryJson } from "./models/query";
+import { Tokyo23TownTrieFinder } from "./models/tokyo23-town-finder";
+import { Tokyo23WardTrieFinder } from "./models/tokyo23-ward-trie-finder";
+import { WardTrieFinder } from "./models/ward-trie-finder";
+import { GeocodeWorkerInitData } from "./worker/geocode-worker-init-data";
+import { AbrAbortSignal } from "@domain/models/abr-abort-controller";
+import { PrefLgCode } from "@domain/types/pref-lg-code";
+import { PrefInfo } from "@domain/types/geocode/pref-info";
 
 export class AbrGeocoder {
   private taskHead: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
   private taskTail: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
-  private readonly taskToNodeMap: Map<number, WorkerPoolTaskInfo<AbrGeocoderInput, Query>> = new Map();
+  private readonly taskIDs: Set<number> = new Set();
   private flushing: boolean = false;
 
   private constructor(
     private readonly workerPool: IWorkerThreadPool<AbrGeocoderInput, QueryJson>,
-    private readonly signal?: AbortSignal,
+    private readonly signal?: AbrAbortSignal,
   ) {
     this.signal?.addEventListener('abort', () => this.close());
   }
@@ -66,12 +79,12 @@ export class AbrGeocoder {
   geocode(input: AbrGeocoderInput): Promise<Query> {
 
     let taskId = Math.floor(performance.now() + Math.random() * performance.now());
-    while (this.taskToNodeMap.has(taskId)) {
+    while (this.taskIDs.has(taskId)) {
       taskId = Math.floor(performance.now() + Math.random() * performance.now());
     }
     // resolver, rejector をキープする
     const taskNode = new WorkerPoolTaskInfo<AbrGeocoderInput, Query>(input);
-    this.taskToNodeMap.set(taskId, taskNode);
+    this.taskIDs.add(taskId);
 
     // 順番を維持するために、連結リストで追加する
     if (this.taskHead) {
@@ -97,22 +110,103 @@ export class AbrGeocoder {
         .catch((error: Error) => {
           taskNode.setResult(error);
         })
-        .finally(() => this.flushResults());
+        .finally(() => {
+          this.taskIDs.delete(taskId);
+          this.flushResults();
+        });
     });
   }
   
-  close() {
-    this.workerPool.close();
+  async close() {
+    await this.workerPool.close();
   }
 
   static create = async (params: {
     container: AbrGeocoderDiContainer;
     numOfThreads: number;
-    signal?: AbortSignal;
+    signal?: AbrAbortSignal;
+    isSilentMode: boolean;
   }) => {
+    const db = await params.container.database.openCommonDb();
+    const prefList: PrefInfo[] = await db.getPrefList();
+
+    // トライ木を作成するために必要な辞書データの読み込み
+    const pref = toSharedMemory((await PrefTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: {
+        type: "pref",
+      },
+    }))!);
+    const countyAndCity = toSharedMemory((await CountyAndCityTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: {
+        type: "county-and-city",
+      },
+    }))!);
+    const cityAndWard = toSharedMemory((await CityAndWardTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data:  {
+        type: "city-and-ward",
+      },
+    }))!);
+    const kyotoStreet = toSharedMemory((await KyotoStreetTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data:  {
+        type: "kyoto-street",
+      },
+    }))!);
+
+    const oazaChomes = [];
+    for await (const prefInfo of prefList) {
+      oazaChomes.push({
+        lg_code: prefInfo.lg_code as PrefLgCode,
+        data: toSharedMemory((await OazaChoTrieFinder.loadDataFile({
+          diContainer: params.container,
+          data:  {
+            type: "oaza-cho",
+            lg_code: prefInfo.lg_code as PrefLgCode,
+          },
+        }))!),
+      });
+    }
+
+    const ward = toSharedMemory((await WardTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data: {
+        type:  "ward",
+      },
+    }))!);
+    const tokyo23Ward = toSharedMemory((await Tokyo23WardTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data:  {
+        type: "tokyo23-ward",
+      },
+    }))!);
+    const tokyo23Town = toSharedMemory((await Tokyo23TownTrieFinder.loadDataFile({
+      diContainer: params.container,
+      data:  {
+        type: "tokyo23-town",
+      },
+    }))!);
+
+    const initData: GeocodeWorkerInitData = {
+      diContainer: params.container.toJSON(),
+      trieData: {
+        pref,
+        countyAndCity,
+        cityAndWard,
+        kyotoStreet,
+        oazaChomes,
+        ward,
+        tokyo23Ward,
+        tokyo23Town,
+      },
+      debug: false,
+    };
+
     // スレッド数が2未満、もしくは、jest で動かしている場合は、メインスレッドで処理する
     if (params.numOfThreads < 2 || process.env.JEST_WORKER_ID !== undefined) {
-      const geocodeTransform = await GeocodeTransform.create(params.container.toJSON());
+      const geocodeTransform = await GeocodeTransform.create(initData);
       const fakePool = new FakeWorkerThreadPool(geocodeTransform);
 
       return new AbrGeocoder(
@@ -121,19 +215,19 @@ export class AbrGeocoder {
       );
     }
 
-    const workerPool = new WorkerThreadPool<AbrGeocoderDiContainerParams, AbrGeocoderInput, QueryJson>({
+    const workerPool = await WorkerThreadPool.create<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
       // 最大何スレッド生成するか
       maxConcurrency: Math.max(1, params.numOfThreads),
 
       // 1スレッドあたり、いくつのタスクを同時並行させるか
-      // (増減させても大差はないので、固定値にする)
-      maxTasksPerWorker: 50,
+      // (ストリームのバックプレッシャに影響するので、固定値にしておく)
+      maxTasksPerWorker: 500,
 
       // geocode-worker.ts へのパス
       filename: path.join(__dirname, 'worker', 'geocode-worker'),
 
       // geocode-worker.ts の初期化に必要なデータ
-      initData: params.container.toJSON(),
+      initData,
 
       signal: params.signal,
     });

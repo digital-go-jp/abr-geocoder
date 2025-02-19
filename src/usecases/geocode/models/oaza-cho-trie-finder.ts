@@ -2,22 +2,19 @@ import { BANGAICHI, DASH, DASH_SYMBOLS, MUBANCHI, OAZA_BANCHO, OAZA_CENTER, SPAC
 import { makeDirIfNotExists } from "@domain/services/make-dir-if-not-exists";
 import { RegExpEx } from "@domain/services/reg-exp-ex";
 import { removeFiles } from "@domain/services/remove-files";
-import { OazaChoMachingInfo } from "@domain/types/geocode/oaza-cho-info";
 import fs from 'node:fs';
 import path from 'node:path';
 import { jisKanji } from '../services/jis-kanji';
 import { kan2num } from '../services/kan2num';
 import { toHankakuAlphaNum } from "../services/to-hankaku-alpha-num";
 import { toHiragana } from '../services/to-hiragana';
-import { AbrGeocoderDiContainer } from './abr-geocoder-di-container';
 import { CharNode } from "./trie/char-node";
-import { TrieAddressFinder } from "./trie/trie-finder";
+import { TrieAddressFinder2 } from "./trie/trie-finder2";
+import { FileTrieWriter } from "./trie/file-trie-writer";
+import { CreateCacheTaskParams } from "../services/worker/create-cache-params";
+import { TownMatchingInfo } from "@domain/types/geocode/town-info";
 
-export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
-
-  private constructor() {
-    super();
-  }
+export class OazaChoTrieFinder extends TrieAddressFinder2<TownMatchingInfo> {
 
   static normalize<T extends string | CharNode | undefined>(address: T): T {
     if (address === undefined) {
@@ -57,7 +54,7 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     
     // 「丁目」をDASH に変換する
     // 大阪府堺市は「丁目」の「目」が付かないので「目?」としている
-    address = address?.replaceAll(RegExpEx.create('丁目?', 'g'), DASH) as T;
+    address = address?.replaceAll(RegExpEx.create('([0-9])丁目?', 'g'), `$1${DASH}`) as T;
     
     // 京都の「四条通」の「通」が省略されることがある
     // 北海道では「春光四条二丁目1-1」を「春光4-2-1-1」と表記する例がある
@@ -90,51 +87,54 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
     return address;
   }
 
-  static readonly create = async (diContainer: AbrGeocoderDiContainer) => {
-    makeDirIfNotExists(diContainer.cacheDir);
-
-    const commonDb = await diContainer.database.openCommonDb();
+  private static readonly getCacheFilePath = async (task: CreateCacheTaskParams) => {
+    makeDirIfNotExists(task.diContainer.cacheDir);
+    const commonDb = await task.diContainer.database.openCommonDb();
     const genHash = commonDb.getOazaChomesGeneratorHash();
 
-    const tree = new OazaChoTrieFinder();
-    const cacheFilePath = path.join(diContainer.cacheDir, `oaza-cho_${genHash}.v8`);
-    const isExist = fs.existsSync(cacheFilePath);
-    try {
-      if (isExist) {
-        // キャッシュがあれば、キャッシュから読み込む
-        const encoded = await fs.promises.readFile(cacheFilePath);
-        tree.import(encoded);
-        return tree;
-      }
-    } catch (_e: unknown) {
-      // インポートエラーが発生した場合は、キャッシュを作り直すので、
-      // ここではエラーを殺すだけで良い
+    return path.join(task.diContainer.cacheDir, `oaza-cho_${genHash}_${task.data.lg_code}.abrg2`);
+  };
+
+  static readonly createDictionaryFile = async (task: CreateCacheTaskParams) => {
+    if (!task.data.lg_code) {
+      throw `lg_code is required`;
     }
+    const cacheFilePath = await OazaChoTrieFinder.getCacheFilePath(task);
+
     // 古いキャッシュファイルを削除
     await removeFiles({
-      dir: diContainer.cacheDir,
-      filename: 'oaza-cho_.*\\.v8',
+      dir: task.diContainer.cacheDir,
+      filename: `oaza-cho_[^_]+_${task.data.lg_code}$\\.abrg2`,
     });
-
+    
     // キャッシュがなければ、Databaseからデータをロードして読み込む
     // キャッシュファイルも作成する
-    const rows = await commonDb.getOazaChomes();
-
-    for (const oazaInfo of rows) {
-      oazaInfo.oaza_cho = toHankakuAlphaNum(oazaInfo.oaza_cho);
-      oazaInfo.chome = toHankakuAlphaNum(oazaInfo.chome);
-      oazaInfo.koaza = toHankakuAlphaNum(oazaInfo.koaza);
-
-      tree.append({
+    const db = await task.diContainer.database.openCommonDb();
+    if (!db) {
+      return false;
+    }
+    const rows = await db.getOazaChomes({
+      lg_code: task.data.lg_code,
+    });
+    const writer = await FileTrieWriter.create(cacheFilePath);
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i++];
+      
+      row.oaza_cho = toHankakuAlphaNum(row.oaza_cho);
+      row.chome = toHankakuAlphaNum(row.chome);
+      row.koaza = toHankakuAlphaNum(row.koaza);
+      
+      await writer.addNode({
         key: OazaChoTrieFinder.normalize([
-          oazaInfo.oaza_cho || '',
-          oazaInfo.chome || '',
-          oazaInfo.koaza || '',
+          row.oaza_cho || '',
+          row.chome || '',
+          row.koaza || '',
         ].join('')),
-        value: oazaInfo,
+        value: row,
       });
       
-      let oaza_cho = oazaInfo.oaza_cho;
+      let oaza_cho = row.oaza_cho;
       if (oaza_cho && oaza_cho.length > 2) {
         if (oaza_cho.endsWith('番町')) {
           oaza_cho = oaza_cho.replace('番町', '');
@@ -143,17 +143,17 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
           oaza_cho = oaza_cho.replace('町', '');
         }
 
-        tree.append({
+        await writer.addNode({
           key: OazaChoTrieFinder.normalize([
             oaza_cho || '',
-            oazaInfo.chome || '',
-            oazaInfo.koaza || '',
+            row.chome || '',
+            row.koaza || '',
           ].join('')),
-          value: oazaInfo,
+          value: row,
         });
       }
 
-      let chome = oazaInfo.chome;
+      let chome = row.chome;
       if (chome && chome.length > 2) {
         if (chome.endsWith('番町')) {
           chome = chome.replace('番町', '');
@@ -162,22 +162,50 @@ export class OazaChoTrieFinder extends TrieAddressFinder<OazaChoMachingInfo> {
           chome = chome.replace('町', '');
         }
 
-        tree.append({
+        await writer.addNode({
           key: OazaChoTrieFinder.normalize([
-            oazaInfo.oaza_cho || '',
+            row.oaza_cho || '',
             chome || '',
-            oazaInfo.koaza || '',
+            row.koaza || '',
           ].join('')),
-          value: oazaInfo,
+          value: row,
         });
       }
     }
-    // console.log(debug_keys);
+    await writer.close();
+    await db.close();
+    return true;
+  };
+  
+  static readonly loadDataFile = async (task: CreateCacheTaskParams) => {
+    if (!task.data.lg_code) {
+      throw `lg_code is required`;
+    }
+    const cacheFilePath = await OazaChoTrieFinder.getCacheFilePath(task);
+    let data: Buffer | undefined;
+    let numOfTry: number = 0;
+    while (!data && numOfTry < 3) {
+      try {
+        // TrieFinderが作成できればOK
+        if (fs.existsSync(cacheFilePath)) {
+          data = await fs.promises.readFile(cacheFilePath);
+          const first100bytes = data.subarray(0, 100);
+          new OazaChoTrieFinder(first100bytes);
+          return data;
+        }
+      } catch (_e: unknown) {
+        // Do nothing here
+      }
 
-    // キャッシュファイルに保存
-    const encoded = tree.export();
-    await fs.promises.writeFile(cacheFilePath, encoded);
-
-    return tree;
+      if (process.env.JEST_WORKER_ID) {
+        console.log(`Creates catch for OazaChoTrieFinder (lgCode: ${task.data.lg_code})`);
+      }
+      // 新しく作成
+      if (!await OazaChoTrieFinder.createDictionaryFile(task)) {
+        return;
+      }
+      numOfTry++;
+    }
+    return data;
   };
 }

@@ -36,6 +36,9 @@ export const removeFiles = async (params: Required<{
       return params.filename;
     }
   })();
+  if (!fs.existsSync(params.dir)) {
+    return;
+  }
 
   // 古いキャッシュファイルを削除
   const dir = await fs.promises.opendir(params.dir);
@@ -44,9 +47,12 @@ export const removeFiles = async (params: Required<{
     if (!filePattern.test(dirent.name)) {
       continue;
     }
+    const filepath = path.join(dirent.parentPath, dirent.name);
+
+    // 削除する
     removedFiles.push(dirent.name);
     try {
-      await fs.promises.unlink(path.join(dirent.parentPath, dirent.name));
+      await fs.promises.unlink(filepath);
     } catch (_e: unknown) {
       // Do nothing here
     }

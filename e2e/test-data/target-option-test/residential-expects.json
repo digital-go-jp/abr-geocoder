@@ -36,34 +36,33 @@
   },
   {
     "query": {
-      "input": "東京都港区芝浦3-1-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+      "input": "東京都中央区銀座3-4−1 # all:住居表示, rsdt:住居表示, parcel:地番"
     },
     "result": {
-      "output": "東京都港区芝浦三丁目1-1 # all:住居表示, rsdt:住居表示, parcel:地番",
+      "output": "東京都中央区銀座三丁目4-1 # all:住居表示, rsdt:住居表示, parcel:地番",
       "others": [
-        "-1 # all:住居表示, rsdt:住居表示, parcel:地番"
+        "# all:住居表示, rsdt:住居表示, parcel:地番"
       ],
-      "score": 0.94,
-      "match_level": "residential_block",
-      "coordinate_level": "residential_block",
-      "lat": 35.644986,
-      "lon": 139.748888,
-      "lg_code": "131032",
-      "machiaza_id": "0005003",
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail",
+      "lat": 35.673369565,
+      "lon": 139.766137237,
+      "lg_code": "131024",
+      "machiaza_id": "0004003",
       "rsdt_addr_flg": 1,
-      "blk_id": "001",
-      "rsdt_id": null,
+      "blk_id": "004",
+      "rsdt_id": "001",
       "rsdt2_id": null,
       "prc_id": null,
       "pref": "東京都",
       "county": null,
-      "city": "港区",
+      "city": "中央区",
       "ward": null,
-      "oaza_cho": "芝浦",
+      "oaza_cho": "銀座",
       "chome": "三丁目",
       "koaza": null,
-      "blk_num": "1",
-      "rsdt_num": null,
+      "blk_num": "4",
+      "rsdt_num": "1",
       "rsdt_num2": null,
       "prc_num1": null,
       "prc_num2": null,
@@ -99,78 +98,6 @@
       "chome": "三丁目",
       "koaza": null,
       "blk_num": null,
-      "rsdt_num": null,
-      "rsdt_num2": null,
-      "prc_num1": null,
-      "prc_num2": null,
-      "prc_num3": null
-    }
-  },
-  {
-    "query": {
-      "input": "東京都港区芝公園4-407-6 # all:地番, rsdt:地番, parcel:地番"
-    },
-    "result": {
-      "output": "東京都港区芝公園四丁目407-6 # all:地番, rsdt:地番, parcel:地番",
-      "others": [
-        "407-6 # all:地番, rsdt:地番, parcel:地番"
-      ],
-      "score": 0.94,
-      "match_level": "machiaza_detail",
-      "coordinate_level": "machiaza_detail",
-      "lat": 35.656459,
-      "lon": 139.74764,
-      "lg_code": "131032",
-      "machiaza_id": "0002004",
-      "rsdt_addr_flg": 1,
-      "blk_id": null,
-      "rsdt_id": null,
-      "rsdt2_id": null,
-      "prc_id": null,
-      "pref": "東京都",
-      "county": null,
-      "city": "港区",
-      "ward": null,
-      "oaza_cho": "芝公園",
-      "chome": "四丁目",
-      "koaza": null,
-      "blk_num": null,
-      "rsdt_num": null,
-      "rsdt_num2": null,
-      "prc_num1": null,
-      "prc_num2": null,
-      "prc_num3": null
-    }
-  },
-  {
-    "query": {
-      "input": "東京都港区芝公園4-2-8 # all:住居表示, rsdt:住居表示, parcel:地番"
-    },
-    "result": {
-      "output": "東京都港区芝公園四丁目2-8 # all:住居表示, rsdt:住居表示, parcel:地番",
-      "others": [
-        "-8 # all:住居表示, rsdt:住居表示, parcel:地番"
-      ],
-      "score": 0.94,
-      "match_level": "residential_block",
-      "coordinate_level": "residential_block",
-      "lat": 35.658648,
-      "lon": 139.745467,
-      "lg_code": "131032",
-      "machiaza_id": "0002004",
-      "rsdt_addr_flg": 1,
-      "blk_id": "002",
-      "rsdt_id": null,
-      "rsdt2_id": null,
-      "prc_id": null,
-      "pref": "東京都",
-      "county": null,
-      "city": "港区",
-      "ward": null,
-      "oaza_cho": "芝公園",
-      "chome": "四丁目",
-      "koaza": null,
-      "blk_num": "2",
       "rsdt_num": null,
       "rsdt_num2": null,
       "prc_num1": null,

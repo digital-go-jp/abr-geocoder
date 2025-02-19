@@ -3,6 +3,11 @@ import { kan2num } from "../kan2num";
 
 describe("kan2num", () => {
 
+  test('should convert "壱〇弐" to "102"', () => {
+    const result = kan2num('石川県鹿島郡中能登町久乃木元飯川壱〇弐');
+    expect(result).toBe('石川県鹿島郡中能登町久乃木元飯川102');
+  });
+  
   test('should convert "一" to "1"', () => {
     const result = kan2num('ソルティア岡本一');
     expect(result).toBe('ソルティア岡本1');

@@ -1,0 +1,104 @@
+[
+  {
+    "query": {
+      "input": "徳島県吉野川市山川町宗田"
+    },
+    "result": {
+      "output": "徳島県吉野川市山川町宗田",
+      "others": [],
+      "score": 1,
+      "match_level": "machiaza_detail",
+      "coordinate_level": "city",
+      "lat": 34.066235,
+      "lon": 134.358667,
+      "lg_code": "362051",
+      "machiaza_id": "0151102",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "徳島県",
+      "county": null,
+      "city": "吉野川市",
+      "ward": null,
+      "oaza_cho": "山川町",
+      "chome": null,
+      "koaza": "宗田",
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "徳島県吉野川市山川町桒内"
+    },
+    "result": {
+      "output": "徳島県吉野川市山川町桑内",
+      "others": [],
+      "score": 0.92,
+      "match_level": "machiaza",
+      "coordinate_level": "machiaza",
+      "lat": 34.021211,
+      "lon": 134.245539,
+      "lg_code": "362051",
+      "machiaza_id": "0074000",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "徳島県",
+      "county": null,
+      "city": "吉野川市",
+      "ward": null,
+      "oaza_cho": "山川町桑内",
+      "chome": null,
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "徳島県吉野川市山川町桒峯"
+    },
+    "result": {
+      "output": "徳島県吉野川市山川町桒峯",
+      "others": [],
+      "score": 1,
+      "match_level": "machiaza_detail",
+      "coordinate_level": "city",
+      "lat": 34.066235,
+      "lon": 134.358667,
+      "lg_code": "362051",
+      "machiaza_id": "0151111",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": null,
+      "pref": "徳島県",
+      "county": null,
+      "city": "吉野川市",
+      "ward": null,
+      "oaza_cho": "山川町",
+      "chome": null,
+      "koaza": "桒峯",
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": null,
+      "prc_num2": null,
+      "prc_num3": null
+    }
+  }
+]

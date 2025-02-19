@@ -28,43 +28,54 @@ import { WorkerPoolTaskInfo } from './worker-thread-pool-task-info';
 import { IWorkerThreadPool } from './iworker-thread-pool';
 import { AbrAbortController } from '@domain/models/abr-abort-controller';
 
+export type WorkerThreadPoolOptions<InitData> = {
+  filename: string;
+  initData?: InitData;
+  // 最大いくつまでのワーカーを生成するか
+  maxConcurrency: number;
+  // 1つの worker にいくつのタスクを同時に実行させるか
+  maxTasksPerWorker: number;
+
+  signal?: AbortSignal;
+};
+
 export class WorkerThreadPool<InitData, TransformData, ReceiveData> 
   extends EventEmitter
   implements IWorkerThreadPool<TransformData, ReceiveData>
 {
   private readonly kWorkerFreedEvent = Symbol('kWorkerFreedEvent');
   private readonly workers: WorkerThread<InitData, TransformData, ReceiveData>[] = [];
-  private readonly signal: AbortSignal | undefined;
+  private readonly signal: AbortSignal;
   private readonly waitingTasks: WorkerPoolTaskInfo<TransformData, ReceiveData>[] = [];
   private readonly abortCtrl = new AbrAbortController();
 
-  constructor(params : {
-    filename: string;
-    initData?: InitData;
-    // 最大いくつまでのワーカーを生成するか
-    maxConcurrency: number;
-    // 1つの worker にいくつのタスクを同時に実行させるか
-    maxTasksPerWorker: number;
+  public get waitingTaskCnt(): number {
+    return this.waitingTasks.length;
+  }
 
-    signal?: AbortSignal;
-  }) {
+  private constructor(private readonly params : WorkerThreadPoolOptions<InitData>) {
     super();
-    params.signal?.addEventListener('abort', () => {
-      this.abortCtrl.abort();
-    });
+    this.setMaxListeners(0);
     this.signal = this.abortCtrl.signal;
+    this.params.signal?.addEventListener('abort', () => {
+      if (this.abortCtrl.signal.aborted) {
+        return;
+      }
+      this.abortCtrl.abort();
+    }, {
+      once: true,
+    });
 
     // タスクが挿入 or 1つタスクが完了したら、次のタスクを実行する
     this.on(this.kWorkerFreedEvent, () => {
+      if (this.signal.aborted) {
+        return;
+      }
       if (this.waitingTasks.length === 0 || this.workers.length === 0) {
         return;
       }
       const task = this.waitingTasks.shift()!;
       const worker = this.workers.shift()!;
-
-      if (this.signal && this.signal.aborted) {
-        return;
-      }
 
       worker.addTask(task)
         .then((data: ReceiveData) => {
@@ -72,50 +83,63 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
           task.done(null, data);
         })
         .finally(() => {
-          if (this.waitingTasks.length === 0) {
-            return;
-          }
           // キューをシフトさせる
           this.emit(this.kWorkerFreedEvent);
         });
       
       this.workers.push(worker);
     });
-
-    // スレッドの起動
-    for (let i = 0; i < params.maxConcurrency; i++) {
-      // 各スレッドが作成され次第、タスクを実行する
-      this.createWorker(params).then(worker => {
-        if (!worker) {
-          return;
-        }
-        this.workers.push(worker);
-        // タスクを実行する
-        this.emit(this.kWorkerFreedEvent);
-      });
-    }
   }
+
+  private async initAsync() {
+    const tasks = [];
+    // Creates threads
+    for (let i = 0; i < this.params.maxConcurrency; i++) {
+      if (this.signal.aborted) {
+        break;
+      }
+      tasks.push(this.createWorker(this.params));
+    }
+    const workers = await Promise.all(tasks);
+
+    // Terminates created workers
+    if (this.signal.aborted) {
+      workers.forEach(worker => worker && worker.terminate());
+      return;
+    }
+
+    // Processes the tasks
+    workers.forEach(worker => worker && this.workers.push(worker));
+    this.emit(this.kWorkerFreedEvent);
+  }
+
+  static readonly create = async <InitData, TransformData, ReceiveData> (params: WorkerThreadPoolOptions<InitData>): Promise<WorkerThreadPool<InitData, TransformData, ReceiveData>> =>  {
+    const pool = new WorkerThreadPool<InitData, TransformData, ReceiveData>(params);
+    await pool.initAsync();
+    return pool;
+  };
 
   private async createWorker(params: {
     filename: string;
     initData?: InitData;
   }): Promise<WorkerThread<InitData, TransformData, ReceiveData> | undefined> {
-    if (this.signal?.aborted) {
+    if (this.signal.aborted) {
       return;
     }
 
-    const worker = await WorkerThread.create<InitData, TransformData, ReceiveData>(params);
-    if (this.signal && this.signal.aborted) {
-      worker.terminate();
+    const worker = await WorkerThread.create<InitData, TransformData, ReceiveData>({
+      signal: this.signal,
+      filename: params.filename,
+      initData: params.initData,
+    });
+    if (this.signal.aborted) {
       return;
     }
-    this.signal?.addEventListener('abort', () => {
-      worker.terminate();
-    });
     worker.on('error', async (error: Event | string) => {
       if (typeof error === 'string' && error === 'abort' || error instanceof Event && error.type === 'abort') {
         return;
       }
+      console.error(error);
       worker.removeAllListeners();
       const logger = DebugLogger.getInstance();
       logger.error(`thread error`, error);
@@ -128,8 +152,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
           task.done(error);
         }
       });
-      if (this.signal && this.signal.aborted) {
-        worker.terminate();
+      if (this.signal.aborted) {
         return;
       }
 
@@ -152,7 +175,7 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
   }
   
   async run(workerData: TransformData): Promise<ReceiveData> {
-    if (this.signal && this.signal.aborted) {
+    if (this.signal.aborted) {
       return Promise.reject(new Event('abort'));
     }
 
@@ -172,14 +195,10 @@ export class WorkerThreadPool<InitData, TransformData, ReceiveData>
     });
   }
 
-  close() {
-    if (this.signal && this.signal.aborted) {
+  async close() {
+    if (this.signal.aborted) {
       return;
     }
     this.abortCtrl.abort();
-
-    this.workers.forEach(worker => {
-      worker.terminate();
-    });
   }
 }

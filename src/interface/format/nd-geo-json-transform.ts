@@ -86,7 +86,22 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
       // Data format to the next stream is non-object mode.
       // Because we output string as Buffer.
       readableObjectMode: false,
+
+      highWaterMark: 2048,
     });
+  }
+
+  private toCoordinate(result: Query): { lat: number; lon: number; } | { lat: null; lon: null; } {
+    if (!result.rep_lat || !result.rep_lon) {
+      return {
+        lon: null,
+        lat: null,
+      };
+    }
+    return {
+      lon: parseFloat(result.rep_lon),
+      lat: parseFloat(result.rep_lat),
+    };
   }
 
   _transform(
@@ -99,18 +114,8 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
     if (result.tempAddress) {
       unmatched.push(result.tempAddress?.toOriginalString()?.trim());
     }
-    const coordinates = (() => {
-      if (!result.rep_lat || !result.rep_lon) {
-        return {
-          lon: null,
-          lat: null,
-        };
-      }
-      return {
-        lon: parseFloat(result.rep_lon),
-        lat: parseFloat(result.rep_lat),
-      };
-    })();
+    const coordinates = this.toCoordinate(result);
+
     const output: NdGeoJsonOutput = {
       type: 'Feature',
       geometry: {
@@ -160,12 +165,7 @@ export class NdGeoJsonTransform extends Stream.Transform implements IFormatTrans
       output.properties.debug_rsdtblk_key = result.rsdtblk_key;
       output.properties.debug_rsdtdsp_key = result.rsdtdsp_key;
     }
-    const geojsonStr = JSON.stringify(output);
-    callback(null, `${geojsonStr}\n`);
-  }
-
-  _final(callback: (error?: Error | null | undefined) => void): void {
-    // this.emit('data', BREAK_AT_EOF); // _transform で改行を付けているので、改行を入れない
-    callback();
+    result.release();
+    callback(null, `${JSON.stringify(output)}\n`);
   }
 }

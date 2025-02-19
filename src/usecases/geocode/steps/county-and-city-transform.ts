@@ -71,7 +71,7 @@ export class CountyAndCityTransform extends Transform {
       }
 
       let anyHit = false;
-      let anyAmbiguous = false;
+      let ambiguousCnt = 0;
       for (const mResult of matched) {
         // 都道府県が判別していない、または判別できでいて、
         // result.pref_key が同一でない結果はスキップする
@@ -81,7 +81,7 @@ export class CountyAndCityTransform extends Transform {
           continue;
         }
         anyHit = true;
-        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+        ambiguousCnt = Math.max(ambiguousCnt, mResult.ambiguousCnt);
 
         results.add(query.copy({
           pref: query.pref || mResult.info!.pref,
@@ -97,13 +97,15 @@ export class CountyAndCityTransform extends Transform {
           match_level: MatchLevel.CITY,
           coordinate_level: MatchLevel.CITY,
           matchedCnt: query.matchedCnt + mResult.depth,
-          ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + mResult.ambiguousCnt, 
         }));
       }
-      if (!anyHit || anyAmbiguous) {
+      if (!anyHit || ambiguousCnt > 0) {
         results.add(query);
       }
     }
+
+    queries.clear();
     next(null, results);
   }
 }

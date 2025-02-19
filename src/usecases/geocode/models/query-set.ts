@@ -47,10 +47,15 @@ export class QuerySet {
 
   add(query: Query) {
     const key = this.toKey(query);
-    if (this.memory.has(key)) {
+    if (this.has(query)) {
       return;
     }
     this.memory.set(key, query);
+  }
+
+  has(query: Query): boolean {
+    const key = this.toKey(query);
+    return this.memory.has(key);
   }
 
   values(): Iterable<Query> {

@@ -104,7 +104,7 @@ module.exports = {
   HttpRequestAdapter: jest.fn().mockImplementation(() => {
     return {
       getJSON: (params: GetJsonOptions) => {
-        switch (params.url) {
+        switch (params.url.toString()) {
           case 'http://localhost/rc/api/3/action/package_list':
             return Promise.resolve(PackageListResponse);
 

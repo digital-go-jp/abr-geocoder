@@ -1,0 +1,74 @@
+[
+  {
+    "query": {
+      "input": "香川県高松市塩江町安原下第1号958-4-1"
+    },
+    "result": {
+      "output": "香川県高松市塩江町安原下第一号958-4-1",
+      "others": [
+        "-1"
+      ],
+      "score": 0.96,
+      "match_level": "parcel",
+      "coordinate_level": "parcel",
+      "lat": 34.185633272,
+      "lon": 134.059653728,
+      "lg_code": "372013",
+      "machiaza_id": "0093000",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": "009580000400000",
+      "pref": "香川県",
+      "county": null,
+      "city": "高松市",
+      "ward": null,
+      "oaza_cho": "塩江町安原下第一号",
+      "chome": null,
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": "958",
+      "prc_num2": "4",
+      "prc_num3": null
+    }
+  },
+  {
+    "query": {
+      "input": "香川県高松市塩江町安原下第3号540-1-25"
+    },
+    "result": {
+      "output": "香川県高松市塩江町安原下第三号540-1-25",
+      "others": [
+        "-25"
+      ],
+      "score": 0.96,
+      "match_level": "parcel",
+      "coordinate_level": "parcel",
+      "lat": 34.209243284,
+      "lon": 134.032121331,
+      "lg_code": "372013",
+      "machiaza_id": "0095000",
+      "rsdt_addr_flg": 0,
+      "blk_id": null,
+      "rsdt_id": null,
+      "rsdt2_id": null,
+      "prc_id": "005400000100000",
+      "pref": "香川県",
+      "county": null,
+      "city": "高松市",
+      "ward": null,
+      "oaza_cho": "塩江町安原下第三号",
+      "chome": null,
+      "koaza": null,
+      "blk_num": null,
+      "rsdt_num": null,
+      "rsdt_num2": null,
+      "prc_num1": "540",
+      "prc_num2": "1",
+      "prc_num3": null
+    }
+  }
+]

@@ -22,16 +22,12 @@
  * SOFTWARE.
  */
 import { EnvProvider } from '@domain/models/env-provider';
-import { UrlCacheManager } from '@domain/services/url-cache-manager';
 import { DatabaseParams } from '@domain/types/database-params';
-import { DownloadDbController } from '@interface/database/download-db-controller';
+import { DownloadDbController } from '@drivers/database/download-db-controller';
 import { jest } from '@jest/globals';
 
-// @domain/services/__mocks__/url-cache-manager
-jest.mock('@domain/services/url-cache-manager');
-
-// @interface/database/__mocks__/download-db-controller
-jest.mock('@interface/database/download-db-controller');
+// @drivers/database/__mocks__/download-db-controller
+jest.mock('@drivers/database/download-db-controller');
 
 // @domain/models/__mocks__/env-provider
 jest.mock('@domain/models/env-provider');
@@ -43,7 +39,6 @@ export type DownloadDiContainerParams = {
 };
 
 const DownloadDiContainer = jest.fn((params: DownloadDiContainerParams) => {
-  const urlCacheMgr = new UrlCacheManager(params.cacheDir);
   const toJSON = () => {
     return params;
   };
@@ -55,7 +50,6 @@ const DownloadDiContainer = jest.fn((params: DownloadDiContainerParams) => {
     env,
     database,
     downloadDir,
-    urlCacheMgr,
     getFileShowUrl: () => 'http://localhost/rc/api/3/action/package_show',
     getPackageListUrl: () => 'http://localhost/rc/api/3/action/package_list',
     toJSON,

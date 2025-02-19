@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+import { UrlCache } from "@drivers/database/dataset-db";
 import { FileGroupKey } from "../types/download/file-group";
 import { ICsvFile } from "../types/download/icsv-file";
 import { CityDatasetFile } from "./city-dataset-file";
@@ -42,10 +43,11 @@ export enum DownloadProcessStatus {
   ERROR = 'error',
   SUCCESS = 'success',
   UNSET = 'unset',
+  SKIP = 'skip',
 }
 
 export type DownloadProcessBase = {
-  status: DownloadProcessStatus
+  status: DownloadProcessStatus;
 };
 
 export type DownloadRequest = {
@@ -66,37 +68,37 @@ export type DownloadQueryBase =
 
 export type DownloadQuery1 = DownloadQueryBase;
 
+export type DownloadProcessSkip = {
+  message: 'skipped';
+  status: DownloadProcessStatus.SKIP;
+} & DownloadProcessBase;
+
 export type DownloadProcessError = {
   message: string;
-} & DownloadQueryBase;
+  status: DownloadProcessStatus.ERROR;
+} & DownloadProcessBase;
 
 export type DownloadQuery2 = {
-  csvFilePath: string;
+  zipFilePath: string;
   noUpdate: boolean;
-} & DownloadQueryBase;
+  urlCache: UrlCache;
+  dataset: FileGroupKey;
+} & DownloadProcessBase;
 
 export type DownloadResult = {
   csvFiles: ICsvFile[];
+  urlCache: UrlCache;
+  dataset: FileGroupKey;
+  zipFilePath: string;
 } & DownloadQueryBase;
 
-export const isDownloadProcessError = (target: DownloadProcessBase): target is DownloadProcessError => {
-  return target.status === DownloadProcessStatus.ERROR;
-};
-
-export type CsvLoadRequest = {
+export type CsvLoadQuery = {
   dataset: FileGroupKey;
-};
-
-export type CsvLoadQueryBase = DownloadProcessBase & CsvLoadRequest;
-
-export type CsvLoadQuery2 = {
   files: {
     fileMeta: IDatasetFileMeta;
     csvFile: ICsvFile,
     datasetFile: PrefDatasetFile | CityDatasetFile | PrefPosDatasetFile | CityPosDatasetFile | TownDatasetFile | TownPosDatasetFile | RsdtdspBlkFile | RsdtdspBlkPosFile | RsdtDspFile | RsdtDspPosFile | ParcelDatasetFile | ParcelPosDatasetFile
-  }[]
-} & CsvLoadQueryBase;
-
-export type CsvLoadResult = {
-  kind: 'result';
-} & CsvLoadQueryBase;
+  }[];
+  zipFilePath: string;
+  urlCache: UrlCache;
+} & DownloadProcessBase;

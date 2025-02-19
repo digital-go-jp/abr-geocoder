@@ -72,7 +72,7 @@ export class CityAndWardTransform extends Transform {
       }
       
       let anyHit = false;
-      let anyAmbiguous = false;
+      let ambiguousCnt = 0;
       for (const mResult of matched) {
         // 都道府県が判別していない、または判別できでいて、
         // result.pref_key が同一でない結果はスキップする
@@ -81,7 +81,7 @@ export class CityAndWardTransform extends Transform {
           query.pref_key !== mResult.info?.pref_key) {
           continue;
         }
-        anyAmbiguous = anyAmbiguous || mResult.ambiguous;
+        ambiguousCnt = Math.max(ambiguousCnt, mResult.ambiguousCnt);
         anyHit = true;
 
         results.add(query.copy({
@@ -98,22 +98,16 @@ export class CityAndWardTransform extends Transform {
           match_level: MatchLevel.CITY,
           coordinate_level: MatchLevel.CITY,
           matchedCnt: query.matchedCnt + mResult.depth,
-          ambiguousCnt: query.ambiguousCnt + (mResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + mResult.ambiguousCnt, 
         }));
       }
-      if (!anyHit || anyAmbiguous) {
+      if (!anyHit || ambiguousCnt > 0) {
         results.add(query);
+        queries.delete(query);
       }
     }
 
-    // const possibilities = Array.from(results.values());
-    // possibilities.sort((a, b) => b.formatted.score - a.formatted.score);
-    // const finalResults = new QuerySet();
-    // let i = 0;
-    // while (finalResults.size() < 5 && i < possibilities.length) {
-    //   finalResults.add(possibilities[i]);
-    //   i++;
-    // }
+    queries.clear();
     next(null, results);
   }
 }

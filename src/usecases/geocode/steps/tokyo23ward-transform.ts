@@ -91,7 +91,7 @@ export class Tokyo23WardTranform extends Transform {
         if (query.lg_code !== PrefLgCode.TOKYO && this.needsCopy.has(searchResult.info.city)) {
           anyAmbiguous = true;
         }
-        anyAmbiguous = anyAmbiguous || searchResult.ambiguous;
+        anyAmbiguous = anyAmbiguous || searchResult.ambiguousCnt > 0;
         anyHit = true;
 
         results.add(query.copy({
@@ -106,13 +106,16 @@ export class Tokyo23WardTranform extends Transform {
           rep_lat: searchResult.info.rep_lat,
           rep_lon: searchResult.info.rep_lon,
           coordinate_level: MatchLevel.CITY,
-          ambiguousCnt: query.ambiguousCnt + (searchResult.ambiguous ? 1 : 0), 
+          ambiguousCnt: query.ambiguousCnt + searchResult.ambiguousCnt, 
         }));
       });
       if (!anyHit || anyAmbiguous) {
         results.add(query);
       }
     });
+
+    queries.clear();
+
     callback(null, results);
   }
 }

@@ -23,15 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { EnvProvider } from '@domain/models/env-provider';
 import { getPackageInfo } from '@domain/services/package/get-package-info';
 import yargs, { Argv } from 'yargs';
 import { hideBin } from 'yargs/helpers';
+import debugCommand from './commands/debug-command';
 import downloadCommand from './commands/download-command';
 import geocodeCommand from './commands/geocode-command';
 import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
-import { EnvProvider } from '@domain/models/env-provider';
 
 // const terminalWidth = Math.min(yargs.terminalWidth(), 120);
 const terminalWidth = 120;
@@ -52,6 +53,7 @@ export const main = async (
     .command(updateCheckCommand)
     .command(downloadCommand)
     .command(geocodeCommand)
+    .command(debugCommand)
     .command(serveCommand)
     .fail((msg: string, e: Error, yargs: Argv<{}>): void => {
       if (parsedArgs.length <= 2) {

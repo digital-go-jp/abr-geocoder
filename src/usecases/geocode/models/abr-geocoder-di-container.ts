@@ -24,7 +24,7 @@
 import { CommonDiContainer } from '@domain/models/common-di-container';
 import { DebugLogger } from '@domain/services/logger/debug-logger';
 import { DatabaseParams } from '@domain/types/database-params';
-import { GeocodeDbController } from '@interface/database/geocode-db-controller';
+import { GeocodeDbController } from '@drivers/database/geocode-db-controller';
 
 export type AbrGeocoderDiContainerParams = {
   cacheDir: string;

@@ -30,45 +30,44 @@ import { runGeocoder } from './common';
 
 describe('debug', () => {
   
-  test('北海道札幌市白石区流通センター五丁目6-61', async () => {
-    const input = '北海道札幌市白石区流通センター五丁目6-61';
+  test('埼玉県坂戸市泉町３丁目２５番地８', async () => {
+    const input = '埼玉県坂戸市泉町３丁目２５番地８';
     const { stdout } = await runGeocoder({
       input,
       geocode: {
         outputFormat: OutputFormat.NDJSON,
         searchTarget: SearchTarget.ALL,
       },
-      useGlobalDB: false,
+      useGlobalDB: true,
     });
 
-    expect(JSON.parse(stdout)).toMatchObject({
+    expect(JSON.parse(stdout)).toMatchObject(  {
       "query": {
-        "input": "北海道札幌市白石区流通センター五丁目6-61"
+        "input": "埼玉県坂戸市泉町３丁目２５番地８"
       },
       "result": {
-        "output": "北海道札幌市白石区流通センター五丁目6-61",
+        "output": "埼玉県坂戸市泉町三丁目25-8",
         "others": [],
-        "score": 1,
         "match_level": "residential_detail",
         "coordinate_level": "residential_detail",
-        "lat": 43.032202568,
-        "lon": 141.44805378,
-        "lg_code": "011045",
-        "machiaza_id": "0207005",
-        "rsdt_addr_flg": 1,
-        "blk_id": "006",
-        "rsdt_id": "061",
+        "lat": 38.475207,
+        "lon": 140.875456,
+        "lg_code": "044245",
+        "machiaza_id": "0010000",
+        "rsdt_addr_flg": 0,
+        "blk_id": null,
+        "rsdt_id": null,
         "rsdt2_id": null,
         "prc_id": null,
-        "pref": "北海道",
-        "county": null,
-        "city": "札幌市",
-        "ward": "白石区",
-        "oaza_cho": "流通センター",
-        "chome": "五丁目",
+        "pref": "宮城県",
+        "county": "黒川郡",
+        "city": "大衡村",
+        "ward": null,
+        "oaza_cho": "大衡",
+        "chome": null,
         "koaza": null,
-        "blk_num": "6",
-        "rsdt_num": "61",
+        "blk_num": null,
+        "rsdt_num": null,
         "rsdt_num2": null,
         "prc_num1": null,
         "prc_num2": null,

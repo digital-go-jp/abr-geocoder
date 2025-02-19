@@ -25,9 +25,9 @@ import { DASH, DEFAULT_FUZZY_CHAR, SPACE } from '@config/constant-values';
 import { RegExpEx } from '@domain/services/reg-exp-ex';
 import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
-import { GeocodeDbController } from '@interface/database/geocode-db-controller';
 import { CharNode } from "@usecases/geocode/models/trie/char-node";
 import { Transform, TransformCallback } from 'node:stream';
+import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
 import { Query } from '../models/query';
 import { QuerySet } from '../models/query-set';
 import { trimDashAndSpace } from '../services/trim-dash-and-space';
@@ -35,7 +35,7 @@ import { trimDashAndSpace } from '../services/trim-dash-and-space';
 export class RsdtBlkTransform extends Transform {
 
   constructor(
-    private readonly dbCtrl: GeocodeDbController,
+    private readonly diContainer: AbrGeocoderDiContainer,
   ) {
     super({
       objectMode: true,
@@ -91,7 +91,7 @@ export class RsdtBlkTransform extends Transform {
         continue;
       }
 
-      const db = await this.dbCtrl.openRsdtBlkDb({
+      const db = await this.diContainer.database.openRsdtBlkDb({
         lg_code: query.lg_code,
         createIfNotExists: false,
       });
@@ -111,12 +111,6 @@ export class RsdtBlkTransform extends Transform {
       });
       
       db.close();
-
-      // 番地が見つからなかった
-      // if (findResults.length === 0) {
-      //   results.add(query);
-      //   continue;
-      // }
 
       // 住居表示が間違えている可能性があるので、地番のために残しておく
       results.add(query);
@@ -141,7 +135,8 @@ export class RsdtBlkTransform extends Transform {
       });
     }
 
-    // this.params.logger?.info(`rsdt-blk : ${((Date.now() - results[0].startTime) / 1000).toFixed(2)} s`);
+    queries.clear();
+
     callback(null, results);
   }
 

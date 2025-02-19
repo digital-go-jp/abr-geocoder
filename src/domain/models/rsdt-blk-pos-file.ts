@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { DataField } from '@config/data-field';
-import { IRsdtBlkDbDownload } from '@interface/database/common-db';
+import { IRsdtBlkDbDownload } from '@drivers/database/common-db';
 import { DataForPosFile, IDatasetFileMeta, ProcessOptions } from './dataset-file';
 
 export class RsdtdspBlkPosFile

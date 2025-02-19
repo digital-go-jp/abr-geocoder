@@ -11,12 +11,12 @@ spec/*.sqlite
 *.tgz
 .pnpm-store/
 pnpm-lock.yaml
+./.vscode/*.csv
+./.vscode/*.json
+./.vscode/rsdt_address.*
 .vscode/result.*
 db/
 .clinic/
 log.txt
-./.vscode/*.csv
-./.vscode/*.json
 .dockerignore
 Dockerfile
-./.vscode/rsdt_address.txt

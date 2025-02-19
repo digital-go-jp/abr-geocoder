@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 import { DataField } from '@config/data-field';
-import { ICommonDbDownload, IParcelDbDownload, IRsdtBlkDbDownload, IRsdtDspDbDownload } from '@interface/database/common-db';
+import { ICommonDbDownload, IParcelDbDownload, IRsdtBlkDbDownload, IRsdtDspDbDownload } from '@drivers/database/common-db';
 import proj4 from 'proj4';
 import crc32 from '../services/crc32-lib';
 import { FileGroup2Key, FileGroupKey } from '../types/download/file-group';

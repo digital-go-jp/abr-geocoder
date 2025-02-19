@@ -46,7 +46,7 @@ export class RegExpEx {
       return result;
     }
 
-    const instance = new RegExp(patternStr, flag);
+    const instance = new RegExp(pattern, flag);
     RegExpEx.staticCache.set(key, instance);
     return instance;
   }

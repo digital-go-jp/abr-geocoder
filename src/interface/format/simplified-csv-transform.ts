@@ -31,7 +31,7 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
 
   mimetype: string = 'text/x-csv';
 
-  private readonly rows: string[] = [];
+  private buffer: string = '';
   private readonly columns = [
     // 出力するCSVカラムの順番
     'input',
@@ -54,6 +54,8 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
       // Data format to the next stream is non-object mode.
       // Because we output string as Buffer.
       readableObjectMode: false,
+
+      highWaterMark: 2048,
     });
     if (this.options.skipHeader) {
       return;
@@ -68,7 +70,7 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
       this.columns.push('rsdtdsp_key');
     }
 
-    this.rows.push(this.columns.map(column => column.toString()).join(','));
+    this.buffer = this.columns.map(column => column.toString()).join(',') + "\n";
   }
 
   _transform(
@@ -76,6 +78,10 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
     _: BufferEncoding,
     callback: TransformCallback,
   ): void {
+    if (this.buffer) {
+      this.push(this.buffer);
+      this.buffer = '';
+    }
     const line = this.columns
       .map(column => {
         switch (column) {
@@ -110,17 +116,9 @@ export class SimplifiedCsvTransform extends Stream.Transform implements IFormatT
       })
       .join(',');
 
-    this.rows.push(line);
-    this.rows.push('');
-    const csvLines: string = this.rows.join('\n');
-    this.rows.length = 0;
+    callback(null, `${line}\n`);
+    this.buffer = '';
 
-    callback(null, csvLines);
+    result.release();
   }
-
-  _final(callback: (error?: Error | null | undefined) => void): void {
-    // this.emit('data', BREAK_AT_EOF); // _transform で改行を付けているので、改行を入れない
-    callback();
-  }
-
 }
