@@ -129,16 +129,17 @@ export class DownloadTransform extends Duplex {
       } catch (e) {
         console.debug("--------> retry!!!", e);
         console.debug(params);
-        retry--;
+        retry++;
 
         // ディレイを挿入
-        await timers.setTimeout(Math.random() * 5000 + 100);
+        await timers.setTimeout(Math.random() * 3000 + 1000);
 
         // リトライする場合はキャッシュファイルを使わない
         params.useCache = false;
       }
     }
 
+    console.debug("aborted!!!");
     this.abortCtrl.abort(`Can not download the file: ${params.packageId}`);
     this.close();
   }

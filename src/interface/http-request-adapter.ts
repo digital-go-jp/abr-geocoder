@@ -22,9 +22,12 @@
  * SOFTWARE.
  */
 import { StatusCodes } from 'http-status-codes';
-import http2, { ClientSessionRequestOptions, Http2Session } from 'node:http2';
+import * as https from 'node:https';
+import * as http from 'node:http';
+import { IncomingMessage } from 'node:http';
+import { Readable } from 'node:stream';
 
-export type HttpHeader = http2.IncomingHttpHeaders & http2.IncomingHttpStatusHeader;
+export type HttpHeader = http.IncomingHttpHeaders & { ':status'?: string | string[] };
 
 export class ResponseHeader {
   private constructor(
@@ -37,16 +40,16 @@ export class ResponseHeader {
     Object.freeze(this);
   }
 
-  static from(headers: HttpHeader): ResponseHeader {
+  static from(headers: HttpHeader, statusCode?: number): ResponseHeader {
 
-    const contentLength = parseInt(headers[http2.constants.HTTP2_HEADER_CONTENT_LENGTH]?.toString() || '0', 10);
-    const statusCode: StatusCodes = parseInt(headers[http2.constants.HTTP2_HEADER_STATUS]?.toString() || '500', 10);
-    const eTag = headers[http2.constants.HTTP2_HEADER_ETAG] as string | undefined;
-    const lastModified = headers[http2.constants.HTTP2_HEADER_LAST_MODIFIED] as string | undefined;
-    const contentRange = headers[http2.constants.HTTP2_HEADER_CONTENT_RANGE] as string | undefined;
+    const contentLength = parseInt(headers['content-length']?.toString() || '0', 10);
+    const status: StatusCodes = statusCode || parseInt(headers[':status']?.toString() || '500', 10);
+    const eTag = headers['etag'] as string | undefined;
+    const lastModified = headers['last-modified'] as string | undefined;
+    const contentRange = headers['content-range'] as string | undefined;
 
     return new ResponseHeader(
-      statusCode,
+      status,
       contentLength,
       eTag,
       lastModified,
@@ -111,59 +114,12 @@ export type GetJsonOptions = {
 };
 
 export class HttpRequestAdapter {
-  private session: http2.ClientHttp2Session | undefined;
   private noLongerReconnect: boolean = false;
-  private readonly windowSize: number = 2 ** 25; // 初期ウィンドウサイズを2MBに設定
-  private readonly timer: NodeJS.Timeout;
 
   constructor(public readonly options: Required<HttpRequestAdapterOptions>) {
-    this.connect();
-    this.timer = setInterval(() => this.sendPing(), 5000);
+    // シンプルな実装：カスタムエージェントは使用しない
   }
 
-  private sendPing() {
-    if (!this.session || this.session.closed) {
-      return;
-    }
-    try {
-      this.session.ping((error: Error | null) => {
-        if (error) {
-          console.error('ping error', error);
-        }
-      });
-    } catch (_error: unknown) {
-      // Do nothing here
-    }
-  }
-  private connect() {
-    this.session = http2.connect(`https://${this.options.hostname}`, {
-      peerMaxConcurrentStreams: this.options.peerMaxConcurrentStreams,
-    });
-    this.session.setMaxListeners(0);
-    this.session.once('session', (session: Http2Session) => {
-      console.log(`  ->session connect`);
-      session.setLocalWindowSize(this.windowSize);
-    });
-    this.session.once('close', () => {
-      // console.log(`--->session close`);
-      this.session?.destroy();
-      this.session?.close();
-      this.session = undefined;
-      if (this.noLongerReconnect) {
-        return;
-      }
-      // console.log(`  ->retry`);
-      setTimeout(() => this.connect(), 1000);
-    });
-    this.session.once('error', () => {
-      // console.log(`--->session error (${process.pid})`);
-      this.session = undefined;
-      if (this.noLongerReconnect) {
-        return;
-      }
-      setTimeout(() => this.connect(), 1000);
-    });
-  }
 
   public getJSON(params: GetJsonOptions): Promise<JsonResponseData> {
     return new Promise<JsonResponseData>((
@@ -322,66 +278,58 @@ export class HttpRequestAdapter {
     headers?: Record<string, string | undefined>;
   }): Promise<ResponseData> {
 
-    const reqParams = Object.assign(
-      headers,
-      {
-        [http2.constants.HTTP2_HEADER_METHOD]: method.toUpperCase(),
-        [http2.constants.HTTP2_HEADER_PATH]: [
-          url.pathname,
-          url.search,
-        ].join(''),
-        [http2.constants.HTTP2_HEADER_USER_AGENT]: this.options.userAgent,
+    const requestOptions: https.RequestOptions = {
+      hostname: url.hostname || this.options.hostname,
+      port: url.port || 443,
+      path: url.pathname + url.search,
+      method: method.toUpperCase(),
+      headers: {
+        ...headers,
+        'User-Agent': this.options.userAgent,
       },
-    );
-
-    await new Promise((resolve: (_?: void) => void) => {
-      const waiter = () => {
-        if (this.noLongerReconnect || this.session) {
-          resolve();
-          return;
-        }
-        setTimeout(() => waiter(), 100);
-      };
-      waiter();
-    });
-    if (!this.session) {
-      return Promise.reject('Session is undefined');
-    }
-    const req: http2.ClientHttp2Stream = this.session.request(
-      reqParams,
-      {
-        endStream: false,
-      },
-    );
-    req.setEncoding(encoding);
+      // カスタムエージェントを使用しない（デフォルトのglobalAgentを使用）
+    };
 
     return new Promise((
       resolve: (data: ResponseData) => void,
+      reject: (error: Error) => void,
     ) => {
-      req.once('response', (headers) => {
-        const header = ResponseHeader.from(headers);
+      const req = https.request(requestOptions, (res: IncomingMessage) => {
+        const header = ResponseHeader.from(res.headers, res.statusCode);
         const buffer: Buffer[] = [];
 
-        req.on('data', (chunk: Buffer) => {
+        res.setEncoding(encoding);
 
-          // データ受信の際にウィンドウサイズを動的に調整
-          const currentWindowSize = req.state.localWindowSize;
-          const receivedDataSize: number = chunk.length;
-
-          // ウィンドウサイズが一定量以下になった場合に拡張
-          if (currentWindowSize && currentWindowSize < this.windowSize / 2) {
-            const newWindowSize: number = this.windowSize - currentWindowSize + receivedDataSize;
-            req.session?.setLocalWindowSize(newWindowSize);
-            // console.log(`===>new window size: ${(newWindowSize / (1024 ** 2)).toFixed(1)}MB`);
-          } 
-          buffer.push(chunk);
+        res.on('data', (chunk: string | Buffer) => {
+          if (typeof chunk === 'string') {
+            buffer.push(Buffer.from(chunk, encoding));
+          } else {
+            buffer.push(chunk);
+          }
         });
 
-        req.once('end', () => {
-          req.removeAllListeners();
+        res.once('end', () => {
+          res.removeAllListeners();
           resolve(new ResponseData(header, buffer));
         });
+
+        res.once('error', (err) => {
+          res.removeAllListeners();
+          reject(err);
+        });
       });
+
+      req.once('error', (err) => {
+        req.removeAllListeners();
+        reject(err);
+      });
+
+      // シンプルなタイムアウト
+      req.setTimeout(60000, () => { // 1分
+        req.destroy();
+      });
+
+      req.end();
     });
   }
 
@@ -393,81 +341,66 @@ export class HttpRequestAdapter {
     url: URL;
     headers?: Record<string, string | undefined>;
     abortController?: AbortController;
-  }) {
+  }): Promise<Readable> {
 
-    const requestOptions: ClientSessionRequestOptions = {
-      endStream: false,
-      signal: abortController?.signal,
+    const requestOptions: https.RequestOptions = {
+      hostname: url.hostname || this.options.hostname,
+      port: url.port || 443,
+      path: url.pathname + url.search,
+      method: 'GET',
+      headers: {
+        ...headers,
+        'User-Agent': this.options.userAgent,
+      },
+      // カスタムエージェントを使用しない（デフォルトのglobalAgentを使用）
     };
 
-    await new Promise((
-      resolve: (_?: void) => void,
+    return new Promise((
+      resolve: (stream: Readable) => void,
       reject: (error: Error) => void,
     ) => {
-      const timeout = setTimeout(() => reject(new Error('Session initialization timeout')), 5000);
-      const waiter = () => {
-        if (this.noLongerReconnect || this.session) {
-          clearTimeout(timeout);
-          resolve();
-        } else {
-          setImmediate(waiter);
+      const req = https.request(requestOptions, (res: IncomingMessage) => {
+        // エラーステータスコードのチェック
+        if (res.statusCode && res.statusCode >= 400) {
+          res.destroy();
+          reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+          return;
         }
-      };
-      waiter();
+
+        if (abortController?.signal.aborted) {
+          res.destroy();
+          reject(new Error('Request aborted'));
+          return;
+        }
+
+        res.once('error', (err) => {
+          reject(err);
+        });
+
+        resolve(res);
+      });
+
+      req.once('error', (err) => {
+        reject(err);
+      });
+
+      // シンプルなタイムアウト
+      req.setTimeout(300000, () => { // 5分
+        req.destroy();
+      });
+
+      if (abortController) {
+        abortController.signal.addEventListener('abort', () => {
+          req.destroy();
+        });
+      }
+
+      req.end();
     });
-    if (!this.session) {
-      return Promise.reject(new Error('No session available'));
-    }
-    const req: http2.ClientHttp2Stream = this.session.request(Object.assign(
-      headers,
-      {
-        [http2.constants.HTTP2_HEADER_PATH]: [
-          url.pathname,
-          url.search,
-        ].join('?'),
-        [http2.constants.HTTP2_HEADER_METHOD]: 'GET',
-        [http2.constants.HTTP2_HEADER_USER_AGENT]: this.options.userAgent,
-      },
-    ), requestOptions);
-    const onSessionClose = () => {
-      // console.log(`--->req.close`);
-      req.destroy();
-      req.close();
-    };
-    this.session.on('close', onSessionClose);
-
-    req.once('error', (err) => {
-      console.error('Stream error:', err);
-    });
-
-    req.once('end', () => {
-      req.removeAllListeners();
-      this.session?.removeListener('close', onSessionClose);
-    });
-
-    return req;
-
-
-    // ファイルの継続ダウンロードを実装するため、レスポンスに応じてWritableを返す用に
-    // return new Promise((resolve: (stream: Writable) => void) => {
-    //   req.once('response', headers => {
-    //     const dst = factory(ResponseHeader.from(headers));
-
-    //     req.on('data', (chunk: Buffer) => dst.write(chunk));
-    //     req.once('end', () => {
-    //       dst.end();
-    //       req.removeAllListeners();
-    //     });
-
-    //     resolve(dst);
-    //   });
-    // })
   }
 
   close() {
     this.noLongerReconnect = true;
-    this.session?.destroy();
-    this.session?.close();
-    clearInterval(this.timer);
+    // シンプル実装：特別なクリーンアップは不要
   }
 }

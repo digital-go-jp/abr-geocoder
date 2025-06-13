@@ -120,7 +120,8 @@ export const DOUBLE_QUOTATION = '"';
 export const BLANK_CHAR = null;
 
 // 同時ダウンロード数
-export const MAX_CONCURRENT_DOWNLOAD = 100;
+//export const MAX_CONCURRENT_DOWNLOAD = 100;
+export const MAX_CONCURRENT_DOWNLOAD = 1;
 
 // MatchLevel = Machiaza のとき、その地域に含まれる
 // 大字・丁目・小字に rsdt_addr_flg = 0 と 1 が

@@ -178,34 +178,55 @@ export class DownloadStep1Transform extends Duplex {
     const zipFilename = path.basename(csvMeta.url.toString());
     const zipFilePath = path.join(this.params.downloadDir, zipFilename);
 
-    // リソースをダウンロードする
-    const src = await this.params.client.getReadableStream({
-      url: csvMeta.url,
-    });
+    try {
+      // リソースをダウンロードする
+      const src = await this.params.client.getReadableStream({
+        url: csvMeta.url,
+      });
 
-    // ファイルに保存する
-    const dst = fs.createWriteStream(zipFilePath);
+      // ファイルに保存する
+      const dst = fs.createWriteStream(zipFilePath);
+      
+      await pipeline(src, dst);
 
-    await pipeline(
-      src,
-      dst,
-    );
-    const fileCrc32 = await crc32.fromFile(zipFilePath)!;
+      const fileCrc32 = await crc32.fromFile(zipFilePath)!;
 
-    return {
-      taskId: job.taskId,
-      data: {
-        dataset: job.data.dataset,
-        zipFilePath,
-        status: DownloadProcessStatus.UNSET,
-        urlCache: {
-          url: csvMeta.url,
-          etag: headResponse.header.eTag,
-          last_modified: headResponse.header.lastModified,
-          content_length: headResponse.header.contentLength,
-          crc32: fileCrc32,
+      return {
+        taskId: job.taskId,
+        data: {
+          dataset: job.data.dataset,
+          zipFilePath,
+          status: DownloadProcessStatus.UNSET,
+          urlCache: {
+            url: csvMeta.url,
+            etag: headResponse.header.eTag,
+            last_modified: headResponse.header.lastModified,
+            content_length: headResponse.header.contentLength,
+            crc32: fileCrc32,
+          },
         },
-      },
-    } as ThreadJobResult<DownloadQuery2>;
+      } as ThreadJobResult<DownloadQuery2>;
+
+    } catch (error) {
+      
+      // エラーが発生した場合はファイルを削除
+      try {
+        if (fs.existsSync(zipFilePath)) {
+          fs.unlinkSync(zipFilePath);
+        }
+      } catch (_) {
+        // ファイル削除エラーは無視
+      }
+
+      return {
+        taskId: job.taskId,
+        kind: 'result',
+        data: {
+          dataset: job.data.dataset,
+          status: DownloadProcessStatus.ERROR,
+          message: `Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        },
+      } as ThreadJobResult<DownloadProcessError>;
+    }
   }
 }
