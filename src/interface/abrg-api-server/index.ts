@@ -25,6 +25,7 @@ import { AbrGeocoder } from "@usecases/geocode/abr-geocoder";
 import { StatusCodes } from 'http-status-codes';
 import { MiddlewareNext, Request, Response, Router, Server } from "hyper-express";
 import { OnGeocodeRequest } from "./on-geocode-request";
+import { OnReverseGeocodeRequest } from "./on-reverse-geocode-request";
 
 export type AbrgApiServerOptions = {
   path?: string;
@@ -55,6 +56,15 @@ export class AbrgApiServer extends Server {
     const onGeocodeRequest = new OnGeocodeRequest(geocoder);
     this.router.get(`/${this.abrgOptions?.path || 'geocode'}`, (request, response) => {
       onGeocodeRequest.run(request, response)
+        .catch((error: string | Error) => {
+          this.onInternalServerError(error, response);
+        });
+    });
+
+    // reverse geocode に対するリクエスト
+    const onReverseGeocodeRequest = new OnReverseGeocodeRequest(geocoder);
+    this.router.get('/reverse', (request, response) => {
+      onReverseGeocodeRequest.run(request, response)
         .catch((error: string | Error) => {
           this.onInternalServerError(error, response);
         });
