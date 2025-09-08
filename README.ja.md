@@ -24,6 +24,7 @@
   - 日本国内の住所を対象としたジオコーダ
   - [アドレス・ベース・レジストリ](https://catalog.registries.digital.go.jp/rc/dataset/)に基づいて住所表記、階層に合わせて正規化
   - `住居表示` と `地番` に対応。
+  - 逆ジオコーディング機能（座標から住所への変換
   - SQLiteを使用。サーバー内でジオコーディングすることが可能。
   - マルチスレッドによる高速処理。
   - `csv`, `json`, `geojson`, `ndjson`, `ndgeojson`, `simplified` の6つの出力形式をサポート。
@@ -33,7 +34,10 @@
   - コマンドとして利用可能
     - 標準入力・標準出力によるパイプライン
     - ファイルによる入出力
+    - **🆕 座標指定による逆ジオコーディング**
   - RESTサーバとして利用可能
+    - ジオコーディング: `/geocode`
+    - **🆕 逆ジオコーディング: `/reverse`**
   - Node.jsのライブラリとして利用可能
     - 個別リクエスト、Streamをサポート
   - 京都の通り名による検索（※一部未対応）
@@ -301,6 +305,119 @@
 
     </details>
 
+## `abrg reverse`コマンド
+
+座標（緯度・経度）から住所を取得する逆ジオコーディングを実行します。
+
+```sh
+abrg reverse --lat <緯度> --lon <経度> [options]
+```
+
+### 基本的な使用方法
+
+```sh
+# 東京の座標から住所を取得
+abrg reverse --lat 35.679107172 --lon 139.736394597
+
+# 出力フォーマットを指定
+abrg reverse --lat 35.679107172 --lon 139.736394597 --format json
+
+# 複数の結果を取得
+abrg reverse --lat 35.679107172 --lon 139.736394597 --limit 3
+```
+
+### オプション
+
+- `--lat` (必須): 緯度（十進度数、-90から90まで）
+- `--lon` (必須): 経度（十進度数、-180から180まで）
+- `--limit, -l`: 返却する結果の最大数（1から5まで、デフォルト: 1）
+- `--target, -t`: 検索対象（`all`, `residential`, `parcel`、デフォルト: `all`）
+- `--format, -f`: 出力形式（`json`, `geojson`, `simplified`、デフォルト: `geojson`）
+- `--debug`: デバッグ情報（処理時間など）を表示
+- `--silent`: 進捗メッセージを非表示
+- `--abrgDir, -d`: データベースがあるディレクトリ（デフォルト: `$HOME/.abr-geocoder`）
+
+### 出力形式
+
+| 形式 | 説明 |
+|------|------|
+| `json` | クエリオブジェクト構造を持つ標準JSON形式 |
+| `geojson` | GeoJSON FeatureCollection形式（デフォルト） |
+| `simplified` | 簡素化されたCSV形式 |
+
+### 出力例
+
+<details>
+<summary>GeoJSON出力（デフォルト）</summary>
+
+```json
+{
+  "type": "FeatureCollection",
+  "query": {
+    "lat": 35.679107172,
+    "lon": 139.736394597,
+    "limit": 1,
+    "target": "all"
+  },
+  "result_info": {
+    "count": 1,
+    "limit": 1,
+    "api_version": "3.0.0",
+    "db_version": "20240501"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [139.736394597, 35.679107172]
+      },
+      "properties": {
+        "formatted_address": "東京都千代田区紀尾井町1-3",
+        "match_level": "residential_detail",
+        "distance": 5.7,
+        "structured_address": {
+          "pref": "東京都",
+          "city": "千代田区",
+          "oaza_cho": "紀尾井町",
+          "blk_num": "1",
+          "rsdt_num": "3"
+        }
+      }
+    }
+  ]
+}
+```
+</details>
+
+<details>
+<summary>JSON出力</summary>
+
+```json
+[
+  {
+    "query": {
+      "input": ""
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3",
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail"
+    }
+  }
+]
+```
+</details>
+
+<details>
+<summary>SIMPLIFIED出力</summary>
+
+```csv
+input,output,score,match_level
+"","東京都千代田区紀尾井町1-3",,"residential_detail"
+```
+</details>
+
 ## `abrg serve start`コマンド
 
   ジオコーダをREST APIサーバーとして起動します。
@@ -312,7 +429,11 @@
   リクエスト方法
 
   ```sh
+  # ジオコーディング（住所から座標）
   curl http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3
+  
+  # 🆕 逆ジオコーディング（座標から住所）
+  curl "http://localhost:3000/reverse?lat=35.679107172&lon=139.736394597&limit=1"
   ```
 
   - <details>
@@ -356,3 +477,4 @@
   ```sh
   abrg serve stop
   ```
+

@@ -23,6 +23,7 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 - Geocoder targeting domestic addresses in Japan.
 - Normalizes address notation according to the [Address Base Registry](https://catalog.registries.digital.go.jp/rc/dataset/) and hierarchy.
 - Supports `residence indication` and `partial number (lot number)`.
+- Reverse geocoding (coordinates to address conversion)
 - Uses SQLite, enabling geocoding within the server.
 - High-speed processing through multithreading.
 - Supports six output formats: `csv`, `json`, `geojson`, `ndjson`, `ndgeojson`, `simplified`.
@@ -32,7 +33,10 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 - Usable as a command:
   - Pipeline with standard input/output.
   - Input/output via file.
-- Usable as a REST server.
+  - **🆕 Reverse geocoding with coordinates**
+- Usable as a REST server:
+  - Geocoding: `/geocode`
+  - **🆕 Reverse geocoding: `/reverse`**
 - Usable as a Node.js library:
   - Supports individual requests and streams.
 - Limited support for searches by Kyoto street names.
@@ -292,6 +296,119 @@ $ abrg <inputFile> [<outputFile>] [options]
   | residential | Searches only the residential address data.                                                                          |
   | parcel      | Searches only the parcel number data.                                                                                |
   </details>
+
+## `abrg reverse` command
+
+Performs reverse geocoding to convert coordinates (latitude, longitude) to Japanese addresses.
+
+```sh
+abrg reverse --lat <latitude> --lon <longitude> [options]
+```
+
+### Basic Usage
+
+```sh
+# Get address for coordinates in Tokyo
+abrg reverse --lat 35.679107172 --lon 139.736394597
+
+# With output format specification
+abrg reverse --lat 35.679107172 --lon 139.736394597 --format json
+
+# Get multiple results
+abrg reverse --lat 35.679107172 --lon 139.736394597 --limit 3
+```
+
+### Options
+
+- `--lat, -lat` (required): Latitude in decimal degrees (-90 to 90)
+- `--lon, -lon` (required): Longitude in decimal degrees (-180 to 180)
+- `--limit, -l`: Maximum number of results to return (1 to 5, default: 1)
+- `--target, -t`: Search target (`all`, `residential`, `parcel`, default: `all`)
+- `--format, -f`: Output format (`json`, `geojson`, `simplified`, default: `geojson`)
+- `--debug`: Show debug information including processing time
+- `--silent`: Hide progress messages
+- `--abrgDir, -d`: Directory containing the database (default: `$HOME/.abr-geocoder`)
+
+### Output Formats
+
+| Format | Description |
+|--------|-------------|
+| `json` | Standard JSON format with query object structure |
+| `geojson` | GeoJSON FeatureCollection format (default) |
+| `simplified` | Simplified CSV format |
+
+### Examples
+
+<details>
+<summary>GeoJSON output (default)</summary>
+
+```json
+{
+  "type": "FeatureCollection",
+  "query": {
+    "lat": 35.679107172,
+    "lon": 139.736394597,
+    "limit": 1,
+    "target": "all"
+  },
+  "result_info": {
+    "count": 1,
+    "limit": 1,
+    "api_version": "3.0.0",
+    "db_version": "20240501"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [139.736394597, 35.679107172]
+      },
+      "properties": {
+        "formatted_address": "東京都千代田区紀尾井町1-3",
+        "match_level": "residential_detail",
+        "distance": 5.7,
+        "structured_address": {
+          "pref": "東京都",
+          "city": "千代田区",
+          "oaza_cho": "紀尾井町",
+          "blk_num": "1",
+          "rsdt_num": "3"
+        }
+      }
+    }
+  ]
+}
+```
+</details>
+
+<details>
+<summary>JSON output</summary>
+
+```json
+[
+  {
+    "query": {
+      "input": ""
+    },
+    "result": {
+      "output": "東京都千代田区紀尾井町1-3",
+      "match_level": "residential_detail",
+      "coordinate_level": "residential_detail"
+    }
+  }
+]
+```
+</details>
+
+<details>
+<summary>Simplified output</summary>
+
+```csv
+input,output,score,match_level
+"","東京都千代田区紀尾井町1-3",,"residential_detail"
+```
+</details>
 
 ## `abrg serve start` command
 
