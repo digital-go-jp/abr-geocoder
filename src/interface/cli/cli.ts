@@ -30,6 +30,7 @@ import { hideBin } from 'yargs/helpers';
 import debugCommand from './commands/debug-command';
 import downloadCommand from './commands/download-command';
 import geocodeCommand from './commands/geocode-command';
+import reverseGeocodeCommand from './commands/reverse-geocode-command';
 import serveCommand from './commands/serve-command';
 import updateCheckCommand from './commands/update-check-command';
 import { parseHelper } from './services/parse-helper';
@@ -53,6 +54,7 @@ export const main = async (
     .command(updateCheckCommand)
     .command(downloadCommand)
     .command(geocodeCommand)
+    .command(reverseGeocodeCommand)
     .command(debugCommand)
     .command(serveCommand)
     .fail((msg: string, e: Error, yargs: Argv<{}>): void => {

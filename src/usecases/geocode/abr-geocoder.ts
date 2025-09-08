@@ -58,6 +58,22 @@ export interface ReverseGeocodeResult extends Query {
   distance: number;
 }
 
+/**
+ * FormatterProvider互換オブジェクトの型定義
+ */
+export interface QueryCompatibleObject {
+  [key: string]: any;
+  match_level: {
+    str: string;
+    [key: string]: any;
+  };
+  coordinate_level: {
+    str: string;
+    [key: string]: any;
+  };
+  release: () => void;
+}
+
 export class AbrGeocoder {
   private taskHead: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
   private taskTail: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
@@ -704,8 +720,61 @@ export class AbrGeocoder {
     });
   }
 
+  /**
+   * ReverseGeocodeResultをFormatterProvider互換のQuery形式に変換
+   */
+  public convertReverseResultToQueryCompatible(result: ReverseGeocodeResult): QueryCompatibleObject {
+    const baseObject = this.copyQueryToPlainObject(result);
+    const matchLevelStr = this.getMatchLevelString(baseObject.match_level);
+    
+    return {
+      ...baseObject,
+      match_level: {
+        ...baseObject.match_level,
+        str: matchLevelStr
+      },
+      coordinate_level: {
+        ...baseObject.coordinate_level,
+        str: matchLevelStr
+      },
+      release: () => {
+        // プレーンオブジェクトなので解放処理不要
+      }
+    };
+  }
+
+  /**
+   * MatchLevelオブジェクトから文字列表現を取得
+   */
+  private getMatchLevelString(matchLevel: any): string {
+    if (matchLevel?.str) {
+      return matchLevel.str;
+    }
+    
+    if (!matchLevel?.num) {
+      return 'unknown';
+    }
+    
+    // MatchLevel.numの値をマッピング
+    const levelMap: Record<number, string> = {
+      [MatchLevel.RESIDENTIAL_DETAIL.num]: 'residential_detail',
+      [MatchLevel.RESIDENTIAL_BLOCK.num]: 'residential_block', 
+      [MatchLevel.MACHIAZA_DETAIL.num]: 'machiaza_detail',
+      [MatchLevel.MACHIAZA.num]: 'machiaza',
+      [MatchLevel.CITY.num]: 'city',
+      [MatchLevel.PREFECTURE.num]: 'prefecture',
+      [MatchLevel.PARCEL.num]: 'parcel',
+      [MatchLevel.ERROR.num]: 'error',
+      [MatchLevel.UNKNOWN.num]: 'unknown'
+    };
+    
+    return levelMap[matchLevel.num] || 'unknown';
+  }
+
+  private static readonly DEFAULT_DB_VERSION = "20240501";
+
   async getDbVersion(): Promise<string> {
-    return "20240501";
+    return AbrGeocoder.DEFAULT_DB_VERSION;
   }
 
   private async getCityInfo(commonDb: any, lgCode: string) {
