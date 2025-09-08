@@ -33,10 +33,10 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 - Usable as a command:
   - Pipeline with standard input/output.
   - Input/output via file.
-  - **🆕 Reverse geocoding with coordinates**
+  - Reverse geocoding with coordinates
 - Usable as a REST server:
   - Geocoding: `/geocode`
-  - **🆕 Reverse geocoding: `/reverse`**
+  - Reverse geocoding: `/reverse`
 - Usable as a Node.js library:
   - Supports individual requests and streams.
 - Limited support for searches by Kyoto street names.
