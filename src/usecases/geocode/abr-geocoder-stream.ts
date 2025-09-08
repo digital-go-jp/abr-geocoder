@@ -23,10 +23,13 @@
  */
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { SearchTarget } from '@domain/types/search-target';
+import { CoordinateData } from '@domain/services/transformations/coordinate-parsing-transform';
 import { Duplex } from 'node:stream';
-import { AbrGeocoder } from './abr-geocoder';
+import { AbrGeocoder, QueryCompatibleObject } from './abr-geocoder';
 import { Query } from './models/query';
 // import inspector from "node:inspector";
+
+export type StreamMode = 'geocode' | 'reverse';
 
 export class AbrGeocoderStream extends Duplex {
   private writeIdx: number = 0;
@@ -38,11 +41,15 @@ export class AbrGeocoderStream extends Duplex {
   private pausing: boolean = false;
   private highWatermark: number;
   private halfWatermark: number;
+  private mode: StreamMode;
+  private limit: number;
 
   constructor(params: {
     geocoder: AbrGeocoder,
-    fuzzy: string;
+    mode?: StreamMode;
+    fuzzy?: string;
     searchTarget?: SearchTarget;
+    limit?: number;
     highWatermark?: number;
   }) {
     super({
@@ -50,9 +57,11 @@ export class AbrGeocoderStream extends Duplex {
       allowHalfOpen: true,
     });
     this.geocoder = params.geocoder;
+    this.mode = params.mode || 'geocode';
     this.fuzzy = params.fuzzy || DEFAULT_FUZZY_CHAR;
     this.searchTarget = params.searchTarget || SearchTarget.ALL;
-    this.highWatermark = params.highWatermark || 8192;
+    this.limit = params.limit || 1;
+    this.highWatermark = params.highWatermark || (params.mode === 'reverse' ? 500 : 8192);
     this.halfWatermark = this.highWatermark >> 1;
 
     this.once('close', async () => {
@@ -91,7 +100,7 @@ export class AbrGeocoderStream extends Duplex {
 
   // 前のstreamからデータが渡されてくる
   async _write(
-    input: string, 
+    input: string | CoordinateData, 
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
@@ -102,29 +111,72 @@ export class AbrGeocoderStream extends Duplex {
     // 次のタスクをもらうために、callbackを呼び出す
     callback();
 
-    this.geocoder.geocode({
-      address: input.toString(),
-      searchTarget: this.searchTarget,
-      fuzzy: this.fuzzy,
-      tag: {
-        lineId,
-      },
-    })
-      // 処理が成功したら、別スレッドで処理した結果をQueryに変換する
-      .then((result: Query) => {
-        this.push(result);
+    if (this.mode === 'geocode') {
+      this.geocoder.geocode({
+        address: input.toString(),
+        searchTarget: this.searchTarget,
+        fuzzy: this.fuzzy,
+        tag: {
+          lineId,
+        },
+      })
+        // 処理が成功したら、別スレッドで処理した結果をQueryに変換する
+        .then((result: Query) => {
+          this.push(result);
+          this.nextIdx++;
+          this.closer();
+          // this.emit(this.kShiftEvent, result);
+        });
+        // エラーが発生した
+        // .catch((error: Error | string) => {
+        //   const query = Query.create(input);
+        //   this.emit(this.kShiftEvent, query.copy({
+        //     match_level: MatchLevel.ERROR,
+        //   }));
+        // })
+    } else {
+      // reverse geocoding mode
+      const coordinate = input as CoordinateData;
+      this.geocoder.reverseGeocode({
+        lat: coordinate.lat,
+        lon: coordinate.lon,
+        limit: this.limit,
+        searchTarget: this.searchTarget,
+      }).then(results => {
+        // 各結果をQuery互換オブジェクトに変換してpush
+        if (results.length > 0) {
+          // limit=1の場合は最初の結果のみ、それ以外は全結果を出力
+          const resultsToProcess = this.limit === 1 ? [results[0]] : results;
+          
+          for (const result of resultsToProcess) {
+            const queryCompatible = this.geocoder.convertReverseResultToQueryCompatible(result);
+            this.push(queryCompatible);
+          }
+        } else {
+          // 結果がない場合はnullを含むダミーオブジェクトをpush
+          const emptyResult: QueryCompatibleObject = {
+            unmatched: [],
+            others: [],
+            tempAddress: null,
+            match_level: { str: 'unknown' },
+            coordinate_level: { str: 'unknown' },
+            formatted: { address: '' },
+            rep_lat: coordinate.lat.toString(),
+            rep_lon: coordinate.lon.toString(),
+            input: { data: { address: '' } },
+            release: () => {}
+          };
+          this.push(emptyResult);
+        }
         this.nextIdx++;
         this.closer();
-        // this.emit(this.kShiftEvent, result);
+      }).catch(error => {
+        // Handle error for reverse geocoding
+        console.error('Reverse geocoding error:', error);
+        this.nextIdx++;
+        this.closer();
       });
-    // エラーが発生した
-    // .catch((error: Error | string) => {
-    //   const query = Query.create(input);
-    //   this.emit(this.kShiftEvent, query.copy({
-    //     match_level: MatchLevel.ERROR,
-    //   }));
-    // })
-
+    }
   }
 
   // 前のストリームからの書き込みが終了した

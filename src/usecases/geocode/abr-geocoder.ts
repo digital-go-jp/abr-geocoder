@@ -46,6 +46,9 @@ import { PrefInfo } from "@domain/types/geocode/pref-info";
 import { SearchTarget } from "@domain/types/search-target";
 import { MatchLevel } from "@domain/types/geocode/match-level";
 import { GeocodeDbController } from "@drivers/database/geocode-db-controller";
+import { AbrgError, AbrgErrorLevel } from "@domain/types/messages/abrg-error";
+import { AbrgMessage } from "@domain/types/messages/abrg-message";
+import fs from 'node:fs';
 
 export type ReverseGeocodeParams = {
   lat: number;
@@ -149,13 +152,36 @@ export class AbrGeocoder {
   }
 
   async reverseGeocode(params: ReverseGeocodeParams): Promise<ReverseGeocodeResult[]> {
+    // パラメータ検証
+    if (isNaN(params.lat) || params.lat < -90 || params.lat > 90) {
+      throw new AbrgError({
+        messageId: AbrgMessage.REVERSE_GEOCODE_COORDINATE_INVALID,
+        level: AbrgErrorLevel.ERROR,
+      });
+    }
+    
+    if (isNaN(params.lon) || params.lon < -180 || params.lon > 180) {
+      throw new AbrgError({
+        messageId: AbrgMessage.REVERSE_GEOCODE_COORDINATE_INVALID,
+        level: AbrgErrorLevel.ERROR,
+      });
+    }
+
     const limit = params.limit || 1;
     const adminResults = await this.searchFromAdmin(params.lat, params.lon, limit * 3);
     
     const searchResults = await this.getSearchResults(params, adminResults, limit);
     const prioritizedResults = this.prioritizeResults(searchResults, limit);
     
-    return prioritizedResults.slice(0, limit);
+    const finalResults = prioritizedResults.slice(0, limit);
+    
+    // デバッグモードでは結果がない場合にログ出力
+    if (finalResults.length === 0) {
+      this.logError('reverseGeocode', 'no-results', 
+        new Error(`No results found for coordinates: ${params.lat}, ${params.lon}`));
+    }
+    
+    return finalResults;
   }
 
   private async getSearchResults(
@@ -282,7 +308,7 @@ export class AbrGeocoder {
         const query = this.rowToQuery(row, 'town', row.lg_code);
         if (query) {
           results.push({
-            ...this.copyQueryToPlainObject(query),
+            ...query.toJSON(),
             distance: row.distance,
           } as any);
         }
@@ -315,7 +341,7 @@ export class AbrGeocoder {
           const query = this.rowToQuery(row, 'city', row.lg_code);
           if (query) {
             results.push({
-              ...this.copyQueryToPlainObject(query),
+              ...query.toJSON(),
               distance: row.distance,
             } as any);
           }
@@ -323,8 +349,10 @@ export class AbrGeocoder {
       }
 
       await db.close();
-    } catch (_error) {
-      // エラーの場合は空配列を返す
+    } catch (error) {
+      // データベースアクセスエラーをログに記録し、空配列を返す
+      this.logError('searchFromAdmin', 'all', error);
+      // 管理情報の取得に失敗してもサービスを継続
     }
 
     return results;
@@ -450,6 +478,7 @@ export class AbrGeocoder {
         }
       } catch (error) {
         this.logError('searchFromResidential', lgCode, error);
+        // データベースエラーが発生した場合、該当LGコードをスキップして継続
         continue;
       }
     }
@@ -571,6 +600,7 @@ export class AbrGeocoder {
         }
       } catch (error) {
         this.logError('searchFromParcel', lgCode, error);
+        // データベースエラーが発生した場合、該当LGコードをスキップして継続
         continue;
       }
     }
@@ -681,54 +711,18 @@ export class AbrGeocoder {
   }
 
   /**
-   * Queryオブジェクトをプレーンオブジェクトにコピー
-   */
-  private copyQueryToPlainObject(query: Query): any {
-    return Object.assign({}, {
-      input: query.input,
-      searchTarget: query.searchTarget,
-      fuzzy: query.fuzzy,
-      unmatched: query.unmatched,
-      pref: query.pref,
-      county: query.county,
-      city: query.city,
-      ward: query.ward,
-      oaza_cho: query.oaza_cho,
-      chome: query.chome,
-      koaza: query.koaza,
-      lg_code: query.lg_code,
-      rep_lat: query.rep_lat,
-      rep_lon: query.rep_lon,
-      block: query.block,
-      block_id: query.block_id,
-      machiaza_id: query.machiaza_id,
-      rsdt_num: query.rsdt_num,
-      rsdt_id: query.rsdt_id,
-      rsdt_num2: query.rsdt_num2,
-      rsdt2_id: query.rsdt2_id,
-      prc_num1: query.prc_num1,
-      prc_num2: query.prc_num2,
-      prc_num3: query.prc_num3,
-      prc_id: query.prc_id,
-      rsdt_addr_flg: query.rsdt_addr_flg,
-      match_level: query.match_level,
-      coordinate_level: query.coordinate_level,
-      formatted: query.formatted,
-      matchedCnt: query.matchedCnt,
-      ambiguousCnt: query.ambiguousCnt,
-      startTime: query.startTime,
-    });
-  }
-
-  /**
    * ReverseGeocodeResultをFormatterProvider互換のQuery形式に変換
    */
   public convertReverseResultToQueryCompatible(result: ReverseGeocodeResult): QueryCompatibleObject {
-    const baseObject = this.copyQueryToPlainObject(result);
+    const baseObject = result;
     const matchLevelStr = this.getMatchLevelString(baseObject.match_level);
     
     return {
       ...baseObject,
+      // フォーマッターが期待する必須フィールドを追加
+      unmatched: [],  // 逆ジオコーディングでは未マッチ部分はない
+      others: [],     // 逆ジオコーディングではその他の候補はない
+      tempAddress: null,  // 一時住所オブジェクトはない
       match_level: {
         ...baseObject.match_level,
         str: matchLevelStr
@@ -774,6 +768,42 @@ export class AbrGeocoder {
   private static readonly DEFAULT_DB_VERSION = "20240501";
 
   async getDbVersion(): Promise<string> {
+    try {
+      // データセットキャッシュの最新更新日時からバージョンを取得
+      const connectParams = this.geocodeDbController.connectParams;
+      
+      if (connectParams.type === 'sqlite3') {
+        const datasetDbPath = path.join(connectParams.dataDir, 'dataset.sqlite');
+        
+        if (fs.existsSync(datasetDbPath)) {
+          const BetterSqlite3 = await import('better-sqlite3');
+          const db = new BetterSqlite3.default(datasetDbPath, { readonly: true });
+          
+          try {
+            const stmt = db.prepare('SELECT MAX(last_modified) as latest_date FROM dataset');
+            const result = stmt.get() as { latest_date?: string } | undefined;
+            
+            if (result?.latest_date) {
+              // "Wed, 28 May 2025 13:53:40 GMT" 形式の日付文字列をパース
+              const date = new Date(result.latest_date);
+              
+              if (!isNaN(date.getTime())) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                
+                return `${year}${month}${day}`;
+              }
+            }
+          } finally {
+            db.close();
+          }
+        }
+      }
+    } catch (error) {
+      // エラー時は既定バージョンにフォールバック（静黙）
+    }
+    
     return AbrGeocoder.DEFAULT_DB_VERSION;
   }
 
@@ -787,7 +817,22 @@ export class AbrGeocoder {
   }
 
   private logError(methodName: string, lgCode: string, error: any): void {
-    console.error(`[ReverseGeocode] Error in ${methodName} for LG code ${lgCode}:`, error);
+    // AbrgErrorかどうかで出力レベルを調整
+    if (error instanceof AbrgError) {
+      switch (error.level) {
+        case AbrgErrorLevel.ERROR:
+          console.error(`[ReverseGeocode] Error in ${methodName} for LG code ${lgCode}:`, error.messageId);
+          break;
+        case AbrgErrorLevel.WARN:
+          console.warn(`[ReverseGeocode] Warning in ${methodName} for LG code ${lgCode}:`, error.messageId);
+          break;
+        default:
+          console.log(`[ReverseGeocode] Info in ${methodName} for LG code ${lgCode}:`, error.messageId);
+      }
+    } else {
+      // 通常のエラー
+      console.error(`[ReverseGeocode] Error in ${methodName} for LG code ${lgCode}:`, error?.message || error);
+    }
   }
   
   async close() {
