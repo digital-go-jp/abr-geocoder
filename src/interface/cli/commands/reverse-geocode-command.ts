@@ -37,7 +37,7 @@ import { OutputFormat } from '@domain/types/output-format';
 import { SearchTarget } from '@domain/types/search-target';
 import { FormatterProvider } from '@interface/format/formatter-provider';
 import { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
-import { AbrGeocoderStream } from '@usecases/geocode/abr-geocoder-stream';
+import { AbrReverseGeocoderStream } from '@usecases/geocode/abr-reverse-geocoder-stream';
 import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
 import { createGeocodeCaches } from '@usecases/geocode/services/create-geocode-caches';
 import { getReadStreamFromSource } from '@usecases/geocode/services/get-read-stream-from-source';
@@ -432,9 +432,8 @@ async function handleFileInput(argv: ArgumentsCamelCase<ReverseGeocodeCommandArg
     isSilentMode,
   });
 
-  const reverseGeocoderStream = new AbrGeocoderStream({
+  const reverseGeocoderStream = new AbrReverseGeocoderStream({
     geocoder,
-    mode: 'reverse',
     searchTarget,
     limit,
     highWatermark: numOfThreads * 500,

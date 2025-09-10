@@ -21,28 +21,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
 import { SearchTarget } from '@domain/types/search-target';
+import { CoordinateData } from '@domain/services/transformations/coordinate-parsing-transform';
 import { Duplex } from 'node:stream';
-import { AbrGeocoder } from './abr-geocoder';
-import { Query } from './models/query';
-// import inspector from "node:inspector";
+import { AbrGeocoder, QueryCompatibleObject } from './abr-geocoder';
 
-export class AbrGeocoderStream extends Duplex {
+export class AbrReverseGeocoderStream extends Duplex {
   private writeIdx: number = 0;
   private receivedFinal: boolean = false;
   private nextIdx: number = 1;
   private geocoder: AbrGeocoder;
   private searchTarget: SearchTarget;
-  private fuzzy: string | undefined;
   private pausing: boolean = false;
   private highWatermark: number;
   private halfWatermark: number;
+  private limit: number;
 
   constructor(params: {
     geocoder: AbrGeocoder,
-    fuzzy?: string;
     searchTarget?: SearchTarget;
+    limit?: number;
     highWatermark?: number;
   }) {
     super({
@@ -50,9 +48,9 @@ export class AbrGeocoderStream extends Duplex {
       allowHalfOpen: true,
     });
     this.geocoder = params.geocoder;
-    this.fuzzy = params.fuzzy || DEFAULT_FUZZY_CHAR;
     this.searchTarget = params.searchTarget || SearchTarget.ALL;
-    this.highWatermark = params.highWatermark || 8192;
+    this.limit = params.limit || 1;
+    this.highWatermark = params.highWatermark || 500;
     this.halfWatermark = this.highWatermark >> 1;
 
     this.once('close', async () => {
@@ -91,7 +89,7 @@ export class AbrGeocoderStream extends Duplex {
 
   // 前のstreamからデータが渡されてくる
   async _write(
-    input: string, 
+    coordinate: CoordinateData, 
     _: BufferEncoding,
     callback: (error?: Error | null | undefined) => void,
   ) {
@@ -102,28 +100,45 @@ export class AbrGeocoderStream extends Duplex {
     // 次のタスクをもらうために、callbackを呼び出す
     callback();
 
-    this.geocoder.geocode({
-      address: input.toString(),
+    this.geocoder.reverseGeocode({
+      lat: coordinate.lat,
+      lon: coordinate.lon,
+      limit: this.limit,
       searchTarget: this.searchTarget,
-      fuzzy: this.fuzzy,
-      tag: {
-        lineId,
-      },
-    })
-      // 処理が成功したら、別スレッドで処理した結果をQueryに変換する
-      .then((result: Query) => {
-        this.push(result);
-        this.nextIdx++;
-        this.closer();
-        // this.emit(this.kShiftEvent, result);
-      });
-      // エラーが発生した
-      // .catch((error: Error | string) => {
-      //   const query = Query.create(input);
-      //   this.emit(this.kShiftEvent, query.copy({
-      //     match_level: MatchLevel.ERROR,
-      //   }));
-      // })
+    }).then(results => {
+      // 各結果をQuery互換オブジェクトに変換してpush
+      if (results.length > 0) {
+        // limit=1の場合は最初の結果のみ、それ以外は全結果を出力
+        const resultsToProcess = this.limit === 1 ? [results[0]] : results;
+        
+        for (const result of resultsToProcess) {
+          const queryCompatible = this.geocoder.convertReverseResultToQueryCompatible(result);
+          this.push(queryCompatible);
+        }
+      } else {
+        // 結果がない場合はnullを含むダミーオブジェクトをpush
+        const emptyResult: QueryCompatibleObject = {
+          unmatched: [],
+          others: [],
+          tempAddress: null,
+          match_level: { str: 'unknown' },
+          coordinate_level: { str: 'unknown' },
+          formatted: { address: '' },
+          rep_lat: coordinate.lat.toString(),
+          rep_lon: coordinate.lon.toString(),
+          input: { data: { address: '' } },
+          release: () => {}
+        };
+        this.push(emptyResult);
+      }
+      this.nextIdx++;
+      this.closer();
+    }).catch(error => {
+      // Handle error for reverse geocoding
+      console.error('Reverse geocoding error:', error);
+      this.nextIdx++;
+      this.closer();
+    });
   }
 
   // 前のストリームからの書き込みが終了した
@@ -135,5 +150,3 @@ export class AbrGeocoderStream extends Duplex {
     callback();
   }
 }
-
-
