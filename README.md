@@ -316,6 +316,38 @@ abrg reverse --lat 35.679107172 --lon 139.736394597 --format json
 
 # Get multiple results
 abrg reverse --lat 35.679107172 --lon 139.736394597 --limit 3
+
+# Batch processing from CSV file
+abrg reverse coordinates.csv result.json
+
+# Processing from standard input
+cat coordinates.csv | abrg reverse - output.json
+```
+
+### Batch Processing with File Input
+
+You can process multiple coordinates from a CSV file (`lat,lon,description` format) for batch reverse geocoding:
+
+```sh
+# Batch processing from CSV file
+abrg reverse input.csv output.json
+
+# Processing from standard input
+cat coordinates.csv | abrg reverse -
+
+# Use spatial index (fast, default)
+abrg reverse coordinates.csv --spatialIndex
+
+# Use Haversine formula
+abrg reverse coordinates.csv --haversine
+```
+
+**Input CSV file format:**
+```csv
+lat,lon,description
+35.676543,139.770203,Around Tokyo Station
+35.689592,139.701171,Around Shinjuku Station
+35.658034,139.701636,Around Shibuya Station
 ```
 
 ### Options
@@ -327,6 +359,8 @@ abrg reverse --lat 35.679107172 --lon 139.736394597 --limit 3
 - `--format, -f`: Output format (`json`, `geojson`, `simplified`, default: `geojson`)
 - `--debug`: Show debug information including processing time
 - `--silent`: Hide progress messages
+- `--spatialIndex`: Use R-tree spatial index (fast, default)
+- `--haversine`: Force use of Haversine formula (cannot be used with --spatialIndex)
 - `--abrgDir, -d`: Directory containing the database (default: `$HOME/.abr-geocoder`)
 
 ### Output Formats

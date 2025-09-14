@@ -324,6 +324,38 @@ abrg reverse --lat 35.679107172 --lon 139.736394597 --format json
 
 # 複数の結果を取得
 abrg reverse --lat 35.679107172 --lon 139.736394597 --limit 3
+
+# CSVファイルから一括処理
+abrg reverse coordinates.csv result.json
+
+# 標準入力から処理
+cat coordinates.csv | abrg reverse - output.json
+```
+
+### ファイル入力による一括処理
+
+CSVファイル（`lat,lon,description`形式）から複数の座標を一括で逆ジオコーディングできます：
+
+```sh
+# CSVファイルから一括処理
+abrg reverse input.csv output.json
+
+# 標準入力から処理
+cat coordinates.csv | abrg reverse -
+
+# 空間インデックスを使用（高速、デフォルト）
+abrg reverse coordinates.csv --spatialIndex
+
+# ハヴァーサイン公式を使用
+abrg reverse coordinates.csv --haversine
+```
+
+**入力CSVファイル形式:**
+```csv
+lat,lon,description
+35.676543,139.770203,東京駅周辺
+35.689592,139.701171,新宿駅周辺
+35.658034,139.701636,渋谷駅周辺
 ```
 
 ### オプション
@@ -335,6 +367,8 @@ abrg reverse --lat 35.679107172 --lon 139.736394597 --limit 3
 - `--format, -f`: 出力形式（`json`, `geojson`, `simplified`、デフォルト: `geojson`）
 - `--debug`: デバッグ情報（処理時間など）を表示
 - `--silent`: 進捗メッセージを非表示
+- `--spatialIndex`: R木空間インデックスを使用（高速、デフォルト）
+- `--haversine`: ハヴァーサイン公式を強制使用（--spatialIndexと併用不可）
 - `--abrgDir, -d`: データベースがあるディレクトリ（デフォルト: `$HOME/.abr-geocoder`）
 
 ### 出力形式
