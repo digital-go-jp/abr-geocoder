@@ -59,12 +59,12 @@ export class GeocodeDbController {
     }
   }
 
-  openCommonDb(): Promise<ICommonDbGeocode> {
+  openCommonDb(options?: { readonly?: boolean }): Promise<ICommonDbGeocode> {
     switch(this.connectParams.type) {
       case 'sqlite3': {
         return Promise.resolve(new CommonDbGeocodeSqlite3({
           sqliteFilePath: path.join(this.connectParams.dataDir, 'common.sqlite'),
-          readonly: true,
+          readonly: options?.readonly ?? true,
         }));
       }
 

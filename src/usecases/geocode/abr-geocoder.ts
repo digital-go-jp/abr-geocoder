@@ -55,6 +55,7 @@ export type ReverseGeocodeParams = {
   lon: number;
   limit?: number;
   searchTarget: SearchTarget;
+  useSpatialIndex?: boolean; // true: R-tree使用, false: ハヴァーサイン公式使用
 };
 
 export interface ReverseGeocodeResult extends Query {
@@ -82,12 +83,15 @@ export class AbrGeocoder {
   private taskTail: WorkerPoolTaskInfo<AbrGeocoderInput, Query> | undefined;
   private readonly taskIDs: Set<number> = new Set();
   private flushing: boolean = false;
+  private readonly defaultUseSpatialIndex: boolean = true; // デフォルトでR-tree使用
 
   private constructor(
     private readonly workerPool: IWorkerThreadPool<AbrGeocoderInput, QueryJson>,
     private readonly geocodeDbController: GeocodeDbController,
     private readonly signal?: AbrAbortSignal,
+    useSpatialIndexDefault: boolean = true,
   ) {
+    this.defaultUseSpatialIndex = useSpatialIndexDefault;
     this.signal?.addEventListener('abort', () => this.close());
   }
 
@@ -98,7 +102,7 @@ export class AbrGeocoder {
     }
     this.flushing = true;
     while (this.taskHead && this.taskHead.isResolved) {
-      // resolve or reject を実行する
+      // 成功または失敗時の処理を実行する
       this.taskHead.emit();
       const nextTask = this.taskHead.next;
       this.taskHead.next = undefined;
@@ -116,7 +120,7 @@ export class AbrGeocoder {
     while (this.taskIDs.has(taskId)) {
       taskId = Math.floor(performance.now() + Math.random() * performance.now());
     }
-    // resolver, rejector をキープする
+    // 成功・失敗時の処理をキープする
     const taskNode = new WorkerPoolTaskInfo<AbrGeocoderInput, Query>(input);
     this.taskIDs.add(taskId);
 
@@ -159,7 +163,7 @@ export class AbrGeocoder {
         level: AbrgErrorLevel.ERROR,
       });
     }
-    
+
     if (isNaN(params.lon) || params.lon < -180 || params.lon > 180) {
       throw new AbrgError({
         messageId: AbrgMessage.REVERSE_GEOCODE_COORDINATE_INVALID,
@@ -167,6 +171,58 @@ export class AbrGeocoder {
       });
     }
 
+    // 手法選択: useSpatialIndexが指定されていない場合はデフォルト設定を使用
+    const useSpatialIndex = params.useSpatialIndex ?? this.defaultUseSpatialIndex;
+
+    if (useSpatialIndex) {
+      // R-tree空間インデックス使用（高速版）
+      return await this.reverseGeocodeWithSpatialIndex(params);
+    } else {
+      // ハヴァーサイン公式使用
+      return await this.reverseGeocodeHaversine(params);
+    }
+  }
+
+  /**
+   * 空間インデックスによる逆ジオコーディング（高速版）
+   */
+  private async reverseGeocodeWithSpatialIndex(params: ReverseGeocodeParams): Promise<ReverseGeocodeResult[]> {
+    const limit = params.limit || 1;
+    
+    // 空間インデックスが存在するか確認
+    const hasSpatialIndex = await this.ensureSpatialIndexExists();
+    if (!hasSpatialIndex) {
+      // 空間インデックスが存在しない場合はハヴァーサイン公式にフォールバック
+      return await this.reverseGeocodeHaversine(params);
+    }
+    
+    const results: ReverseGeocodeResult[] = [];
+    
+    // Phase 1: 町丁目レベル（5km範囲）
+    const townResults = await this.searchTownSpatial(params.lat, params.lon, 0.05, limit * 3);
+    results.push(...townResults);
+    
+    // Phase 2: 市区町村レベル（10km範囲）- 町丁目で十分な結果が得られない場合
+    if (results.length < limit) {
+      const cityResults = await this.searchCitySpatial(params.lat, params.lon, 0.1, limit * 2);
+      results.push(...cityResults);
+    }
+    
+    // Phase 3: 住居表示・地番レベル（1km範囲）
+    if (params.searchTarget === SearchTarget.ALL || params.searchTarget === SearchTarget.RESIDENTIAL || params.searchTarget === SearchTarget.PARCEL) {
+      const detailResults = await this.searchResidentialParcelSpatial(params.lat, params.lon, results, limit);
+      results.push(...detailResults);
+    }
+    
+    // 重複除去と距離順ソート
+    const uniqueResults = this.prioritizeResults(results, limit);
+    return uniqueResults.slice(0, limit);
+  }
+
+  /**
+   * ハヴァーサイン公式による逆ジオコーディング
+   */
+  private async reverseGeocodeHaversine(params: ReverseGeocodeParams): Promise<ReverseGeocodeResult[]> {
     const limit = params.limit || 1;
     const adminResults = await this.searchFromAdmin(params.lat, params.lon, limit * 3);
     
