@@ -231,11 +231,6 @@ export class AbrGeocoder {
     
     const finalResults = prioritizedResults.slice(0, limit);
     
-    // デバッグモードでは結果がない場合にログ出力
-    if (finalResults.length === 0) {
-      this.logError('reverseGeocode', 'no-results', 
-        new Error(`No results found for coordinates: ${params.lat}, ${params.lon}`));
-    }
     
     return finalResults;
   }
@@ -250,12 +245,12 @@ export class AbrGeocoder {
         return await this.getAllSearchResults(params.lat, params.lon, adminResults, limit);
       
       case SearchTarget.RESIDENTIAL:
-        const residentialResults = await this.searchFromResidential(params.lat, params.lon, limit * 3);
-        return [...residentialResults, ...adminResults];
+        const residentialOnly = await this.searchFromResidential(params.lat, params.lon, limit);
+        return [...adminResults, ...residentialOnly];
       
       case SearchTarget.PARCEL:
-        const parcelResults = await this.searchFromParcel(params.lat, params.lon, limit * 3);
-        return [...parcelResults, ...adminResults];
+        const parcelOnly = await this.searchFromParcel(params.lat, params.lon, limit);
+        return [...adminResults, ...parcelOnly];
       
       default:
         return adminResults;
@@ -268,33 +263,84 @@ export class AbrGeocoder {
     adminResults: ReverseGeocodeResult[], 
     limit: number
   ): Promise<ReverseGeocodeResult[]> {
-    const residentialResults = await this.searchFromResidential(lat, lon, limit * 3);
-    const parcelResults = await this.searchFromParcel(lat, lon, limit * 3);
+    // 住居表示・地番レベルの詳細検索を実行
+    // 3つのLGコードに制限して性能を確保
+    const results: ReverseGeocodeResult[] = [...adminResults];
     
-    const allCandidates = [...residentialResults, ...parcelResults, ...adminResults];
-    allCandidates.sort((a, b) => a.distance - b.distance);
+    // 住居表示データの検索
+    const residentialResults = await this.searchFromResidential(lat, lon, limit);
+    results.push(...residentialResults);
     
-    return allCandidates;
+    // 地番データの検索
+    // 住居表示と地番の両方を検索して、最も近いものを選択できるようにする
+    const parcelResults = await this.searchFromParcel(lat, lon, limit);
+    results.push(...parcelResults);
+    
+    return results;
   }
 
   private prioritizeResults(candidates: ReverseGeocodeResult[], limit: number): ReverseGeocodeResult[] {
     const results: ReverseGeocodeResult[] = [];
-    
-    for (const candidate of candidates) {
+
+    // 距離と詳細度でスコアリング
+    const scoredCandidates = candidates.map(candidate => {
+      // 詳細度によるスコア（高いほど詳細）
+      let detailScore = 0;
+      switch (candidate.match_level?.str) {
+        case 'residential_detail':
+          detailScore = 4;
+          break;
+        case 'parcel':
+          detailScore = 3;
+          break;
+        case 'machiaza':
+          detailScore = 2;
+          break;
+        case 'city':
+        case 'ward':
+          detailScore = 1;
+          break;
+        default:
+          detailScore = 0;
+      }
+
+      // 距離ペナルティ（150m以内なら詳細度を優先、それ以上は距離を重視）
+      const distancePenalty = candidate.distance < 150 ?
+        candidate.distance * 0.001 :  // 150m以内: 軽いペナルティ
+        candidate.distance < 300 ?
+        candidate.distance * 0.003 :  // 150-300m: 中程度のペナルティ
+        candidate.distance * 0.01;     // 300m以上: 重いペナルティ
+
+      // 総合スコア（高いほど良い）
+      const totalScore = detailScore - distancePenalty;
+
+      return {
+        candidate,
+        score: totalScore,
+        distance: candidate.distance
+      };
+    });
+
+    // スコア順にソート（同点の場合は距離順）
+    scoredCandidates.sort((a, b) => {
+      if (Math.abs(a.score - b.score) < 0.01) {
+        return a.distance - b.distance;
+      }
+      return b.score - a.score; // スコアは高い方が良い
+    });
+
+    // 重複除去しながら結果に追加
+    for (const scored of scoredCandidates) {
+      const candidate = scored.candidate;
       if (this.isDuplicate(candidate, results)) {
         continue;
       }
-      
-      if (this.shouldIncludeCandidate(candidate, candidates)) {
-        results.push(candidate);
-      }
-      
+      results.push(candidate);
       if (results.length >= limit) {
         break;
       }
     }
-    
-    results.sort((a, b) => a.distance - b.distance);
+
     return results;
   }
 
@@ -337,70 +383,50 @@ export class AbrGeocoder {
       const db = await this.geocodeDbController.openCommonDb();
 
       // 町丁目レベル（5km範囲）
+      const distanceSQL = this.getHaversineDistanceSQLWithColumns('t.rep_lat', 't.rep_lon');
       const townSql = `
         SELECT 
           c.lg_code, c.city, c.county, c.ward, p.pref,
           t.machiaza_id, t.oaza_cho, t.chome, t.koaza, t.rep_lat, t.rep_lon, t.rsdt_addr_flg,
-          (6371000 * acos(
-            cos(radians(?)) * cos(radians(t.rep_lat)) * 
-            cos(radians(t.rep_lon) - radians(?)) + 
-            sin(radians(?)) * sin(radians(t.rep_lat))
-          )) AS distance
+          ${distanceSQL} AS distance
         FROM town t
         JOIN city c ON t.city_key = c.city_key
         JOIN pref p ON c.pref_key = p.pref_key
         WHERE t.rep_lat IS NOT NULL AND t.rep_lon IS NOT NULL
-        AND (6371000 * acos(
-          cos(radians(?)) * cos(radians(t.rep_lat)) * 
-          cos(radians(t.rep_lon) - radians(?)) + 
-          sin(radians(?)) * sin(radians(t.rep_lat))
-        )) < 5000
+        AND ${distanceSQL} < 5000
         ORDER BY distance
         LIMIT ?
       `;
 
       const townRows = (db as any).prepare(townSql).all(lat, lon, lat, lat, lon, lat, limit);
       for (const row of townRows) {
-        const query = this.rowToQuery(row, 'town', row.lg_code);
-        if (query) {
-          results.push({
-            ...query.toJSON(),
-            distance: row.distance,
-          } as any);
-        }
+        results.push(this.createQueryFromSpatialResult({
+          ...row,
+          match_level: MatchLevel.MACHIAZA,
+        }, row.distance));
       }
 
       // 市区町村レベル（10km範囲）- 町丁目で十分な結果が得られない場合
       if (results.length < limit) {
+        const cityDistanceSQL = this.getHaversineDistanceSQLWithColumns('c.rep_lat', 'c.rep_lon');
         const citySql = `
           SELECT 
             c.lg_code, c.city, c.county, c.ward, c.rep_lat, c.rep_lon, p.pref,
-            (6371000 * acos(
-              cos(radians(?)) * cos(radians(c.rep_lat)) * 
-              cos(radians(c.rep_lon) - radians(?)) + 
-              sin(radians(?)) * sin(radians(c.rep_lat))
-            )) AS distance
+            ${cityDistanceSQL} AS distance
           FROM city c
           JOIN pref p ON c.pref_key = p.pref_key
           WHERE c.rep_lat IS NOT NULL AND c.rep_lon IS NOT NULL
-          AND (6371000 * acos(
-            cos(radians(?)) * cos(radians(c.rep_lat)) * 
-            cos(radians(c.rep_lon) - radians(?)) + 
-            sin(radians(?)) * sin(radians(c.rep_lat))
-          )) < 10000
+          AND ${cityDistanceSQL} < 10000
           ORDER BY distance
           LIMIT ?
         `;
 
         const cityRows = (db as any).prepare(citySql).all(lat, lon, lat, lat, lon, lat, limit - results.length);
         for (const row of cityRows) {
-          const query = this.rowToQuery(row, 'city', row.lg_code);
-          if (query) {
-            results.push({
-              ...query.toJSON(),
-              distance: row.distance,
-            } as any);
-          }
+          results.push(this.createQueryFromSpatialResult({
+            ...row,
+            match_level: MatchLevel.CITY,
+          }, row.distance));
         }
       }
 
@@ -415,108 +441,147 @@ export class AbrGeocoder {
   }
 
   private async searchFromResidential(lat: number, lon: number, limit: number): Promise<ReverseGeocodeResult[]> {
-    const results: ReverseGeocodeResult[] = [];
-    const lgCodes = await this.getLgCodesInRange(lat, lon);
+    return this.processLgCodeDatabases(lat, lon, limit, async (db, lgCode, lat, lon, limit) => {
+      const results: ReverseGeocodeResult[] = [];
+      const commonDb = await this.geocodeDbController.openCommonDb();
+      const cityInfo = await this.getCityInfo(commonDb, lgCode);
 
-    for (const lgCode of lgCodes) {
-      try {
-        const db = await this.geocodeDbController.openRsdtDspDb({ 
-          lg_code: lgCode,
-          createIfNotExists: false, 
-        });
+      // rsdt_dspテーブルの存在確認
+      const hasRsdtDsp = await this.checkTableExists(db, 'rsdt_dsp');
+
+      if (hasRsdtDsp) {
+        const distanceSQL = this.getHaversineDistanceSQLWithColumns('rd.rep_lat', 'rd.rep_lon');
+      const sql = `
+        SELECT 
+          rd.rsdt_id, rd.rsdt2_id, rd.rsdt_num, rd.rsdt_num2, 
+          rd.rep_lat, rd.rep_lon, rb.blk_id, rb.blk_num, rb.town_key,
+          ${distanceSQL} AS distance
+        FROM rsdt_dsp rd
+        LEFT JOIN rsdt_blk rb ON rd.rsdtblk_key = rb.rsdtblk_key
+        WHERE rd.rep_lat IS NOT NULL AND rd.rep_lon IS NOT NULL
+        AND ${distanceSQL} < 1000
+        ORDER BY distance
+        LIMIT ?
+      `;
+
+      const rows = (db as any).prepare(sql).all(lat, lon, lat, lat, lon, lat, limit);
+
+      for (const row of rows) {
+        // rsdt_blkのtown_keyを使用して町情報を取得
+        const townInfo = await this.getTownInfo(commonDb, row.town_key);
         
-        if (!db) {
-          continue;
+        const addressParts = [
+          cityInfo?.pref,
+          cityInfo?.county,
+          cityInfo?.city,
+          cityInfo?.ward,
+          townInfo?.oaza_cho,
+          townInfo?.chome,
+        ].filter(Boolean);
+        
+        if (row.blk_num && row.rsdt_num) {
+          addressParts.push(row.blk_num + '-' + row.rsdt_num);
+        } else if (row.blk_num) {
+          addressParts.push(row.blk_num);
+        } else if (row.rsdt_num) {
+          addressParts.push(row.rsdt_num);
         }
+        
+        const formattedAddress = addressParts.join('');
 
-        const commonDb = await this.geocodeDbController.openCommonDb();
-        const cityInfo = await this.getCityInfo(commonDb, lgCode);
+        results.push({
+          input: { data: { address: '', searchTarget: 'residential' }, taskId: 0 },
+          searchTarget: 'residential',
+          lg_code: lgCode,
+          rep_lat: row.rep_lat?.toString(),
+          rep_lon: row.rep_lon?.toString(),
+          pref: cityInfo?.pref || null,
+          city: cityInfo?.city || null,
+          county: cityInfo?.county || null,
+          ward: cityInfo?.ward || null,
+          oaza_cho: townInfo?.oaza_cho || null,
+          chome: townInfo?.chome || null,
+          koaza: townInfo?.koaza || null,
+          block: row.blk_num || null,
+          block_id: row.blk_id || null,
+          rsdt_num: row.rsdt_num || null,
+          rsdt_id: row.rsdt_id || null,
+          rsdt_num2: row.rsdt_num2 || null,
+          rsdt2_id: row.rsdt2_id || null,
+          rsdt_addr_flg: townInfo?.rsdt_addr_flg ?? null,
+          machiaza_id: townInfo?.machiaza_id || null,
+          prc_num1: null,
+          prc_num2: null,
+          prc_num3: null,
+          prc_id: null,
+          match_level: { str: 'residential_detail' },
+          formatted: { address: formattedAddress },
+          unmatched: null,
+          coordinate_level: null,
+          matchedCnt: 1,
+          ambiguousCnt: 0,
+          fuzzy: null,
+          other_detail: null,
+          tempAddress: null,
+          distance: row.distance,
+        } as any);
+      }
+      }
 
+      // rsdt_blkテーブルのみの場合（住居番号なし）
+      const hasRsdtBlk = await this.checkTableExists(db, 'rsdt_blk');
+      if (!hasRsdtDsp && hasRsdtBlk) {
+        const distanceSQL = this.getHaversineDistanceSQLWithColumns('rb.rep_lat', 'rb.rep_lon');
         const sql = `
-          SELECT 
-            rd.rsdt_id, rd.rsdt2_id, rd.rsdt_num, rd.rsdt_num2, 
-            rd.rep_lat, rd.rep_lon, rb.blk_id, rb.blk_num, rb.town_key,
-            (6371000 * acos(
-              cos(radians(?)) * cos(radians(rd.rep_lat)) * 
-              cos(radians(rd.rep_lon) - radians(?)) + 
-              sin(radians(?)) * sin(radians(rd.rep_lat))
-            )) AS distance
-          FROM rsdt_dsp rd
-          LEFT JOIN rsdt_blk rb ON rd.rsdtblk_key = rb.rsdtblk_key
-          WHERE rd.rep_lat IS NOT NULL AND rd.rep_lon IS NOT NULL
-          AND (6371000 * acos(
-            cos(radians(?)) * cos(radians(rd.rep_lat)) * 
-            cos(radians(rd.rep_lon) - radians(?)) + 
-            sin(radians(?)) * sin(radians(rd.rep_lat))
-          )) < 1000
+          SELECT
+            rb.blk_id, rb.blk_num, rb.town_key, rb.rep_lat, rb.rep_lon,
+            ${distanceSQL} AS distance
+          FROM rsdt_blk rb
+          WHERE rb.rep_lat IS NOT NULL AND rb.rep_lon IS NOT NULL
+          AND ${distanceSQL} < 1000
           ORDER BY distance
           LIMIT ?
         `;
 
         const rows = (db as any).prepare(sql).all(lat, lon, lat, lat, lon, lat, limit);
-        
+
         for (const row of rows) {
-          // rsdt_blkのtown_keyを使用して町情報を取得
-          let townInfo = null;
-          if (row.town_key) {
-            try {
-              townInfo = (commonDb as any).prepare(`
-                SELECT t.oaza_cho, t.chome, t.koaza, t.machiaza_id, t.rsdt_addr_flg
-                FROM town t
-                WHERE t.town_key = ?
-                LIMIT 1
-              `).get(row.town_key);
-            } catch {
-              // 町情報の取得に失敗した場合、町情報なしで継続
-            }
-          }
-          
-          const addressParts = [
-            cityInfo?.pref,
-            cityInfo?.city,
-            townInfo?.oaza_cho,
-            townInfo?.chome,
-          ].filter(Boolean);
-          
-          if (row.blk_num && row.rsdt_num) {
-            addressParts.push(row.blk_num + '-' + row.rsdt_num);
-          } else if (row.blk_num) {
-            addressParts.push(row.blk_num);
-          } else if (row.rsdt_num) {
-            addressParts.push(row.rsdt_num);
-          }
-          
-          const formattedAddress = addressParts.join('');
+          const townInfo = await this.getTownInfo(commonDb, row.town_key);
+
+          const formattedAddress = this.formatAddress({
+            pref: cityInfo?.pref,
+            county: cityInfo?.county,
+            city: cityInfo?.city,
+            ward: cityInfo?.ward,
+            oaza_cho: townInfo?.oaza_cho,
+            chome: townInfo?.chome,
+            blk_num: row.blk_num
+          });
 
           results.push({
-            input: { data: { address: '', searchTarget: 'residential' }, taskId: 0 },
-            searchTarget: 'residential',
+            input: { data: { address: '' }, taskId: 0 },
+            match_level: { str: 'residential_detail', num: 8 },
+            coordinate_level: null,
+            searchTarget: SearchTarget.RESIDENTIAL,
             lg_code: lgCode,
+            machiaza_id: townInfo?.machiaza_id,
             rep_lat: row.rep_lat?.toString(),
             rep_lon: row.rep_lon?.toString(),
-            pref: cityInfo?.pref || null,
-            city: cityInfo?.city || null,
-            county: cityInfo?.county || null,
-            ward: cityInfo?.ward || null,
-            oaza_cho: townInfo?.oaza_cho || null,
-            chome: townInfo?.chome || null,
-            koaza: townInfo?.koaza || null,
-            block: row.blk_num || null,
-            block_id: row.blk_id || null,
-            rsdt_num: row.rsdt_num || null,
-            rsdt_id: row.rsdt_id || null,
-            rsdt_num2: row.rsdt_num2 || null,
-            rsdt2_id: row.rsdt2_id || null,
-            rsdt_addr_flg: townInfo?.rsdt_addr_flg ?? null,
-            machiaza_id: townInfo?.machiaza_id || null,
+            block_id: row.blk_id,
+            rsdt_addr_flg: townInfo?.rsdt_addr_flg,
+            rsdt_id: null,
+            rsdt2_id: null,
+            prc_id: null,
+            oaza_cho: townInfo?.oaza_cho,
+            chome: townInfo?.chome,
+            koaza: townInfo?.koaza,
+            rsdt_num: null,
+            rsdt_num2: null,
             prc_num1: null,
             prc_num2: null,
             prc_num3: null,
-            prc_id: null,
-            match_level: { str: 'residential_detail' },
             formatted: { address: formattedAddress },
             unmatched: null,
-            coordinate_level: null,
             matchedCnt: 1,
             ambiguousCnt: 0,
             fuzzy: null,
@@ -525,172 +590,138 @@ export class AbrGeocoder {
             distance: row.distance,
           } as any);
         }
-
-        await db.close();
-        await commonDb.close();
-        
-        if (results.length >= limit) {
-          break;
-        }
-      } catch (error) {
-        this.logError('searchFromResidential', lgCode, error);
-        // データベースエラーが発生した場合、該当LGコードをスキップして継続
-        continue;
       }
-    }
 
-    return results;
+      await commonDb.close();
+      return results;
+    });
   }
 
   private async searchFromParcel(lat: number, lon: number, limit: number): Promise<ReverseGeocodeResult[]> {
-    const results: ReverseGeocodeResult[] = [];
-    const lgCodes = await this.getLgCodesInRange(lat, lon);
+    return this.processLgCodeDatabases(lat, lon, limit, async (db, lgCode, lat, lon, limit) => {
+      const results: ReverseGeocodeResult[] = [];
 
-    for (const lgCode of lgCodes) {
-      try {
-        const db = await this.geocodeDbController.openParcelDb({
+      const commonDb = await this.geocodeDbController.openCommonDb();
+      const cityInfo = await this.getCityInfo(commonDb, lgCode);
+
+      const distanceSQL = this.getHaversineDistanceSQLWithColumns('p.rep_lat', 'p.rep_lon');
+      const sql = `
+        SELECT 
+          p.prc_num1, p.prc_num2, p.prc_num3, 
+          p.prc_id, p.rep_lat, p.rep_lon,
+          ${distanceSQL} AS distance
+        FROM parcel p
+        WHERE p.rep_lat IS NOT NULL AND p.rep_lon IS NOT NULL
+        AND ${distanceSQL} < 5000
+        ORDER BY distance
+        LIMIT ?
+      `;
+
+      const rows = (db as any).prepare(sql).all(lat, lon, lat, lat, lon, lat, limit);
+      
+      for (const row of rows) {
+        // 座標に基づく町情報を取得
+        const townInfo = await this.getNearestTownInfo(commonDb, lgCode, row.rep_lat, row.rep_lon);
+        
+        const formattedAddress = [
+          cityInfo?.pref,
+          cityInfo?.county,
+          cityInfo?.city,
+          cityInfo?.ward,
+          townInfo?.oaza_cho,
+          townInfo?.chome,
+          [row.prc_num1, row.prc_num2, row.prc_num3].filter(Boolean).join('-')
+        ].filter(Boolean).join('');
+
+        results.push({
+          input: { data: { address: '', searchTarget: 'parcel' }, taskId: 0 },
+          searchTarget: 'parcel',
           lg_code: lgCode,
-          createIfNotExists: false,
-        });
-        
-        if (!db) {
-          continue;
-        }
-
-        const commonDb = await this.geocodeDbController.openCommonDb();
-        const cityInfo = await this.getCityInfo(commonDb, lgCode);
-
-        const sql = `
-          SELECT 
-            p.prc_num1, p.prc_num2, p.prc_num3, 
-            p.prc_id, p.rep_lat, p.rep_lon,
-            (6371000 * acos(
-              cos(radians(?)) * cos(radians(p.rep_lat)) * 
-              cos(radians(p.rep_lon) - radians(?)) + 
-              sin(radians(?)) * sin(radians(p.rep_lat))
-            )) AS distance
-          FROM parcel p
-          WHERE p.rep_lat IS NOT NULL AND p.rep_lon IS NOT NULL
-          AND (6371000 * acos(
-            cos(radians(?)) * cos(radians(p.rep_lat)) * 
-            cos(radians(p.rep_lon) - radians(?)) + 
-            sin(radians(?)) * sin(radians(p.rep_lat))
-          )) < 5000
-          ORDER BY distance
-          LIMIT ?
-        `;
-
-        const rows = (db as any).prepare(sql).all(lat, lon, lat, lat, lon, lat, limit);
-        
-        for (const row of rows) {
-          // 座標に基づく町情報を取得
-          let townInfo = null;
-          try {
-            townInfo = (commonDb as any).prepare(`
-              SELECT t.oaza_cho, t.chome, t.koaza, t.machiaza_id, t.rsdt_addr_flg
-              FROM town t
-              JOIN city c ON t.city_key = c.city_key
-              WHERE c.lg_code = ?
-              ORDER BY (6371000 * acos(
-                cos(radians(?)) * cos(radians(t.rep_lat)) * 
-                cos(radians(t.rep_lon) - radians(?)) + 
-                sin(radians(?)) * sin(radians(t.rep_lat))
-              ))
-              LIMIT 1
-            `).get(lgCode, row.rep_lat, row.rep_lon, row.rep_lat);
-          } catch {
-            // 町データが見つからない場合、町情報なしで継続
-          }
-          
-          const formattedAddress = [
-            cityInfo?.pref,
-            cityInfo?.city,
-            townInfo?.oaza_cho,
-            townInfo?.chome,
-            [row.prc_num1, row.prc_num2, row.prc_num3].filter(Boolean).join('-')
-          ].filter(Boolean).join('');
-
-          results.push({
-            input: { data: { address: '', searchTarget: 'parcel' }, taskId: 0 },
-            searchTarget: 'parcel',
-            lg_code: lgCode,
-            rep_lat: row.rep_lat?.toString(),
-            rep_lon: row.rep_lon?.toString(),
-            pref: cityInfo?.pref || null,
-            city: cityInfo?.city || null,
-            county: cityInfo?.county || null,
-            ward: cityInfo?.ward || null,
-            oaza_cho: townInfo?.oaza_cho || null,
-            chome: townInfo?.chome || null,
-            koaza: townInfo?.koaza || null,
-            block: null,
-            block_id: null,
-            rsdt_num: null,
-            rsdt_id: null,
-            rsdt_num2: null,
-            rsdt2_id: null,
-            rsdt_addr_flg: townInfo?.rsdt_addr_flg ?? null,
-            machiaza_id: townInfo?.machiaza_id || null,
-            prc_num1: row.prc_num1 || null,
-            prc_num2: row.prc_num2 || null,
-            prc_num3: row.prc_num3 || null,
-            prc_id: row.prc_id || null,
-            match_level: { str: 'parcel' },
-            formatted: { address: formattedAddress },
-            unmatched: null,
-            coordinate_level: null,
-            matchedCnt: 1,
-            ambiguousCnt: 0,
-            fuzzy: null,
-            other_detail: null,
-            tempAddress: null,
-            distance: row.distance,
-          } as any);
-        }
-
-        await db.close();
-        await commonDb.close();
-        
-        if (results.length >= limit) {
-          break;
-        }
-      } catch (error) {
-        this.logError('searchFromParcel', lgCode, error);
-        // データベースエラーが発生した場合、該当LGコードをスキップして継続
-        continue;
+          rep_lat: row.rep_lat?.toString(),
+          rep_lon: row.rep_lon?.toString(),
+          pref: cityInfo?.pref || null,
+          city: cityInfo?.city || null,
+          county: cityInfo?.county || null,
+          ward: cityInfo?.ward || null,
+          oaza_cho: townInfo?.oaza_cho || null,
+          chome: townInfo?.chome || null,
+          koaza: townInfo?.koaza || null,
+          block: null,
+          block_id: null,
+          rsdt_num: null,
+          rsdt_id: null,
+          rsdt_num2: null,
+          rsdt2_id: null,
+          rsdt_addr_flg: townInfo?.rsdt_addr_flg ?? null,
+          machiaza_id: townInfo?.machiaza_id || null,
+          prc_num1: row.prc_num1 || null,
+          prc_num2: row.prc_num2 || null,
+          prc_num3: row.prc_num3 || null,
+          prc_id: row.prc_id || null,
+          match_level: { str: 'parcel' },
+          formatted: { address: formattedAddress },
+          unmatched: null,
+          coordinate_level: null,
+          matchedCnt: 1,
+          ambiguousCnt: 0,
+          fuzzy: null,
+          other_detail: null,
+          tempAddress: null,
+          distance: row.distance,
+        } as any);
       }
-    }
 
-    return results;
+      await commonDb.close();
+      return results;
+    });
   }
 
   private async getLgCodesInRange(lat: number, lon: number): Promise<string[]> {
     const lgCodes: string[] = [];
-    
+    const lgCodeSet = new Set<string>();
+
     try {
       const db = await this.geocodeDbController.openCommonDb();
-      
-      const sql = `
-        SELECT DISTINCT lg_code,
-        (6371000 * acos(
-          cos(radians(?)) * cos(radians(rep_lat)) * 
-          cos(radians(rep_lon) - radians(?)) + 
-          sin(radians(?)) * sin(radians(rep_lat))
-        )) AS distance
-        FROM city 
+
+      // Step 1: 最も近い町丁目を検索して、実際に属するLGコードを特定
+      const townDistanceSQL = this.getHaversineDistanceSQLWithColumns('t.rep_lat', 't.rep_lon');
+      const townSql = `
+        SELECT DISTINCT c.lg_code, ${townDistanceSQL} AS distance
+        FROM town t
+        JOIN city c ON t.city_key = c.city_key
+        WHERE t.rep_lat IS NOT NULL AND t.rep_lon IS NOT NULL
+        AND ${townDistanceSQL} < 3000
+        ORDER BY distance
+        LIMIT 3
+      `;
+
+      const townRows = (db as any).prepare(townSql).all(lat, lon, lat, lat, lon, lat);
+
+      // 最も近い町丁目のLGコードを最優先で追加
+      for (const row of townRows) {
+        if (!lgCodeSet.has(row.lg_code)) {
+          lgCodes.push(row.lg_code);
+          lgCodeSet.add(row.lg_code);
+        }
+      }
+
+      // Step 2: 近隣の市区町村を追加（すでに追加されたものは除く）
+      const cityDistanceSQL = this.getHaversineDistanceSQL();
+      const citySql = `
+        SELECT DISTINCT lg_code, ${cityDistanceSQL} AS distance
+        FROM city
         WHERE rep_lat IS NOT NULL AND rep_lon IS NOT NULL
-        AND (6371000 * acos(
-          cos(radians(?)) * cos(radians(rep_lat)) * 
-          cos(radians(rep_lon) - radians(?)) + 
-          sin(radians(?)) * sin(radians(rep_lat))
-        )) < 50000
+        AND ${cityDistanceSQL} < 50000
         ORDER BY distance
         LIMIT 10
       `;
 
-      const rows = (db as any).prepare(sql).all(lat, lon, lat, lat, lon, lat);
-      for (const row of rows) {
-        lgCodes.push(row.lg_code);
+      const cityRows = (db as any).prepare(citySql).all(lat, lon, lat, lat, lon, lat);
+      for (const row of cityRows) {
+        if (!lgCodeSet.has(row.lg_code) && lgCodes.length < 10) {
+          lgCodes.push(row.lg_code);
+          lgCodeSet.add(row.lg_code);
+        }
       }
 
       await db.close();
@@ -864,31 +895,92 @@ export class AbrGeocoder {
   }
 
   private async getCityInfo(commonDb: any, lgCode: string) {
+    return this.getCityInfoFromCommonDb(commonDb, lgCode);
+  }
+
+  /**
+   * ハヴァーサイン距離計算のSQLフラグメントを生成
+   */
+  private getHaversineDistanceSQL(): string {
+    return `(6371000 * acos(
+      cos(radians(?)) * cos(radians(rep_lat)) * 
+      cos(radians(rep_lon) - radians(?)) + 
+      sin(radians(?)) * sin(radians(rep_lat))
+    ))`;
+  }
+
+  /**
+   * ハヴァーサイン距離計算のSQLフラグメントを生成（特定カラム指定版）
+   */
+  private getHaversineDistanceSQLWithColumns(latCol: string, lonCol: string): string {
+    return `(6371000 * acos(
+      cos(radians(?)) * cos(radians(${latCol})) * 
+      cos(radians(${lonCol}) - radians(?)) + 
+      sin(radians(?)) * sin(radians(${latCol}))
+    ))`;
+  }
+
+  /**
+   * データベーステーブルの存在をチェック
+   */
+  private async checkTableExists(db: any, tableName: string): Promise<boolean> {
+    const result = (db as any).prepare(
+      `SELECT COUNT(*) as cnt FROM sqlite_master WHERE type='table' AND name=?`
+    ).get(tableName);
+    return result.cnt > 0;
+  }
+
+  /**
+   * 市区町村情報を取得する共通メソッド
+   */
+  private async getCityInfoFromCommonDb(commonDb: any, lgCode: string) {
     return (commonDb as any).prepare(`
-      SELECT c.city, c.county, c.ward, p.pref
+      SELECT c.lg_code, c.city, c.county, c.ward, p.pref
       FROM city c 
       JOIN pref p ON c.pref_key = p.pref_key
       WHERE c.lg_code = ?
     `).get(lgCode);
   }
 
-  private logError(methodName: string, lgCode: string, error: any): void {
-    // AbrgErrorかどうかで出力レベルを調整
-    if (error instanceof AbrgError) {
-      switch (error.level) {
-        case AbrgErrorLevel.ERROR:
-          console.error(`[ReverseGeocode] Error in ${methodName} for LG code ${lgCode}:`, error.messageId);
-          break;
-        case AbrgErrorLevel.WARN:
-          console.warn(`[ReverseGeocode] Warning in ${methodName} for LG code ${lgCode}:`, error.messageId);
-          break;
-        default:
-          console.log(`[ReverseGeocode] Info in ${methodName} for LG code ${lgCode}:`, error.messageId);
-      }
-    } else {
-      // 通常のエラー
-      console.error(`[ReverseGeocode] Error in ${methodName} for LG code ${lgCode}:`, error?.message || error);
+  /**
+   * 町丁目情報を取得する共通メソッド
+   */
+  private async getTownInfo(commonDb: any, townKey: string | null) {
+    if (!townKey) return null;
+    try {
+      return (commonDb as any).prepare(`
+        SELECT t.town_key, t.machiaza_id, t.oaza_cho, t.chome, t.koaza, t.rsdt_addr_flg
+        FROM town t
+        WHERE t.town_key = ?
+        LIMIT 1
+      `).get(townKey);
+    } catch {
+      return null;
     }
+  }
+
+  /**
+   * 座標に基づいて最寄りの町丁目情報を取得
+   */
+  private async getNearestTownInfo(commonDb: any, lgCode: string, lat: number, lon: number) {
+    try {
+      const distanceSQL = this.getHaversineDistanceSQLWithColumns('t.rep_lat', 't.rep_lon');
+      return (commonDb as any).prepare(`
+        SELECT t.oaza_cho, t.chome, t.koaza, t.machiaza_id, t.rsdt_addr_flg
+        FROM town t
+        JOIN city c ON t.city_key = c.city_key
+        WHERE c.lg_code = ?
+        ORDER BY ${distanceSQL}
+        LIMIT 1
+      `).get(lgCode, lat, lon, lat);
+    } catch {
+      return null;
+    }
+  }
+
+  private logError(methodName: string, lgCode: string, error: any): void {
+    // エラーログ出力は無効（JSON出力を壊さないため）
+    return;
   }
   
   async close() {
@@ -900,6 +992,7 @@ export class AbrGeocoder {
     numOfThreads: number;
     signal?: AbrAbortSignal;
     isSilentMode: boolean;
+    useSpatialIndex?: boolean;
   }) => {
     const db = await params.container.database.openCommonDb();
     const prefList: PrefInfo[] = await db.getPrefList();
@@ -991,6 +1084,7 @@ export class AbrGeocoder {
         fakePool,
         geocodeDbController,
         params.signal,
+        params.useSpatialIndex ?? true,
       );
     }
 
