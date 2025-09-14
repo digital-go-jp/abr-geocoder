@@ -1109,7 +1109,747 @@ export class AbrGeocoder {
       workerPool,
       geocodeDbController,
       params.signal,
+      params.useSpatialIndex ?? true,
     );
   };
+
+  /**
+   * 空間インデックスが存在するかチェックし、なければ作成
+   */
+  private async ensureSpatialIndexExists(): Promise<boolean> {
+    try {
+      const db = await this.geocodeDbController.openCommonDb();
+      if (!db) return false;
+
+      // town_spatialテーブルの存在確認
+      const townSpatialExists = (db as any).prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='town_spatial'"
+      ).get();
+
+      const citySpatialExists = (db as any).prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='city_spatial'"
+      ).get();
+
+      if (townSpatialExists && citySpatialExists) {
+        return true; // 既に存在
+      }
+
+      console.log('空間インデックスを作成しています...');
+
+      // SQLite R*Tree Moduleを使用した空間インデックステーブル作成（町丁目用）
+      if (!townSpatialExists) {
+        (db as any).exec(`
+          CREATE VIRTUAL TABLE IF NOT EXISTS town_spatial USING rtree(
+            id INTEGER PRIMARY KEY,
+            min_lat REAL,
+            max_lat REAL,
+            min_lon REAL,
+            max_lon REAL
+          );
+          
+          DELETE FROM town_spatial;
+          
+          INSERT INTO town_spatial (id, min_lat, max_lat, min_lon, max_lon)
+          SELECT 
+            rowid,
+            rep_lat as min_lat,
+            rep_lat as max_lat, 
+            rep_lon as min_lon,
+            rep_lon as max_lon
+          FROM town 
+          WHERE rep_lat IS NOT NULL AND rep_lon IS NOT NULL;
+        `);
+      }
+
+      // SQLite R*Tree Moduleを使用した空間インデックステーブル作成（市区町村用）
+      if (!citySpatialExists) {
+        (db as any).exec(`
+          CREATE VIRTUAL TABLE IF NOT EXISTS city_spatial USING rtree(
+            id INTEGER PRIMARY KEY,
+            min_lat REAL,
+            max_lat REAL,
+            min_lon REAL,
+            max_lon REAL
+          );
+          
+          DELETE FROM city_spatial;
+          
+          INSERT INTO city_spatial (id, min_lat, max_lat, min_lon, max_lon)
+          SELECT 
+            rowid,
+            rep_lat,
+            rep_lat,
+            rep_lon,
+            rep_lon
+          FROM city 
+          WHERE rep_lat IS NOT NULL AND rep_lon IS NOT NULL;
+        `);
+      }
+
+      // インデックス統計更新
+      (db as any).exec(`
+        CREATE INDEX IF NOT EXISTS idx_town_coordinates ON town(rep_lat, rep_lon);
+        CREATE INDEX IF NOT EXISTS idx_city_coordinates ON city(rep_lat, rep_lon);
+        ANALYZE town_spatial;
+        ANALYZE city_spatial; 
+        ANALYZE town;
+        ANALYZE city;
+      `);
+
+      const townCount = (db as any).prepare("SELECT COUNT(*) as count FROM town_spatial").get().count;
+      const cityCount = (db as any).prepare("SELECT COUNT(*) as count FROM city_spatial").get().count;
+
+      console.log(`空間インデックス作成完了: 町丁目${townCount}件, 市区町村${cityCount}件`);
+      return true;
+
+    } catch (error) {
+      console.error('空間インデックス作成エラー:', error);
+      return false;
+    }
+  }
+
+
+  /**
+   * 空間検索結果をQueryオブジェクトに変換
+   */
+  private createQueryFromSpatialResult(row: any, distance: number): ReverseGeocodeResult {
+    // 住所文字列を生成
+    const addressParts = [];
+    
+    // 都道府県を取得（lg_codeから判定）
+    const prefCode = row.lg_code ? row.lg_code.substring(0, 2) : null;
+    const prefName = this.getPrefNameFromCode(prefCode);
+    if (prefName) addressParts.push(prefName);
+    
+    // 市区町村名を取得
+    if (row.county) addressParts.push(row.county);
+    if (row.city) addressParts.push(row.city);
+    if (row.ward) addressParts.push(row.ward);
+    
+    // 町丁目
+    if (row.oaza_cho) {
+      addressParts.push(row.oaza_cho);
+      if (row.chome) addressParts.push(row.chome);
+      // koazaは、oaza_choが存在する場合のみ追加（小字として扱う）
+      if (row.koaza) addressParts.push(row.koaza);
+    }
+    
+    // 番地情報
+    if (row.block && row.rsdt_num) {
+      addressParts.push(`${row.block}-${row.rsdt_num}`);
+      if (row.rsdt_num2) addressParts.push(`-${row.rsdt_num2}`);
+    } else if (row.block) {
+      addressParts.push(row.block);
+    } else if (row.rsdt_num) {
+      addressParts.push(row.rsdt_num.toString());
+      if (row.rsdt_num2) addressParts.push(`-${row.rsdt_num2}`);
+    }
+    if (row.prc_num1) addressParts.push(row.prc_num1);
+    if (row.prc_num2) addressParts.push(`-${row.prc_num2}`);
+    
+    const formattedAddress = addressParts.filter(Boolean).join('');
+    
+    // ベースとなるQueryを作成（逆ジオコーディングなのでaddressは空）
+    const baseQuery = Query.create({
+      data: {
+        address: '',
+        searchTarget: SearchTarget.ALL,
+      },
+      taskId: 0,
+    });
+    
+    // 必要なフィールドをコピーして新しいQueryを作成
+    const query = baseQuery.copy({
+      searchTarget: SearchTarget.ALL,
+      pref: prefName,
+      pref_key: row.pref_key,
+      county: row.county,
+      city: row.city,
+      city_key: row.city_key,
+      ward: row.ward,
+      lg_code: row.lg_code,
+      oaza_cho: row.oaza_cho,
+      chome: row.chome,
+      koaza: row.koaza,
+      town_key: row.town_key,
+      machiaza_id: row.machiaza_id,
+      rsdt_addr_flg: row.rsdt_addr_flg,
+      block: row.block,
+      block_id: row.block_id,
+      rsdt_num: row.rsdt_num,
+      rsdt_id: row.rsdt_id,
+      rsdt_num2: row.rsdt_num2,
+      rsdt2_id: row.rsdt2_id,
+      prc_num1: row.prc_num1,
+      prc_num2: row.prc_num2,
+      prc_id: row.prc_id,
+      rep_lat: row.rep_lat?.toString(),
+      rep_lon: row.rep_lon?.toString(),
+      match_level: row.match_level || MatchLevel.UNKNOWN,
+      coordinate_level: row.match_level || MatchLevel.UNKNOWN,
+      matchedCnt: formattedAddress.length,
+      ambiguousCnt: 0,
+    });
+    
+    // ReverseGeocodeResultを返す（QueryをインターフェースとしてDistanceを追加）
+    const result: ReverseGeocodeResult = Object.assign(query, { distance });
+    return result;
+  }
+
+  /**
+   * 都道府県コードから都道府県名を取得
+   */
+  private getPrefNameFromCode(prefCode: string | null): string | undefined {
+    if (!prefCode) return undefined;
+    const prefMap: { [key: string]: string } = {
+      '01': '北海道', '02': '青森県', '03': '岩手県', '04': '宮城県', '05': '秋田県',
+      '06': '山形県', '07': '福島県', '08': '茨城県', '09': '栃木県', '10': '群馬県',
+      '11': '埼玉県', '12': '千葉県', '13': '東京都', '14': '神奈川県', '15': '新潟県',
+      '16': '富山県', '17': '石川県', '18': '福井県', '19': '山梨県', '20': '長野県',
+      '21': '岐阜県', '22': '静岡県', '23': '愛知県', '24': '三重県', '25': '滋賀県',
+      '26': '京都府', '27': '大阪府', '28': '兵庫県', '29': '奈良県', '30': '和歌山県',
+      '31': '鳥取県', '32': '島根県', '33': '岡山県', '34': '広島県', '35': '山口県',
+      '36': '徳島県', '37': '香川県', '38': '愛媛県', '39': '高知県', '40': '福岡県',
+      '41': '佐賀県', '42': '長崎県', '43': '熊本県', '44': '大分県', '45': '宮崎県',
+      '46': '鹿児島県', '47': '沖縄県',
+    };
+    return prefMap[prefCode];
+  }
+
+  /**
+   * 町丁目データの空間検索（R-tree使用）
+   */
+  private async searchTownSpatial(lat: number, lon: number, radius: number, limit: number): Promise<ReverseGeocodeResult[]> {
+    const db = await this.geocodeDbController.openCommonDb();
+    if (!db) return [];
+
+    const distanceSQL = this.getHaversineDistanceSQLWithColumns('t.rep_lat', 't.rep_lon');
+    const sql = `
+      SELECT 
+        c.lg_code,
+        c.county,
+        c.city,
+        c.ward,
+        c.city_key,
+        t.town_key,
+        t.machiaza_id,
+        t.oaza_cho,
+        t.chome,
+        t.koaza,
+        t.rep_lat,
+        t.rep_lon,
+        t.rsdt_addr_flg,
+        ${distanceSQL} AS distance
+      FROM town t
+      JOIN city c ON t.city_key = c.city_key
+      JOIN town_spatial ts ON t.rowid = ts.id
+      WHERE ts.min_lat BETWEEN ? - ? AND ? + ?
+        AND ts.min_lon BETWEEN ? - ? AND ? + ?
+        AND t.oaza_cho IS NOT NULL AND t.oaza_cho != ''  -- oaza_choがnullまたは空文字のレコードは除外
+        AND ${distanceSQL} < 5000
+      ORDER BY distance
+      LIMIT ?
+    `;
+
+    const rows = (db as any).prepare(sql).all(
+      lat, lon, lat,           // 距離計算
+      lat, radius, lat, radius, // 緯度範囲  
+      lon, radius, lon, radius, // 経度範囲
+      lat, lon, lat,           // 距離フィルター
+      limit
+    );
+
+    const results = rows.map((row: any) => {
+      return this.createQueryFromSpatialResult({
+        ...row,
+        match_level: MatchLevel.MACHIAZA,
+      }, row.distance);
+    });
+    return results;
+  }
+
+  /**
+   * 市区町村データの空間検索
+   */
+  private async searchCitySpatial(lat: number, lon: number, radius: number, limit: number): Promise<ReverseGeocodeResult[]> {
+    const db = await this.geocodeDbController.openCommonDb();
+    if (!db) return [];
+
+    const distanceSQL = this.getHaversineDistanceSQLWithColumns('c.rep_lat', 'c.rep_lon');
+    const sql = `
+      SELECT 
+        c.lg_code,
+        c.county,
+        c.city,
+        c.ward,
+        c.city_key,
+        c.rep_lat,
+        c.rep_lon,
+        ${distanceSQL} AS distance
+      FROM city c
+      JOIN city_spatial cs ON c.rowid = cs.id
+      WHERE cs.min_lat BETWEEN ? - ? AND ? + ?
+        AND cs.min_lon BETWEEN ? - ? AND ? + ?
+        AND ${distanceSQL} < 10000
+      ORDER BY distance
+      LIMIT ?
+    `;
+
+    const rows = (db as any).prepare(sql).all(
+      lat, lon, lat,
+      lat, radius, lat, radius,
+      lon, radius, lon, radius,
+      lat, lon, lat,
+      limit
+    );
+
+    return rows.map((row: any) => this.createQueryFromSpatialResult({
+      ...row,
+      match_level: MatchLevel.CITY,
+    }, row.distance));
+  }
+
+  /**
+   * 住居表示・地番データの検索（空間インデックス使用）
+   */
+  private async searchResidentialParcelSpatial(
+    lat: number,
+    lon: number,
+    existingResults: ReverseGeocodeResult[],
+    limit: number
+  ): Promise<ReverseGeocodeResult[]> {
+    const searchLimit = Math.max(limit, 5); // 最低5件は検索する
+    const results: ReverseGeocodeResult[] = [];
+
+    // 既存の結果からLGコードを抽出（すでに町丁目検索で特定済み）
+    const lgCodesSet = new Set<string>();
+    for (const result of existingResults) {
+      if (result.lg_code) {
+        lgCodesSet.add(result.lg_code);
+      }
+    }
+
+    // LGコードが見つからない場合は空配列を返す
+    if (lgCodesSet.size === 0) {
+      return [];
+    }
+
+    const lgCodes = Array.from(lgCodesSet).slice(0, 5); // 最大5つのLGコードを使用
+
+    try {
+      // 住居表示データの空間検索（LGコードを直接渡す）
+      const residentialResults = await this.searchResidentialSpatialWithLgCodes(lat, lon, lgCodes, 0.01, searchLimit);
+      results.push(...residentialResults);
+
+      // 地番データの空間検索（LGコードを直接渡す）
+      if (results.length < searchLimit) {
+        const parcelResults = await this.searchParcelSpatialWithLgCodes(lat, lon, lgCodes, 0.01, searchLimit);
+        results.push(...parcelResults);
+      }
+
+      return results;
+    } catch (error) {
+      console.error('詳細空間検索エラー:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 住居表示データの空間検索（R-tree使用）
+   */
+  private async searchResidentialSpatial(lat: number, lon: number, radius: number, limit: number): Promise<ReverseGeocodeResult[]> {
+    // 近隣のLGコードを取得
+    const lgCodes = await this.getLgCodesInRange(lat, lon);
+    return await this.searchResidentialSpatialWithLgCodes(lat, lon, lgCodes, radius, limit);
+  }
+
+  /**
+   * 住居表示データの空間検索（LGコード指定版）
+   */
+  private async searchResidentialSpatialWithLgCodes(
+    lat: number,
+    lon: number,
+    lgCodes: string[],
+    radius: number,
+    limit: number
+  ): Promise<ReverseGeocodeResult[]> {
+    if (lgCodes.length === 0) return [];
+
+    const results: ReverseGeocodeResult[] = [];
+
+    for (const lgCode of lgCodes) {
+      const db = await this.geocodeDbController.openParcelDb({
+        lg_code: lgCode,
+        createIfNotExists: false,
+      });
+      if (!db) continue;
+      
+      try {
+        // rsdt_blkテーブルの存在確認
+        const hasRsdtBlk = await this.checkTableExists(db, 'rsdt_blk');
+        if (!hasRsdtBlk) continue;
+        
+        // 住居表示空間検索を実行
+        const residentialRows = await this.searchResidentialSpatialByLgCode(
+          db, lgCode, lat, lon, radius, limit
+        );
+        
+        for (const row of residentialRows) {
+          results.push(row);
+        }
+      } catch (error) {
+        console.error(`LGコード ${lgCode} の住居表示空間検索エラー:`, error);
+      }
+      
+      if (results.length >= limit) break;
+    }
+    
+    return results.slice(0, limit);
+  }
+
+  /**
+   * 特定のLGコードDBでの住居表示空間検索
+   */
+  private async searchResidentialSpatialByLgCode(
+    db: any, 
+    lgCode: string, 
+    lat: number, 
+    lon: number, 
+    radius: number, 
+    limit: number
+  ): Promise<ReverseGeocodeResult[]> {
+    const results: ReverseGeocodeResult[] = [];
+    
+    // rsdt_dsp_spatialの存在確認（より詳細な住居番号レベル）
+    const hasRsdtDspSpatial = await this.checkTableExists(db, 'rsdt_dsp_spatial');
+    
+    if (hasRsdtDspSpatial) {
+      // rsdt_dsp空間インデックスを使用した検索（住居番号レベル）
+      const distanceSQL = this.getHaversineDistanceSQLWithColumns('rd.rep_lat', 'rd.rep_lon');
+      const sql = `
+        SELECT 
+          rd.rsdt_id, rd.rsdt2_id, rd.rsdt_num, rd.rsdt_num2,
+          rd.rep_lat, rd.rep_lon, rb.blk_id, rb.blk_num, rb.town_key,
+          ${distanceSQL} AS distance
+        FROM rsdt_dsp rd
+        LEFT JOIN rsdt_blk rb ON rd.rsdtblk_key = rb.rsdtblk_key
+        JOIN rsdt_dsp_spatial rds ON rd.rowid = rds.id
+        WHERE rds.min_lat BETWEEN ? - ? AND ? + ?
+          AND rds.min_lon BETWEEN ? - ? AND ? + ?
+          AND ${distanceSQL} < 1000
+        ORDER BY distance
+        LIMIT ?
+      `;
+      
+      const rows = (db as any).prepare(sql).all(
+        lat, lon, lat,           // 距離計算
+        lat, radius, lat, radius, // 緯度範囲  
+        lon, radius, lon, radius, // 経度範囲
+        lat, lon, lat,           // 距離フィルター
+        limit
+      );
+      
+      await this.processResidentialRows(rows, lgCode, results, {
+        rsdt_num: true,
+        rsdt_id: true,
+        rsdt_num2: true,
+        rsdt2_id: true,
+        blk_num: true,
+        blk_id: true,
+      });
+    } else {
+      // rsdt_dsp_spatialがない場合は、rsdt_blk_spatialを使用
+      const hasRsdtBlkSpatial = await this.checkTableExists(db, 'rsdt_blk_spatial');
+      
+      if (hasRsdtBlkSpatial) {
+        const distanceSQL = this.getHaversineDistanceSQLWithColumns('r.rep_lat', 'r.rep_lon');
+        const sql = `
+          SELECT 
+            r.rsdtblk_key,
+            r.town_key,
+            r.blk_id,
+            r.blk_num,
+            r.rep_lat,
+            r.rep_lon,
+            ${distanceSQL} AS distance
+          FROM rsdt_blk r
+          JOIN rsdt_blk_spatial rs ON r.rowid = rs.id
+          WHERE rs.min_lat BETWEEN ? - ? AND ? + ?
+            AND rs.min_lon BETWEEN ? - ? AND ? + ?
+            AND ${distanceSQL} < 1000
+          ORDER BY distance
+          LIMIT ?
+        `;
+        
+        const rows = (db as any).prepare(sql).all(
+          lat, lon, lat,           // 距離計算
+          lat, radius, lat, radius, // 緯度範囲  
+          lon, radius, lon, radius, // 経度範囲
+          lat, lon, lat,           // 距離フィルター
+          limit
+        );
+        
+        await this.processResidentialRows(rows, lgCode, results, {
+          blk_num: true,
+          blk_id: true,
+        });
+      }
+    }
+    
+    return results;
+  }
+
+  /**
+   * 住居表示検索結果の行を処理して結果配列に追加
+   */
+  private async processResidentialRows(
+    rows: any[], 
+    lgCode: string, 
+    results: ReverseGeocodeResult[], 
+    fieldMap: { [key: string]: boolean }
+  ): Promise<void> {
+    for (const row of rows) {
+      // 市区町村情報と町丁目情報を取得
+      const commonDb = await this.geocodeDbController.openCommonDb();
+      const cityInfo = await this.getCityInfoFromCommonDb(commonDb, lgCode);
+      
+      // 町丁目情報を取得
+      const townInfo = await this.getTownInfo(commonDb, row.town_key);
+      
+      const resultData: any = {
+        ...row,
+        ...cityInfo,
+        ...townInfo,
+        match_level: MatchLevel.RESIDENTIAL_DETAIL,
+      };
+      
+      // フィールドマップに基づいて結果データを設定
+      if (fieldMap.blk_num) resultData.block = row.blk_num;
+      if (fieldMap.blk_id) resultData.block_id = row.blk_id;
+      if (fieldMap.rsdt_num) resultData.rsdt_num = row.rsdt_num;
+      if (fieldMap.rsdt_id) resultData.rsdt_id = row.rsdt_id;
+      if (fieldMap.rsdt_num2) resultData.rsdt_num2 = row.rsdt_num2;
+      if (fieldMap.rsdt2_id) resultData.rsdt2_id = row.rsdt2_id;
+      
+      results.push(this.createQueryFromSpatialResult(resultData, row.distance));
+      await commonDb.close();
+    }
+  }
+
+  /**
+   * 地番データの空間検索（R-tree使用）
+   */
+  private async searchParcelSpatial(lat: number, lon: number, radius: number, limit: number): Promise<ReverseGeocodeResult[]> {
+    // 近隣のLGコードを取得
+    const lgCodes = await this.getLgCodesInRange(lat, lon);
+    return await this.searchParcelSpatialWithLgCodes(lat, lon, lgCodes, radius, limit);
+  }
+
+  /**
+   * 地番データの空間検索（LGコード指定版）
+   */
+  private async searchParcelSpatialWithLgCodes(
+    lat: number,
+    lon: number,
+    lgCodes: string[],
+    radius: number,
+    limit: number
+  ): Promise<ReverseGeocodeResult[]> {
+    if (lgCodes.length === 0) return [];
+
+    const results: ReverseGeocodeResult[] = [];
+    
+    for (const lgCode of lgCodes) {
+      const db = await this.geocodeDbController.openParcelDb({
+        lg_code: lgCode,
+        createIfNotExists: false,
+      });
+      if (!db) continue;
+      
+      try {
+        // parcelテーブルの存在確認
+        const hasParcel = await this.checkTableExists(db, 'parcel');
+        if (!hasParcel) continue;
+        
+        // parcel_spatialの存在確認
+        const hasSpatialIndex = await this.checkTableExists(db, 'parcel_spatial');
+        
+        if (hasSpatialIndex) {
+          // 地番空間検索を実行
+          const parcelRows = await this.searchParcelSpatialByLgCode(
+            db, lgCode, lat, lon, radius, limit
+          );
+          
+          for (const row of parcelRows) {
+            results.push(row);
+          }
+        }
+      } catch (error) {
+        console.error(`LGコード ${lgCode} の地番空間検索エラー:`, error);
+      }
+      
+      if (results.length >= limit) break;
+    }
+    
+    return results.slice(0, limit);
+  }
+
+  /**
+   * LGコード別DBでの共通処理を実行するヘルパーメソッド
+   */
+  private async processLgCodeDatabases<T>(
+    lat: number,
+    lon: number,
+    limit: number,
+    processor: (db: any, lgCode: string, lat: number, lon: number, limit: number) => Promise<T[]>
+  ): Promise<T[]> {
+    const lgCodes = await this.getLgCodesInRange(lat, lon);
+    const limitedLgCodes = lgCodes.slice(0, 3); // 最も近い3つのLGコードのみ処理
+    const allResults: T[] = [];
+
+    // すべてのLGコードから結果を収集（limitを超えても全部取得）
+    for (const lgCode of limitedLgCodes) {
+      try {
+        const db = await this.geocodeDbController.openParcelDb({
+          lg_code: lgCode,
+          createIfNotExists: false,
+        });
+
+        if (!db) {
+          continue;
+        }
+
+        // 各LGコードからlimit * 2の結果を取得（後でソートするため）
+        const lgResults = await processor(db, lgCode, lat, lon, limit * 2);
+        allResults.push(...lgResults);
+
+        await db.close();
+      } catch (error) {
+        this.logError('processLgCodeDatabases', lgCode, error);
+        continue;
+      }
+    }
+
+    // 全結果を距離順にソートしてからlimit分返す
+    // TypeScriptの型システム上、distanceプロパティがあることを前提とする
+    const sortedResults = allResults.sort((a: any, b: any) => {
+      if (a.distance !== undefined && b.distance !== undefined) {
+        return a.distance - b.distance;
+      }
+      return 0;
+    });
+
+    return sortedResults.slice(0, limit);
+  }
+
+  /**
+   * 住所パーツを結合してフォーマット済み住所を作成
+   */
+  private formatAddress(parts: {
+    pref?: string;
+    county?: string;
+    city?: string;
+    ward?: string;
+    oaza_cho?: string;
+    chome?: string;
+    koaza?: string;
+    blk_num?: string;
+    rsdt_num?: string;
+    prc_nums?: string;
+  }): string {
+    const addressParts = [
+      parts.pref,
+      parts.county,
+      parts.city,
+      parts.ward,
+      parts.oaza_cho,
+      parts.chome,
+      parts.koaza
+    ].filter(Boolean);
+
+    // 住居表示番号がある場合
+    if (parts.rsdt_num && parts.blk_num) {
+      addressParts.push(parts.blk_num + '-' + parts.rsdt_num);
+    } else if (parts.blk_num) {
+      addressParts.push(parts.blk_num);
+    } else if (parts.rsdt_num) {
+      addressParts.push(parts.rsdt_num);
+    }
+
+    // 地番番号がある場合
+    if (parts.prc_nums) {
+      addressParts.push(parts.prc_nums);
+    }
+
+    return addressParts.join('');
+  }
+
+  /**
+   * 特定のLGコードDBでの地番空間検索
+   */
+  private async searchParcelSpatialByLgCode(
+    db: any, 
+    lgCode: string, 
+    lat: number, 
+    lon: number, 
+    radius: number, 
+    limit: number
+  ): Promise<ReverseGeocodeResult[]> {
+    const results: ReverseGeocodeResult[] = [];
+    
+    // 空間インデックスを使用した検索
+    const distanceSQL = this.getHaversineDistanceSQLWithColumns('p.rep_lat', 'p.rep_lon');
+    const sql = `
+      SELECT 
+        p.parcel_key,
+        p.town_key,
+        p.prc_id,
+        p.prc_num1,
+        p.prc_num2,
+        p.prc_num3,
+        p.rep_lat,
+        p.rep_lon,
+        ${distanceSQL} AS distance
+      FROM parcel p
+      JOIN parcel_spatial ps ON p.rowid = ps.id
+      WHERE ps.min_lat BETWEEN ? - ? AND ? + ?
+        AND ps.min_lon BETWEEN ? - ? AND ? + ?
+        AND ${distanceSQL} < 1000
+      ORDER BY distance
+      LIMIT ?
+    `;
+    
+    const rows = (db as any).prepare(sql).all(
+      lat, lon, lat,           // 距離計算
+      lat, radius, lat, radius, // 緯度範囲  
+      lon, radius, lon, radius, // 経度範囲
+      lat, lon, lat,           // 距離フィルター
+      limit
+    );
+    
+    for (const row of rows) {
+      // 市区町村情報と町丁目情報を取得
+      const commonDb = await this.geocodeDbController.openCommonDb();
+      const cityInfo = await this.getCityInfoFromCommonDb(commonDb, lgCode);
+      
+      // 町丁目情報を取得
+      const townInfo = await this.getTownInfo(commonDb, row.town_key);
+      
+      results.push(this.createQueryFromSpatialResult({
+        ...row,
+        ...cityInfo,
+        ...townInfo,
+        prc_id: row.prc_id,
+        prc_num1: row.prc_num1,
+        prc_num2: row.prc_num2,
+        prc_num3: row.prc_num3,
+        match_level: MatchLevel.PARCEL,
+      }, row.distance));
+      
+      await commonDb.close();
+    }
+    
+    return results;
+  }
 
 }
