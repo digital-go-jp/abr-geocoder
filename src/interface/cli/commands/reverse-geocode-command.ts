@@ -256,9 +256,21 @@ async function handleSingleCoordinate(argv: ArgumentsCamelCase<ReverseGeocodeCom
     cacheDir: path.join(abrgDir, 'cache'),
   });
 
+  // スレッド数を決める
+  const numOfThreads = (() => {
+    if (process.env.JEST_WORKER_ID) {
+      // テスト環境ではメインスレッドで処理を行う
+      return 1;
+    }
+    // バックグラウンドスレッドを用いる
+    const threads = container.env.availableParallelism();
+    console.error(`Available threads: ${threads}`);
+    return threads;
+  })();
+
   const geocoder = await AbrGeocoder.create({
     container,
-    numOfThreads: 1,
+    numOfThreads,
     isSilentMode: silent,
     useSpatialIndex,
   });
@@ -273,6 +285,17 @@ async function handleSingleCoordinate(argv: ArgumentsCamelCase<ReverseGeocodeCom
       searchTarget,
       useSpatialIndex,
     });
+
+    // 結果が配列でない場合のエラーハンドリング
+    if (!results || !Array.isArray(results)) {
+      console.error(`[error] 結果が配列ではありません: ${typeof results}`);
+      results = [];
+    }
+
+    // デバッグ: 最初の結果を確認
+    if (debug && results.length > 0) {
+      console.error('[debug] Raw result[0]:', JSON.stringify(results[0], null, 2));
+    }
 
     if (format === OutputFormat.GEOJSON) {
       const geoJsonResponse = {
@@ -296,7 +319,7 @@ async function handleSingleCoordinate(argv: ArgumentsCamelCase<ReverseGeocodeCom
             coordinates: [parseFloat(result.rep_lon!), parseFloat(result.rep_lat!)],
           },
           properties: {
-            formatted_address: result.formatted.address,
+            formatted_address: result.formatted?.address || result.address || '',
             match_level: result.match_level.str,
             distance: result.distance,
             ids: {
@@ -316,7 +339,7 @@ async function handleSingleCoordinate(argv: ArgumentsCamelCase<ReverseGeocodeCom
               oaza_cho: result.oaza_cho || null,
               chome: result.chome || null,
               koaza: result.koaza || null,
-              blk_num: result.block || null,
+              blk_num: result.block || result.blk_num || null,
               rsdt_num: result.rsdt_num?.toString() || null,
               rsdt_num2: result.rsdt2_id?.toString() || null,
               prc_num1: result.prc_num1 || null,
@@ -410,7 +433,16 @@ async function handleFileInput(argv: ArgumentsCamelCase<ReverseGeocodeCommandArg
     cacheDir: path.join(abrgDir, 'cache'),
   });
 
-  const numOfThreads = 1;
+  // スレッド数を決める
+  const numOfThreads = (() => {
+    if (process.env.JEST_WORKER_ID) {
+      // テスト環境ではメインスレッドで処理を行う
+      return 1;
+    }
+    // バックグラウンドスレッドを用いる
+    const threads = container.env.availableParallelism();
+    return threads;
+  })();
   
   const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
   cacheProgressBar?.start(1, 0);

@@ -28,6 +28,8 @@ import { WorkerPoolTaskInfo } from "@domain/services/thread/worker-thread-pool-t
 import { GeocodeTransform } from '@usecases/geocode/worker/geocode-worker';
 import path from 'node:path';
 import { FakeWorkerThreadPool } from "./fake-worker-thread-pool";
+import { ReverseGeocodeTransform } from './worker/reverse-geocode-worker';
+import { FakeReverseWorkerThreadPool } from './fake-reverse-worker-thread-pool';
 import { AbrGeocoderDiContainer } from "./models/abr-geocoder-di-container";
 import { AbrGeocoderInput } from "./models/abrg-input-data";
 import { CityAndWardTrieFinder } from "./models/city-and-ward-trie-finder";
@@ -84,6 +86,7 @@ export class AbrGeocoder {
   private readonly taskIDs: Set<number> = new Set();
   private flushing: boolean = false;
   private readonly defaultUseSpatialIndex: boolean = true; // デフォルトでR-tree使用
+  private reverseWorkerPool?: IWorkerThreadPool<any, any>; // 逆ジオコーディング用ワーカープール
 
   private constructor(
     private readonly workerPool: IWorkerThreadPool<AbrGeocoderInput, QueryJson>,
@@ -171,16 +174,28 @@ export class AbrGeocoder {
       });
     }
 
-    // 手法選択: useSpatialIndexが指定されていない場合はデフォルト設定を使用
-    const useSpatialIndex = params.useSpatialIndex ?? this.defaultUseSpatialIndex;
-
-    if (useSpatialIndex) {
-      // R-tree空間インデックス使用（高速版）
-      return await this.reverseGeocodeWithSpatialIndex(params);
-    } else {
-      // ハヴァーサイン公式使用
-      return await this.reverseGeocodeHaversine(params);
+    // 常にワーカープール経由で処理（FakeWorkerThreadPoolまたは実際のWorkerThreadPool）
+    if (!this.reverseWorkerPool) {
+      throw new Error('逆ジオコーディング用ワーカープールが初期化されていません');
     }
+
+    const input = {
+      lat: params.lat,
+      lon: params.lon,
+      searchTarget: params.searchTarget,
+      limit: params.limit || 1,
+      useSpatialIndex: params.useSpatialIndex ?? this.defaultUseSpatialIndex,
+    };
+
+    return new Promise((resolve, reject) => {
+      this.reverseWorkerPool!.run(input)
+        .then((result: any) => {
+          resolve(result.data || result);
+        })
+        .catch((error: Error) => {
+          reject(error);
+        });
+    });
   }
 
   /**
@@ -515,7 +530,16 @@ export class AbrGeocoder {
           prc_num3: null,
           prc_id: null,
           match_level: { str: 'residential_detail' },
-          formatted: { address: formattedAddress },
+          formatted: {
+            address: formattedAddress,
+            score: 1,
+            pref: cityInfo?.pref || null,
+            city: cityInfo?.city || null,
+            town: townInfo?.oaza_cho || null,
+            chome: townInfo?.chome || null,
+            koaza: townInfo?.koaza || null,
+            other: null
+          },
           unmatched: null,
           coordinate_level: null,
           matchedCnt: 1,
@@ -580,7 +604,16 @@ export class AbrGeocoder {
             prc_num1: null,
             prc_num2: null,
             prc_num3: null,
-            formatted: { address: formattedAddress },
+            formatted: {
+              address: formattedAddress,
+              score: 1,
+              pref: cityInfo?.pref || null,
+              city: cityInfo?.city || null,
+              town: townInfo?.oaza_cho || null,
+              chome: townInfo?.chome || null,
+              koaza: townInfo?.koaza || null,
+              other: null
+            },
             unmatched: null,
             matchedCnt: 1,
             ambiguousCnt: 0,
@@ -659,7 +692,16 @@ export class AbrGeocoder {
           prc_num3: row.prc_num3 || null,
           prc_id: row.prc_id || null,
           match_level: { str: 'parcel' },
-          formatted: { address: formattedAddress },
+          formatted: {
+            address: formattedAddress,
+            score: 1,
+            pref: cityInfo?.pref || null,
+            city: cityInfo?.city || null,
+            town: townInfo?.oaza_cho || null,
+            chome: townInfo?.chome || null,
+            koaza: townInfo?.koaza || null,
+            other: null
+          },
           unmatched: null,
           coordinate_level: null,
           matchedCnt: 1,
@@ -801,12 +843,44 @@ export class AbrGeocoder {
    * ReverseGeocodeResultをFormatterProvider互換のQuery形式に変換
    */
   public convertReverseResultToQueryCompatible(result: ReverseGeocodeResult): QueryCompatibleObject {
-    const baseObject = result;
+    const baseObject = result as any;  // ワーカーからの結果は型が異なる
     const matchLevelStr = this.getMatchLevelString(baseObject.match_level);
-    
-    return {
+
+    // 座標の取得（ワーカーからはlat/lon、通常はrep_lat/rep_lon）
+    const lat = baseObject.lat || baseObject.rep_lat;
+    const lon = baseObject.lon || baseObject.rep_lon;
+
+    // rep_lat/rep_lonを設定（FormatterProviderが期待）
+    const resultWithCoords = {
       ...baseObject,
+      rep_lat: lat,
+      rep_lon: lon,
+      // lg_code, pref, cityなども補完
+      lg_code: baseObject.lg_code || baseObject.machiaza_id?.substring(0, 6),
+      pref: baseObject.pref || null,  // 逆ジオコーディングで取得した実際の値を使用
+      city: baseObject.city || null,  // 逆ジオコーディングで取得した実際の値を使用
+    };
+
+    return {
+      ...resultWithCoords,
       // フォーマッターが期待する必須フィールドを追加
+      input: {
+        data: {
+          address: `${lat},${lon}`,  // 座標を入力として扱う
+          lat: lat,
+          lon: lon
+        }
+      },
+      formatted: {
+        address: baseObject.output || baseObject.pref + (baseObject.city || '') + (baseObject.oaza_cho || '') + (baseObject.chome || ''),
+        score: undefined,  // 逆ジオコーディングではundefined（フィールド自体を出力しない）
+        pref: resultWithCoords.pref,
+        city: resultWithCoords.city,
+        town: baseObject.oaza_cho || null,
+        chome: baseObject.chome || null,
+        koaza: baseObject.koaza || null,
+        other: null
+      },
       unmatched: [],  // 逆ジオコーディングでは未マッチ部分はない
       others: [],     // 逆ジオコーディングではその他の候補はない
       tempAddress: null,  // 一時住所オブジェクトはない
@@ -985,6 +1059,9 @@ export class AbrGeocoder {
   
   async close() {
     await this.workerPool.close();
+    if (this.reverseWorkerPool) {
+      await this.reverseWorkerPool.close();
+    }
   }
 
   static create = async (params: {
@@ -997,8 +1074,8 @@ export class AbrGeocoder {
     const db = await params.container.database.openCommonDb();
     const prefList: PrefInfo[] = await db.getPrefList();
 
-    const geocodeDbController = new GeocodeDbController({ 
-      connectParams: params.container.database.connectParams, 
+    const geocodeDbController = new GeocodeDbController({
+      connectParams: params.container.database.connectParams,
     });
 
     // トライ木を作成するために必要な辞書データの読み込み
@@ -1080,12 +1157,27 @@ export class AbrGeocoder {
       const geocodeTransform = await GeocodeTransform.create(initData);
       const fakePool = new FakeWorkerThreadPool(geocodeTransform);
 
-      return new AbrGeocoder(
+      // 逆ジオコーディング用のワーカープールも作成（メインスレッドモード）
+      const reverseInitData = {
+        database: params.container.database.connectParams,
+        cacheDir: params.container.cacheDir,
+        debug: false,
+        useSpatialIndex: params.useSpatialIndex ?? true,
+        diContainer: params.container,
+      };
+
+      const reverseGeocodeTransform = await ReverseGeocodeTransform.create(reverseInitData);
+      const reverseWorkerPool = new FakeReverseWorkerThreadPool(reverseGeocodeTransform);
+
+      const geocoder = new AbrGeocoder(
         fakePool,
         geocodeDbController,
         params.signal,
         params.useSpatialIndex ?? true,
       );
+      geocoder.reverseWorkerPool = reverseWorkerPool;
+
+      return geocoder;
     }
 
     const workerPool = await WorkerThreadPool.create<GeocodeWorkerInitData, AbrGeocoderInput, QueryJson>({
@@ -1104,13 +1196,36 @@ export class AbrGeocoder {
 
       signal: params.signal,
     });
-    
-    return new AbrGeocoder(
+
+    // 逆ジオコーディング用のワーカープールも作成
+    const reverseInitData = {
+      database: params.container.database.connectParams,
+      cacheDir: params.container.cacheDir,
+      debug: false,
+      useSpatialIndex: params.useSpatialIndex ?? true,
+      diContainer: params.container,
+    };
+
+    // ワーカースレッドで並列処理
+    const reverseWorkerPool = await WorkerThreadPool.create({
+      maxConcurrency: Math.max(1, params.numOfThreads),
+      maxTasksPerWorker: 500,
+      filename: path.join(__dirname, 'worker', 'reverse-geocode-worker'),
+      initData: reverseInitData,
+      signal: params.signal,
+    });
+
+    const geocoder = new AbrGeocoder(
       workerPool,
       geocodeDbController,
       params.signal,
       params.useSpatialIndex ?? true,
     );
+
+    // 逆ジオコーディング用ワーカープールを設定
+    geocoder.reverseWorkerPool = reverseWorkerPool;
+
+    return geocoder;
   };
 
   /**
@@ -1235,11 +1350,12 @@ export class AbrGeocoder {
     }
     
     // 番地情報
-    if (row.block && row.rsdt_num) {
-      addressParts.push(`${row.block}-${row.rsdt_num}`);
+    const blockNum = row.block || row.blk_num;
+    if (blockNum && row.rsdt_num) {
+      addressParts.push(`${blockNum}-${row.rsdt_num}`);
       if (row.rsdt_num2) addressParts.push(`-${row.rsdt_num2}`);
-    } else if (row.block) {
-      addressParts.push(row.block);
+    } else if (blockNum) {
+      addressParts.push(blockNum);
     } else if (row.rsdt_num) {
       addressParts.push(row.rsdt_num.toString());
       if (row.rsdt_num2) addressParts.push(`-${row.rsdt_num2}`);
@@ -1274,8 +1390,8 @@ export class AbrGeocoder {
       town_key: row.town_key,
       machiaza_id: row.machiaza_id,
       rsdt_addr_flg: row.rsdt_addr_flg,
-      block: row.block,
-      block_id: row.block_id,
+      block: row.block || row.blk_num,
+      block_id: row.block_id || row.blk_id,
       rsdt_num: row.rsdt_num,
       rsdt_id: row.rsdt_id,
       rsdt_num2: row.rsdt_num2,
@@ -1291,8 +1407,20 @@ export class AbrGeocoder {
       ambiguousCnt: 0,
     });
     
-    // ReverseGeocodeResultを返す（QueryをインターフェースとしてDistanceを追加）
-    const result: ReverseGeocodeResult = Object.assign(query, { distance });
+    // ReverseGeocodeResultを返す（QueryをインターフェースとしてDistanceとformattedを追加）
+    const result: ReverseGeocodeResult = Object.assign(query, {
+      distance,
+      formatted: {
+        address: formattedAddress,
+        score: 1,  // 逆ジオコーディングでは常に1
+        pref: prefName,
+        city: row.city,
+        town: row.oaza_cho,
+        chome: row.chome,
+        koaza: row.koaza,
+        other: null
+      }
+    });
     return result;
   }
 
@@ -1624,8 +1752,14 @@ export class AbrGeocoder {
       };
       
       // フィールドマップに基づいて結果データを設定
-      if (fieldMap.blk_num) resultData.block = row.blk_num;
-      if (fieldMap.blk_id) resultData.block_id = row.blk_id;
+      if (fieldMap.blk_num) {
+        resultData.block = row.blk_num;
+        resultData.blk_num = row.blk_num;  // 両方のフィールド名をサポート
+      }
+      if (fieldMap.blk_id) {
+        resultData.block_id = row.blk_id;
+        resultData.blk_id = row.blk_id;  // 両方のフィールド名をサポート
+      }
       if (fieldMap.rsdt_num) resultData.rsdt_num = row.rsdt_num;
       if (fieldMap.rsdt_id) resultData.rsdt_id = row.rsdt_id;
       if (fieldMap.rsdt_num2) resultData.rsdt_num2 = row.rsdt_num2;
