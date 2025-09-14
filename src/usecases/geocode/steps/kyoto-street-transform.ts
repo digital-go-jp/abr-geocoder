@@ -236,9 +236,10 @@ export class KyotoStreetTransform extends Transform {
     }
 
     // 最もスコアが高い結果を採用する(入力文字列と整形された文字列が似ている結果を採用する)
-    buffer.sort((a, b) => b.formatted.score - a.formatted.score);
+    buffer.sort((a, b) => (b.formatted.score ?? 0) - (a.formatted.score ?? 0));
     let i = 0;
-    while (i < buffer.length && buffer[0].formatted.score - buffer[i].formatted.score < 5) {
+    const firstScore = buffer[0]?.formatted.score ?? 0;
+    while (i < buffer.length && firstScore - (buffer[i].formatted.score ?? 0) < 5) {
       results.add(buffer[i]);
       i++;
     }

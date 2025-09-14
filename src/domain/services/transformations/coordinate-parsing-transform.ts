@@ -51,10 +51,14 @@ export class CoordinateParsingTransform extends Transform {
 
     // ヘッダー行の処理
     if (!this.headerProcessed) {
-      this.processHeader(line);
+      const isDataRow = this.processHeader(line);
+      if (!isDataRow) {
+        this.headerProcessed = true;
+        callback();
+        return;
+      }
+      // データ行として処理を続行
       this.headerProcessed = true;
-      callback();
-      return;
     }
 
     try {
@@ -69,7 +73,7 @@ export class CoordinateParsingTransform extends Transform {
     callback();
   }
 
-  private processHeader(line: string): void {
+  private processHeader(line: string): boolean {
     const columns = line.split(',').map(col => col.trim().toLowerCase());
     
     // 緯度のカラムを検索
@@ -80,11 +84,24 @@ export class CoordinateParsingTransform extends Transform {
     
     // ヘッダーがない場合は最初の2列を座標とみなす
     if (this.latIndex === -1 && this.lonIndex === -1) {
+      // 数値かどうかチェックして、数値なら座標データとして扱う
+      const values = line.split(',').map(val => val.trim());
+      if (values.length >= 2) {
+        const lat = parseFloat(values[0]);
+        const lon = parseFloat(values[1]);
+        if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+          // これは座標データ行なので、インデックスを設定して再処理
+          this.latIndex = 0;
+          this.lonIndex = 1;
+          // この行を座標データとして処理する
+          return true;
+        }
+      }
+      // 数値でない場合はデフォルトのインデックスを設定
       this.latIndex = 0;
       this.lonIndex = 1;
-      // ヘッダーがない場合、この行を座標データとして処理
-      this.headerProcessed = false;
     }
+    return false;
   }
 
   private findColumnIndex(columns: string[], searchTerms: string[]): number {

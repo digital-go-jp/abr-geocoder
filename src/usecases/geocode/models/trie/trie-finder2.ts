@@ -121,7 +121,7 @@ export class TrieAddressFinder2<T> {
       if (this.debug) {
         console.error(`Can not read the file`);
       }
-      throw `Can not read the file`;
+            throw `Can not read the file`;
     }
     this.header = header;
   }
@@ -191,11 +191,11 @@ export class TrieAddressFinder2<T> {
     const headerBuffer = this.read(0, headerSize);
     
     // バージョン番号の読み取り
-    // version 2.2でない場合はサポートしていない
+    // version 2.2以上またはversion 3.x をサポート
     // (将来的に書きこんだversionによってロジックが変わる可能性がある)
     const majorVersion = headerBuffer.readUInt8(VERSION_BYTES.offset);
     const minorVersion = headerBuffer.readUInt8(VERSION_BYTES.offset + 1);
-    if (majorVersion !== 2 || minorVersion < 2) {
+    if (!((majorVersion === 2 && minorVersion >= 2) || (majorVersion === 3))) {
       return null;
     }
 
