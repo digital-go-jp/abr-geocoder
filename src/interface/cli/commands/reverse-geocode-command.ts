@@ -39,7 +39,7 @@ import { FormatterProvider } from '@interface/format/formatter-provider';
 import { AbrGeocoder } from '@usecases/geocode/abr-geocoder';
 import { AbrReverseGeocoderStream } from '@usecases/geocode/abr-reverse-geocoder-stream';
 import { AbrGeocoderDiContainer } from '@usecases/geocode/models/abr-geocoder-di-container';
-import { createGeocodeCaches } from '@usecases/geocode/services/create-geocode-caches';
+// import { createGeocodeCaches } from '@usecases/geocode/services/create-geocode-caches';
 import { getReadStreamFromSource } from '@usecases/geocode/services/get-read-stream-from-source';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -65,6 +65,9 @@ export type ReverseGeocodeCommandArgv = {
 
   debug?: boolean; // 'debug' はオプショナル
   silent?: boolean; // 'silent' はオプショナル
+
+  spatialIndex?: boolean; // 'spatialIndex' - R-tree使用フラグ
+  haversine?: boolean; // 'haversine' - ハヴァーサイン公式強制使用フラグ
 
   inputFile?: string; // ファイル入力時の入力ファイル
   outputFile?: string; // ファイル入力時の出力ファイル
@@ -158,6 +161,16 @@ const reverseGeocodeCommand: CommandModule<{}, ReverseGeocodeCommandArgv> = {
           AbrgMessage.CLI_COMMON_SILENT_OPTION,
         ),
       })
+      .option('spatialIndex', {
+        type: 'boolean',
+        default: true,
+        describe: 'R木空間インデックスを使用（高速、デフォルト）',
+      })
+      .option('haversine', {
+        type: 'boolean',
+        default: false,
+        describe: 'ハヴァーサイン公式を使用（--spatialIndexと併用不可）',
+      })
       .positional('inputFile', {
         describe: '入力ファイル（CSVファイルまたは"-"で標準入力）',
         type: 'string',
@@ -213,9 +226,13 @@ async function handleSingleCoordinate(argv: ArgumentsCamelCase<ReverseGeocodeCom
   const debug = argv.debug === true;
   const silent = argv.silent === true;
   const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
+  
+  // 検索手法の決定
+  const useSpatialIndex = argv.haversine ? false : (argv.spatialIndex ?? true);
+  const methodName = useSpatialIndex ? 'R木空間インデックス（高速）' : 'ハヴァーサイン公式';
 
   if (!silent) {
-    console.error(`逆ジオコーディング実行: 座標(${lat}, ${lon})`);
+    console.error(`逆ジオコーディング実行: 座標(${lat}, ${lon}) [${methodName}]`);
   }
 
   if (debug) {
@@ -239,18 +256,11 @@ async function handleSingleCoordinate(argv: ArgumentsCamelCase<ReverseGeocodeCom
     cacheDir: path.join(abrgDir, 'cache'),
   });
 
-  await createGeocodeCaches({
-    container,
-    maxConcurrency: 1,
-    progress: debug ? (current: number, total: number) => {
-      console.error(`キャッシュ作成中: ${current}/${total}`);
-    } : undefined,
-  });
-
   const geocoder = await AbrGeocoder.create({
     container,
     numOfThreads: 1,
     isSilentMode: silent,
+    useSpatialIndex,
   });
 
   let results: any[] = [];
@@ -261,6 +271,7 @@ async function handleSingleCoordinate(argv: ArgumentsCamelCase<ReverseGeocodeCom
       lon,
       limit,
       searchTarget,
+      useSpatialIndex,
     });
 
     if (format === OutputFormat.GEOJSON) {
@@ -356,6 +367,7 @@ async function handleFileInput(argv: ArgumentsCamelCase<ReverseGeocodeCommandArg
   const format = (argv.format || OutputFormat.JSON) as OutputFormat;
   const debug = argv.debug === true;
   const abrgDir = resolveHome(argv.abrgDir || EnvProvider.DEFAULT_ABRG_DIR);
+  const useSpatialIndex = argv.haversine ? false : (argv.spatialIndex ?? true);
 
   if (debug) {
     console.time("reverse-geocoding");
@@ -402,14 +414,7 @@ async function handleFileInput(argv: ArgumentsCamelCase<ReverseGeocodeCommandArg
   
   const cacheProgressBar = isSilentMode ? undefined : createSingleProgressBar(CACHE_CREATE_PROGRESS_BAR);
   cacheProgressBar?.start(1, 0);
-
-  const createCacheTask = createGeocodeCaches({
-    container,
-    maxConcurrency: 1,
-    progress: (current: number) => {
-      cacheProgressBar?.update(current);
-    },
-  });
+  const createCacheTask = Promise.resolve();
 
   const countNumOfLinesTask = (async () => {
     if (source !== STDIN_FILEPATH) {
@@ -430,12 +435,14 @@ async function handleFileInput(argv: ArgumentsCamelCase<ReverseGeocodeCommandArg
     container,
     numOfThreads: numOfLinesInFiles < numOfThreads ? numOfLinesInFiles : numOfThreads,
     isSilentMode,
+    useSpatialIndex,
   });
 
   const reverseGeocoderStream = new AbrReverseGeocoderStream({
     geocoder,
     searchTarget,
     limit,
+    useSpatialIndex,
     highWatermark: numOfThreads * 500,
   });
 

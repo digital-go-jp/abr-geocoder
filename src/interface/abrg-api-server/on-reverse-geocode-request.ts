@@ -44,6 +44,8 @@ export class OnReverseGeocodeRequest {
     const lonParam = request.query_parameters['lon'];
     const limitParam = request.query_parameters['limit'];
     const targetParam = request.query_parameters['target'];
+    const spatialIndexParam = request.query_parameters['spatialIndex'];
+    const haversineParam = request.query_parameters['haversine'];
 
     if (!latParam) {
       response.status(StatusCodes.BAD_REQUEST, 'lat is required');
@@ -106,11 +108,15 @@ export class OnReverseGeocodeRequest {
       return;
     }
 
+    // 検索手法の決定
+    const useSpatialIndex = haversineParam === 'true' ? false : (spatialIndexParam !== 'false');
+
     const results = await this.geocoder.reverseGeocode({
       lat,
       lon,
       limit,
       searchTarget,
+      useSpatialIndex,
     });
 
     const geoJsonResponse = {
@@ -127,7 +133,7 @@ export class OnReverseGeocodeRequest {
         api_version: "3.0.0",
         db_version: await this.geocoder.getDbVersion(),
       },
-      features: results.map(result => ({
+      features: results.map((result: any) => ({
         type: "Feature",
         geometry: {
           type: "Point",
