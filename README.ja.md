@@ -2,6 +2,11 @@
 
 - [English version](./README.md)
 
+## 🚀 Version 3.0 の新機能
+
+- `abrg reverse` コマンドで逆ジオコーディングに対応しました
+- REST APIサーバー `/reverse` エンドポイントで逆ジオコーディングに対応しました
+
 ## 🚨 Version 2.2 から Version 2.2.1 へのアップグレード
 
 - データセットダウンロード用の新しいDCAT形式APIに対応しました。
@@ -21,10 +26,9 @@
 
 ## 特徴
 
-  - 日本国内の住所を対象としたジオコーダ
+  - 日本国内の住所を対象としたジオコーダ・逆ジオコーダ
   - [アドレス・ベース・レジストリ](https://catalog.registries.digital.go.jp/rc/dataset/)に基づいて住所表記、階層に合わせて正規化
   - `住居表示` と `地番` に対応。
-  - 逆ジオコーディング機能（座標から住所への変換
   - SQLiteを使用。サーバー内でジオコーディングすることが可能。
   - マルチスレッドによる高速処理。
   - `csv`, `json`, `geojson`, `ndjson`, `ndgeojson`, `simplified` の6つの出力形式をサポート。
@@ -307,150 +311,164 @@
 
 ## `abrg reverse`コマンド
 
-座標（緯度・経度）から住所を取得する逆ジオコーディングを実行します。
+  座標（緯度・経度）をデータベースと突合し、日本の住所を出力します。
+  （逆ジオコーディングを行います。）
 
-```sh
-abrg reverse --lat <緯度> --lon <経度> [options]
-```
+  ```
+  $ abrg reverse <inputFile> [<outputFile>] [options]
+  または
+  $ abrg reverse --lat <緯度> --lon <経度> [options]
+  ```
 
-### 基本的な使用方法
+  - `<inputFile>`
 
-```sh
-# 東京の座標から住所を取得
-abrg reverse --lat 35.679107172 --lon 139.736394597
+    コマンドにデータを入力する方法を指定します。
 
-# 出力フォーマットを指定
-abrg reverse --lat 35.679107172 --lon 139.736394597 --format json
+    - <details>
+      <summary>ファイルへのパスを指定した場合</summary>
+      指定されたCSVファイルを逆ジオコーディングします。
+      CSVファイルは `lat,lon,description` の形式で記入してください。
 
-# 複数の結果を取得
-abrg reverse --lat 35.679107172 --lon 139.736394597 --limit 3
+      例：
+      ```
+      abrg reverse ./coordinates.csv
+      ```
 
-# CSVファイルから一括処理
-abrg reverse coordinates.csv result.json
+      coordinates.csv
+      ```csv
+      lat,lon,description
+      35.676543,139.770203,東京駅周辺
+      35.689592,139.701171,新宿駅周辺
+      35.658034,139.701636,渋谷駅周辺
+      ```
+      </details>
 
-# 標準入力から処理
-cat coordinates.csv | abrg reverse - output.json
-```
+    - <details>
+      <summary>"-" を指定した場合</summary>
+      標準入力からデータを受け取ります。
 
-### ファイル入力による一括処理
+      例：
+      ```
+      echo "lat,lon,description
+      35.679107,139.736395,テスト地点" | abrg reverse -
+      ```
+      </details>
 
-CSVファイル（`lat,lon,description`形式）から複数の座標を一括で逆ジオコーディングできます：
+    - <details>
+      <summary>--lat/--lon オプションを指定した場合</summary>
+      単一の座標を直接指定して逆ジオコーディングします。
 
-```sh
-# CSVファイルから一括処理
-abrg reverse input.csv output.json
+      例：
+      ```
+      abrg reverse --lat 35.679107172 --lon 139.736394597
+      ```
+      </details>
 
-# 標準入力から処理
-cat coordinates.csv | abrg reverse -
 
-# 空間インデックスを使用（高速、デフォルト）
-abrg reverse coordinates.csv --spatialIndex
+  - `<outputFile>`
 
-# ハヴァーサイン公式を使用
-abrg reverse coordinates.csv --haversine
-```
+    処理結果の出力先を指定します。省略された場合は標準出力(stdout)に出力されます。
 
-**入力CSVファイル形式:**
-```csv
-lat,lon,description
-35.676543,139.770203,東京駅周辺
-35.689592,139.701171,新宿駅周辺
-35.658034,139.701636,渋谷駅周辺
-```
+    - <details>
+      <summary>ファイルへのパスを指定した場合</summary>
+      指定されたファイルに処理結果を出力します。出力形式は `--format` オプションに基づきます。
 
-### オプション
+      例：
+      ```
+      abrg reverse ./coordinates.csv ./output.json
+      ```
+      </details>
 
-- `--lat` (必須): 緯度（十進度数、-90から90まで）
-- `--lon` (必須): 経度（十進度数、-180から180まで）
-- `--limit, -l`: 返却する結果の最大数（1から5まで、デフォルト: 1）
-- `--target, -t`: 検索対象（`all`, `residential`, `parcel`、デフォルト: `all`）
-- `--format, -f`: 出力形式（`json`, `geojson`, `simplified`、デフォルト: `geojson`）
-- `--debug`: デバッグ情報（処理時間など）を表示
-- `--silent`: 進捗メッセージを非表示
-- `--spatialIndex`: R木空間インデックスを使用（高速、デフォルト）
-- `--haversine`: ハヴァーサイン公式を強制使用（--spatialIndexと併用不可）
-- `--abrgDir, -d`: データベースがあるディレクトリ（デフォルト: `$HOME/.abr-geocoder`）
+    - <details>
+      <summary>省略した場合</summary>
+      省略された場合は標準出力(stdout)に出力されます。
 
-### 出力形式
+      例：
+      ```
+      cat ./coordinates.csv | abrg reverse - | jq
+      ```
+      </details>
 
-| 形式 | 説明 |
-|------|------|
-| `json` | クエリオブジェクト構造を持つ標準JSON形式 |
-| `geojson` | GeoJSON FeatureCollection形式（デフォルト） |
-| `simplified` | 簡素化されたCSV形式 |
+  - <details>
+    <summary>出力形式の変更</summary>
 
-### 出力例
+    `-f`, `--format` オプションで出力書式を変更できます。デフォルトは`geojson`です。
 
-<details>
-<summary>GeoJSON出力（デフォルト）</summary>
+    | format     | 説明                                                           |
+    |------------|---------------------------------------------------------------|
+    | csv        | カンマ区切りのcsv形式で結果を出力します                             |
+    | simplified | 出力フィールドを限定した、カンマ区切りのcsv形式で結果を出力します        |
+    | json       | JSON形式で結果を出力します                                        |
+    | ndjson     | NDJSON形式で結果を出力します                                      |
+    | geojson    | GeoJSON形式で結果を出力します                                     |
+    | ndgeojson  | NDGeoJSON形式で結果を出力します                                   |
 
-```json
-{
-  "type": "FeatureCollection",
-  "query": {
-    "lat": 35.679107172,
-    "lon": 139.736394597,
-    "limit": 1,
-    "target": "all"
-  },
-  "result_info": {
-    "count": 1,
-    "limit": 1,
-    "api_version": "3.0.0",
-    "db_version": "20240501"
-  },
-  "features": [
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [139.736394597, 35.679107172]
-      },
-      "properties": {
-        "formatted_address": "東京都千代田区紀尾井町1-3",
-        "match_level": "residential_detail",
-        "distance": 5.7,
-        "structured_address": {
-          "pref": "東京都",
-          "city": "千代田区",
-          "oaza_cho": "紀尾井町",
-          "blk_num": "1",
-          "rsdt_num": "3"
-        }
-      }
-    }
-  ]
-}
-```
-</details>
+    </details>
 
-<details>
-<summary>JSON出力</summary>
+  - <details>
+    <summary>結果数の制限</summary>
+    `-l`, `--limit` オプションで返却する結果の最大数を指定できます。デフォルトは`1`です。
 
-```json
-[
-  {
-    "query": {
-      "input": ""
-    },
-    "result": {
-      "output": "東京都千代田区紀尾井町1-3",
-      "match_level": "residential_detail",
-      "coordinate_level": "residential_detail"
-    }
-  }
-]
-```
-</details>
+    例:
+    ```
+    abrg reverse --lat 35.679107 --lon 139.736395 --limit 3
+    ```
+    </details>
 
-<details>
-<summary>SIMPLIFIED出力</summary>
+  - <details>
+    <summary>検索アルゴリズムの選択</summary>
+    デフォルトでは空間インデックス（R木）を使用した高速検索を行います。
 
-```csv
-input,output,score,match_level
-"","東京都千代田区紀尾井町1-3",,"residential_detail"
-```
-</details>
+    ```sh
+    # 空間インデックスを使用（高速、デフォルト）
+    abrg reverse coordinates.csv --spatialIndex
+
+    # ハヴァーサイン公式を使用
+    abrg reverse coordinates.csv --haversine
+    ```
+    </details>
+
+  - <details>
+    <summary>プログレスバーを非表示</summary>
+    silentオプションを指定すると、プログレスバーを表示しません。
+
+    ```sh
+    abrg reverse ./coordinates.csv ./output.txt --silent
+    ```
+  </details>
+
+  - <details>
+    <summary>ディレクトリの変更</summary>
+
+    データベースを保存するディレクトリを指定します。デフォルトでは `$HOME/.abr-geocoder` です。
+
+    ```sh
+    abrg reverse ./coordinates.csv ./output.txt  -d (データを保存するディレクトリへのパス)
+    ```
+  </details>
+
+  - <details>
+    <summary>デバッグ情報の表示</summary>
+    処理が完了したとき、処理に掛かった時間を表示します。
+
+    ```sh
+    abrg reverse ./coordinates.csv ./output.txt --debug
+    ```
+  </details>
+
+  - <details>
+    <summary>逆ジオコーディング対象</summary>
+
+    `--target` オプションで住居表示・地番の逆ジオコーディング対象を変更できます。デフォルトは`all`です。
+
+    | format      | 説明                                                         |
+    |-------------|-------------------------------------------------------------|
+    | all         | 住居表示と地番のデータの両方を調べます。住居表示の結果が優先されます    |
+    | residential | 住居表示データのみを調べます                                     |
+    | parcel      | 地番データのみを調べます                                        |
+
+    </details>
+
 
 ## `abrg serve start`コマンド
 

@@ -3,6 +3,11 @@
 
 - [日本語版](./README.ja.md)
 
+## 🚀 What's New in Version 3.0
+
+- `abrg reverse` command now supports reverse geocoding
+- REST API server `/reverse` endpoint now supports reverse geocoding
+
 ## 🚨 Upgrade to version 2.2.1 from v2.2
 
 - Updated to use the new DCAT format API for downloading datasets.
@@ -20,10 +25,9 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 
 ## Features
 
-- Geocoder targeting domestic addresses in Japan.
+- Geocoder and reverse geocoder targeting domestic addresses in Japan.
 - Normalizes address notation according to the [Address Base Registry](https://catalog.registries.digital.go.jp/rc/dataset/) and hierarchy.
 - Supports `residence indication` and `partial number (lot number)`.
-- Reverse geocoding (coordinates to address conversion)
 - Uses SQLite, enabling geocoding within the server.
 - High-speed processing through multithreading.
 - Supports six output formats: `csv`, `json`, `geojson`, `ndjson`, `ndgeojson`, `simplified`.
@@ -299,150 +303,163 @@ $ abrg <inputFile> [<outputFile>] [options]
 
 ## `abrg reverse` command
 
-Performs reverse geocoding to convert coordinates (latitude, longitude) to Japanese addresses.
+Matches coordinates (latitude, longitude) with the database and outputs Japanese addresses.
+(Performs reverse geocoding.)
 
-```sh
-abrg reverse --lat <latitude> --lon <longitude> [options]
+```
+$ abrg reverse <inputFile> [<outputFile>] [options]
+or
+$ abrg reverse --lat <latitude> --lon <longitude> [options]
 ```
 
-### Basic Usage
+- `<inputFile>`
 
-```sh
-# Get address for coordinates in Tokyo
-abrg reverse --lat 35.679107172 --lon 139.736394597
+  Specifies how to input data into the command.
 
-# With output format specification
-abrg reverse --lat 35.679107172 --lon 139.736394597 --format json
+  - <details>
+    <summary>If a file path is specified</summary>
+    The specified CSV file will be reverse geocoded.
+    The CSV file should be in `lat,lon,description` format.
 
-# Get multiple results
-abrg reverse --lat 35.679107172 --lon 139.736394597 --limit 3
+    Example:
+    ```
+    abrg reverse ./coordinates.csv
+    ```
 
-# Batch processing from CSV file
-abrg reverse coordinates.csv result.json
+    coordinates.csv:
+    ```csv
+    lat,lon,description
+    35.676543,139.770203,Around Tokyo Station
+    35.689592,139.701171,Around Shinjuku Station
+    35.658034,139.701636,Around Shibuya Station
+    ```
+    </details>
 
-# Processing from standard input
-cat coordinates.csv | abrg reverse - output.json
-```
+  - <details>
+    <summary>If "-" is specified</summary>
+    Receives data from standard input.
 
-### Batch Processing with File Input
+    Example:
+    ```
+    echo "lat,lon,description
+    35.679107,139.736395,Test location" | abrg reverse -
+    ```
+    </details>
 
-You can process multiple coordinates from a CSV file (`lat,lon,description` format) for batch reverse geocoding:
+  - <details>
+    <summary>If --lat/--lon options are specified</summary>
+    Directly specify a single coordinate for reverse geocoding.
 
-```sh
-# Batch processing from CSV file
-abrg reverse input.csv output.json
+    Example:
+    ```
+    abrg reverse --lat 35.679107172 --lon 139.736394597
+    ```
+    </details>
 
-# Processing from standard input
-cat coordinates.csv | abrg reverse -
 
-# Use spatial index (fast, default)
-abrg reverse coordinates.csv --spatialIndex
+- `<outputFile>`
 
-# Use Haversine formula
-abrg reverse coordinates.csv --haversine
-```
+  Specifies where to output the processing results. If omitted, outputs to standard output (stdout).
 
-**Input CSV file format:**
-```csv
-lat,lon,description
-35.676543,139.770203,Around Tokyo Station
-35.689592,139.701171,Around Shinjuku Station
-35.658034,139.701636,Around Shibuya Station
-```
+  - <details>
+    <summary>If a file path is specified</summary>
+    Outputs the processing results to the specified file. The output format is based on the `--format` option.
 
-### Options
+    Example:
+    ```
+    abrg reverse ./coordinates.csv ./output.json
+    ```
+    </details>
 
-- `--lat, -lat` (required): Latitude in decimal degrees (-90 to 90)
-- `--lon, -lon` (required): Longitude in decimal degrees (-180 to 180)
-- `--limit, -l`: Maximum number of results to return (1 to 5, default: 1)
-- `--target, -t`: Search target (`all`, `residential`, `parcel`, default: `all`)
-- `--format, -f`: Output format (`json`, `geojson`, `simplified`, default: `geojson`)
-- `--debug`: Show debug information including processing time
-- `--silent`: Hide progress messages
-- `--spatialIndex`: Use R-tree spatial index (fast, default)
-- `--haversine`: Force use of Haversine formula (cannot be used with --spatialIndex)
-- `--abrgDir, -d`: Directory containing the database (default: `$HOME/.abr-geocoder`)
+  - <details>
+    <summary>If omitted</summary>
+    If omitted, outputs to standard output (stdout).
 
-### Output Formats
+    Example:
+    ```
+    cat ./coordinates.csv | abrg reverse - | jq
+    ```
+    </details>
 
-| Format | Description |
-|--------|-------------|
-| `json` | Standard JSON format with query object structure |
-| `geojson` | GeoJSON FeatureCollection format (default) |
-| `simplified` | Simplified CSV format |
+- <details>
+  <summary>Change output format</summary>
 
-### Examples
+  You can change the output format with the `-f`, `--format` option. The default is `geojson`.
 
-<details>
-<summary>GeoJSON output (default)</summary>
+  | format     | Description                                                   |
+  |------------|---------------------------------------------------------------|
+  | csv        | Outputs results in comma-separated csv format                 |
+  | simplified | Outputs results in comma-separated csv format with limited fields |
+  | json       | Outputs results in JSON format                                |
+  | ndjson     | Outputs results in NDJSON format                              |
+  | geojson    | Outputs results in GeoJSON format                             |
+  | ndgeojson  | Outputs results in NDGeoJSON format                           |
 
-```json
-{
-  "type": "FeatureCollection",
-  "query": {
-    "lat": 35.679107172,
-    "lon": 139.736394597,
-    "limit": 1,
-    "target": "all"
-  },
-  "result_info": {
-    "count": 1,
-    "limit": 1,
-    "api_version": "3.0.0",
-    "db_version": "20240501"
-  },
-  "features": [
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [139.736394597, 35.679107172]
-      },
-      "properties": {
-        "formatted_address": "東京都千代田区紀尾井町1-3",
-        "match_level": "residential_detail",
-        "distance": 5.7,
-        "structured_address": {
-          "pref": "東京都",
-          "city": "千代田区",
-          "oaza_cho": "紀尾井町",
-          "blk_num": "1",
-          "rsdt_num": "3"
-        }
-      }
-    }
-  ]
-}
-```
+  </details>
+
+- <details>
+  <summary>Limit number of results</summary>
+  You can specify the maximum number of results to return with the `-l`, `--limit` option. The default is `1`.
+
+  Example:
+  ```
+  abrg reverse --lat 35.679107 --lon 139.736395 --limit 3
+  ```
+  </details>
+
+- <details>
+  <summary>Select search algorithm</summary>
+  By default, fast search using spatial index (R-tree) is performed.
+
+  ```sh
+  # Use spatial index (fast, default)
+  abrg reverse coordinates.csv --spatialIndex
+
+  # Use Haversine formula
+  abrg reverse coordinates.csv --haversine
+  ```
+  </details>
+
+- <details>
+  <summary>Hide progress bar</summary>
+  If you specify the silent option, the progress bar will not be displayed.
+
+  ```sh
+  abrg reverse ./coordinates.csv ./output.txt --silent
+  ```
 </details>
 
-<details>
-<summary>JSON output</summary>
+- <details>
+  <summary>Change directory</summary>
 
-```json
-[
-  {
-    "query": {
-      "input": ""
-    },
-    "result": {
-      "output": "東京都千代田区紀尾井町1-3",
-      "match_level": "residential_detail",
-      "coordinate_level": "residential_detail"
-    }
-  }
-]
-```
+  Specifies the directory containing the database. The default is `$HOME/.abr-geocoder`.
+
+  ```sh
+  abrg reverse ./coordinates.csv ./output.txt -d (path to directory to save data)
+  ```
 </details>
 
-<details>
-<summary>Simplified output</summary>
+- <details>
+  <summary>Show debug information</summary>
+  Shows the time taken for the process when it is completed.
 
-```csv
-input,output,score,match_level
-"","東京都千代田区紀尾井町1-3",,"residential_detail"
-```
+  ```sh
+  abrg reverse ./coordinates.csv ./output.txt --debug
+  ```
 </details>
+
+- <details>
+  <summary>Reverse geocoding target</summary>
+
+  You can change the reverse geocoding target with the `--target` option. The default is `all`.
+
+  | format      | Description                                                                                                          |
+  |-------------|----------------------------------------------------------------------------------------------------------------------|
+  | all         | Searches both residential address and parcel number data. The result for the residential address takes precedence.   |
+  | residential | Searches only the residential address data.                                                                          |
+  | parcel      | Searches only the parcel number data.                                                                                |
+
+  </details>
 
 ## `abrg serve start` command
 
