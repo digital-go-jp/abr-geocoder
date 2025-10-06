@@ -26,7 +26,6 @@ import crc32 from '@domain/services/crc32-lib';
 import { ThreadJob, ThreadJobResult } from '@domain/services/thread/thread-task';
 import { IDatasetDb } from '@drivers/database/dataset-db';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
-import { StatusCodes } from 'http-status-codes';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Duplex } from 'node:stream';

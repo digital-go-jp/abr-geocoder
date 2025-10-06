@@ -95,40 +95,40 @@ export class KyotoStreetTransform extends Transform {
 
       if (markers) {
         markers.forEach(marker => {
-        const koaza = query.tempAddress!.substring(0, marker.index);
-        const bearingWord = query.tempAddress!.substring(marker.index, marker.lastIndex);
-        const rest = query.tempAddress!.substring(marker.lastIndex);
+          const koaza = query.tempAddress!.substring(0, marker.index);
+          const bearingWord = query.tempAddress!.substring(marker.index, marker.lastIndex);
+          const rest = query.tempAddress!.substring(marker.lastIndex);
 
-        // 方角を省略して探す (DB内に含まれていない可能性)
-        targets.push({
-          target: koaza!.concat(rest),
-          ambiguous: marker.lastIndex - marker.index,
-          unused: [bearingWord!.toOriginalString()],
-          useKoaza: true,
-        });
+          // 方角を省略して探す (DB内に含まれていない可能性)
+          targets.push({
+            target: koaza!.concat(rest),
+            ambiguous: marker.lastIndex - marker.index,
+            unused: [bearingWord!.toOriginalString()],
+            useKoaza: true,
+          });
 
-        // 通り名 + 方角
-        // targets.push({
-        //   target: koaza?.concat(bearingWord),
-        //   ambiguous: marker.lastIndex
-        // });
+          // 通り名 + 方角
+          // targets.push({
+          //   target: koaza?.concat(bearingWord),
+          //   ambiguous: marker.lastIndex
+          // });
 
-        // 大字 + 方角で探す
-        // targets.push({
-        //   target: bearingWord?.concat(rest),
-        //   ambiguous: marker.lastIndex
-        // });
+          // 大字 + 方角で探す
+          // targets.push({
+          //   target: bearingWord?.concat(rest),
+          //   ambiguous: marker.lastIndex
+          // });
 
-        // 大字だけで探す
-        targets.push({
-          target: rest,
-          ambiguous: marker.lastIndex,
-          unused: [
-            koaza!.toOriginalString(),
-            bearingWord!.toOriginalString(),
-          ],
-          useKoaza: false,
-        });
+          // 大字だけで探す
+          targets.push({
+            target: rest,
+            ambiguous: marker.lastIndex,
+            unused: [
+              koaza!.toOriginalString(),
+              bearingWord!.toOriginalString(),
+            ],
+            useKoaza: false,
+          });
         });
       }
 

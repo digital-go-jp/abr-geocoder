@@ -25,7 +25,7 @@ import { FileGroupKey } from "@domain/types/download/file-group";
 import { parseDownloadUrl } from "./parse-package-id";
 
 export const createPackageTree = (
-  packageIDs: string[]
+  packageIDs: string[],
 ): Map<string, Map<FileGroupKey, string>> => {
   // 各lgCodeが何のdatasetType を持っているのかをツリー構造にする
   // lgcode -> dataset -> URL
