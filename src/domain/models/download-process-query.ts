@@ -56,6 +56,7 @@ export type DownloadRequest = {
   dataset: FileGroupKey;
   useCache?: boolean;
   packageId: string;
+  lastModified?: string;
 };
 export type CommandRequest<T> = {
   kind: 'command';

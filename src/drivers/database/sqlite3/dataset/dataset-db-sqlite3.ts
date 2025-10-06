@@ -116,7 +116,7 @@ export class DatasetDbSqlite3
     while (true) {
       try {
         return await new Promise((resolve: (_?: void) => void) => {
-          this.driver.transaction(() => {
+          this.transactionWithRetry(() => {
             const url_key = TableKeyProvider.getUrlHashKey(urlCache.url);
             this.prepare(sql).run({
               url_key,
@@ -127,12 +127,17 @@ export class DatasetDbSqlite3
               crc32: urlCache.crc32,
             });
             resolve();
-          })();
+          });
         });
       } catch (e: unknown) {
         if (e && typeof e === 'object' && 'code' in e && e.code === 'SQLITE_BUSY') {
           await timers.setTimeout(100);
         } else {
+          console.error('[ERROR] dataset DB upsertUrlCache failed:', {
+            error: e,
+            message: e instanceof Error ? e.message : JSON.stringify(e),
+            url: urlCache.url,
+          });
           throw e;
         }
       }

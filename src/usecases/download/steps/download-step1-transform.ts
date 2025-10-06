@@ -24,7 +24,6 @@
 import { DownloadProcessError, DownloadProcessSkip, DownloadProcessStatus, DownloadQuery1, DownloadQuery2 } from '@domain/models/download-process-query';
 import crc32 from '@domain/services/crc32-lib';
 import { ThreadJob, ThreadJobResult } from '@domain/services/thread/thread-task';
-import { CkanPackageResponse, CkanResource } from '@domain/types/download/ckan-package';
 import { IDatasetDb } from '@drivers/database/dataset-db';
 import { HttpRequestAdapter } from '@interface/http-request-adapter';
 import { StatusCodes } from 'http-status-codes';
@@ -39,7 +38,6 @@ export class DownloadStep1Transform extends Duplex {
     client: HttpRequestAdapter;
     datasetDb: IDatasetDb;
     downloadDir: string;
-    fileShowUrl: URL;
     highWaterMark: number;
   }>) {
     super({
@@ -71,85 +69,15 @@ export class DownloadStep1Transform extends Duplex {
     job: ThreadJob<DownloadQuery1>,
   }): Promise<ThreadJobResult<DownloadProcessError | DownloadQuery2 | DownloadProcessSkip>> {
 
-    // リソースのURL
-    const urlStr = [
-      this.params.fileShowUrl.origin,
-      this.params.fileShowUrl.pathname,
-      `?id=${job.data.packageId}`,
-    ].join('');
-    const packageInfoUrl = new URL(urlStr);
-    
-    // メタデータを取得
-    const packageResponse = await this.params.client.getJSON({
-      url: packageInfoUrl,
-    });
-
-    // リソースが利用できない (404 Not found)
-    if (packageResponse.header.statusCode !== StatusCodes.OK) {
-      return {
-        kind: 'result',
-        taskId: job.taskId,
-        data: {
-          lgCode: job.data.lgCode,
-          status: DownloadProcessStatus.ERROR,
-          dataset: job.data.dataset,
-          message: `status: ${packageResponse.header.statusCode}`,
-        },
-      } as ThreadJobResult<DownloadProcessError>;
-    }
-
-    // CSVファイルのURLを抽出する
-    const packageInfo = packageResponse.body as unknown as CkanPackageResponse<string>;
-    let csvMeta: CkanResource<URL> | undefined;
-    if (packageInfo && packageInfo.result) {
-      csvMeta = packageInfo.result.resources
-        .map(x => {
-          return Object.assign(x, {
-            url: new URL(x.url),
-          });
-        })
-        .find(x =>
-          x.format.toLowerCase().startsWith('csv'),
-        );
-    }
-
-    // CSVがない (予防的なコード)
-    if (!csvMeta) {
-      return {
-        taskId: job.taskId,
-        kind: 'result',
-        data: {
-          dataset: job.data.dataset,
-          message: 'can not find the csv resource',
-          status: DownloadProcessStatus.ERROR,
-        },
-      } as ThreadJobResult<DownloadProcessError>;
-    }
-    
-    // URLに対するハッシュ文字列の生成
-    const headers: {
-      'if-none-match': string | undefined;
-    } = {
-      'if-none-match': '',
-    };
+    // packageIdが直接CSV.ZIPのURL
+    const csvUrl = new URL(job.data.packageId);
 
     // DBからキャッシュ情報の読込
-    const cache = await this.params.datasetDb.readUrlCache(csvMeta.url);
+    const cache = await this.params.datasetDb.readUrlCache(csvUrl);
 
-    // キャッシュを利用する場合、利用できるか確認する
-    if (job.data.useCache && cache) {
-      // DBからキャッシュ情報の読込
-      headers['if-none-match'] = cache.etag;
-    }
-
-    // URIに対するHEADリクエスト
-    const headResponse = await this.params.client.headRequest({
-      url: csvMeta.url,
-      headers,
-    });
-
-    if (job.data.useCache && cache) {
-      if (headResponse.header.statusCode === StatusCodes.NOT_MODIFIED) {
+    // キャッシュがあり、最終更新日が一致する場合はスキップ（HEADリクエスト不要）
+    if (job.data.useCache && cache && job.data.lastModified) {
+      if (cache.last_modified === job.data.lastModified) {
         return {
           taskId: job.taskId,
           kind: 'result',
@@ -159,28 +87,16 @@ export class DownloadStep1Transform extends Duplex {
             message: 'skipped',
           },
         } as ThreadJobResult<DownloadProcessSkip>;
-      };
-    }
-
-    if (headResponse.header.statusCode !== StatusCodes.OK) {
-      return {
-        taskId: job.taskId,
-        kind: 'result',
-        data: {
-          dataset: job.data.dataset,
-          status: DownloadProcessStatus.ERROR,
-          message: `status: ${packageResponse.header.statusCode}`,
-        },
-      } as ThreadJobResult<DownloadProcessError>;
+      }
     }
 
     // サーバーからリソース(zipファイル)をダウンロード
-    const zipFilename = path.basename(csvMeta.url.toString());
+    const zipFilename = path.basename(csvUrl.toString());
     const zipFilePath = path.join(this.params.downloadDir, zipFilename);
 
     // リソースをダウンロードする
     const src = await this.params.client.getReadableStream({
-      url: csvMeta.url,
+      url: csvUrl,
     });
 
     // ファイルに保存する
@@ -191,6 +107,7 @@ export class DownloadStep1Transform extends Duplex {
       dst,
     );
     const fileCrc32 = await crc32.fromFile(zipFilePath)!;
+    const fileStats = await fs.promises.stat(zipFilePath);
 
     return {
       taskId: job.taskId,
@@ -199,10 +116,10 @@ export class DownloadStep1Transform extends Duplex {
         zipFilePath,
         status: DownloadProcessStatus.UNSET,
         urlCache: {
-          url: csvMeta.url,
-          etag: headResponse.header.eTag,
-          last_modified: headResponse.header.lastModified,
-          content_length: headResponse.header.contentLength,
+          url: csvUrl,
+          etag: '',
+          last_modified: job.data.lastModified || fileStats.mtime.toUTCString(),
+          content_length: fileStats.size,
           crc32: fileCrc32,
         },
       },

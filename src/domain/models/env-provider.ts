@@ -31,7 +31,7 @@ export class EnvProvider {
     return process.env.NODE_ENV?.startsWith('test') || false;
   })();
   
-  public readonly hostname: string = 'catalog.registries.digital.go.jp';
+  public readonly hostname: string = 'dataset.address-br.digital.go.jp';
   public readonly userAgent: string = 'curl/7.81.0';
   public readonly nodeRuntimeVersion: number[];
 

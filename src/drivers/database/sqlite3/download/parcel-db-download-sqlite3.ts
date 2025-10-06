@@ -130,24 +130,42 @@ export class ParcelDbDownloadSqlite3 extends Sqlite3Wrapper implements IParcelDb
     upsert: Statement;
     rows: Record<string, string | number>[];
   }>) {
-    return await new Promise((resolve: (_?: void) => void) => {
-      this.driver.transaction((rows: Record<string, string | number>[]) => {
-        const lg_code = rows[0][DataField.LG_CODE.dbColumn] as string;
+    return await new Promise((resolve: (_?: void) => void, reject) => {
+      try {
+        // transactionWithRetryを使用してSQLITE_BUSYを自動再試行
+        this.transactionWithRetry(() => {
+          const lg_code = params.rows[0][DataField.LG_CODE.dbColumn] as string;
 
-        for (const row of rows) {
-          row.town_key = TableKeyProvider.getTownKey({
-            lg_code,
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
-          });
-          row.parcel_key = TableKeyProvider.getParcelKey({
-            lg_code: row[DataField.LG_CODE.dbColumn].toString().toString(),
-            machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
-            prc_id: row[DataField.PRC_ID.dbColumn].toString(),
-          });
-          params.upsert.run(row);
-        }
+          for (const row of params.rows) {
+            row.town_key = TableKeyProvider.getTownKey({
+              lg_code,
+              machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
+            });
+            row.parcel_key = TableKeyProvider.getParcelKey({
+              lg_code: row[DataField.LG_CODE.dbColumn].toString().toString(),
+              machiaza_id: row[DataField.MACHIAZA_ID.dbColumn].toString(),
+              prc_id: row[DataField.PRC_ID.dbColumn].toString(),
+            });
+            try {
+              params.upsert.run(row);
+            } catch (e: unknown) {
+              console.error('[ERROR] parcel upsert.run failed:', {
+                error: e,
+                message: e instanceof Error ? e.message : 'Unknown',
+                row: row,
+              });
+              throw e;
+            }
+          }
+        });
         resolve();
-      })(params.rows);
+      } catch (e: unknown) {
+        console.error('[ERROR] parcel transaction failed:', {
+          error: e,
+          message: e instanceof Error ? e.message : 'Unknown',
+        });
+        reject(e);
+      }
     });
   }
 }

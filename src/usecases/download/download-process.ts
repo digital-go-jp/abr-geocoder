@@ -186,7 +186,11 @@ export class Downloader {
       saveResourceInfoTransform,
       dst,
     ).catch((e: unknown) => {
-      console.error(e);
+      console.error('[ERROR] Download pipeline error:', {
+        error: e,
+        message: e instanceof Error ? e.message : JSON.stringify(e),
+        stack: e instanceof Error ? e.stack : undefined,
+      });
     });
     await downloadTransform.close();
     await csvParseTransform.close();
@@ -204,20 +208,55 @@ export class Downloader {
       });
     }
     
-    const packageListResult = response.body as unknown as {
-      success: boolean;
-      result: string[];
+    // 新しいDCAT-US形式のレスポンスをパース
+    const dcatResponse = response.body as unknown as {
+      dataset?: Array<{
+        description?: string;
+        distribution?: Array<{
+          accessURL?: string;
+        }>;
+      }>;
     };
-    if (!packageListResult.success) {
+
+    if (!dcatResponse.dataset) {
       throw new AbrgError({
         messageId: AbrgMessage.CANNOT_GET_PACKAGE_LIST,
         level: AbrgErrorLevel.ERROR,
       });
     }
 
+    // すべてのCSV zipファイルのURLと最終更新日を抽出
+    const downloadUrls: string[] = [];
+    const urlToLastModified = new Map<string, string>();
+
+    for (const dataset of dcatResponse.dataset) {
+      if (!dataset.distribution) {
+        continue;
+      }
+
+      // descriptionから最終更新日を抽出: "最終更新日: 2025-09-30T15:41:43.000Z"
+      let lastModified = '';
+      if (dataset.description) {
+        const match = dataset.description.match(/最終更新日:\s*(.+)/);
+        if (match) {
+          lastModified = match[1];
+        }
+      }
+
+      for (const dist of dataset.distribution) {
+        if (dist.accessURL && dist.accessURL.includes('.csv.zip')) {
+          downloadUrls.push(dist.accessURL);
+          if (lastModified) {
+            urlToLastModified.set(dist.accessURL, lastModified);
+          }
+        }
+      }
+    }
+
     // 各lgCodeが何のdatasetType を持っているのかをツリー構造にする
-    // lgcode -> dataset -> packageId
-    const lgCodePackages = createPackageTree(packageListResult.result);
+    // lgcode -> dataset -> packageId(URL)
+    const lgCodePackages = createPackageTree(downloadUrls);
+    
     const results: DownloadRequest[] = [];
     const targetPrefixes = new Set<string>();
     const cityPrefixes = new Set<string>();
@@ -244,6 +283,7 @@ export class Downloader {
           packageId,
           useCache: true,
           lgCode,
+          lastModified: urlToLastModified.get(packageId),
         } as DownloadRequest);
       }
 
@@ -252,19 +292,25 @@ export class Downloader {
 
     for (const [lgCode, packages] of lgCodePackages.entries()) {
       const prefix = lgCode.substring(0, 2);
+      const isPrefLevel = lgCode.endsWith('....');
       // 都道府県LgCodeで、市町村が必要な場合、追加する
-      if (isPrefLgCode(lgCode)) {
+      if (isPrefLevel) {
         if (downloadTargetLgCodes.size > 0 && !cityPrefixes.has(prefix)) {
           continue;
         }
-        for (const dataset of ['city', 'city_pos'] as FileGroupKey[]) {
-          results.push({
-            kind: 'download',
-            dataset,
-            packageId: lgCodePackages.get(lgCode)!.get(dataset)!,
-            useCache: true,
-            lgCode,
-          });
+        // city, city_pos に加えて、都道府県レベルのrsdtdsp系ファイルも含める
+        for (const dataset of ['city', 'city_pos', 'rsdtdsp_blk', 'rsdtdsp_blk_pos', 'rsdtdsp_rsdt', 'rsdtdsp_rsdt_pos'] as FileGroupKey[]) {
+          const packageId = lgCodePackages.get(lgCode)?.get(dataset);
+          if (packageId) {
+            results.push({
+              kind: 'download',
+              dataset,
+              packageId,
+              useCache: true,
+              lgCode,
+              lastModified: urlToLastModified.get(packageId),
+            });
+          }
         }
         continue;
       }
@@ -283,19 +329,24 @@ export class Downloader {
           packageId,
           useCache: true,
           lgCode,
+          lastModified: urlToLastModified.get(packageId),
         } as DownloadRequest);
       }
     }
 
     // 都道府県全国マスターだけは必ずダウンロード
     for (const dataset of ['pref', 'pref_pos'] as FileGroupKey[]) {
-      results.push({
-        kind: 'download',
-        dataset,
-        packageId: lgCodePackages.get(PrefLgCode.ALL)!.get(dataset)!,
-        useCache: true,
-        lgCode: '000000',
-      });
+      const packageId = lgCodePackages.get(PrefLgCode.ALL)?.get(dataset);
+      if (packageId) {
+        results.push({
+          kind: 'download',
+          dataset,
+          packageId,
+          useCache: true,
+          lgCode: '000000',
+          lastModified: urlToLastModified.get(packageId),
+        });
+      }
     }
 
     // ランダムに並び替えることで、lgCodeが分散され、DB書き込みのときに衝突を起こしにくくなる

@@ -67,7 +67,7 @@ export class GeocodeDbController {
           readonly: true,
         }));
       }
-      
+
       default:
         throw new AbrgError({
           messageId: AbrgMessage.NOT_IMPLEMENTED,

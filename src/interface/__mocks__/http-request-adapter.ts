@@ -105,7 +105,7 @@ module.exports = {
     return {
       getJSON: (params: GetJsonOptions) => {
         switch (params.url.toString()) {
-          case 'http://localhost/rc/api/3/action/package_list':
+          case 'http://localhost/api/feed/dcat-us/1.1.json':
             return Promise.resolve(PackageListResponse);
 
           case 'http://localhost/404_url':
