@@ -5,9 +5,13 @@
     "node_modules/@jest"
   ],
   "compilerOptions": {
-    "types": [ "node", "jest" ],
-    "moduleResolution": "node",
-    "lib": ["ES2023"]
+    "types": [
+      "node",
+      "jest"
+    ],
+    "lib": [
+      "ES2023"
+    ]
   },
   "include": [
     "src/**/*.ts",

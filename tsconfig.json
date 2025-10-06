@@ -18,15 +18,27 @@
       "node"
     ],
     "resolveJsonModule": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "paths": {
-      "@domain/*": ["src/domain/*"],
-      "@interface/*": ["src/interface/*"],
-      "@drivers/*": ["src/drivers/*"],
-      "@usecases/*": ["src/usecases/*"],
-      "@config/*": ["src/config/*"],
-      "@mock/*": ["__mocks__/*"]
+      "@domain/*": [
+        "src/domain/*"
+      ],
+      "@interface/*": [
+        "src/interface/*"
+      ],
+      "@drivers/*": [
+        "src/drivers/*"
+      ],
+      "@usecases/*": [
+        "src/usecases/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@mock/*": [
+        "__mocks__/*"
+      ]
     },
     "removeComments": true,
     "moduleDetection": "force",
@@ -47,7 +59,9 @@
       "typescript-transform-paths/register"
     ]
   },
-  "include": ["src/**/*.ts" ],
+  "include": [
+    "src/**/*.ts"
+  ],
   "exclude": [
     "node_modules",
     "**/__skips__/",
