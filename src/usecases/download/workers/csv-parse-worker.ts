@@ -63,6 +63,7 @@ export const parseOnWorkerThread = async (params: Required<{
     databaseCtrl,
     semaphore,
     keepFiles: container.keepFiles,
+    lgCodeFilter: new Set(params.initData.lgCodeFilter),
   });
 
   const reader = new Readable({
@@ -88,6 +89,20 @@ export const parseOnWorkerThread = async (params: Required<{
     },
   });
   
+  // 各ステップにエラーハンドラを追加
+  step2.on('error', (err: unknown) => {
+    console.error('[ERROR] step2 (unzip) error:', err);
+  });
+  step3.on('error', (err: unknown) => {
+    console.error('[ERROR] step3 (csv parse) error:', err);
+  });
+  step4.on('error', (err: unknown) => {
+    console.error('[ERROR] step4 (database load) error:', err);
+  });
+  dst.on('error', (err: unknown) => {
+    console.error('[ERROR] dst (result writer) error:', err);
+  });
+
   reader
     .pipe(new Transform({
       objectMode: true,
@@ -96,7 +111,7 @@ export const parseOnWorkerThread = async (params: Required<{
 
         // エラーになったQuery or 変更がないZIPファイルはスキップする
         if (
-          job.data.status === DownloadProcessStatus.ERROR || 
+          job.data.status === DownloadProcessStatus.ERROR ||
           job.data.status === DownloadProcessStatus.SKIP
         ) {
           returnTheResult({

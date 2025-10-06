@@ -57,14 +57,9 @@ export class DownloadDiContainer extends CommonDiContainer {
     return this.params.keepFiles || false;
   }
 
-  // データセットファイル個別の情報を取得するためのエントリーポイント
-  getFileShowUrl() {
-    return new URL(`https://${this.env.hostname}/rc/api/3/action/package_show`);
-  }
-
   // データセットの一覧を取得するためのエントリーポイント
   getPackageListUrl() {
-    return new URL(`https://${this.env.hostname}/rc/api/3/action/package_list`);
+    return new URL(`https://${this.env.hostname}/api/feed/dcat-us/1.1.json`);
   }
 
   // JSON形式に変換する

@@ -22,15 +22,17 @@
  * SOFTWARE.
  */
 import { FileGroupKey } from "@domain/types/download/file-group";
-import { parsePackageId } from "./parse-package-id";
+import { parseDownloadUrl } from "./parse-package-id";
 
-export const createPackageTree = (packageIDs: string[]): Map<string, Map<FileGroupKey, string>> => {
-
+export const createPackageTree = (
+  packageIDs: string[]
+): Map<string, Map<FileGroupKey, string>> => {
   // 各lgCodeが何のdatasetType を持っているのかをツリー構造にする
-  // lgcode -> dataset -> packageId
+  // lgcode -> dataset -> URL
   const lgCodePackages = new Map<string, Map<FileGroupKey, string>>();
-  packageIDs.forEach(packageId => {
-    const packageInfo = parsePackageId(packageId);
+  packageIDs.forEach((packageId) => {
+    const packageInfo = parseDownloadUrl(packageId);
+
     if (!packageInfo) {
       return;
     }

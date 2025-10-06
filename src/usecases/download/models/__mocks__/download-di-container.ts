@@ -50,8 +50,7 @@ const DownloadDiContainer = jest.fn((params: DownloadDiContainerParams) => {
     env,
     database,
     downloadDir,
-    getFileShowUrl: () => 'http://localhost/rc/api/3/action/package_show',
-    getPackageListUrl: () => 'http://localhost/rc/api/3/action/package_list',
+    getPackageListUrl: () => 'http://localhost/api/feed/dcat-us/1.1.json',
     toJSON,
   };
 });

@@ -49,6 +49,14 @@ export class Sqlite3Wrapper {
       readonly: params.readonly,
     });
 
+    // SQLiteのbusy_timeoutを設定（複数スレッドからのアクセス時のロック待ち時間）
+    this.driver.pragma('busy_timeout = 10000'); // 10秒待機してからSQLITE_BUSYエラーを返す
+
+    // WALモードを先に設定（読み込み専用でない場合）
+    if (!params.readonly) {
+      this.driver.pragma('journal_mode = WAL');
+    }
+
     if (params.readonly) {
       // 読み込み専用にしてパフォーマンスの向上を図る
 
@@ -94,8 +102,6 @@ export class Sqlite3Wrapper {
        * 読み込み専用で使用する場合も設定しておくと、少しパフォーマンスが向上する可能性があります。
        */
       this.driver.pragma('read_uncommitted = TRUE');
-    } else {
-      this.driver.pragma('journal_mode = WAL');
     }
   }
 
@@ -107,5 +113,40 @@ export class Sqlite3Wrapper {
     const statement = this.driver.prepare<P, R>(sql);
     this.cache.set(key, statement);
     return statement;
+  }
+
+  /**
+   * SQLITE_BUSYエラーを自動的に再試行するtransactionラッパー
+   * 最大10回、指数バックオフで再試行
+   */
+  transactionWithRetry<T>(fn: () => T): T {
+    const maxRetries = 10;
+    const baseDelay = 100; // 初期待機時間（ミリ秒）
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return this.driver.transaction(fn)();
+      } catch (e: unknown) {
+        const isBusy = e && typeof e === 'object' && 'code' in e && e.code === 'SQLITE_BUSY';
+
+        if (isBusy && attempt < maxRetries) {
+          // 指数バックオフ: 100ms, 200ms, 400ms, 800ms, ...
+          const delay = baseDelay * Math.pow(2, attempt);
+          console.error(`[WARN] SQLITE_BUSY on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${delay}ms...`);
+
+          // 同期的に待機
+          const start = Date.now();
+          while (Date.now() - start < delay) {
+            // Busy wait
+          }
+          continue;
+        }
+
+        // 最大再試行回数に達したか、SQLITE_BUSY以外のエラー
+        throw e;
+      }
+    }
+
+    throw new Error('Transaction failed after max retries');
   }
 }
