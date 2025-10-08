@@ -93,42 +93,44 @@ export class KyotoStreetTransform extends Transform {
       const markers = target?.
         matchAll(RegExpEx.create('(?:(?:上る|下る|東入|西入)|(?:角[東西南北])|(?:[東西南北]側))', 'g'));
 
-      markers?.forEach(marker => {
-        const koaza = query.tempAddress!.substring(0, marker.index);
-        const bearingWord = query.tempAddress!.substring(marker.index, marker.lastIndex);
-        const rest = query.tempAddress!.substring(marker.lastIndex);
+      if (markers) {
+        markers.forEach(marker => {
+          const koaza = query.tempAddress!.substring(0, marker.index);
+          const bearingWord = query.tempAddress!.substring(marker.index, marker.lastIndex);
+          const rest = query.tempAddress!.substring(marker.lastIndex);
 
-        // 方角を省略して探す (DB内に含まれていない可能性)
-        targets.push({
-          target: koaza!.concat(rest),
-          ambiguous: marker.lastIndex - marker.index,
-          unused: [bearingWord!.toOriginalString()],
-          useKoaza: true,
+          // 方角を省略して探す (DB内に含まれていない可能性)
+          targets.push({
+            target: koaza!.concat(rest),
+            ambiguous: marker.lastIndex - marker.index,
+            unused: [bearingWord!.toOriginalString()],
+            useKoaza: true,
+          });
+
+          // 通り名 + 方角
+          // targets.push({
+          //   target: koaza?.concat(bearingWord),
+          //   ambiguous: marker.lastIndex
+          // });
+
+          // 大字 + 方角で探す
+          // targets.push({
+          //   target: bearingWord?.concat(rest),
+          //   ambiguous: marker.lastIndex
+          // });
+
+          // 大字だけで探す
+          targets.push({
+            target: rest,
+            ambiguous: marker.lastIndex,
+            unused: [
+              koaza!.toOriginalString(),
+              bearingWord!.toOriginalString(),
+            ],
+            useKoaza: false,
+          });
         });
-
-        // 通り名 + 方角
-        // targets.push({
-        //   target: koaza?.concat(bearingWord),
-        //   ambiguous: marker.lastIndex
-        // });
-
-        // 大字 + 方角で探す
-        // targets.push({
-        //   target: bearingWord?.concat(rest),
-        //   ambiguous: marker.lastIndex
-        // });
-
-        // 大字だけで探す
-        targets.push({
-          target: rest,
-          ambiguous: marker.lastIndex,
-          unused: [
-            koaza!.toOriginalString(),
-            bearingWord!.toOriginalString(),
-          ],
-          useKoaza: false,
-        });
-      });
+      }
 
       // ------------------------------------
       // トライ木を使って探索
@@ -146,27 +148,31 @@ export class KyotoStreetTransform extends Transform {
         });
 
         const filteredResult = findResults?.filter(result => {
+          if (!result.info) {
+            return false;
+          }
+
           if (query.match_level === MatchLevel.UNKNOWN) {
             return true;
           }
-  
+
           let matched = true;
 
           // 数字が 〇丁目にヒットしたが、次の文字が DASH でない場合はミスマッチ
-          if (result.info!.oaza_cho.includes('丁目') && 
+          if (result.info.oaza_cho?.includes('丁目') &&
             result.unmatched !== undefined &&
             result.unmatched.char !== DASH) {
             matched = false;
           }
 
           if (matched && query.pref_key) {
-            matched = result.info?.pref_key === query.pref_key;
+            matched = result.info.pref_key === query.pref_key;
           }
           if (matched && query.city_key) {
-            matched = result.info?.city_key === query.city_key;
+            matched = result.info.city_key === query.city_key;
           }
           if (matched && query.oaza_cho) {
-            matched = result.info?.oaza_cho === query.oaza_cho;
+            matched = result.info.oaza_cho === query.oaza_cho;
           }
           return matched;
         });
@@ -176,9 +182,14 @@ export class KyotoStreetTransform extends Transform {
           return;
         }
         filteredResult.forEach(result => {
+          // result.info は filteredResult で保証されている
+          if (!result.info || !result.info.match_level) {
+            return;
+          }
+
           let matchedCnt = query.matchedCnt + result.depth;
           let unmatched = result.unmatched;
-          if (result.info?.oaza_cho.includes('丁目') || result.info?.chome.includes('丁目')) {
+          if (result.info.oaza_cho?.includes('丁目') || result.info.chome?.includes('丁目')) {
             unmatched = trimDashAndSpace(unmatched);
             matchedCnt++;
           }
@@ -186,28 +197,28 @@ export class KyotoStreetTransform extends Transform {
           // 小字(通り名)がヒットした
           const params: Record<string, CharNode | number | string | MatchLevel | undefined> = {
             tempAddress: unmatched,
-            match_level: result.info?.match_level,
-            town_key: result.info!.town_key,
-            city: result.info!.city,
-            pref: result.info!.pref,
-            city_key: result.info!.city_key,
-            pref_key: result.info!.pref_key,
-            rsdt_addr_flg: result.info!.rsdt_addr_flg,
-            original_rsdt_addr_flg: result.info!.rsdt_addr_flg,
-            oaza_cho: result.info!.oaza_cho,
-            chome: result.info!.chome,
-            ward: result.info!.ward,
-            lg_code: result.info!.lg_code,
-            koaza: result.info!.koaza,
-            koaza_aka_code: result.info?.koaza_aka_code,
-            machiaza_id: result.info!.machiaza_id,
+            match_level: result.info.match_level,
+            town_key: result.info.town_key,
+            city: result.info.city,
+            pref: result.info.pref,
+            city_key: result.info.city_key,
+            pref_key: result.info.pref_key,
+            rsdt_addr_flg: result.info.rsdt_addr_flg,
+            original_rsdt_addr_flg: result.info.rsdt_addr_flg,
+            oaza_cho: result.info.oaza_cho,
+            chome: result.info.chome,
+            ward: result.info.ward,
+            lg_code: result.info.lg_code,
+            koaza: result.info.koaza,
+            koaza_aka_code: result.info.koaza_aka_code,
+            machiaza_id: result.info.machiaza_id,
             matchedCnt,
             ambiguousCnt: query.ambiguousCnt + result.ambiguousCnt + search.ambiguous,
           };
-          if (result.info!.rep_lat && result.info!.rep_lon) {
-            params.coordinate_level = result.info?.coordinate_level;
-            params.rep_lat = result.info!.rep_lat;
-            params.rep_lon = result.info!.rep_lon;
+          if (result.info.rep_lat && result.info.rep_lon) {
+            params.coordinate_level = result.info.coordinate_level;
+            params.rep_lat = result.info.rep_lat;
+            params.rep_lon = result.info.rep_lon;
           }
           // if (!search.useKoaza) {
           //   params.match_level = MatchLevel.MACHIAZA;

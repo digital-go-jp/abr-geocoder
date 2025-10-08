@@ -56,8 +56,57 @@ export type PackageInfo = {
   dataset: FileGroupKey;
   packageId: string;
 };
+export const parseDownloadUrl = (url: string): PackageInfo | undefined => {
+  // 新しいAPI形式: https://data.address-br.digital.go.jp/mt_{type}/{scope}/mt_{type}_{scope}{lgcode}.csv.zip
+  // または: https://data.address-br.digital.go.jp/mt_{type}/mt_{type}_all.csv.zip
+
+  const match = url.match(/mt_([^/]+)\/((?:pref|city)\/)?mt_\1_(pref|city|all)(\d+)?\.csv\.zip$/);
+  if (!match) {
+    return;
+  }
+
+  const datasetTypeMap: Record<string, FileGroupKey> = {
+    'pref': 'pref',
+    'pref_pos': 'pref_pos',
+    'city': 'city',
+    'city_pos': 'city_pos',
+    'town': 'town',
+    'town_pos': 'town_pos',
+    'rsdtdsp_blk': 'rsdtdsp_blk',
+    'rsdtdsp_blk_pos': 'rsdtdsp_blk_pos',
+    'rsdtdsp_rsdt': 'rsdtdsp_rsdt',
+    'rsdtdsp_rsdt_pos': 'rsdtdsp_rsdt_pos',
+    'parcel': 'parcel',
+    'parcel_pos': 'parcel_pos',
+  };
+
+  const typePrefix = match[1]; // e.g., 'town', 'city_pos'
+  const scope = match[3]; // 'pref', 'city', or 'all'
+  const lgCodeSuffix = match[4]; // e.g., '40', '403849'
+
+  const dataset = datasetTypeMap[typePrefix];
+  if (!dataset) {
+    return;
+  }
+
+  let lgCode: string;
+  if (scope === 'all') {
+    lgCode = '000000';
+  } else if (scope === 'pref') {
+    lgCode = `${lgCodeSuffix.padStart(2, '0')}....`;
+  } else { // city
+    lgCode = lgCodeSuffix;
+  }
+
+  return {
+    lgCode,
+    dataset,
+    packageId: url,
+  };
+};
+
 export const parsePackageId = (packageId: string): PackageInfo | undefined => {
-  
+
   const elements = packageId.split(RegExpEx.create('[_\\-]'));
   if (
   // パターンマッチしないパッケージID
@@ -66,7 +115,7 @@ export const parsePackageId = (packageId: string): PackageInfo | undefined => {
         elements[0] !== 'ba' ||
         elements[1] !== 'o1' ||
         elements[3] !== 'g2' ||
-      
+
         // 対象外のパッケージタイプ
         !datasetTypes.has(elements[4])
   ) {

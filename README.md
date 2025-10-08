@@ -3,6 +3,11 @@
 
 - [日本語版](./README.ja.md)
 
+## 🚨 Upgrade to version 2.2.1 from v2.2
+
+- Updated to use the new DCAT format API for downloading datasets.
+- **Known Issue**: The `abrg update-check` command is not yet compatible with the new API format and will not work properly. Since we are planning to upgrade to Version 3, support in Version 2 is undecided.
+
 ## 🚨 Upgrade to version 2.2 from v2.1
 
 - The `abrg serve` command is splitted into `abrg serve start` and `abrg serve stop` commands.

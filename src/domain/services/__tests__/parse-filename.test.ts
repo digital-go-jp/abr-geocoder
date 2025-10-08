@@ -92,7 +92,7 @@ describe('parseFilename', () => {
     expect(res).toEqual({
       type: "rsdtdsp_blk",
       type2: "pref",
-      lgCode : "01",
+      lgCode : "01....",
       prefLgCode: "010006",
       path: "foo/bar/mt_rsdtdsp_blk_pref01.zip",
       filename: "mt_rsdtdsp_blk_pref01.zip",
@@ -105,7 +105,7 @@ describe('parseFilename', () => {
     expect(res).toEqual({
       type: "pref",
       type2: "pref",
-      lgCode : "10",
+      lgCode : "10....",
       prefLgCode: "100005",
       path: "mt_pref_pref10.zip",
       filename: "mt_pref_pref10.zip",

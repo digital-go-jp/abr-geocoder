@@ -82,10 +82,17 @@ export const parseFilename = (params: {
     }
   })(fileMatch[2]);
 
-  const lgCode = fileMatch[2].replaceAll(RegExpEx.create('[^0-9]+', 'g'), '');
-
   const type2 = fileMatch[2]
     .replaceAll(RegExpEx.create('[0-9]+', 'g'), '') as FileGroup2Key;
+
+  const lgCode = (() => {
+    const numericPart = fileMatch[2].replaceAll(RegExpEx.create('[^0-9]+', 'g'), '');
+    // pref{NN}形式の場合は{NN}....にする
+    if (type2 === 'pref') {
+      return numericPart.padStart(2, '0') + '....';
+    }
+    return numericPart;
+  })();
 
   if (!prefLgCode) {
     return null;

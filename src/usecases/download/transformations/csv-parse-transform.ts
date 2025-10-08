@@ -151,10 +151,20 @@ export class CsvParseTransform extends Duplex {
       this.closer();
     } catch (e: unknown) {
 
-      console.error(e);
-      this.abortCtrl.abort(new Event(`Can not parse the file: ${[downloadResult.zipFilePath]}`));
-      
-      this.close();
+      console.error('[ERROR] CSV parse error:', {
+        zipFile: downloadResult.zipFilePath,
+        error: e,
+        message: e instanceof Error ? e.message : 'Unknown error',
+        stack: e instanceof Error ? e.stack : undefined,
+      });
+
+      // エラーを記録するが、処理は続行（他のファイルの処理をブロックしない）
+      console.error('[WARN] Skipping file due to parse error, continuing with next files...');
+
+      this.runningTasks--;
+      this.closer();
+      // this.abortCtrl.abort を呼ばないことで、処理を続行
+      // this.close(); も呼ばない
     };
   }
 

@@ -11,66 +11,54 @@ const PackageListResponse = {
     contentRange: 'bytes 200-1000/67589',
   },
   body: {
-    success: true,
-    result: [
-      "ba000001",
-      "ba000002",
-      "ba-o1-000000_g2-000001",
-      "ba-o1-000000_g2-000002",
-      "ba-o1-000000_g2-000003",
-      "ba-o1-000000_g2-000009",
-      "ba-o1-000000_g2-000012",
-      "ba-o1-000000_g2-000013",
-      "ba-o1-000000_g2-000026",
-      "ba-o1-130001_g2-000008",
-      "ba-o1-130001_g2-000009",
-      "ba-o1-130001_g2-000013",
-      "ba-o1-131016_g2-000003",
-      "ba-o1-131016_g2-000004",
-      "ba-o1-131016_g2-000005",
-      "ba-o1-131016_g2-000006",
-      "ba-o1-131016_g2-000007",
-      "ba-o1-131016_g2-000008",
-      "ba-o1-131016_g2-000009",
-      "ba-o1-131016_g2-000010",
-      "ba-o1-131016_g2-000011",
-      "ba-o1-131024_g2-000003",
-      "ba-o1-131024_g2-000004",
-      "ba-o1-260002_g2-000002",
-      "ba-o1-260002_g2-000003",
-      "ba-o1-260002_g2-000004",
-      "ba-o1-260002_g2-000005",
-      "ba-o1-260002_g2-000006",
-      "ba-o1-260002_g2-000007",
-      "ba-o1-260002_g2-000008",
-      "ba-o1-260002_g2-000009",
-      "ba-o1-260002_g2-000013",
-      "ba-o1-262013_g2-000003",
-      "ba-o1-262013_g2-000004",
-      "ba-o1-262013_g2-000006",
-      "ba-o1-262013_g2-000007",
-      "ba-o1-262013_g2-000009",
-      "ba-o1-262013_g2-000010",
-      "ba-o1-262013_g2-000011",
-      "ba-o1-262021_g2-000003",
-      "ba-o1-262021_g2-000004",
-      "ba-o1-262021_g2-000006",
-      "ba-o1-262021_g2-000007",
-      "ba-o1-262021_g2-000009",
-      "ba-o1-262021_g2-000010",
-      "ba-o1-262021_g2-000011",
-      "ba-o1-262030_g2-000003",
-      "ba-o1-262030_g2-000004",
-      "ba-o1-262030_g2-000006",
-      "ba-o1-262030_g2-000007",
-      "ba-o1-262030_g2-000009",
-      "ba-o1-262030_g2-000010",
-      "ba-o1-262030_g2-000011",
-      "cn000001",
-      "ed000001",
-      "ed000030",
-      "ed000040",
-      "ed000080",
+    dataset: [
+      // 全国データ (000000)
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_pref/mt_pref_all.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_pref_pos/mt_pref_pos_all.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_city/mt_city_all.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_city_pos/mt_city_pos_all.csv.zip" }] },
+
+      // 東京都データ (13....)
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_rsdt_pos/pref/mt_rsdtdsp_rsdt_pos_pref13.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_city_pos/pref/mt_city_pos_pref13.csv.zip" }] },
+
+      // 東京都千代田区 (131016)
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town/city/mt_town_city131016.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town_pos/city/mt_town_pos_city131016.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_blk/city/mt_rsdtdsp_blk_city131016.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_blk_pos/city/mt_rsdtdsp_blk_pos_city131016.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_rsdt/city/mt_rsdtdsp_rsdt_city131016.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_rsdt_pos/city/mt_rsdtdsp_rsdt_pos_city131016.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_parcel/city/mt_parcel_city131016.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_parcel_pos/city/mt_parcel_pos_city131016.csv.zip" }] },
+
+      // 京都府データ (26....)
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_city/pref/mt_city_pref26.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_city_pos/pref/mt_city_pos_pref26.csv.zip" }] },
+
+      // 京都府福知山市 (262013)
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town/city/mt_town_city262013.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town_pos/city/mt_town_pos_city262013.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_blk/city/mt_rsdtdsp_blk_city262013.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_blk_pos/city/mt_rsdtdsp_blk_pos_city262013.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_parcel/city/mt_parcel_city262013.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_parcel_pos/city/mt_parcel_pos_city262013.csv.zip" }] },
+
+      // 京都府舞鶴市 (262021)
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town/city/mt_town_city262021.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town_pos/city/mt_town_pos_city262021.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_blk/city/mt_rsdtdsp_blk_city262021.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_blk_pos/city/mt_rsdtdsp_blk_pos_city262021.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_parcel/city/mt_parcel_city262021.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_parcel_pos/city/mt_parcel_pos_city262021.csv.zip" }] },
+
+      // 京都府綾部市 (262030)
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town/city/mt_town_city262030.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town_pos/city/mt_town_pos_city262030.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_blk/city/mt_rsdtdsp_blk_city262030.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_blk_pos/city/mt_rsdtdsp_blk_pos_city262030.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_parcel/city/mt_parcel_city262030.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_parcel_pos/city/mt_parcel_pos_city262030.csv.zip" }] },
     ],
   },
 };
@@ -92,8 +80,7 @@ const ErrorResponse = {
     contentLength: 100,
   },
   body: {
-    success: false,
-    result: [],
+    dataset: [],
   },
 };
 
@@ -105,7 +92,7 @@ module.exports = {
     return {
       getJSON: (params: GetJsonOptions) => {
         switch (params.url.toString()) {
-          case 'http://localhost/rc/api/3/action/package_list':
+          case 'http://localhost/api/feed/dcat-us/1.1.json':
             return Promise.resolve(PackageListResponse);
 
           case 'http://localhost/404_url':

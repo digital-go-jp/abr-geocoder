@@ -1,10 +1,11 @@
-FROM node:20-slim
+FROM node:20
 
 RUN apt-get update && apt-get install -y \
   locales \
   jq \
   git \
   sqlite3 \
+  curl \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 RUN sed -i -E 's/# (ja_JP.UTF-8)/\1/' /etc/locale.gen \

@@ -129,7 +129,7 @@ export class DownloadTransform extends Duplex {
       } catch (e) {
         console.debug("--------> retry!!!", e);
         console.debug(params);
-        retry--;
+        retry++;
 
         // ディレイを挿入
         await timers.setTimeout(Math.random() * 5000 + 100);

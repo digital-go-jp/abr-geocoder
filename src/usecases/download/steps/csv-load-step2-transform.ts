@@ -34,7 +34,8 @@ import { loadCsvToDatabase } from './load-csv-to-database';
 export type CsvLoadStep2TransformParams = {
   databaseCtrl: DownloadDbController;
   semaphore: SemaphoreManager;
-  keepFiles: boolean;  
+  keepFiles: boolean;
+  lgCodeFilter: Set<string>;
 };
 
 export class CsvLoadStep2Transform extends Duplex {
@@ -56,7 +57,16 @@ export class CsvLoadStep2Transform extends Duplex {
       datasetFile.type === 'town_pos') {
       return 0;
     }
-  
+
+    // 都道府県レベルのrsdtdsp系ファイル（lgCode: '01....'など）は、
+    // 市町村別に分割されるため、複数のDBに書き込まれる可能性がある
+    // そのため、セマフォインデックスは都道府県コードベースで計算
+    if (datasetFile.type.includes('rsdtdsp') && datasetFile.lgCode.endsWith('....')) {
+      // 都道府県コード（最初の2桁）を使用
+      const prefCode = parseInt(datasetFile.lgCode.substring(0, 2));
+      return (prefCode % (this.params.semaphore.size - 1)) + 1;
+    }
+
     return (parseInt(datasetFile.lgCode) % (this.params.semaphore.size - 1)) + 1;
   };
   
@@ -79,6 +89,7 @@ export class CsvLoadStep2Transform extends Duplex {
         await loadCsvToDatabase({
           datasetFile: fileInfo.datasetFile,
           databaseCtrl: this.params.databaseCtrl,
+          lgCodeFilter: this.params.lgCodeFilter,
         });
       } catch (e: unknown) {
         if (e &&
@@ -95,11 +106,16 @@ export class CsvLoadStep2Transform extends Duplex {
           continue;
         }
 
-        // セマフォのロックを解除する
         this.params.semaphore.leave(lockIdx);
-        console.error(e);
-        callback(e as Error);
-        return;
+        console.error('[ERROR] loadCsvToDatabase failed:', {
+          type: fileInfo.datasetFile.type,
+          lgCode: fileInfo.datasetFile.lgCode,
+          csvPath: fileInfo.datasetFile.csvFile?.path,
+          error: e,
+          message: e instanceof Error ? e.message : 'Unknown error',
+          stack: e instanceof Error ? e.stack : undefined,
+        });
+        console.error('[WARN] Skipping file due to error, continuing with next files...');
       }
 
       // セマフォのロックを解除する

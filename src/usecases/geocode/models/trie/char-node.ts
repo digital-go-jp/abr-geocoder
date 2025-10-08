@@ -499,7 +499,8 @@ export class CharNode {
         }
         i++;
       }
-      if (buffer.next) {
+      // 上のWhileでtailが更新されていない時にはスキップする #214
+      if (buffer.next && tail!=buffer) {
         results.push(buffer.next);
         tail = buffer;
         root = root?.next;

@@ -2,6 +2,11 @@
 
 - [English version](./README.md)
 
+## 🚨 Version 2.2 から Version 2.2.1 へのアップグレード
+
+- データセットダウンロード用の新しいDCAT形式APIに対応しました。
+- **既知の問題**: `abrg update-check`コマンドは新しいAPI形式にまだ対応しておらず、正しく動作しません。今後Version3へのアップデートを予定しているため、Version2での対応は未定です。
+
 ## 🚨 Version 2.1 から Version 2.2 へのアップグレード
 
 - `abrg serve`コマンドは、`abrg serve start`と `abrg serve stop`コマンドになりました
