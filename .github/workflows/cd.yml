@@ -84,5 +84,5 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish . --access public
         env:
-          # GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
+          GH_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
           GITHUB_TOKEN: ${{ secrets.G_ACTIONS_TOKEN_FOR_PR }}
