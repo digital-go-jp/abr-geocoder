@@ -34,7 +34,7 @@ export type NDJsonOutputType = {
   result: {
     output: string;
     others: string[];
-    score: number;
+    score: number | undefined;
     match_level: string;
     coordinate_level: string;
     lat: number | null;

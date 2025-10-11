@@ -103,7 +103,7 @@ export class GeocodeResultTransform extends Transform {
       // console.error(query.formatted.score, query.formatted.address);
       // inputの文字列に対して30％以上の割合でマッチしている or
       // 市区町村が判明している
-      const result = (query.formatted.score >= 0.5 ||
+      const result = ((query.formatted.score ?? 0) >= 0.5 ||
         (query.matchedCnt / addressLen) >= 0.3 || 
         query.match_level.num >= MatchLevel.CITY.num);
       if (!result) {
@@ -240,7 +240,8 @@ export class GeocodeResultTransform extends Transform {
     debug.push(`ambiguousCnt: ${ambiguousScore}`);
 
     // 類似度 (1.0になるほど良い)
-    const similarScore = query.formatted.score;
+    // 逆ジオコーディングの場合はundefinedなので0として扱う
+    const similarScore = query.formatted.score ?? 0;
     debug.push(`formatted.score: ${similarScore}`);
 
     // match_level と coordinate_level の差

@@ -132,7 +132,7 @@ export type QueryInput = {
 
 export type FormattedAddres = {
   address: string;
-  score: number;
+  score: number | undefined;
 };
 export type QueryJson = Omit<IQuery, 'tempAddress'> & { tempAddress: string | undefined; };
 
@@ -445,11 +445,14 @@ export class Query implements IQuery {
       .trim();
     
     // 最終的な文字列と一番最初のクエリ文字列の類似度を計算する
+    // 逆ジオコーディングの場合（入力が空文字列）はスコアをundefinedにする
     const originalInput = this.input.data.address.replaceAll(RegExpEx.create('[ 　]+', 'g'), ' ');
-    const score = getLevenshteinDistanceRatio(
-      toHankakuAlphaNum(result),
-      toHankakuAlphaNum(originalInput),
-    );
+    const score = originalInput.length === 0
+      ? undefined
+      : getLevenshteinDistanceRatio(
+          toHankakuAlphaNum(result),
+          toHankakuAlphaNum(originalInput),
+        );
 
     return {
       address: result,

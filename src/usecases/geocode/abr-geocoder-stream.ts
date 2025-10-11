@@ -41,7 +41,7 @@ export class AbrGeocoderStream extends Duplex {
 
   constructor(params: {
     geocoder: AbrGeocoder,
-    fuzzy: string;
+    fuzzy?: string;
     searchTarget?: SearchTarget;
     highWatermark?: number;
   }) {
@@ -117,14 +117,6 @@ export class AbrGeocoderStream extends Duplex {
         this.closer();
         // this.emit(this.kShiftEvent, result);
       });
-    // エラーが発生した
-    // .catch((error: Error | string) => {
-    //   const query = Query.create(input);
-    //   this.emit(this.kShiftEvent, query.copy({
-    //     match_level: MatchLevel.ERROR,
-    //   }));
-    // })
-
   }
 
   // 前のストリームからの書き込みが終了した
@@ -136,5 +128,3 @@ export class AbrGeocoderStream extends Duplex {
     callback();
   }
 }
-
-

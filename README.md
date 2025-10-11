@@ -3,6 +3,11 @@
 
 - [日本語版](./README.ja.md)
 
+## 🚀 What's New in Version 3.0
+
+- `abrg reverse` command now supports reverse geocoding
+- REST API server `/reverse` endpoint now supports reverse geocoding
+
 ## 🚨 Upgrade to version 2.2.1 from v2.2
 
 - Updated to use the new DCAT format API for downloading datasets.
@@ -20,7 +25,7 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 
 ## Features
 
-- Geocoder targeting domestic addresses in Japan.
+- Geocoder and reverse geocoder targeting domestic addresses in Japan.
 - Normalizes address notation according to the [Address Base Registry](https://catalog.registries.digital.go.jp/rc/dataset/) and hierarchy.
 - Supports `residence indication` and `partial number (lot number)`.
 - Uses SQLite, enabling geocoding within the server.
@@ -32,7 +37,10 @@ A geocoder that matches input address strings with the [Address Base Registry](h
 - Usable as a command:
   - Pipeline with standard input/output.
   - Input/output via file.
-- Usable as a REST server.
+  - Reverse geocoding with coordinates
+- Usable as a REST server:
+  - Geocoding: `/geocode`
+  - Reverse geocoding: `/reverse`
 - Usable as a Node.js library:
   - Supports individual requests and streams.
 - Limited support for searches by Kyoto street names.
@@ -291,6 +299,166 @@ $ abrg <inputFile> [<outputFile>] [options]
   | all         | Searches both residential address and parcel number data. The result for the residential address takes precedence.   |
   | residential | Searches only the residential address data.                                                                          |
   | parcel      | Searches only the parcel number data.                                                                                |
+  </details>
+
+## `abrg reverse` command
+
+Matches coordinates (latitude, longitude) with the database and outputs Japanese addresses.
+(Performs reverse geocoding.)
+
+```
+$ abrg reverse <inputFile> [<outputFile>] [options]
+or
+$ abrg reverse --lat <latitude> --lon <longitude> [options]
+```
+
+- `<inputFile>`
+
+  Specifies how to input data into the command.
+
+  - <details>
+    <summary>If a file path is specified</summary>
+    The specified CSV file will be reverse geocoded.
+    The CSV file should be in `lat,lon,description` format.
+
+    Example:
+    ```
+    abrg reverse ./coordinates.csv
+    ```
+
+    coordinates.csv:
+    ```csv
+    lat,lon,description
+    35.676543,139.770203,Around Tokyo Station
+    35.689592,139.701171,Around Shinjuku Station
+    35.658034,139.701636,Around Shibuya Station
+    ```
+    </details>
+
+  - <details>
+    <summary>If "-" is specified</summary>
+    Receives data from standard input.
+
+    Example:
+    ```
+    echo "lat,lon,description
+    35.679107,139.736395,Test location" | abrg reverse -
+    ```
+    </details>
+
+  - <details>
+    <summary>If --lat/--lon options are specified</summary>
+    Directly specify a single coordinate for reverse geocoding.
+
+    Example:
+    ```
+    abrg reverse --lat 35.679107172 --lon 139.736394597
+    ```
+    </details>
+
+
+- `<outputFile>`
+
+  Specifies where to output the processing results. If omitted, outputs to standard output (stdout).
+
+  - <details>
+    <summary>If a file path is specified</summary>
+    Outputs the processing results to the specified file. The output format is based on the `--format` option.
+
+    Example:
+    ```
+    abrg reverse ./coordinates.csv ./output.json
+    ```
+    </details>
+
+  - <details>
+    <summary>If omitted</summary>
+    If omitted, outputs to standard output (stdout).
+
+    Example:
+    ```
+    cat ./coordinates.csv | abrg reverse - | jq
+    ```
+    </details>
+
+- <details>
+  <summary>Change output format</summary>
+
+  You can change the output format with the `-f`, `--format` option. The default is `geojson`.
+
+  | format     | Description                                                   |
+  |------------|---------------------------------------------------------------|
+  | csv        | Outputs results in comma-separated csv format                 |
+  | simplified | Outputs results in comma-separated csv format with limited fields |
+  | json       | Outputs results in JSON format                                |
+  | ndjson     | Outputs results in NDJSON format                              |
+  | geojson    | Outputs results in GeoJSON format                             |
+  | ndgeojson  | Outputs results in NDGeoJSON format                           |
+
+  </details>
+
+- <details>
+  <summary>Limit number of results</summary>
+  You can specify the maximum number of results to return with the `-l`, `--limit` option. The default is `1`.
+
+  Example:
+  ```
+  abrg reverse --lat 35.679107 --lon 139.736395 --limit 3
+  ```
+  </details>
+
+- <details>
+  <summary>Select search algorithm</summary>
+  By default, fast search using spatial index (R-tree) is performed.
+
+  ```sh
+  # Use spatial index (fast, default)
+  abrg reverse coordinates.csv --spatialIndex
+
+  # Use Haversine formula
+  abrg reverse coordinates.csv --haversine
+  ```
+  </details>
+
+- <details>
+  <summary>Hide progress bar</summary>
+  If you specify the silent option, the progress bar will not be displayed.
+
+  ```sh
+  abrg reverse ./coordinates.csv ./output.txt --silent
+  ```
+</details>
+
+- <details>
+  <summary>Change directory</summary>
+
+  Specifies the directory containing the database. The default is `$HOME/.abr-geocoder`.
+
+  ```sh
+  abrg reverse ./coordinates.csv ./output.txt -d (path to directory to save data)
+  ```
+</details>
+
+- <details>
+  <summary>Show debug information</summary>
+  Shows the time taken for the process when it is completed.
+
+  ```sh
+  abrg reverse ./coordinates.csv ./output.txt --debug
+  ```
+</details>
+
+- <details>
+  <summary>Reverse geocoding target</summary>
+
+  You can change the reverse geocoding target with the `--target` option. The default is `all`.
+
+  | format      | Description                                                                                                          |
+  |-------------|----------------------------------------------------------------------------------------------------------------------|
+  | all         | Searches both residential address and parcel number data. The result for the residential address takes precedence.   |
+  | residential | Searches only the residential address data.                                                                          |
+  | parcel      | Searches only the parcel number data.                                                                                |
+
   </details>
 
 ## `abrg serve start` command

@@ -59,6 +59,12 @@ export enum AbrgMessage {
   INPUT_SOURCE_FROM_STDIN_ERROR = 'INPUT_SOURCE_FROM_STDIN_ERROR',
   UNSUPPORTED_OUTPUT_FORMAT = 'UNSUPPORTED_OUTPUT_FORMAT',
   CLI_GEOCODE_OUTPUT_FILE = 'CLI_GEOCODE_OUTPUT_FILE',
+  
+  // 逆ジオコーディング関連エラーメッセージ
+  REVERSE_GEOCODE_DATABASE_ERROR = 'REVERSE_GEOCODE_DATABASE_ERROR',
+  REVERSE_GEOCODE_COORDINATE_INVALID = 'REVERSE_GEOCODE_COORDINATE_INVALID',
+  REVERSE_GEOCODE_NO_RESULTS_FOUND = 'REVERSE_GEOCODE_NO_RESULTS_FOUND',
+  
   CLI_SERVE_API_PORT_OPTION = 'CLI_SERVE_API_PORT_OPTION',
   CLI_SERVE_CONTROL_HOST_OPTION = 'CLI_SERVE_CONTROL_HOST_OPTION',
   CLI_SERVE_CONTROL_PORT_OPTION = 'CLI_SERVE_CONTROL_PORT_OPTION',
@@ -99,6 +105,9 @@ const enMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.UNSUPPORTED_OUTPUT_FORMAT]: 'Specified output format is not available',
   [AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE]: 'Can not file the required file "package.json"',
   [AbrgMessage.CLI_GEOCODE_OUTPUT_FILE]: 'The path for the output file. If omit, print out to stdout.',
+  [AbrgMessage.REVERSE_GEOCODE_DATABASE_ERROR]: 'Database access error occurred during reverse geocoding',
+  [AbrgMessage.REVERSE_GEOCODE_COORDINATE_INVALID]: 'Invalid coordinate values provided for reverse geocoding',
+  [AbrgMessage.REVERSE_GEOCODE_NO_RESULTS_FOUND]: 'No reverse geocoding results found for the given coordinates',
   [AbrgMessage.CLI_SERVE_API_PORT_OPTION]: 'The port number for rest api',
   [AbrgMessage.CLI_SERVE_CONTROL_HOST_OPTION]: 'The host address for control the rest api server',
   [AbrgMessage.CLI_SERVE_CONTROL_PORT_OPTION]: 'The port number for control the rest api server',
@@ -138,6 +147,9 @@ const jaMessages: Record<AbrgMessage, string> = {
   [AbrgMessage.UNSUPPORTED_OUTPUT_FORMAT]: 'サポートされていない出力形式が指定されました',
   [AbrgMessage.CANNOT_FIND_PACKAGE_JSON_FILE]: '"package.json"ファイルが見つかりませんでした',
   [AbrgMessage.CLI_GEOCODE_OUTPUT_FILE]: '出力するファイルのパス。省略すると、標準出力に出力します。',
+  [AbrgMessage.REVERSE_GEOCODE_DATABASE_ERROR]: '逆ジオコーディング処理中にデータベースアクセスエラーが発生しました',
+  [AbrgMessage.REVERSE_GEOCODE_COORDINATE_INVALID]: '逆ジオコーディングで無効な座標値が指定されました',
+  [AbrgMessage.REVERSE_GEOCODE_NO_RESULTS_FOUND]: '指定された座標に対する逆ジオコーディング結果が見つかりませんでした',
   [AbrgMessage.CLI_SERVE_API_PORT_OPTION]: 'REST apiのためのポート番号',
   [AbrgMessage.CLI_SERVE_CONTROL_HOST_OPTION]: 'REST APIサーバーのホストアドレス',
   [AbrgMessage.CLI_SERVE_CONTROL_PORT_OPTION]: 'REST APIサーバーを制御するためのコマンドを送るポート',
