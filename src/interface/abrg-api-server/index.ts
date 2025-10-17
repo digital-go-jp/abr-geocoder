@@ -60,6 +60,13 @@ export class AbrgApiServer extends Server {
         });
     });
 
+    // ヘルスチェック
+    this.router.get('/healthcheck', (_: Request, response: Response) => {
+        response.json({
+            status: 'ok',
+        });
+    });
+
     // その他のアクセスは Not found
     this.router.get('*', (_: Request, response: Response) => {
       response.status(StatusCodes.NOT_FOUND);
