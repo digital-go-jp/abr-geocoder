@@ -1,0 +1,16 @@
+[book]
+title = "ABR Geocoder 内部仕様"
+description = "ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様"
+language = "ja"
+multilingual = false
+src = "src"
+
+[output.html]
+preferred-dark-theme = "navy"
+mathjax-support = false
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
+
+# Mermaid 図の利用（mdbook-mermaid プリプロセッサを導入してください）
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+renderer = ["html"]

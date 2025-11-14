@@ -1,0 +1,3747 @@
+<!DOCTYPE HTML>
+<html lang="ja" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>ABR Geocoder 内部仕様</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="abr-geocoder-内部仕様"><a class="header" href="#abr-geocoder-内部仕様">ABR Geocoder 内部仕様</a></h1>
+<p>このドキュメントは、ABR Geocoder の内部アーキテクチャ、設計思想、並列処理、そして SQLite を起点に生成されるキャッシュ（ABRG2 バイナリ辞書）の仕様をまとめたものです。公開前提の日本語ドキュメントであり、Mermaid 図を用いて構造を可視化しています。</p>
+<p>主対象:</p>
+<ul>
+<li>コア開発者・レビュアー（内部仕様の把握）</li>
+<li>運用担当（キャッシュ再生成や互換性の判断）</li>
+<li>外部コントリビュータ（拡張/改修の際の参照）</li>
+</ul>
+<p>このドキュメントの読み方:</p>
+<ul>
+<li>Architecture でシステム全体像とクリーンアーキテクチャ/DI 方針を把握</li>
+<li>Geocoding で探索戦略・並列化・ABRG2 仕様の詳細を把握</li>
+<li>Classes/Utilities で要素技術の API と責務を把握</li>
+<li>Operations/Troubleshooting で実運用の要点を確認</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="architecture"><a class="header" href="#architecture">Architecture</a></h1>
+<p>この章では、ABR Geocoderのアーキテクチャ設計について解説します。全体像からレイヤー構成、コンポーネント、クラス設計、依存性注入まで、システムの構造を理解するための情報を提供します。</p>
+<h2 id="各セクション"><a class="header" href="#各セクション">各セクション</a></h2>
+<ul>
+<li><strong>Overview</strong>: システムの高レベル構成とデータフロー</li>
+<li><strong>Clean Architecture</strong>: レイヤー責務と依存関係の方向性</li>
+<li><strong>Components</strong>: ディレクトリ別の役割とファイル構成</li>
+<li><strong>Classes</strong>: 主要クラスの設計原則と実装パターン</li>
+<li><strong>Dependency Injection</strong>: DIの基礎から実装方法、テスタビリティ向上まで</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="overview"><a class="header" href="#overview">Overview</a></h1>
+<p>ABR Geocoder は、オープンデータ（CSV/zip）を収集・SQLite にロードし、検索に最適化したバイナリ辞書（ABRG2）を生成して高速ジオコーディングを行います。REST API/CLI から同一コアを呼び出せる構成です。</p>
+<pre class="mermaid">flowchart LR
+  DCAT[&quot;オープンデータ&lt;br/&gt;DCAT/配布&quot;] --&gt; DL[&quot;Download&lt;br/&gt;(CSV/zip)&quot;]
+  DL --&gt;|パース| DB[(SQLite)]
+  DB --&gt;|辞書生成| CACHE[&quot;ABRG2 キャッシュ&lt;br/&gt;(Trie + Data)&quot;]
+  CACHE --&gt;|SharedMemory| WK1[Worker 1]
+  CACHE --&gt;|SharedMemory| WK2[Worker 2]
+  subgraph Geocoding Core
+    GEOCODER[&quot;AbrGeocoder&lt;br/&gt;(Task整列/ThreadPool)&quot;] --&gt; WK1
+    GEOCODER --&gt; WK2
+  end
+  API[REST API / CLI] --&gt; GEOCODER
+</pre>
+<h2 id="主要コンポーネント"><a class="header" href="#主要コンポーネント">主要コンポーネント</a></h2>
+<h3 id="1-downloadデータ取得前処理"><a class="header" href="#1-downloadデータ取得前処理">1. Download（データ取得・前処理）</a></h3>
+<p>オープンデータカタログ（DCAT）から住所データをダウンロードし、SQLiteデータベースに格納します。</p>
+<ul>
+<li><strong>データソース</strong>: 政府が公開する住所データ（CSV/zip形式）</li>
+<li><strong>処理フロー</strong>:
+<ol>
+<li>DCATメタデータから配布URLを抽出</li>
+<li>CSV/zipファイルをHTTPダウンロード</li>
+<li>CSVをパースしてSQLiteに投入</li>
+<li>データセットごとに正規化・検証</li>
+</ol>
+</li>
+</ul>
+<p><strong>技術ポイント</strong>:</p>
+<ul>
+<li>Node.jsのStreamを活用した大容量ファイル処理</li>
+<li>並列ダウンロードによる高速化</li>
+<li>better-sqlite3によるバッチインサート最適化</li>
+</ul>
+<h3 id="2-cache辞書生成"><a class="header" href="#2-cache辞書生成">2. Cache（辞書生成）</a></h3>
+<p>SQLiteから読み出したデータを、検索に最適化されたバイナリ形式（ABRG2）に変換します。</p>
+<ul>
+<li><strong>ABRG2形式</strong>: トライ木 + gzip圧縮JSON + ハッシュベース重複排除</li>
+<li><strong>SharedMemory対応</strong>: Worker間でコピーレスにデータ共有</li>
+<li><strong>段階的生成</strong>: 都道府県、市区町村、大字、地番など階層ごとに辞書を作成</li>
+</ul>
+<p><strong>技術ポイント</strong>:</p>
+<ul>
+<li>バッファベースのバイナリI/Oで高速書き込み</li>
+<li>FNV-1aハッシュによる重複データ排除</li>
+<li>メモリマップドファイル的なアクセスパターン</li>
+</ul>
+<h3 id="3-geocodingジオコーディング処理"><a class="header" href="#3-geocodingジオコーディング処理">3. Geocoding（ジオコーディング処理）</a></h3>
+<p>入力された住所文字列を正規化し、トライ木を段階的に探索してマッチング結果を得ます。</p>
+<ul>
+<li><strong>正規化</strong>: 全角/半角、漢数字/算用数字、異体字などを統一</li>
+<li><strong>段階的探索</strong>: 都道府県 → 市区 → 町字 → 街区/地番の順に絞り込み</li>
+<li><strong>スコアリング</strong>: 一致度、あいまい度、文字列長などから最適結果を選択</li>
+</ul>
+<p><strong>技術ポイント</strong>:</p>
+<ul>
+<li>Worker Threadsによる並列処理（入力順序を保持）</li>
+<li>トライ木の再帰探索（確定一致/ワイルドカード/補助チャレンジ）</li>
+<li>スコアリングアルゴリズムで曖昧マッチングを実現</li>
+</ul>
+<h3 id="4-rest-api--cli"><a class="header" href="#4-rest-api--cli">4. REST API / CLI</a></h3>
+<p>ジオコーディング機能を外部から利用するためのインターフェースです。</p>
+<ul>
+<li><strong>REST API</strong>: <code>GET /geocode?address=東京都千代田区霞が関1-1-1</code></li>
+<li><strong>CLI</strong>: ストリーム処理で大量住所を一括変換（<code>cat addresses.txt | abr-geocoder geocode</code>）</li>
+<li><strong>出力形式</strong>: JSON, CSV, GeoJSON, NDJSONなど</li>
+</ul>
+<p><strong>技術ポイント</strong>:</p>
+<ul>
+<li>hyper-expressによる高速HTTPサーバー</li>
+<li>StreamベースのCLIでメモリ効率的な大量処理</li>
+<li>フォーマッター抽象化でプラガブルな出力対応</li>
+</ul>
+<h2 id="アーキテクチャの特徴"><a class="header" href="#アーキテクチャの特徴">アーキテクチャの特徴</a></h2>
+<h3 id="パフォーマンス"><a class="header" href="#パフォーマンス">パフォーマンス</a></h3>
+<ul>
+<li><strong>Worker Threads</strong>: CPU並列化により秒間数万件のジオコーディングを実現</li>
+<li><strong>SharedArrayBuffer</strong>: 辞書データをWorker間で共有しメモリ使用量を削減</li>
+<li><strong>トライ木検索</strong>: 文字列マッチングをO(m)（m=文字列長）で高速化</li>
+</ul>
+<h3 id="スケーラビリティ"><a class="header" href="#スケーラビリティ">スケーラビリティ</a></h3>
+<ul>
+<li><strong>ストリーム処理</strong>: バックプレッシャー制御で任意サイズの入力を処理可能</li>
+<li><strong>キャッシュ分離</strong>: 都道府県別・データセット別にキャッシュを分割し、部分更新が可能</li>
+<li><strong>ステートレス設計</strong>: REST APIはステートレスなので水平スケール可能</li>
+</ul>
+<h3 id="保守性"><a class="header" href="#保守性">保守性</a></h3>
+<ul>
+<li><strong>Clean Architecture</strong>: 層を分離し、テスト容易性と拡張性を確保</li>
+<li><strong>DI Container</strong>: 依存性注入により実装差し替えが容易</li>
+<li><strong>TypeScript</strong>: 型安全性により大規模リファクタリングを支援</li>
+</ul>
+<h2 id="コントリビューションのポイント"><a class="header" href="#コントリビューションのポイント">コントリビューションのポイント</a></h2>
+<p>このプロジェクトは、以下のような改善に貢献できます：</p>
+<ol>
+<li><strong>パフォーマンス改善</strong>: より効率的なアルゴリズム、並列化の最適化</li>
+<li><strong>新機能追加</strong>: 新しい出力形式、追加のAPI、検索オプション</li>
+<li><strong>データソース拡張</strong>: 新しいオープンデータへの対応</li>
+<li><strong>ドキュメント改善</strong>: 技術解説、チュートリアル、API仕様の充実</li>
+<li><strong>テスト強化</strong>: エッジケースのカバレッジ向上、E2Eテスト</li>
+</ol>
+<p>詳細は各セクション（Components, Classes, Clean Architecture）を参照してください。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="clean-architecture--di-方針"><a class="header" href="#clean-architecture--di-方針">Clean Architecture / DI 方針</a></h1>
+<p>本プロジェクトは、層間の依存を一方向に保ち、実装差し替えやテスト容易性を確保するためのクリーンアーキテクチャ/DI を採用しています。</p>
+<pre class="mermaid">flowchart TB
+  UI[&quot;Interface&lt;br/&gt;(CLI/REST)&quot;] --&gt; UseCases[&quot;UseCases&lt;br/&gt;(Geocoding/Download)&quot;]
+  UseCases --&gt; Domain[Domain Models/Services]
+  UseCases --&gt; Drivers[&quot;Drivers&lt;br/&gt;(DB/Binary/FS)&quot;]
+  subgraph Crosscutting
+  DI[DI Container]-- 依存解決 --&gt;UseCases
+  end
+</pre>
+<p>レイヤーの役割:</p>
+<ul>
+<li>Interface: CLI/REST API（入出力/プロトコル変換）</li>
+<li>UseCases: アプリケーションフロー（ジオコーディング・ダウンロード）</li>
+<li>Domain: 値オブジェクト/ユーティリティ（正規化、ハッシュ、スレッド制御、表記変換など）</li>
+<li>Drivers: SQLite アクセス、ABRG2 読み書き（IO 層）</li>
+</ul>
+<p>DI による分岐削減:</p>
+<ul>
+<li><code>AbrGeocoderDiContainer</code>/<code>DownloadDiContainer</code> が DB 接続情報やキャッシュディレクトリ、ロガー等を提供し、UseCase 側の条件分岐を最小化</li>
+<li>テストではモック DB/HTTP を注入してユースケースの分岐を抑制</li>
+</ul>
+<p>依存方向:</p>
+<ul>
+<li>Interface → UseCases → Domain/Drivers（内向き依存）。Domain は最小依存。</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="componentsコンポーネント構成"><a class="header" href="#componentsコンポーネント構成">Components（コンポーネント構成）</a></h1>
+<p>ABR Geocoderのソースコード構成を、ディレクトリ単位で説明します。各ディレクトリは明確な責務を持ち、Clean Architectureの層構造に従っています。</p>
+<h2 id="ディレクトリ構成の概要"><a class="header" href="#ディレクトリ構成の概要">ディレクトリ構成の概要</a></h2>
+<pre class="mermaid">flowchart TD
+  CLI[&quot;src/interface/cli&lt;br/&gt;(CLI)&quot;] --&gt; UC_GEO[&quot;src/usecases/geocode&lt;br/&gt;(Geocoding UseCase)&quot;]
+  API[&quot;src/interface/abrg-api-server&lt;br/&gt;(REST API)&quot;] --&gt; UC_GEO
+  UC_GEO --&gt; DB[&quot;src/drivers/database/sqlite3&lt;br/&gt;(SQLite Driver)&quot;]
+  UC_GEO --&gt; TRIE[&quot;src/usecases/geocode/models/trie&lt;br/&gt;(ABRG2 Trie)&quot;]
+  UC_DOWN[&quot;src/usecases/download&lt;br/&gt;(Download UseCase)&quot;] --&gt; DB
+  UC_DOWN --&gt; TRIE
+  UC_GEO -.-&gt; DOMAIN[&quot;src/domain/services&lt;br/&gt;(Domain Services)&quot;]
+  UC_DOWN -.-&gt; DOMAIN
+
+  subgraph &quot;Domain Services&quot;
+    DOMAIN
+  end
+</pre>
+<h2 id="interface-layerインターフェース層"><a class="header" href="#interface-layerインターフェース層">Interface Layer（インターフェース層）</a></h2>
+<p>ユーザーとシステムの接点となる層です。</p>
+<h3 id="srcinterfaceabrg-api-server"><a class="header" href="#srcinterfaceabrg-api-server">src/interface/abrg-api-server</a></h3>
+<p>RESTful APIサーバーの実装。hyper-expressベースで高速なHTTP処理を提供します。</p>
+<p><strong>主要ファイル</strong>:</p>
+<ul>
+<li><code>index.ts</code>: サーバー起動とルーティング設定</li>
+<li><code>on-geocode-request.ts</code>: <code>/geocode</code> エンドポイントのハンドラー</li>
+<li><code>cors.ts</code>: CORS設定（クロスオリジンリクエスト対応）</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>hyper-expressは Express互換で、より高速な処理が可能</li>
+<li>クエリパラメータを受け取り、AbrGeocoderを呼び出し</li>
+<li>結果をJSON形式で返却（または指定されたフォーマット）</li>
+</ul>
+<p><strong>使用例</strong>:</p>
+<pre><code class="language-bash">curl "http://localhost:3000/geocode?address=東京都千代田区霞が関1-1-1"
+</code></pre>
+<h3 id="srcinterfacecli"><a class="header" href="#srcinterfacecli">src/interface/cli</a></h3>
+<p>コマンドラインインターフェースの実装。標準入出力を使ったストリーム処理。</p>
+<p><strong>主要ファイル</strong>:</p>
+<ul>
+<li><code>index.ts</code>: CLI起動とコマンド解析</li>
+<li><code>geocode-command.ts</code>: <code>geocode</code> コマンドの実装</li>
+<li><code>download-command.ts</code>: <code>download</code> コマンドの実装</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li><code>process.stdin</code> から住所を1行ずつ読み込み</li>
+<li>Transformストリームでジオコーディング処理</li>
+<li><code>process.stdout</code> に結果を出力（パイプライン処理に最適）</li>
+</ul>
+<p><strong>使用例</strong>:</p>
+<pre><code class="language-bash"># ファイルから一括ジオコーディング
+cat addresses.txt | abr-geocoder geocode --format=csv &gt; results.csv
+
+# ストリーム処理で大量データを効率的に処理
+zcat huge-addresses.txt.gz | abr-geocoder geocode | gzip &gt; results.json.gz
+</code></pre>
+<h3 id="srcinterfaceformat"><a class="header" href="#srcinterfaceformat">src/interface/format</a></h3>
+<p>出力フォーマッターの実装。Strategy パターンで複数形式に対応。</p>
+<p><strong>主要ファイル</strong>:</p>
+<ul>
+<li><code>formatter-provider.ts</code>: フォーマッター取得のファクトリ</li>
+<li><code>json-formatter.ts</code>: JSON形式</li>
+<li><code>csv-formatter.ts</code>: CSV形式</li>
+<li><code>geojson-formatter.ts</code>: GeoJSON形式</li>
+<li><code>ndjson-formatter.ts</code>: NDJSON形式（ストリーム処理向け）</li>
+</ul>
+<p><strong>設計ポイント</strong>:</p>
+<ul>
+<li>各フォーマッターは <code>IFormatTransform</code> インターフェースを実装</li>
+<li>Transformストリームなので、パイプラインに組み込み可能</li>
+</ul>
+<h2 id="usecase-layerユースケース層"><a class="header" href="#usecase-layerユースケース層">UseCase Layer（ユースケース層）</a></h2>
+<p>アプリケーションロジックを実装する層です。</p>
+<h3 id="srcusecasesgeocode"><a class="header" href="#srcusecasesgeocode">src/usecases/geocode</a></h3>
+<p>ジオコーディング処理のユースケース実装。</p>
+<p><strong>ディレクトリ構成</strong>:</p>
+<pre><code>src/usecases/geocode/
+├── abr-geocoder.ts           # メインエントリポイント
+├── worker/
+│   └── geocode-worker.ts     # Workerスレッドで動作する処理
+├── models/
+│   ├── query.ts              # ジオコード結果のモデル
+│   ├── trie/                 # トライ木関連
+│   │   ├── trie-finder2.ts   # 基底クラス
+│   │   └── file-trie-writer.ts
+│   ├── pref-trie-finder.ts
+│   ├── city-and-ward-trie-finder.ts
+│   └── ...（各種Finder）
+└── services/
+    ├── normalization.ts      # 住所正規化
+    └── scoring.ts            # スコアリング
+</code></pre>
+<p><strong>主要な処理フロー</strong>:</p>
+<ol>
+<li><strong>AbrGeocoder</strong>: Worker Poolを管理し、タスクを分配</li>
+<li><strong>Worker</strong>: ストリーム処理で住所を正規化 → Trie探索 → スコアリング</li>
+<li><strong>Finder</strong>: 各階層（都道府県、市区、町字等）のトライ木を探索</li>
+<li><strong>Query</strong>: 結果を構造化したオブジェクトとして返却</li>
+</ol>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Worker Threadsで並列処理を実現（CPUコア数に応じて自動スケール）</li>
+<li>SharedArrayBufferでトライ木データを共有（メモリコピー不要）</li>
+<li>TaskInfo連結リストで入力順序を保証</li>
+</ul>
+<h3 id="srcusecasesdownload"><a class="header" href="#srcusecasesdownload">src/usecases/download</a></h3>
+<p>データセットのダウンロードとDB投入のユースケース実装。</p>
+<p><strong>ディレクトリ構成</strong>:</p>
+<pre><code>src/usecases/download/
+├── download-process.ts       # ダウンロードオーケストレーター
+├── transformations/
+│   ├── download-transform.ts # HTTPダウンロード
+│   ├── csv-parse-transform.ts # CSVパース→DB投入
+│   └── save-resource-info-transform.ts # メタデータ保存
+└── models/
+    └── download-di-container.ts # DI Container
+</code></pre>
+<p><strong>主要な処理フロー</strong>:</p>
+<ol>
+<li>DCATメタデータから配布URLを抽出</li>
+<li>URLをキューに投入し、並列ダウンロード</li>
+<li>Streamパイプライン: Download → Unzip → CSV Parse → DB Insert</li>
+<li>完了後、各FinderがABRG2キャッシュを生成</li>
+</ol>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Streamのバックプレッシャー制御で、メモリを節約しつつ高速処理</li>
+<li>ETagベースの差分更新（変更されたファイルのみダウンロード）</li>
+<li>トランザクション制御でDB一貫性を保証</li>
+</ul>
+<h2 id="driver-layerドライバー層"><a class="header" href="#driver-layerドライバー層">Driver Layer（ドライバー層）</a></h2>
+<p>外部システム（DB、ファイルシステム等）への アクセスを抽象化します。</p>
+<h3 id="srcdriversdatabasesqlite3"><a class="header" href="#srcdriversdatabasesqlite3">src/drivers/database/sqlite3</a></h3>
+<p>SQLiteデータベースドライバーの実装。</p>
+<p><strong>ディレクトリ構成</strong>:</p>
+<pre><code>src/drivers/database/sqlite3/
+├── better-sqlite3-wrap.ts    # better-sqlite3ラッパー
+├── geocode/
+│   ├── common-db-geocode-sqlite3.ts    # 検索用（読み取り専用）
+│   ├── rsdt-blk-db-sqlite3.ts
+│   └── parcel-db-sqlite3.ts
+└── download/
+    └── common-db-download-sqlite3.ts   # 更新用（書き込み）
+</code></pre>
+<p><strong>設計ポイント</strong>:</p>
+<ul>
+<li>読み取りと書き込みでクラスを分離（CQRS的なアプローチ）</li>
+<li>Prepared Statementでパフォーマンスとセキュリティを両立</li>
+<li>WALモードで複数Workerからの同時読み取りに対応</li>
+</ul>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>better-sqlite3は同期APIなので、コードがシンプル</li>
+<li>ただし、同期処理はEventLoopをブロックするため、CPUバウンドな処理に限定</li>
+</ul>
+<h2 id="domain-layerドメイン層"><a class="header" href="#domain-layerドメイン層">Domain Layer（ドメイン層）</a></h2>
+<p>ビジネスロジックやドメイン固有のサービスを提供します。</p>
+<h3 id="srcdomainservices"><a class="header" href="#srcdomainservices">src/domain/services</a></h3>
+<p>再利用可能なドメインサービスの実装。</p>
+<p><strong>主要なサービス</strong>:</p>
+<h4 id="threadスレッド管理"><a class="header" href="#threadスレッド管理">thread（スレッド管理）</a></h4>
+<ul>
+<li><code>worker-thread-pool.ts</code>: Worker Threadsの管理</li>
+<li><code>worker-thread.ts</code>: 個別Workerのラッパー</li>
+<li><code>semaphore-manager.ts</code>: SharedArrayBuffer版セマフォ</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li><code>Atomics.wait()</code> / <code>Atomics.notify()</code> でスレッド間同期</li>
+<li>連結リストでタスク順序を保証</li>
+</ul>
+<h4 id="regex正規表現と正規化"><a class="header" href="#regex正規表現と正規化">regex（正規表現と正規化）</a></h4>
+<ul>
+<li><code>address-normalizer.ts</code>: 住所文字列の正規化</li>
+<li><code>kan-to-num.ts</code>: 漢数字→算用数字変換</li>
+<li><code>zen-to-han.ts</code>: 全角→半角変換</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Unicode正規化（NFC）で異体字を統一</li>
+<li>正規表現のキャッシングでパフォーマンス向上</li>
+</ul>
+<h4 id="hashハッシュ関数"><a class="header" href="#hashハッシュ関数">hash（ハッシュ関数）</a></h4>
+<ul>
+<li><code>fnv1a.ts</code>: FNV-1a 64bitハッシュ</li>
+<li><code>crc32.ts</code>: CRC32チェックサム</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Bufferを直接操作して高速計算</li>
+<li>ハッシュ衝突時の連結リスト処理</li>
+</ul>
+<h4 id="fileファイルシステム"><a class="header" href="#fileファイルシステム">file（ファイルシステム）</a></h4>
+<ul>
+<li><code>file-utils.ts</code>: ファイル操作のユーティリティ</li>
+<li><code>directory-scanner.ts</code>: ディレクトリ走査</li>
+</ul>
+<h2 id="trie-modelsトライ木データ構造"><a class="header" href="#trie-modelsトライ木データ構造">Trie Models（トライ木データ構造）</a></h2>
+<h3 id="srcusecasesgeocodemodelstrie"><a class="header" href="#srcusecasesgeocodemodelstrie">src/usecases/geocode/models/trie</a></h3>
+<p>ABRG2形式のトライ木実装。</p>
+<p><strong>主要ファイル</strong>:</p>
+<ul>
+<li><code>file-trie-writer.ts</code>: バイナリ書き込み</li>
+<li><code>trie-finder2.ts</code>: バイナリ読み込みと探索</li>
+<li><code>expandable-buffer.ts</code>: 動的拡張バッファ</li>
+<li><code>char-node.ts</code>: 文字ノード（連結リスト）</li>
+</ul>
+<p><strong>ABRG2フォーマット</strong>:</p>
+<pre><code>[Header]
+- magic: "abrg" (4B)
+- version: 2.2 (2B)
+- trie_root: offset (4B)
+- data_head: offset (4B)
+
+[Trie Nodes]
+- size (1B) + sibling (4B) + child (4B) + hash_list (4B) + name (var)
+
+[Data Nodes]
+- next (4B) + size (2B) + hash (8B) + data (gzip JSON)
+</code></pre>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Big Endianで整列（クロスプラットフォーム対応）</li>
+<li>ハッシュ連結リストで重複データを排除</li>
+<li>gzip圧縮でディスク使用量を削減</li>
+</ul>
+<h2 id="層間の依存関係"><a class="header" href="#層間の依存関係">層間の依存関係</a></h2>
+<pre><code>Interface Layer (CLI, REST API)
+    ↓
+UseCase Layer (Geocode, Download)
+    ↓
+Driver Layer (SQLite, FileSystem)
+    ↓
+Infrastructure (OS, Node.js Runtime)
+</code></pre>
+<p><strong>依存の方向</strong>: 常に外側から内側（上位層 → 下位層）</p>
+<p><strong>Domain Layerは独立</strong>: すべての層から参照されるが、他層に依存しない</p>
+<h2 id="コントリビューションのヒント"><a class="header" href="#コントリビューションのヒント">コントリビューションのヒント</a></h2>
+<h3 id="新しいfinderの追加"><a class="header" href="#新しいfinderの追加">新しいFinderの追加</a></h3>
+<ol>
+<li><code>src/usecases/geocode/models/</code> に新しいFinderクラスを作成</li>
+<li><code>TrieAddressFinder2</code> を継承</li>
+<li><code>createDictionaryFile()</code> をオーバーライドしてDB→Trie変換を実装</li>
+</ol>
+<h3 id="新しいフォーマッターの追加"><a class="header" href="#新しいフォーマッターの追加">新しいフォーマッターの追加</a></h3>
+<ol>
+<li><code>src/interface/format/</code> に新しいFormatterを作成</li>
+<li><code>IFormatTransform</code> インターフェースを実装</li>
+<li><code>formatter-provider.ts</code> に登録</li>
+</ol>
+<h3 id="パフォーマンス改善"><a class="header" href="#パフォーマンス改善">パフォーマンス改善</a></h3>
+<ul>
+<li><code>src/domain/services/thread/</code>: Worker管理の最適化</li>
+<li><code>src/usecases/geocode/models/trie/</code>: トライ木探索アルゴリズムの改善</li>
+<li><code>src/drivers/database/sqlite3/</code>: クエリ最適化、インデックス追加</li>
+</ul>
+<p>このコンポーネント構成を理解することで、変更すべきファイルが明確になり、効率的な開発が可能になります。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classesクラス図"><a class="header" href="#classesクラス図">Classes（クラス図）</a></h1>
+<p>ABR Geocoder の主要なクラスと役割を示します。Clean Architecture に基づいた層構造で、各クラスが明確な責務を持ちます。</p>
+<h2 id="このページの目的"><a class="header" href="#このページの目的">このページの目的</a></h2>
+<p>ソースコードを読む前に、システム全体のクラス構造を理解することで：</p>
+<ol>
+<li><strong>どこに何があるか</strong>: 機能追加や修正時に、どのクラスを変更すべきかが分かる</li>
+<li><strong>依存関係の理解</strong>: クラス間の依存を把握し、影響範囲を予測できる</li>
+<li><strong>設計意図の把握</strong>: なぜこのような構造になっているかを理解し、一貫性のある改善ができる</li>
+</ol>
+<h2 id="クラス設計の基本方針"><a class="header" href="#クラス設計の基本方針">クラス設計の基本方針</a></h2>
+<h3 id="単一責任の原則srp"><a class="header" href="#単一責任の原則srp">単一責任の原則（SRP）</a></h3>
+<p>各クラスは1つの責務のみを持ちます。例えば：</p>
+<ul>
+<li><strong>AbrGeocoder</strong>: ジオコーディングのオーケストレーション（Workerの管理と結果の整列）</li>
+<li><strong>TrieAddressFinder2</strong>: トライ木探索のみ（DB操作やスコアリングは別クラス）</li>
+<li><strong>FileTrieWriter</strong>: バイナリ書き込みのみ（データ取得は別クラス）</li>
+</ul>
+<h3 id="依存性逆転の原則dip"><a class="header" href="#依存性逆転の原則dip">依存性逆転の原則（DIP）</a></h3>
+<p>上位層は抽象（インターフェース）に依存し、下位層の実装詳細に依存しません：</p>
+<ul>
+<li><strong>IWorkerThreadPool</strong>: インターフェースを定義し、WorkerThreadPool/FakeWorkerThreadPoolで実装</li>
+<li><strong>Sqlite3Wrapper</strong>: 抽象クラスでDB操作を定義し、具体的なテーブル操作は派生クラスで実装</li>
+</ul>
+<h3 id="ファクトリーパターン"><a class="header" href="#ファクトリーパターン">ファクトリーパターン</a></h3>
+<p>複雑なオブジェクト生成はstaticメソッド（<code>create()</code>）で隠蔽します：</p>
+<ul>
+<li><strong>WorkerThreadPool.create()</strong>: Worker生成とSharedMemory初期化を内部で処理</li>
+<li><strong>FileTrieWriter.create()</strong>: ファイルヘッダー書き込みとバッファ初期化を自動化</li>
+</ul>
+<p>これにより、利用側は複雑な初期化手順を意識せず、シンプルにインスタンス化できます。</p>
+<h2 id="全体構成"><a class="header" href="#全体構成">全体構成</a></h2>
+<p>システム全体の主要クラスと依存関係の概要です。</p>
+<pre class="mermaid">classDiagram
+    class AbrGeocoder {
+        +geocode(input) Query
+        +create()$ AbrGeocoder
+    }
+
+    class WorkerThreadPool {
+        +run(data) Promise
+        +close() Promise
+    }
+
+    class TrieAddressFinder2 {
+        &lt;&lt;abstract&gt;&gt;
+        +find(target, fuzzy, partialMatches) TrieFinderResult[]
+    }
+
+    class FileTrieWriter {
+        +addNode(key, value) Promise~void~
+        +storeData(data) Promise~number~
+        +create(filePath)$ FileTrieWriter
+    }
+
+    class AbrgApiServer {
+        +listen(port)
+    }
+
+    class Downloader {
+        +download(params) Promise~void~
+        +createDownloadRequests()
+    }
+
+    class GeocodeDbController {
+        +openCommonDb()
+        +openRsdtBlkDb()
+        +openParcelDb()
+    }
+
+    AbrGeocoder --&gt; WorkerThreadPool : uses
+    AbrGeocoder --&gt; TrieAddressFinder2 : uses
+    AbrgApiServer --&gt; AbrGeocoder : calls
+    Downloader --&gt; FileTrieWriter : creates
+    AbrGeocoder --&gt; GeocodeDbController : uses
+    Downloader --&gt; GeocodeDbController : uses
+</pre>
+<p><strong>依存の方向性</strong>:</p>
+<ul>
+<li>API/CLI層 → Geocoding Core → Worker Pool/Trie Finder</li>
+<li>Download System → Data Structures → Database Layer</li>
+<li>すべての層 → Database Layer（データ永続化）</li>
+</ul>
+<h2 id="geocoding-coreジオコーディング中核"><a class="header" href="#geocoding-coreジオコーディング中核">Geocoding Core（ジオコーディング中核）</a></h2>
+<p>ジオコーディング処理を担当する主要クラス群です。</p>
+<pre class="mermaid">classDiagram
+    class AbrGeocoder {
+        -WorkerThreadPool pool
+        -GeocodeDbController dbController
+        +geocode(input) Query
+        +create()$ AbrGeocoder
+    }
+
+    class Query {
+        +prefecture string
+        +city string
+        +town string
+        +score number
+        +lat number
+        +lon number
+    }
+
+    class GeocodeTransform {
+        +create()$ Duplex
+    }
+
+    AbrGeocoder --&gt; Query : returns
+    AbrGeocoder --&gt; GeocodeTransform : uses in worker
+</pre>
+<h3 id="役割の詳細"><a class="header" href="#役割の詳細">役割の詳細</a></h3>
+<h4 id="abrgeocoder"><a class="header" href="#abrgeocoder">AbrGeocoder</a></h4>
+<p>ジオコーディングのメインエントリポイント。以下を担当：</p>
+<ol>
+<li><strong>Worker管理</strong>: WorkerThreadPoolを初期化し、並列処理を制御</li>
+<li><strong>タスク投入</strong>: 入力住所をWorkerに分配</li>
+<li><strong>結果整列</strong>: Worker間で完了順序がバラバラでも、入力順に結果を返却（TaskInfo連結リストで実現）</li>
+</ol>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li><code>geocode(input: string): Promise&lt;Query&gt;</code> というシンプルなAPIで複雑な並列処理を隠蔽</li>
+<li>内部的にはWorker Threadsを使用するが、呼び出し側はasync/awaitで扱える</li>
+</ul>
+<h4 id="query"><a class="header" href="#query">Query</a></h4>
+<p>ジオコーディング結果を表現するイミュータブルなデータモデル：</p>
+<ul>
+<li>住所階層（都道府県、市区町村、町字、番地等）</li>
+<li>座標（緯度経度）</li>
+<li>マッチングスコア（0-1の範囲で一致度を表現）</li>
+</ul>
+<p><strong>設計思想</strong>: Value Objectとして不変性を保証し、副作用のない安全な値の受け渡しを実現</p>
+<h4 id="geocodetransform"><a class="header" href="#geocodetransform">GeocodeTransform</a></h4>
+<p>Workerスレッド内で動作するNode.js Duplexストリーム：</p>
+<ul>
+<li><strong>入力</strong>: 住所文字列</li>
+<li><strong>処理</strong>: 正規化 → Trie検索 → スコアリング</li>
+<li><strong>出力</strong>: Query オブジェクト</li>
+</ul>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>Transformストリームのパイプライン処理で、複数の変換ステップを組み合わせ</li>
+<li>バックプレッシャー対応により、メモリを圧迫せずに大量データを処理</li>
+</ul>
+<h2 id="trie-finderトライ木検索"><a class="header" href="#trie-finderトライ木検索">Trie Finder（トライ木検索）</a></h2>
+<p>各レベルの住所データを検索するトライ木ファインダー群です。継承により共通処理を再利用しつつ、データソースごとに特化した検索を実現します。</p>
+<pre class="mermaid">classDiagram
+    direction TB
+    class TrieAddressFinder2 {
+        &lt;&lt;abstract&gt;&gt;
+        #buffer Buffer
+        #dataHead number
+        #trieRoot number
+        +find(target, fuzzy, partialMatches) TrieFinderResult[]
+        +createDictionaryFile()
+    }
+
+    class PrefTrieFinder {
+        +createDictionaryFile()
+    }
+
+    class CountyAndCityTrieFinder {
+        +createDictionaryFile()
+    }
+
+    class CityAndWardTrieFinder {
+        +createDictionaryFile()
+    }
+
+    class OazaChoTrieFinder {
+        +createDictionaryFile()
+    }
+
+    class Tokyo23WardTrieFinder {
+        +createDictionaryFile()
+    }
+
+    class KyotoStreetTrieFinder {
+        +createDictionaryFile()
+    }
+
+    class ParcelTrieFinder {
+        +createDictionaryFile()
+    }
+
+    class RsdtBlkTrieFinder {
+        +createDictionaryFile()
+    }
+
+    TrieAddressFinder2 &lt;|-- PrefTrieFinder
+    TrieAddressFinder2 &lt;|-- CountyAndCityTrieFinder
+    TrieAddressFinder2 &lt;|-- CityAndWardTrieFinder
+    TrieAddressFinder2 &lt;|-- OazaChoTrieFinder
+    TrieAddressFinder2 &lt;|-- Tokyo23WardTrieFinder
+    TrieAddressFinder2 &lt;|-- KyotoStreetTrieFinder
+    TrieAddressFinder2 &lt;|-- ParcelTrieFinder
+    TrieAddressFinder2 &lt;|-- RsdtBlkTrieFinder
+</pre>
+<h3 id="役割の詳細-1"><a class="header" href="#役割の詳細-1">役割の詳細</a></h3>
+<h4 id="trieaddressfinder2基底クラス"><a class="header" href="#trieaddressfinder2基底クラス">TrieAddressFinder2（基底クラス）</a></h4>
+<p>トライ木探索の共通ロジックを実装：</p>
+<ol>
+<li><strong>バッファアクセス</strong>: SharedArrayBufferからトライ木ノードを読み出し</li>
+<li><strong>再帰探索</strong>: 文字列を1文字ずつトライ木に沿って探索</li>
+<li><strong>あいまい一致</strong>: ワイルドカード（<code>?</code>）や補助チャレンジ（異体字、略称等）に対応</li>
+</ol>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>バッファオフセット計算により、ファイルI/Oなしでメモリ上のバイナリデータを直接読み取り</li>
+<li>再帰的な探索により、前方一致/部分一致/あいまい一致を同時に処理</li>
+</ul>
+<h4 id="各サブクラスの役割"><a class="header" href="#各サブクラスの役割">各サブクラスの役割</a></h4>
+<div class="table-wrapper"><table><thead><tr><th>クラス名</th><th>対象データ</th><th>特殊処理</th></tr></thead><tbody>
+<tr><td><strong>PrefTrieFinder</strong></td><td>都道府県</td><td>標準的な探索のみ</td></tr>
+<tr><td><strong>CountyAndCityTrieFinder</strong></td><td>郡+市</td><td>郡と市の組み合わせパターン</td></tr>
+<tr><td><strong>CityAndWardTrieFinder</strong></td><td>市+区</td><td>政令指定都市の区対応</td></tr>
+<tr><td><strong>OazaChoTrieFinder</strong></td><td>大字+丁目+小字</td><td>地方自治体コード（LGコード）で分離</td></tr>
+<tr><td><strong>Tokyo23WardTrieFinder</strong></td><td>東京23区</td><td>東京都特別区の特殊処理</td></tr>
+<tr><td><strong>KyotoStreetTrieFinder</strong></td><td>京都通り名</td><td>京都独自の通り名表記</td></tr>
+<tr><td><strong>ParcelTrieFinder</strong></td><td>地番</td><td>地番（土地の番号）の検索</td></tr>
+<tr><td><strong>RsdtBlkTrieFinder</strong></td><td>住居表示（街区）</td><td>住居表示の街区符号・住居番号</td></tr>
+</tbody></table>
+</div>
+<p><strong>設計ポイント</strong>:</p>
+<ul>
+<li>基底クラスで共通処理を実装し、サブクラスで <code>createDictionaryFile()</code> をオーバーライド</li>
+<li>各サブクラスは対応するDBテーブルからデータを読み、専用の辞書ファイルを生成</li>
+</ul>
+<h2 id="data-structuresデータ構造"><a class="header" href="#data-structuresデータ構造">Data Structures（データ構造）</a></h2>
+<p>トライ木の構築と永続化を担当するクラス群です。</p>
+<pre class="mermaid">classDiagram
+    class FileTrieWriter {
+        -ExpandableBuffer buffer
+        -Map~number,number~ hashMap
+        +addNode(key, value) Promise~void~
+        +storeData(data) Promise~number~
+        +create(filePath)$ FileTrieWriter
+    }
+
+    class CharNode {
+        +originalChar string
+        +char string
+        +ignore boolean
+        +next CharNode
+    }
+
+    class ExpandableBuffer {
+        -Buffer buffer
+        +write(data)
+        +expand()
+    }
+
+    class TrieTreeBuilderBase {
+        #writeToFile()
+    }
+
+    FileTrieWriter --&gt; ExpandableBuffer : uses
+    FileTrieWriter --&gt; TrieTreeBuilderBase : extends
+    TrieAddressFinder2 --&gt; CharNode : uses
+</pre>
+<h3 id="役割の詳細-2"><a class="header" href="#役割の詳細-2">役割の詳細</a></h3>
+<h4 id="filetriewriter"><a class="header" href="#filetriewriter">FileTrieWriter</a></h4>
+<p>バイナリトライ木（ABRG2形式）をファイルに永続化するクラス：</p>
+<ol>
+<li><strong>ヘッダー書き込み</strong>: マジックナンバー、バージョン、エントリポイント</li>
+<li><strong>ノード追加</strong>: <code>addNode(key, value)</code> で文字列をトライ木に追加</li>
+<li><strong>データ圧縮</strong>: JSONをgzip圧縮し、FNV-1aハッシュで重複排除</li>
+</ol>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>Bufferを直接操作して高速なバイナリI/O</li>
+<li>async/awaitでファイル書き込みの非同期処理を制御</li>
+<li>メモリバッファリング（8MB）で書き込み回数を削減</li>
+</ul>
+<p><strong>アルゴリズム</strong>:</p>
+<ul>
+<li>トライ木の各ノードは <code>sibling/child</code> ポインタで連結</li>
+<li>データノードはハッシュ連結リストで衝突を解決</li>
+<li>同一データは1回だけ保存（ハッシュ値で判定）</li>
+</ul>
+<h4 id="charnode"><a class="header" href="#charnode">CharNode</a></h4>
+<p>ジオコーディング検索時の文字ノードを表現する連結リスト：</p>
+<ul>
+<li><strong>originalChar</strong>: 元の文字（正規化前）</li>
+<li><strong>char</strong>: 正規化後の文字</li>
+<li><strong>ignore</strong>: スキップすべき文字（空白、ハイフン等）</li>
+<li><strong>next</strong>: 次の文字ノード</li>
+</ul>
+<p><strong>設計思想</strong>: 文字列を配列ではなく連結リストで表現することで、文字の挿入/削除/スキップを柔軟に処理</p>
+<h4 id="expandablebuffer"><a class="header" href="#expandablebuffer">ExpandableBuffer</a></h4>
+<p>動的に拡張可能なバッファ。容量不足時に自動的にサイズを2倍に拡張：</p>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>Bufferのサイズは固定なので、拡張時には新しいBufferを確保してコピー</li>
+<li>事前に大きめのバッファを確保することで、拡張回数を最小化</li>
+</ul>
+<h4 id="trietreebuilderbase"><a class="header" href="#trietreebuilderbase">TrieTreeBuilderBase</a></h4>
+<p>トライ木構築の基底クラス。ファイル書き込みの共通処理を提供：</p>
+<ul>
+<li>ファイルディスクリプタの管理</li>
+<li>オフセット位置の追跡</li>
+<li>前方書換（既に書いたノードのポインタを後から更新）</li>
+</ul>
+<h2 id="apicli-layerインターフェース層"><a class="header" href="#apicli-layerインターフェース層">API/CLI Layer（インターフェース層）</a></h2>
+<p>REST APIとCLIのエントリポイントです。</p>
+<pre class="mermaid">classDiagram
+    class AbrgApiServer {
+        -AbrGeocoder geocoder
+        +listen(port)
+    }
+
+    class CliServer {
+        -AbrGeocoder geocoder
+        +handleCommand(command)
+    }
+
+    class OnGeocodeRequest {
+        +handle(req, res)
+    }
+
+    class OnCommandRequest {
+        +handle(command)
+    }
+
+    class FormatterProvider {
+        +getFormatter(format) IFormatTransform
+    }
+
+    class HttpRequestAdapter {
+        +getJSON(url) Promise
+        +get(url) Promise
+        +post(url, data) Promise
+    }
+
+    AbrgApiServer --&gt; OnGeocodeRequest : uses
+    CliServer --&gt; OnCommandRequest : uses
+    AbrgApiServer --&gt; FormatterProvider : uses
+    CliServer --&gt; FormatterProvider : uses
+    AbrgApiServer --&gt; AbrGeocoder : calls
+    CliServer --&gt; AbrGeocoder : calls
+</pre>
+<h3 id="役割の詳細-3"><a class="header" href="#役割の詳細-3">役割の詳細</a></h3>
+<h4 id="abrgapiserver--cliserver"><a class="header" href="#abrgapiserver--cliserver">AbrgApiServer / CliServer</a></h4>
+<p><strong>AbrgApiServer</strong>:</p>
+<ul>
+<li>hyper-expressベースのHTTPサーバー</li>
+<li>RESTful APIとして <code>GET /geocode?address=...</code> を提供</li>
+<li>1件ずつのリクエストに対応</li>
+</ul>
+<p><strong>CliServer</strong>:</p>
+<ul>
+<li>コマンドライン引数を解析してAbrGeocoderを呼び出し</li>
+<li>ストリーム処理で標準入力から大量住所を読み込み</li>
+<li>標準出力に結果を出力（パイプライン処理に最適）</li>
+</ul>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li><code>process.stdin</code> / <code>process.stdout</code> をStreamとして扱い、メモリ効率的に処理</li>
+<li>Transformストリームをパイプラインで接続: <code>stdin → geocode → format → stdout</code></li>
+</ul>
+<h4 id="formatterprovider"><a class="header" href="#formatterprovider">FormatterProvider</a></h4>
+<p>出力フォーマッターを提供するファクトリクラス：</p>
+<ul>
+<li><strong>JSON</strong>: 標準的なJSON形式</li>
+<li><strong>CSV</strong>: 表計算ソフトで開けるCSV形式</li>
+<li><strong>GeoJSON</strong>: 地理情報システム（GIS）標準形式</li>
+<li><strong>NDJSON</strong>: Newline Delimited JSON（ストリーム処理に最適）</li>
+</ul>
+<p><strong>設計ポイント</strong>: Strategy パターンでフォーマット処理を差し替え可能に</p>
+<h4 id="httprequestadapter"><a class="header" href="#httprequestadapter">HttpRequestAdapter</a></h4>
+<p>HTTP通信の抽象化レイヤー。テスト時にはモック実装に差し替え可能：</p>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>fetch API（Node.js 18+標準）またはnode-fetchを使用</li>
+<li>async/awaitでPromiseベースの非同期処理</li>
+<li>タイムアウト、リトライ、エラーハンドリングを一箇所に集約</li>
+</ul>
+<h2 id="download-systemダウンロードシステム"><a class="header" href="#download-systemダウンロードシステム">Download System（ダウンロードシステム）</a></h2>
+<p>データセットのダウンロードと処理を担当します。</p>
+<pre class="mermaid">classDiagram
+    class Downloader {
+        -HttpRequestAdapter httpAdapter
+        -DownloadDbController dbController
+        +download(params) Promise~void~
+        +createDownloadRequests()
+    }
+
+    class DownloadTransform {
+        +create()$ Duplex
+    }
+
+    class CsvParseTransform {
+        +create()$ Duplex
+    }
+
+    class SaveResourceInfoTransform {
+        +create()$ Transform
+    }
+
+    class DownloadDiContainer {
+        +getHttpAdapter()
+        +getDbController()
+    }
+
+    Downloader --&gt; DownloadTransform : uses
+    Downloader --&gt; CsvParseTransform : uses
+    Downloader --&gt; SaveResourceInfoTransform : uses
+    Downloader --&gt; DownloadDiContainer : uses
+    Downloader --&gt; HttpRequestAdapter : uses
+</pre>
+<h3 id="役割の詳細-4"><a class="header" href="#役割の詳細-4">役割の詳細</a></h3>
+<h4 id="downloader"><a class="header" href="#downloader">Downloader</a></h4>
+<p>データセットダウンロード処理のオーケストレーター：</p>
+<ol>
+<li>DCATメタデータから配布URLリストを生成</li>
+<li>各URLをキューに投入し、並列ダウンロード</li>
+<li>CSVパース → DB投入をストリームパイプライン処理</li>
+<li>キャッシュファイル（ABRG2）を生成</li>
+</ol>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>Promiseの並列実行（<code>Promise.all()</code>）で複数ファイルを同時ダウンロード</li>
+<li>Streamのバックプレッシャー制御でメモリ使用量を抑制</li>
+</ul>
+<h4 id="downloadtransform--csvparsetransform"><a class="header" href="#downloadtransform--csvparsetransform">DownloadTransform / CsvParseTransform</a></h4>
+<p><strong>DownloadTransform</strong>:</p>
+<ul>
+<li>HTTPレスポンスボディをStreamとして受信</li>
+<li>zip圧縮されている場合は自動的に展開</li>
+</ul>
+<p><strong>CsvParseTransform</strong>:</p>
+<ul>
+<li>CSV行をパースしてオブジェクトに変換</li>
+<li>バリデーション（必須フィールドチェック等）</li>
+<li>SQLiteへのバッチインサート</li>
+</ul>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>Transformストリームを継承し、<code>_transform()</code> メソッドで変換処理を実装</li>
+<li>チャンク単位で処理するため、巨大ファイルでもメモリ効率的</li>
+</ul>
+<h4 id="saveresourceinfotransform"><a class="header" href="#saveresourceinfotransform">SaveResourceInfoTransform</a></h4>
+<p>ダウンロード済みリソースのメタ情報（ETag、最終更新日時等）をDBに保存：</p>
+<p><strong>目的</strong>: 次回ダウンロード時に、更新されたファイルのみを再取得（差分更新）</p>
+<h2 id="worker-thread-poolワーカースレッドプール"><a class="header" href="#worker-thread-poolワーカースレッドプール">Worker Thread Pool（ワーカースレッドプール）</a></h2>
+<p>並列処理を実現するスレッドプール管理です。</p>
+<pre class="mermaid">classDiagram
+    class IWorkerThreadPool {
+        &lt;&lt;interface&gt;&gt;
+        +run(data) Promise
+        +close() Promise
+    }
+
+    class WorkerThreadPool {
+        -WorkerThread[] workers
+        -WorkerPoolTaskInfo[] tasks
+        +run(data) Promise
+        +close() Promise
+        +create()$ WorkerThreadPool
+    }
+
+    class WorkerThread {
+        -Worker worker
+        +addTask(task) Promise
+        +close() Promise
+    }
+
+    class WorkerPoolTaskInfo {
+        +data Object
+        +result Object
+        +setResolver(resolve)
+        +setRejector(reject)
+        +emit()
+    }
+
+    class SemaphoreManager {
+        -SharedArrayBuffer buffer
+        +enterAwait() Promise
+        +leave()
+    }
+
+    class FakeWorkerThreadPool {
+        +run(data) Promise
+        +close() Promise
+    }
+
+    IWorkerThreadPool &lt;|.. WorkerThreadPool : implements
+    IWorkerThreadPool &lt;|.. FakeWorkerThreadPool : implements
+    WorkerThreadPool --&gt; WorkerThread : manages
+    WorkerThreadPool --&gt; WorkerPoolTaskInfo : uses
+    WorkerThread --&gt; SemaphoreManager : uses
+</pre>
+<h3 id="役割の詳細-5"><a class="header" href="#役割の詳細-5">役割の詳細</a></h3>
+<h4 id="workerthreadpool"><a class="header" href="#workerthreadpool">WorkerThreadPool</a></h4>
+<p>ワーカースレッド管理の中核：</p>
+<ol>
+<li><strong>初期化</strong>: CPU数に応じたWorkerを起動</li>
+<li><strong>タスク分配</strong>: ラウンドロビンで空いているWorkerにタスク投入</li>
+<li><strong>結果収集</strong>: 各Workerからの結果をTaskInfoに格納</li>
+<li><strong>順序保証</strong>: 入力順にPromiseを解決（TaskInfo連結リストで実現）</li>
+</ol>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li><code>worker_threads</code> モジュールでマルチコアCPUを活用</li>
+<li>SharedArrayBufferでWorker間のデータ共有（コピーレス）</li>
+<li>MessageChannelでWorkerとメインスレッド間の通信</li>
+</ul>
+<p><strong>アルゴリズム</strong>:</p>
+<ul>
+<li>タスクは連結リストで管理し、完了順序に関わらず入力順に結果を返却</li>
+<li>バックプレッシャー: <code>maxTasksPerWorker</code> で同時実行タスク数を制限</li>
+</ul>
+<h4 id="workerthread"><a class="header" href="#workerthread">WorkerThread</a></h4>
+<p>個別ワーカースレッドのラッパー：</p>
+<ul>
+<li><strong>起動</strong>: Workerスクリプトをロードし、初期化データを送信</li>
+<li><strong>タスク実行</strong>: <code>postMessage()</code> でタスクを送信し、結果を <code>on('message')</code> で受信</li>
+<li><strong>終了</strong>: <code>terminate()</code> でWorkerを強制終了、または <code>close()</code> で正常終了を待機</li>
+</ul>
+<h4 id="semaphoremanager"><a class="header" href="#semaphoremanager">SemaphoreManager</a></h4>
+<p>SharedArrayBufferを使用したセマフォ実装：</p>
+<p><strong>用途</strong>: ファイル書き込み時の排他制御（複数Workerが同時に書き込まないよう制御）</p>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li><code>Atomics.wait()</code> / <code>Atomics.notify()</code> でスレッド間同期</li>
+<li>ポーリングではなくブロッキング待機により、CPU使用率を抑制</li>
+</ul>
+<h4 id="fakeworkerthreadpool"><a class="header" href="#fakeworkerthreadpool">FakeWorkerThreadPool</a></h4>
+<p>テスト/デバッグ用のモック実装：</p>
+<p><strong>目的</strong>: Worker Threadsを使わずにメインスレッドで実行することで、デバッガーで追跡可能に</p>
+<p><strong>設計ポイント</strong>: IWorkerThreadPoolインターフェースに準拠し、本番とテストで実装を差し替え</p>
+<h2 id="database-layerデータベース層"><a class="header" href="#database-layerデータベース層">Database Layer（データベース層）</a></h2>
+<p>SQLiteデータベースへのアクセスを管理します。</p>
+<pre class="mermaid">classDiagram
+    class GeocodeDbController {
+        +openCommonDb() CommonDbGeocode
+        +openRsdtBlkDb() RsdtBlkDb
+        +openParcelDb() ParcelDb
+    }
+
+    class DownloadDbController {
+        +openDatasetDb() DatasetDb
+        +openCommonDb() CommonDbDownload
+    }
+
+    class CommonDbGeocodeSqlite3 {
+        +getPref()
+        +getCity()
+        +getTown()
+    }
+
+    class CommonDbDownloadSqlite3 {
+        +insertPref()
+        +insertCity()
+        +insertTown()
+    }
+
+    class Sqlite3Wrapper {
+        &lt;&lt;abstract&gt;&gt;
+        #db Database
+        +prepare(sql)
+        +exec(sql)
+    }
+
+    GeocodeDbController --&gt; CommonDbGeocodeSqlite3 : creates
+    DownloadDbController --&gt; CommonDbDownloadSqlite3 : creates
+    CommonDbGeocodeSqlite3 --&gt; Sqlite3Wrapper : extends
+    CommonDbDownloadSqlite3 --&gt; Sqlite3Wrapper : extends
+</pre>
+<h3 id="役割の詳細-6"><a class="header" href="#役割の詳細-6">役割の詳細</a></h3>
+<h4 id="geocodedbcontroller--downloaddbcontroller"><a class="header" href="#geocodedbcontroller--downloaddbcontroller">GeocodeDbController / DownloadDbController</a></h4>
+<p><strong>GeocodeDbController</strong>:</p>
+<ul>
+<li>ジオコーディング時（読み取り専用）のDB接続を管理</li>
+<li>複数のWorkerから同時アクセス可能（SQLiteのWALモード）</li>
+</ul>
+<p><strong>DownloadDbController</strong>:</p>
+<ul>
+<li>ダウンロード時（書き込み）のDB接続を管理</li>
+<li>トランザクション制御でデータ一貫性を保証</li>
+</ul>
+<p><strong>設計ポイント</strong>: 読み取りと書き込みでControllerを分離し、責務を明確化</p>
+<h4 id="commondbgeocodesqlite3--commondbdownloadsqlite3"><a class="header" href="#commondbgeocodesqlite3--commondbdownloadsqlite3">CommonDbGeocodeSqlite3 / CommonDbDownloadSqlite3</a></h4>
+<p><strong>CommonDbGeocodeSqlite3</strong>（読み取り用）:</p>
+<ul>
+<li><code>getPref()</code>, <code>getCity()</code> などのSELECTクエリ</li>
+<li>インデックスを活用した高速検索</li>
+</ul>
+<p><strong>CommonDbDownloadSqlite3</strong>（書き込み用）:</p>
+<ul>
+<li><code>insertPref()</code>, <code>insertCity()</code> などのINSERTクエリ</li>
+<li>バッチインサートで高速化</li>
+</ul>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>better-sqlite3（同期API）でシンプルなコード</li>
+<li>Prepared Statementでインジェクション対策とパフォーマンス向上</li>
+</ul>
+<h4 id="sqlite3wrapper"><a class="header" href="#sqlite3wrapper">Sqlite3Wrapper</a></h4>
+<p>better-sqlite3ライブラリのラッパー抽象クラス：</p>
+<p><strong>目的</strong>:</p>
+<ul>
+<li>共通的なDB操作（prepare, exec, transaction）を提供</li>
+<li>テスト時にモック実装に差し替え可能</li>
+</ul>
+<h2 id="クラス間の主要な依存関係"><a class="header" href="#クラス間の主要な依存関係">クラス間の主要な依存関係</a></h2>
+<p>以下の依存関係により、システム全体が協調動作します：</p>
+<ol>
+<li><strong>API/CLI → Geocoding Core</strong>: AbrgApiServer/CliServer が AbrGeocoder を呼び出し</li>
+<li><strong>Geocoding Core → Worker Pool</strong>: AbrGeocoder が WorkerThreadPool を管理し、並列処理を実現</li>
+<li><strong>Geocoding Core → Trie Finder</strong>: AbrGeocoder が各 TrieAddressFinder2 サブクラスを使用して段階的検索</li>
+<li><strong>Download → Data Structures</strong>: Downloader が FileTrieWriter を使用してABRG2キャッシュを生成</li>
+<li><strong>All → Database</strong>: すべてのレイヤーが GeocodeDbController/DownloadDbController を介してDB操作</li>
+</ol>
+<h2 id="コントリビューションのヒント-1"><a class="header" href="#コントリビューションのヒント-1">コントリビューションのヒント</a></h2>
+<h3 id="パフォーマンス改善-1"><a class="header" href="#パフォーマンス改善-1">パフォーマンス改善</a></h3>
+<ul>
+<li><strong>WorkerThreadPool</strong>: タスクスケジューリングアルゴリズムの改善</li>
+<li><strong>TrieAddressFinder2</strong>: 探索アルゴリズムの最適化（枝刈り、キャッシング等）</li>
+<li><strong>FileTrieWriter</strong>: バッファサイズやハッシュアルゴリズムのチューニング</li>
+</ul>
+<h3 id="機能追加"><a class="header" href="#機能追加">機能追加</a></h3>
+<ul>
+<li><strong>新しいFinder</strong>: 特定地域（北海道、沖縄等）の特殊処理に対応</li>
+<li><strong>新しいFormatter</strong>: 新しい出力形式（KML, Shapefile等）のサポート</li>
+<li><strong>新しいAPI</strong>: バッチジオコーディングAPIの追加</li>
+</ul>
+<h3 id="テスト強化"><a class="header" href="#テスト強化">テスト強化</a></h3>
+<ul>
+<li><strong>FakeWorkerThreadPool</strong>: テストカバレッジの向上に活用</li>
+<li><strong>Sqlite3Wrapper</strong>: モック実装でDBなしのユニットテストを実現</li>
+<li><strong>E2Eテスト</strong>: 実データでのエンドツーエンドテスト</li>
+</ul>
+<p>このクラス図を参照しながらソースコードを読むことで、システム全体の理解が深まります。ぜひGitHub PRで改善提案をお寄せください！</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="dependency-injection依存性注入"><a class="header" href="#dependency-injection依存性注入">Dependency Injection（依存性注入）</a></h1>
+<p>このページでは、Dependency Injection（DI）の基礎から、ABR Geocoderでの実装方法、テスタビリティ向上のメリットまでを詳しく説明します。</p>
+<h2 id="diとは何か"><a class="header" href="#diとは何か">DIとは何か？</a></h2>
+<h3 id="依存性の問題"><a class="header" href="#依存性の問題">依存性の問題</a></h3>
+<p>まず、DIを使わない場合の問題を見てみましょう。</p>
+<p><strong>悪い例（依存性が固定されている）</strong>：</p>
+<pre><code class="language-typescript">class UserService {
+  private database: MySQLDatabase;
+
+  constructor() {
+    // MySQLDatabaseに直接依存している
+    this.database = new MySQLDatabase({
+      host: 'localhost',
+      port: 3306,
+      user: 'root',
+      password: 'password',
+    });
+  }
+
+  async getUser(id: number) {
+    return await this.database.query('SELECT * FROM users WHERE id = ?', [id]);
+  }
+}
+</code></pre>
+<p><strong>問題点</strong>：</p>
+<ol>
+<li><strong>テストが困難</strong>: 実際のMySQLデータベースが必要になる</li>
+<li><strong>環境切り替えが困難</strong>: 本番/開発/テストで別のDB設定を使いたい場合、コードを変更する必要がある</li>
+<li><strong>拡張性がない</strong>: PostgreSQLに変更したい場合、UserServiceのコードを書き換える必要がある</li>
+</ol>
+<h3 id="diによる解決"><a class="header" href="#diによる解決">DIによる解決</a></h3>
+<p>Dependency Injection（依存性注入）は、クラスの依存関係を外部から与える設計パターンです。</p>
+<p><strong>良い例（依存性を外部から注入）</strong>：</p>
+<pre><code class="language-typescript">// データベースのインターフェース
+interface IDatabase {
+  query(sql: string, params: any[]): Promise&lt;any[]&gt;;
+}
+
+class UserService {
+  // インターフェースに依存
+  constructor(private database: IDatabase) {}
+
+  async getUser(id: number) {
+    return await this.database.query('SELECT * FROM users WHERE id = ?', [id]);
+  }
+}
+
+// 使用例
+const db = new MySQLDatabase({ /* 設定 */ });
+const userService = new UserService(db); // 依存性を注入
+</code></pre>
+<p><strong>メリット</strong>：</p>
+<ol>
+<li><strong>テスト容易性</strong>: モックデータベースを注入してテスト可能</li>
+<li><strong>柔軟な設定</strong>: 環境に応じて異なるデータベースを注入できる</li>
+<li><strong>拡張性</strong>: PostgreSQLに変更してもUserServiceのコードは変わらない</li>
+</ol>
+<h2 id="なぜdiが必要か"><a class="header" href="#なぜdiが必要か">なぜDIが必要か？</a></h2>
+<h3 id="問題分岐だらけのコード"><a class="header" href="#問題分岐だらけのコード">問題：分岐だらけのコード</a></h3>
+<p>DIを使わないと、環境や設定による分岐がコード全体に散在します。</p>
+<pre><code class="language-typescript">// ❌ 悪い例：分岐だらけ
+class AbrGeocoder {
+  private database: any;
+  private logger: any;
+  private cacheDir: string;
+
+  constructor(options: any) {
+    // 環境による分岐
+    if (process.env.NODE_ENV === 'test') {
+      this.database = new MockDatabase();
+      this.logger = new NullLogger();
+      this.cacheDir = '/tmp/test-cache';
+    } else if (process.env.NODE_ENV === 'development') {
+      this.database = new SQLiteDatabase('dev.db');
+      this.logger = new ConsoleLogger();
+      this.cacheDir = './cache';
+    } else {
+      this.database = new SQLiteDatabase('prod.db');
+      this.logger = new FileLogger('/var/log/abr.log');
+      this.cacheDir = '/var/cache/abr';
+    }
+
+    // データベースの種類による分岐
+    if (options.dbType === 'sqlite') {
+      this.database = new SQLiteDatabase(options.dbPath);
+    } else if (options.dbType === 'postgres') {
+      this.database = new PostgreSQLDatabase(options.dbConfig);
+    }
+  }
+
+  async geocode(address: string) {
+    // ロガーがあるかチェック
+    if (this.logger) {
+      this.logger.log(`Geocoding: ${address}`);
+    }
+
+    // データベースの種類によって呼び出し方が違う
+    if (this.database instanceof SQLiteDatabase) {
+      return await this.database.querySync('SELECT ...');
+    } else {
+      return await this.database.query('SELECT ...');
+    }
+  }
+}
+</code></pre>
+<p><strong>問題点</strong>：</p>
+<ul>
+<li>ユースケース（geocode）の中に、インフラ選択のif/elseが混在</li>
+<li>新しい環境を追加するたびにコード修正が必要</li>
+<li>テスト用の分岐がプロダクションコードに残る</li>
+<li>バグの温床（条件分岐が複雑すぎて把握できない）</li>
+</ul>
+<h3 id="解決diコンテナで集約"><a class="header" href="#解決diコンテナで集約">解決：DIコンテナで集約</a></h3>
+<p>DIコンテナを使うと、依存関係の構築をコンテナに集約できます。</p>
+<pre><code class="language-typescript">// ✅ 良い例：DIコンテナで集約
+class AbrGeocoderDiContainer {
+  public readonly database: GeocodeDbController;
+  public readonly logger?: DebugLogger;
+  public readonly cacheDir: string;
+
+  constructor(params: AbrGeocoderDiContainerParams) {
+    // 依存関係の構築はコンテナ内で完結
+    this.database = new GeocodeDbController({
+      connectParams: params.database,
+    });
+
+    if (params.debug) {
+      this.logger = DebugLogger.getInstance();
+    }
+
+    this.cacheDir = params.cacheDir;
+    Object.freeze(this); // イミュータブル化
+  }
+}
+
+class AbrGeocoder {
+  constructor(private container: AbrGeocoderDiContainer) {}
+
+  async geocode(address: string) {
+    // 分岐なし！コンテナから取得するだけ
+    this.container.logger?.log(`Geocoding: ${address}`);
+    return await this.container.database.query('SELECT ...');
+  }
+}
+
+// 使用例
+const container = new AbrGeocoderDiContainer({
+  database: { type: 'sqlite3', dataDir: './data' },
+  cacheDir: './cache',
+  debug: true,
+});
+
+const geocoder = new AbrGeocoder(container);
+</code></pre>
+<p><strong>メリット</strong>：</p>
+<ul>
+<li>ユースケースコードから分岐が消える</li>
+<li>環境による違いはコンテナ初期化時に吸収</li>
+<li>テスト時はモックコンテナを注入するだけ</li>
+<li>新しい環境でも、新しいコンテナを作るだけで対応可能</li>
+</ul>
+<h2 id="abr-geocoderのdi実装"><a class="header" href="#abr-geocoderのdi実装">ABR GeocoderのDI実装</a></h2>
+<h3 id="diコンテナの種類"><a class="header" href="#diコンテナの種類">DIコンテナの種類</a></h3>
+<p>ABR Geocoderでは、ユースケースごとに専用のDIコンテナを用意しています。</p>
+<h4 id="1-commondicontainer基底クラス"><a class="header" href="#1-commondicontainer基底クラス">1. CommonDiContainer（基底クラス）</a></h4>
+<p>すべてのDIコンテナの基底クラスです。</p>
+<pre><code class="language-typescript">// src/domain/models/common-di-container.ts
+export class CommonDiContainer {
+  public readonly env: EnvProvider;
+
+  constructor() {
+    this.env = new EnvProvider();
+  }
+}
+</code></pre>
+<p><strong>役割</strong>：</p>
+<ul>
+<li>環境変数の提供（<code>EnvProvider</code>）</li>
+<li>共通の依存関係を管理</li>
+</ul>
+<h4 id="2-abrgeocoderdicontainerジオコーディング用"><a class="header" href="#2-abrgeocoderdicontainerジオコーディング用">2. AbrGeocoderDiContainer（ジオコーディング用）</a></h4>
+<p>ジオコーディング処理で使用する依存関係を集約します。</p>
+<pre><code class="language-typescript">// src/usecases/geocode/models/abr-geocoder-di-container.ts
+export type AbrGeocoderDiContainerParams = {
+  cacheDir: string;      // ABRG2キャッシュファイルの保存先
+  database: DatabaseParams;  // データベース接続情報
+  debug: boolean;        // デバッグモード
+};
+
+export class AbrGeocoderDiContainer extends CommonDiContainer {
+  public readonly database: GeocodeDbController;
+  public readonly logger?: DebugLogger;
+  public readonly cacheDir: string;
+
+  constructor(private params: AbrGeocoderDiContainerParams) {
+    super();
+
+    // データベースコントローラーを生成
+    this.database = new GeocodeDbController({
+      connectParams: params.database,
+    });
+
+    // デバッグモードならロガーを生成
+    if (params.debug) {
+      this.logger = DebugLogger.getInstance();
+    }
+
+    this.cacheDir = params.cacheDir;
+
+    // イミュータブル化（変更不可）
+    Object.freeze(this);
+  }
+
+  // JSON形式に変換（Worker間でパラメータを渡すため）
+  toJSON(): AbrGeocoderDiContainerParams {
+    return { ...this.params };
+  }
+}
+</code></pre>
+<p><strong>提供する依存関係</strong>：</p>
+<div class="table-wrapper"><table><thead><tr><th>プロパティ</th><th>型</th><th>説明</th></tr></thead><tbody>
+<tr><td><code>database</code></td><td>GeocodeDbController</td><td>データベースアクセス</td></tr>
+<tr><td><code>logger</code></td><td>DebugLogger</td><td>デバッグログ出力</td></tr>
+<tr><td><code>cacheDir</code></td><td>string</td><td>ABRG2キャッシュディレクトリ</td></tr>
+<tr><td><code>env</code></td><td>EnvProvider</td><td>環境変数（継承）</td></tr>
+</tbody></table>
+</div>
+<p><strong>使用例</strong>：</p>
+<pre><code class="language-typescript">// CLI起動時
+const container = new AbrGeocoderDiContainer({
+  cacheDir: path.join(os.homedir(), '.abr-geocoder', 'cache'),
+  database: {
+    type: 'sqlite3',
+    dataDir: path.join(os.homedir(), '.abr-geocoder', 'database'),
+  },
+  debug: process.env.DEBUG === 'true',
+});
+
+const geocoder = new AbrGeocoder(container);
+const result = await geocoder.geocode('東京都千代田区霞が関1-1-1');
+</code></pre>
+<h4 id="3-downloaddicontainerダウンロード用"><a class="header" href="#3-downloaddicontainerダウンロード用">3. DownloadDiContainer（ダウンロード用）</a></h4>
+<p>データセットのダウンロードで使用する依存関係を集約します。</p>
+<pre><code class="language-typescript">// src/usecases/download/models/download-di-container.ts
+export type DownloadDiContainerParams = {
+  cacheDir: string;      // キャッシュファイルの保存先
+  downloadDir: string;   // ダウンロードファイルの一時保存先
+  database: DatabaseParams;  // データベース接続情報
+  keepFiles?: boolean;   // ダウンロードファイルを削除せず保持するか
+};
+
+export class DownloadDiContainer extends CommonDiContainer {
+  public readonly downloadDir: string;
+  public readonly database: DownloadDbController;
+
+  constructor(private params: DownloadDiContainerParams) {
+    super();
+
+    this.downloadDir = params.downloadDir;
+
+    // ディレクトリが存在しなければ作成
+    makeDirIfNotExists(params.downloadDir);
+    makeDirIfNotExists(params.cacheDir);
+
+    // ダウンロード用データベースコントローラーを生成
+    this.database = new DownloadDbController(params.database);
+
+    Object.freeze(this);
+  }
+
+  get keepFiles(): boolean {
+    return this.params.keepFiles || false;
+  }
+
+  // データセット一覧を取得するURL
+  getPackageListUrl() {
+    return new URL(`https://${this.env.hostname}/api/feed/dcat-us/1.1.json`);
+  }
+
+  toJSON(): DownloadDiContainerParams {
+    return this.params;
+  }
+}
+</code></pre>
+<p><strong>提供する依存関係</strong>：</p>
+<div class="table-wrapper"><table><thead><tr><th>プロパティ</th><th>型</th><th>説明</th></tr></thead><tbody>
+<tr><td><code>database</code></td><td>DownloadDbController</td><td>ダウンロード用DB</td></tr>
+<tr><td><code>downloadDir</code></td><td>string</td><td>ダウンロードディレクトリ</td></tr>
+<tr><td><code>keepFiles</code></td><td>boolean</td><td>ファイル保持フラグ</td></tr>
+<tr><td><code>env</code></td><td>EnvProvider</td><td>環境変数（継承）</td></tr>
+</tbody></table>
+</div>
+<p><strong>使用例</strong>：</p>
+<pre><code class="language-typescript">// ダウンロードコマンド実行時
+const container = new DownloadDiContainer({
+  cacheDir: path.join(os.homedir(), '.abr-geocoder', 'cache'),
+  downloadDir: path.join(os.homedir(), '.abr-geocoder', 'download'),
+  database: {
+    type: 'sqlite3',
+    dataDir: path.join(os.homedir(), '.abr-geocoder', 'database'),
+  },
+  keepFiles: false,
+});
+
+const downloader = new Downloader(container);
+await downloader.download({
+  lgCodes: ['13'], // 東京都
+  concurrentDownloads: 10,
+  numOfThreads: 6,
+});
+</code></pre>
+<h3 id="コンテナのライフサイクル"><a class="header" href="#コンテナのライフサイクル">コンテナのライフサイクル</a></h3>
+<pre class="mermaid">flowchart TD
+  START[&quot;プログラム起動&quot;] --&gt; PARAMS[&quot;設定パラメータ取得&lt;br/&gt;(CLI引数 / 環境変数)&quot;]
+  PARAMS --&gt; CREATE[&quot;DIコンテナ生成&quot;]
+  CREATE --&gt; INJECT[&quot;ユースケースに注入&quot;]
+  INJECT --&gt; RUN[&quot;処理実行&quot;]
+  RUN --&gt; END[&quot;終了&quot;]
+
+  CREATE --&gt; DB[&quot;データベース接続&quot;]
+  CREATE --&gt; LOGGER[&quot;ロガー初期化&quot;]
+  CREATE --&gt; DIR[&quot;ディレクトリ作成&quot;]
+</pre>
+<p><strong>重要な特徴</strong>：</p>
+<ol>
+<li><strong>イミュータブル（不変）</strong>: <code>Object.freeze()</code> で変更不可</li>
+<li><strong>シングルトン</strong>: アプリケーション全体で1つのコンテナを共有</li>
+<li><strong>遅延初期化なし</strong>: コンテナ生成時にすべての依存関係を構築</li>
+</ol>
+<h2 id="テスタビリティの向上"><a class="header" href="#テスタビリティの向上">テスタビリティの向上</a></h2>
+<h3 id="モックによるテスト"><a class="header" href="#モックによるテスト">モックによるテスト</a></h3>
+<p>DIコンテナを使うと、テスト時にモックを注入できます。</p>
+<p><strong>プロダクションコード</strong>：</p>
+<pre><code class="language-typescript">// src/usecases/geocode/abr-geocoder.ts
+class AbrGeocoder {
+  constructor(private container: AbrGeocoderDiContainer) {}
+
+  async geocode(address: string) {
+    this.container.logger?.log(`Geocoding: ${address}`);
+
+    // データベースから検索
+    const result = await this.container.database.query(...);
+
+    return result;
+  }
+}
+</code></pre>
+<p><strong>テストコード</strong>：</p>
+<pre><code class="language-typescript">// src/usecases/geocode/__tests__/abr-geocoder.test.ts
+import { AbrGeocoder } from '../abr-geocoder';
+import { AbrGeocoderDiContainer } from '../models/abr-geocoder-di-container';
+import { jest } from '@jest/globals';
+
+// DIコンテナをモック化
+jest.mock('../models/abr-geocoder-di-container');
+
+describe('AbrGeocoder', () =&gt; {
+  it('should geocode address', async () =&gt; {
+    // モックデータベースを用意
+    const mockDatabase = {
+      query: jest.fn().mockResolvedValue([
+        { pref: '東京都', city: '千代田区', lat: 35.6762, lon: 139.6503 }
+      ]),
+    };
+
+    // モックコンテナを作成
+    const mockContainer = {
+      database: mockDatabase,
+      logger: undefined,
+      cacheDir: '/tmp/test-cache',
+    };
+
+    // DIコンテナとして注入
+    const geocoder = new AbrGeocoder(mockContainer as any);
+
+    // テスト実行
+    const result = await geocoder.geocode('東京都千代田区霞が関1-1-1');
+
+    // 検証
+    expect(mockDatabase.query).toHaveBeenCalled();
+    expect(result).toEqual([
+      { pref: '東京都', city: '千代田区', lat: 35.6762, lon: 139.6503 }
+    ]);
+  });
+});
+</code></pre>
+<p><strong>メリット</strong>：</p>
+<ul>
+<li>実際のデータベース不要</li>
+<li>ファイルシステムのアクセス不要</li>
+<li>テストが高速（数ms）</li>
+<li>テストが安定（外部依存なし）</li>
+</ul>
+<h3 id="モックコンテナの実装"><a class="header" href="#モックコンテナの実装">モックコンテナの実装</a></h3>
+<p>実際のモックコンテナの実装例です。</p>
+<pre><code class="language-typescript">// src/usecases/geocode/models/__mocks__/abr-geocoder-di-container.ts
+import { DownloadDbController } from '@drivers/database/download-db-controller';
+import { jest } from '@jest/globals';
+
+// データベースコントローラーをモック化
+jest.mock('@drivers/database/download-db-controller');
+
+const database = new DownloadDbController({
+  type: 'sqlite3',
+  dataDir: '~/.abr-geocoder/database_test',
+});
+
+const originalModule = jest.requireActual(
+  '@usecases/geocode/models/abr-geocoder-di-container'
+);
+
+module.exports = {
+  ...Object.assign({}, originalModule),
+  AbrGeocoderDiContainer: jest.fn(() =&gt; {
+    return {
+      // モック化されたデータベース
+      database,
+
+      toJSON: () =&gt; {
+        return {
+          database,
+          debug: false,
+        };
+      },
+
+      logger: undefined,
+    };
+  }),
+};
+</code></pre>
+<p><strong>使い方</strong>：</p>
+<pre><code class="language-typescript">// テストファイルの先頭で
+jest.mock('@usecases/geocode/models/abr-geocoder-di-container');
+
+// あとは通常通りコンテナを使うだけ
+const container = new AbrGeocoderDiContainer({ /* ... */ });
+// → 自動的にモックが注入される
+</code></pre>
+<h2 id="diのメリットまとめ"><a class="header" href="#diのメリットまとめ">DIのメリットまとめ</a></h2>
+<h3 id="1-分岐削減"><a class="header" href="#1-分岐削減">1. 分岐削減</a></h3>
+<pre><code class="language-typescript">// ❌ DIなし：分岐だらけ
+if (env === 'test') {
+  db = mockDB;
+} else if (env === 'dev') {
+  db = devDB;
+} else {
+  db = prodDB;
+}
+
+// ✅ DIあり：分岐なし
+const db = container.database; // コンテナから取得するだけ
+</code></pre>
+<h3 id="2-テスタビリティ"><a class="header" href="#2-テスタビリティ">2. テスタビリティ</a></h3>
+<pre><code class="language-typescript">// ❌ DIなし：実際のDBが必要
+const geocoder = new AbrGeocoder();
+await geocoder.geocode('東京都'); // 実DBにアクセス
+
+// ✅ DIあり：モック注入
+const geocoder = new AbrGeocoder(mockContainer);
+await geocoder.geocode('東京都'); // モックDBにアクセス
+</code></pre>
+<h3 id="3-層の独立性"><a class="header" href="#3-層の独立性">3. 層の独立性</a></h3>
+<pre><code>Interface Layer (CLI, REST API)
+    ↓ DIコンテナを注入
+UseCase Layer (Geocode, Download)
+    ↓ コンテナ経由でアクセス
+Driver Layer (SQLite, FileSystem)
+</code></pre>
+<ul>
+<li>UseCasesはInterfaceに依存しない</li>
+<li>UseCasesはDriversに直接依存しない</li>
+<li>すべての依存関係はコンテナ経由</li>
+</ul>
+<h3 id="4-環境切り替えが容易"><a class="header" href="#4-環境切り替えが容易">4. 環境切り替えが容易</a></h3>
+<pre><code class="language-typescript">// 開発環境
+const devContainer = new AbrGeocoderDiContainer({
+  database: { type: 'sqlite3', dataDir: './dev-data' },
+  cacheDir: './dev-cache',
+  debug: true,
+});
+
+// 本番環境
+const prodContainer = new AbrGeocoderDiContainer({
+  database: { type: 'sqlite3', dataDir: '/var/lib/abr-geocoder' },
+  cacheDir: '/var/cache/abr-geocoder',
+  debug: false,
+});
+
+// コード変更不要！
+const geocoder = new AbrGeocoder(container);
+</code></pre>
+<h2 id="nodejs特有のポイント"><a class="header" href="#nodejs特有のポイント">Node.js特有のポイント</a></h2>
+<h3 id="1-objectfreeze-でイミュータブル化"><a class="header" href="#1-objectfreeze-でイミュータブル化">1. Object.freeze() でイミュータブル化</a></h3>
+<pre><code class="language-typescript">constructor(params: AbrGeocoderDiContainerParams) {
+  this.database = new GeocodeDbController(...);
+  this.logger = new DebugLogger();
+  this.cacheDir = params.cacheDir;
+
+  // プロパティを変更不可にする
+  Object.freeze(this);
+}
+
+// これはエラーになる
+container.database = new OtherDatabase(); // TypeError
+</code></pre>
+<p><strong>理由</strong>：</p>
+<ul>
+<li>コンテナは設定の集約なので、途中で変更されると混乱する</li>
+<li>バグの原因になりやすい変更を防ぐ</li>
+</ul>
+<h3 id="2-tojson-でシリアライズ可能"><a class="header" href="#2-tojson-でシリアライズ可能">2. toJSON() でシリアライズ可能</a></h3>
+<pre><code class="language-typescript">toJSON(): AbrGeocoderDiContainerParams {
+  return { ...this.params };
+}
+
+// Worker Threadsに渡す際に使用
+const containerParams = container.toJSON();
+worker.postMessage({ containerParams });
+</code></pre>
+<p><strong>理由</strong>：</p>
+<ul>
+<li>Worker Threadsはシリアライズ可能なデータしか渡せない</li>
+<li>コンテナ自体は渡せないが、パラメータだけ渡してWorker側で再構築</li>
+</ul>
+<h3 id="3-シングルトンパターンdebuglogger"><a class="header" href="#3-シングルトンパターンdebuglogger">3. シングルトンパターン（DebugLogger）</a></h3>
+<pre><code class="language-typescript">if (params.debug) {
+  // シングルトンインスタンスを取得
+  this.logger = DebugLogger.getInstance();
+}
+</code></pre>
+<p><strong>理由</strong>：</p>
+<ul>
+<li>ロガーは複数インスタンスを作る必要がない</li>
+<li>メモリ効率化</li>
+</ul>
+<h2 id="コントリビューションのヒント-2"><a class="header" href="#コントリビューションのヒント-2">コントリビューションのヒント</a></h2>
+<h3 id="新しい依存関係の追加"><a class="header" href="#新しい依存関係の追加">新しい依存関係の追加</a></h3>
+<p>既存のコンテナに新しい依存関係を追加する場合：</p>
+<pre><code class="language-typescript">export class AbrGeocoderDiContainer extends CommonDiContainer {
+  public readonly database: GeocodeDbController;
+  public readonly logger?: DebugLogger;
+  public readonly cacheDir: string;
+
+  // 新しい依存関係を追加
+  public readonly metricsCollector?: MetricsCollector;
+
+  constructor(private params: AbrGeocoderDiContainerParams) {
+    super();
+    this.database = new GeocodeDbController(...);
+    this.logger = params.debug ? DebugLogger.getInstance() : undefined;
+    this.cacheDir = params.cacheDir;
+
+    // 新しい依存関係の初期化
+    if (params.enableMetrics) {
+      this.metricsCollector = new MetricsCollector();
+    }
+
+    Object.freeze(this);
+  }
+}
+</code></pre>
+<h3 id="新しいコンテナの作成"><a class="header" href="#新しいコンテナの作成">新しいコンテナの作成</a></h3>
+<p>新しいユースケース用のコンテナを作る場合：</p>
+<pre><code class="language-typescript">// src/usecases/update-check/models/update-check-di-container.ts
+export type UpdateCheckDiContainerParams = {
+  cacheDir: string;
+  checkInterval: number;
+};
+
+export class UpdateCheckDiContainer extends CommonDiContainer {
+  public readonly cacheDir: string;
+  public readonly checkInterval: number;
+
+  constructor(params: UpdateCheckDiContainerParams) {
+    super();
+    this.cacheDir = params.cacheDir;
+    this.checkInterval = params.checkInterval;
+    Object.freeze(this);
+  }
+
+  toJSON(): UpdateCheckDiContainerParams {
+    return {
+      cacheDir: this.cacheDir,
+      checkInterval: this.checkInterval,
+    };
+  }
+}
+</code></pre>
+<h3 id="インターフェースの導入"><a class="header" href="#インターフェースの導入">インターフェースの導入</a></h3>
+<p>より柔軟にしたい場合は、インターフェースを導入：</p>
+<pre><code class="language-typescript">// データベースのインターフェース
+interface IGeocodeDatabase {
+  query(sql: string, params: any[]): Promise&lt;any[]&gt;;
+  close(): Promise&lt;void&gt;;
+}
+
+export class AbrGeocoderDiContainer extends CommonDiContainer {
+  // 具象クラスではなくインターフェースに依存
+  public readonly database: IGeocodeDatabase;
+
+  constructor(params: AbrGeocoderDiContainerParams) {
+    super();
+
+    // 実装クラスを注入
+    this.database = new GeocodeDbController(...);
+    // または
+    // this.database = new PostgresDbController(...);
+
+    Object.freeze(this);
+  }
+}
+</code></pre>
+<h3 id="テスト用のファクトリ関数"><a class="header" href="#テスト用のファクトリ関数">テスト用のファクトリ関数</a></h3>
+<p>テスト用のコンテナを簡単に作るヘルパー：</p>
+<pre><code class="language-typescript">// __tests__/helpers/create-test-container.ts
+export function createTestContainer(
+  overrides?: Partial&lt;AbrGeocoderDiContainerParams&gt;
+): AbrGeocoderDiContainer {
+  const defaults: AbrGeocoderDiContainerParams = {
+    database: {
+      type: 'sqlite3',
+      dataDir: ':memory:', // インメモリDB
+    },
+    cacheDir: '/tmp/test-cache',
+    debug: false,
+  };
+
+  return new AbrGeocoderDiContainer({
+    ...defaults,
+    ...overrides,
+  });
+}
+
+// テストで使用
+const container = createTestContainer({ debug: true });
+</code></pre>
+<h2 id="まとめ"><a class="header" href="#まとめ">まとめ</a></h2>
+<p>Dependency Injection（DI）により、ABR Geocoderは以下を実現しています：</p>
+<ol>
+<li><strong>分岐削減</strong>: ユースケースから環境による分岐を排除</li>
+<li><strong>テスタビリティ</strong>: モック注入で高速・安定したテスト</li>
+<li><strong>層の独立性</strong>: UseCasesがInterfaceやDriversに直接依存しない</li>
+<li><strong>拡張性</strong>: 新しい依存関係を簡単に追加可能</li>
+</ol>
+<p>DIコンテナを使うことで、コードがシンプルになり、メンテナンス性とテスタビリティが大幅に向上します！</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="geocoding"><a class="header" href="#geocoding">Geocoding</a></h1>
+<p>この章では、探索戦略・並列処理・ABRG2 仕様・Finder 実装について解説します。</p>
+<ul>
+<li>Strategy: トライ木を用いた段階的探索とスコアリング</li>
+<li>Parallelism: ワーカープール/共有メモリ/順序維持</li>
+<li>ABRG2 Format: 辞書のバイナリ仕様</li>
+<li>Finder Internals: 読み出しと探索アルゴリズム</li>
+</ul>
+<h2 id="geocoding-coreジオコーディング中核-1"><a class="header" href="#geocoding-coreジオコーディング中核-1">Geocoding Core（ジオコーディング中核）</a></h2>
+<p>ジオコーディング処理を担当する主要クラス群です。</p>
+<pre class="mermaid">classDiagram
+    class AbrGeocoder {
+        -WorkerThreadPool pool
+        -GeocodeDbController dbController
+        +geocode(input) Query
+        +create()$ AbrGeocoder
+    }
+
+    class Query {
+        +prefecture string
+        +city string
+        +town string
+        +score number
+        +lat number
+        +lon number
+    }
+
+    class GeocodeTransform {
+        +create()$ Duplex
+    }
+
+    AbrGeocoder --&gt; Query : returns
+    AbrGeocoder --&gt; GeocodeTransform : uses in worker
+</pre>
+<p><strong>役割:</strong></p>
+<ul>
+<li><strong>AbrGeocoder</strong>: ジオコーディングのメインエントリポイント。ワーカースレッドプールを管理し、入力住所をジオコード結果に変換</li>
+<li><strong>Query</strong>: ジオコード結果を表現するデータモデル（都道府県、市区町村、緯度経度、スコア等）</li>
+<li><strong>GeocodeTransform</strong>: ワーカースレッド内で動作するストリーム処理。複数の変換ステップをパイプライン化</li>
+</ul>
+<h2 id="trie-finderトライ木検索-1"><a class="header" href="#trie-finderトライ木検索-1">Trie Finder（トライ木検索）</a></h2>
+<p>各レベルの住所データを検索するトライ木ファインダー群です。</p>
+<pre class="mermaid">classDiagram
+    direction TB
+    class TrieAddressFinder2 {
+        &lt;&lt;abstract&gt;&gt;
+        #buffer Buffer
+        #dataHead number
+        #trieRoot number
+        +find(target, fuzzy, partialMatches) TrieFinderResult[]
+        +createDictionaryFile()
+    }
+
+    %% ▼派生クラスをグループ化
+    classGroup Finders
+        class PrefTrieFinder
+        class CountyAndCityTrieFinder
+        class CityAndWardTrieFinder
+        class OazaChoTrieFinder
+        class Tokyo23WardTrieFinder
+        class KyotoStreetTrieFinder
+        class ParcelTrieFinder
+        class RsdtBlkTrieFinder
+
+    TrieAddressFinder2 &lt;|-- PrefTrieFinder
+    TrieAddressFinder2 &lt;|-- CountyAndCityTrieFinder
+    TrieAddressFinder2 &lt;|-- CityAndWardTrieFinder
+    TrieAddressFinder2 &lt;|-- OazaChoTrieFinder
+    TrieAddressFinder2 &lt;|-- Tokyo23WardTrieFinder
+    TrieAddressFinder2 &lt;|-- KyotoStreetTrieFinder
+    TrieAddressFinder2 &lt;|-- ParcelTrieFinder
+    TrieAddressFinder2 &lt;|-- RsdtBlkTrieFinder
+</pre>
+<p><strong>役割:</strong></p>
+<ul>
+<li><strong>TrieAddressFinder2</strong>: トライ木検索の基底クラス。バッファベースの高速検索を実装</li>
+<li><strong>PrefTrieFinder</strong>: 都道府県データ用</li>
+<li><strong>CountyAndCityTrieFinder</strong>: 郡市データ用</li>
+<li><strong>CityAndWardTrieFinder</strong>: 市区データ用</li>
+<li><strong>OazaChoTrieFinder</strong>: 大字町丁目データ用</li>
+<li><strong>Tokyo23WardTrieFinder</strong>: 東京23区特別処理用</li>
+<li><strong>KyotoStreetTrieFinder</strong>: 京都通り名データ用</li>
+<li><strong>ParcelTrieFinder</strong>: 地番データ用</li>
+<li><strong>RsdtBlkTrieFinder</strong>: 住居表示（街区符号）データ用</li>
+</ul>
+<h2 id="data-structuresデータ構造-1"><a class="header" href="#data-structuresデータ構造-1">Data Structures（データ構造）</a></h2>
+<p>トライ木の構築と永続化を担当するクラス群です。</p>
+<pre class="mermaid">classDiagram
+    class FileTrieWriter {
+        -ExpandableBuffer buffer
+        -Map~number,number~ hashMap
+        +addNode(key, value) Promise~void~
+        +storeData(data) Promise~number~
+        +create(filePath)$ FileTrieWriter
+    }
+
+    class CharNode {
+        +originalChar string
+        +char string
+        +ignore boolean
+        +next CharNode
+    }
+
+    class ExpandableBuffer {
+        -Buffer buffer
+        +write(data)
+        +expand()
+    }
+
+    class TrieTreeBuilderBase {
+        #writeToFile()
+    }
+
+    FileTrieWriter --&gt; ExpandableBuffer : uses
+    FileTrieWriter --&gt; TrieTreeBuilderBase : extends
+    TrieAddressFinder2 --&gt; CharNode : uses
+</pre>
+<p><strong>役割:</strong></p>
+<ul>
+<li><strong>FileTrieWriter</strong>: バイナリトライ木（ABRG2形式）をファイルに永続化。ハッシュ値ベースのデータ重複排除</li>
+<li><strong>CharNode</strong>: ジオコーディング検索時の文字ノード。連結リスト構造で文字列を管理</li>
+<li><strong>ExpandableBuffer</strong>: 動的に拡張可能なバッファ。トライ木ノード管理時に使用</li>
+<li><strong>TrieTreeBuilderBase</strong>: トライ木構築の基底クラス</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="strategy探索戦略"><a class="header" href="#strategy探索戦略">Strategy（探索戦略）</a></h1>
+<p>住所ジオコーディングの核心部分です。入力された住所文字列を段階的に探索し、最適な位置情報（緯度経度）を返します。</p>
+<h2 id="概要どうやって住所を見つけるのか"><a class="header" href="#概要どうやって住所を見つけるのか">概要：どうやって住所を見つけるのか</a></h2>
+<p>住所「東京都千代田区霞が関1-1-1」を探す場合、以下のステップで処理します：</p>
+<ol>
+<li><strong>正規化</strong>: 「東京都千代田区霞が関１ー１ー１」→「東京都千代田区霞が関1-1-1」（全角→半角、漢数字→算用数字）</li>
+<li><strong>段階的探索</strong>: 都道府県 → 市区 → 町字 → 番地 の順にトライ木で探索</li>
+<li><strong>候補収集</strong>: 各階層でマッチした候補をすべて保持</li>
+<li><strong>スコアリング</strong>: 候補の中から最も一致度が高いものを選択</li>
+</ol>
+<h2 id="トライ木とは"><a class="header" href="#トライ木とは">トライ木とは？</a></h2>
+<p>トライ木（Trie）は、文字列を効率的に検索するためのデータ構造です。</p>
+<h3 id="簡単な例都道府県の検索"><a class="header" href="#簡単な例都道府県の検索">簡単な例：都道府県の検索</a></h3>
+<p>都道府県「東京都」「大阪府」「京都府」をトライ木に格納すると、以下のような木構造になります：</p>
+<pre><code>       (root)
+      /  |  \
+     東  大  京
+     |   |   |
+     京  阪  都
+     |   |   |
+     都  府  府
+     ↓   ↓   ↓
+   [東京] [大阪] [京都]
+</code></pre>
+<p><strong>検索の流れ</strong>（「東京都」を探す場合）：</p>
+<ol>
+<li>ルートから「東」を探す → 見つかった</li>
+<li>「東」の子ノードから「京」を探す → 見つかった</li>
+<li>「京」の子ノードから「都」を探す → 見つかった</li>
+<li>「都」ノードに関連付けられたデータ（緯度経度等）を取得</li>
+</ol>
+<p><strong>メリット</strong>:</p>
+<ul>
+<li>1文字ずつ辿るので、O(m)（m=文字列長）の高速検索</li>
+<li>前方一致検索が簡単（「東京」で検索すると「東京都」が見つかる）</li>
+<li>メモリ効率的（共通接頭辞を共有）</li>
+</ul>
+<h3 id="abr-geocoderでの実装"><a class="header" href="#abr-geocoderでの実装">ABR Geocoderでの実装</a></h3>
+<p>実際には、各階層（都道府県、市区、町字等）ごとに別々のトライ木を用意しています：</p>
+<ul>
+<li><strong>PrefTrie</strong>: 都道府県用（「東京都」「大阪府」等）</li>
+<li><strong>CityTrie</strong>: 市区町村用（「千代田区」「中央区」等）</li>
+<li><strong>OazaTrie</strong>: 大字・町丁目用（「霞が関」「丸の内」等）</li>
+<li><strong>RsdtBlkTrie</strong>: 街区符号・住居番号用（「1-1-1」等）</li>
+</ul>
+<h2 id="処理フローの全体像"><a class="header" href="#処理フローの全体像">処理フローの全体像</a></h2>
+<pre class="mermaid">flowchart TD
+  A[&quot;入力: 住所文字列&quot;] --&gt; NORM[&quot;正規化&lt;br/&gt;(全/半角, 仮名, 漢数字→算用数字, 記号整理)&quot;]
+  NORM --&gt; PREF[&quot;都道府県 Trie&quot;]
+  PREF --&gt; CC[&quot;郡+市 Trie&quot;]
+  CC --&gt; CW[&quot;市+区 Trie&quot;]
+  CW --&gt; WARD[&quot;区 Trie&quot;]
+  WARD --&gt; T23W[&quot;東京23区 Trie&quot;]
+  T23W --&gt; T23T[&quot;東京23区+大字 Trie&quot;]
+  T23T --&gt; KYOTO[&quot;京都通り名 Trie&quot;]
+  KYOTO --&gt; OAZA[&quot;大字+丁目+小字 Trie&lt;br/&gt;(LGコード別)&quot;]
+  OAZA --&gt; RBLK[&quot;街区符号 / 住居番号 / 地番&quot;]
+  RBLK --&gt; SCORE[&quot;スコアリング&quot;]
+  SCORE --&gt; OUT[&quot;最終結果&quot;]
+</pre>
+<h2 id="具体例東京都千代田区霞が関1-1-1の探索"><a class="header" href="#具体例東京都千代田区霞が関1-1-1の探索">具体例：「東京都千代田区霞が関1-1-1」の探索</a></h2>
+<h3 id="ステップ1正規化"><a class="header" href="#ステップ1正規化">ステップ1：正規化</a></h3>
+<p>入力が「東京都千代田区霞ヶ関１ー１ー１」の場合：</p>
+<div class="table-wrapper"><table><thead><tr><th>処理</th><th>結果</th></tr></thead><tbody>
+<tr><td>元の入力</td><td><code>東京都千代田区霞ヶ関１ー１ー１</code></td></tr>
+<tr><td>全角→半角</td><td><code>東京都千代田区霞ヶ関1ー1ー1</code></td></tr>
+<tr><td>漢数字→算用数字</td><td><code>東京都千代田区霞ヶ関1ー1ー1</code></td></tr>
+<tr><td>記号統一（ー→-）</td><td><code>東京都千代田区霞ヶ関1-1-1</code></td></tr>
+<tr><td>異体字統一（ヶ→が）</td><td><code>東京都千代田区霞が関1-1-1</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="ステップ2都道府県の探索preftrie"><a class="header" href="#ステップ2都道府県の探索preftrie">ステップ2：都道府県の探索（PrefTrie）</a></h3>
+<p>入力文字列を先頭から1文字ずつトライ木に照合：</p>
+<pre><code>入力: 「東京都千代田区霞が関1-1-1」
+      ↑
+      ここから探索開始
+
+トライ木の探索:
+  root → 「東」 → 「京」 → 「都」 → [マッチ！]
+
+結果:
+  - 都道府県: 東京都
+  - 都道府県コード: 13
+  - 残りの文字列: 「千代田区霞が関1-1-1」
+</code></pre>
+<h3 id="ステップ3市区の探索citytrie"><a class="header" href="#ステップ3市区の探索citytrie">ステップ3：市区の探索（CityTrie）</a></h3>
+<p>残りの文字列「千代田区霞が関1-1-1」を探索：</p>
+<pre><code>入力: 「千代田区霞が関1-1-1」
+      ↑
+      ここから探索開始
+
+トライ木の探索:
+  root → 「千」 → 「代」 → 「田」 → 「区」 → [マッチ！]
+
+結果:
+  - 市区: 千代田区
+  - 市区コード: 13101
+  - 残りの文字列: 「霞が関1-1-1」
+</code></pre>
+<h3 id="ステップ4大字町丁目の探索oazatrie"><a class="header" href="#ステップ4大字町丁目の探索oazatrie">ステップ4：大字・町丁目の探索（OazaTrie）</a></h3>
+<p>残りの文字列「霞が関1-1-1」を探索：</p>
+<pre><code>入力: 「霞が関1-1-1」
+      ↑
+      ここから探索開始
+
+トライ木の探索:
+  root → 「霞」 → 「が」 → 「関」 → [マッチ！]
+
+結果:
+  - 町字: 霞が関
+  - 町字コード: 131010012000
+  - 残りの文字列: 「1-1-1」
+</code></pre>
+<h3 id="ステップ5街区符号住居番号の探索rsdtblktrie"><a class="header" href="#ステップ5街区符号住居番号の探索rsdtblktrie">ステップ5：街区符号・住居番号の探索（RsdtBlkTrie）</a></h3>
+<p>残りの文字列「1-1-1」を探索：</p>
+<pre><code>入力: 「1-1-1」
+      ↑
+      ここから探索開始
+
+トライ木の探索:
+  root → 「1」 → 「-」 → 「1」 → 「-」 → 「1」 → [マッチ！]
+
+結果:
+  - 街区符号: 1
+  - 住居番号: 1
+  - 住居番号2: 1
+  - 緯度: 35.674176
+  - 経度: 139.751774
+</code></pre>
+<h3 id="ステップ6スコアリング"><a class="header" href="#ステップ6スコアリング">ステップ6：スコアリング</a></h3>
+<p>複数の候補がある場合、以下の基準でスコアリングして最適な結果を選択：</p>
+<div class="table-wrapper"><table><thead><tr><th>項目</th><th>スコア</th><th>説明</th></tr></thead><tbody>
+<tr><td>マッチレベル</td><td>80点</td><td>住居番号まで完全一致</td></tr>
+<tr><td>文字一致率</td><td>100%</td><td>入力文字列の100%が一致</td></tr>
+<tr><td>あいまい一致</td><td>0点減点</td><td>ワイルドカードや補助チャレンジなし</td></tr>
+<tr><td>表記差</td><td>0点減点</td><td>完全一致（「ヶ」と「が」は正規化済み）</td></tr>
+<tr><td><strong>合計</strong></td><td><strong>180点</strong></td><td>最高スコア</td></tr>
+</tbody></table>
+</div>
+<h2 id="正規化の詳細"><a class="header" href="#正規化の詳細">正規化の詳細</a></h2>
+<h3 id="全角半角の統一"><a class="header" href="#全角半角の統一">全角/半角の統一</a></h3>
+<pre><code class="language-javascript">入力: 「１２３」→「123」
+入力: 「ＡＢＣ」→「ABC」
+入力: 「　」（全角スペース）→「 」（半角スペース）
+</code></pre>
+<h3 id="漢数字算用数字"><a class="header" href="#漢数字算用数字">漢数字→算用数字</a></h3>
+<pre><code class="language-javascript">入力: 「一丁目二番三号」→「1丁目2番3号」
+入力: 「十五番地」→「15番地」
+</code></pre>
+<h3 id="異体字表記ゆれの統一"><a class="header" href="#異体字表記ゆれの統一">異体字・表記ゆれの統一</a></h3>
+<pre><code class="language-javascript">入力: 「霞ヶ関」→「霞が関」
+入力: 「竈門」→「竃門」（Unicode正規化）
+入力: 「丁目」「町目」→「丁目」
+</code></pre>
+<h3 id="記号の統一"><a class="header" href="#記号の統一">記号の統一</a></h3>
+<pre><code class="language-javascript">入力: 「1ー1ー1」→「1-1-1」（長音符号をハイフンに）
+入力: 「1−1−1」→「1-1-1」（全角ハイフンを半角に）
+入力: 「1の1の1」→「1-1-1」
+</code></pre>
+<h2 id="あいまい一致とワイルドカード"><a class="header" href="#あいまい一致とワイルドカード">あいまい一致とワイルドカード</a></h2>
+<p>完全一致しない場合でも、以下の方法で候補を探します。</p>
+<h3 id="ワイルドカード"><a class="header" href="#ワイルドカード">ワイルドカード（<code>?</code>）</a></h3>
+<p>トライ木のノードに「?」（ワイルドカード）が設定されている場合、任意の1文字にマッチします。</p>
+<p><strong>例</strong>：「霞?関」というパターンで「霞が関」「霞ケ関」「霞ヶ関」すべてにマッチ</p>
+<pre><code>トライ木:
+  霞 → ? → 関
+       ↑
+       任意の1文字にマッチ
+
+入力「霞が関」: 霞 → が → 関 [マッチ！]
+入力「霞ケ関」: 霞 → ケ → 関 [マッチ！]
+</code></pre>
+<h3 id="補助チャレンジextrachallenges"><a class="header" href="#補助チャレンジextrachallenges">補助チャレンジ（extraChallenges）</a></h3>
+<p>通常の探索で見つからない場合、以下の代替表記を試します：</p>
+<div class="table-wrapper"><table><thead><tr><th>元の文字</th><th>補助チャレンジ</th><th>例</th></tr></thead><tbody>
+<tr><td>が</td><td>ケ、ヶ、ガ、カ</td><td>霞が関 → 霞ケ関</td></tr>
+<tr><td>の</td><td>ノ</td><td>二の丸 → 二ノ丸</td></tr>
+<tr><td>条</td><td>條</td><td>四条 → 四條</td></tr>
+<tr><td>崎</td><td>﨑</td><td>宮崎 → 宮﨑</td></tr>
+</tbody></table>
+</div>
+<p><strong>スコアへの影響</strong>：補助チャレンジでマッチした場合、スコアが減点されます（完全一致より優先度が低い）</p>
+<h2 id="部分一致の処理"><a class="header" href="#部分一致の処理">部分一致の処理</a></h2>
+<p>入力文字列の途中までしか一致しない場合でも、候補として保持します。</p>
+<p><strong>例</strong>：「東京都千代田区霞が関一丁目」を探す場合</p>
+<ol>
+<li>「霞が関」までマッチ → 候補1（町字レベル）</li>
+<li>「一丁目」が見つからない → 候補1のスコアを調整</li>
+<li>最終的に「霞が関」レベルの結果を返却（一丁目は無視）</li>
+</ol>
+<p><strong>スコアへの影響</strong>：文字一致率が下がるため、スコアは減点されます</p>
+<h2 id="スコアリングの詳細"><a class="header" href="#スコアリングの詳細">スコアリングの詳細</a></h2>
+<h3 id="マッチレベルによる基本点"><a class="header" href="#マッチレベルによる基本点">マッチレベルによる基本点</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>マッチレベル</th><th>基本点</th><th>説明</th></tr></thead><tbody>
+<tr><td>住居番号まで完全一致</td><td>80点</td><td>「霞が関1-1-1」まで完全一致</td></tr>
+<tr><td>街区符号まで一致</td><td>70点</td><td>「霞が関1-1」まで一致</td></tr>
+<tr><td>町字まで一致</td><td>60点</td><td>「霞が関」まで一致</td></tr>
+<tr><td>市区まで一致</td><td>40点</td><td>「千代田区」まで一致</td></tr>
+<tr><td>都道府県まで一致</td><td>20点</td><td>「東京都」まで一致</td></tr>
+</tbody></table>
+</div>
+<h3 id="文字一致率による加点"><a class="header" href="#文字一致率による加点">文字一致率による加点</a></h3>
+<pre><code>文字一致率 = (マッチした文字数) / (入力文字列の総文字数) × 100
+
+例：「東京都千代田区霞が関1-1-1」(15文字) が完全一致
+  → 文字一致率 = 15 / 15 × 100 = 100%
+  → 加点: +20点
+
+例：「東京都千代田区霞が関」(11文字) のみ一致、「1-1-1」が不一致
+  → 文字一致率 = 11 / 15 × 100 = 73%
+  → 加点: +15点（減点）
+</code></pre>
+<h3 id="あいまい一致による減点"><a class="header" href="#あいまい一致による減点">あいまい一致による減点</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>あいまい一致の種類</th><th>減点</th></tr></thead><tbody>
+<tr><td>ワイルドカード（?）でマッチ</td><td>-5点/箇所</td></tr>
+<tr><td>補助チャレンジでマッチ</td><td>-10点/箇所</td></tr>
+</tbody></table>
+</div>
+<h3 id="最終スコア計算例"><a class="header" href="#最終スコア計算例">最終スコア計算例</a></h3>
+<p><strong>入力</strong>：「東京都千代田区霞ヶ関1-1-1」（「ヶ」が異なる）</p>
+<div class="table-wrapper"><table><thead><tr><th>項目</th><th>点数</th><th>説明</th></tr></thead><tbody>
+<tr><td>マッチレベル</td><td>80点</td><td>住居番号まで一致</td></tr>
+<tr><td>文字一致率</td><td>+20点</td><td>100%一致</td></tr>
+<tr><td>あいまい一致</td><td>-10点</td><td>「ヶ」→「が」の補助チャレンジ</td></tr>
+<tr><td><strong>合計</strong></td><td><strong>90点</strong></td><td>良いマッチング</td></tr>
+</tbody></table>
+</div>
+<h2 id="複数候補がある場合"><a class="header" href="#複数候補がある場合">複数候補がある場合</a></h2>
+<p>同じ文字列に複数の解釈がある場合、すべての候補を探索してスコアリングします。</p>
+<p><strong>例</strong>：「中央区」は複数存在</p>
+<ol>
+<li>東京都中央区</li>
+<li>大阪府大阪市中央区</li>
+<li>神戸市中央区</li>
+<li>...（他多数）</li>
+</ol>
+<p><strong>処理</strong>：</p>
+<ol>
+<li>すべての「中央区」を候補として取得</li>
+<li>入力文字列の残り部分と照合して、それぞれスコアリング</li>
+<li>最高スコアの候補を返却</li>
+</ol>
+<p><strong>ヒント</strong>：より詳細な住所（「東京都中央区」）を入力すると、スコアが高くなり正確な結果が得られます</p>
+<h2 id="探索のキーポイント"><a class="header" href="#探索のキーポイント">探索のキーポイント</a></h2>
+<h3 id="1-再帰的な探索"><a class="header" href="#1-再帰的な探索">1. 再帰的な探索</a></h3>
+<p>トライ木の探索は再帰的に実行されます：</p>
+<pre><code class="language-typescript">function find(node, inputChars, index) {
+  if (index &gt;= inputChars.length) {
+    return node.data; // 文字列の終端に到達
+  }
+
+  const char = inputChars[index];
+
+  // 1. 完全一致を探す
+  const exactMatch = node.findChild(char);
+  if (exactMatch) {
+    return find(exactMatch, inputChars, index + 1);
+  }
+
+  // 2. ワイルドカードを探す
+  const wildcardMatch = node.findChild('?');
+  if (wildcardMatch) {
+    return find(wildcardMatch, inputChars, index + 1);
+  }
+
+  // 3. 補助チャレンジを試す
+  for (const altChar of getAlternatives(char)) {
+    const altMatch = node.findChild(altChar);
+    if (altMatch) {
+      return find(altMatch, inputChars, index + 1);
+    }
+  }
+
+  return null; // 見つからない
+}
+</code></pre>
+<h3 id="2-中間ノードでのデータ収集"><a class="header" href="#2-中間ノードでのデータ収集">2. 中間ノードでのデータ収集</a></h3>
+<p>トライ木の途中のノードにもデータが格納されている場合があります。</p>
+<p><strong>例</strong>：「霞が関」と「霞が関一丁目」が両方存在する場合</p>
+<pre><code>トライ木:
+  霞 → が → 関 → [データ1: 霞が関]
+              ↓
+              一 → 丁 → 目 → [データ2: 霞が関一丁目]
+</code></pre>
+<p>探索中、「関」ノードでデータ1を収集し、さらに「目」ノードでデータ2も収集します。最終的に両方をスコアリングして最適な結果を選びます。</p>
+<h3 id="3-ハッシュ連結リストによる重複排除"><a class="header" href="#3-ハッシュ連結リストによる重複排除">3. ハッシュ連結リストによる重複排除</a></h3>
+<p>同じキーに複数の値がある場合、ハッシュ連結リストで管理します。</p>
+<p><strong>例</strong>：「中央区1-1-1」が複数の都市に存在</p>
+<pre><code>「1-1-1」ノード
+  ↓
+[ハッシュ連結リスト]
+  → 東京都中央区1-1-1（緯度経度A）
+  → 大阪市中央区1-1-1（緯度経度B）
+  → 神戸市中央区1-1-1（緯度経度C）
+</code></pre>
+<p>すべての候補を取得し、上位階層（市区町村等）の情報と照合してスコアリングします。</p>
+<h2 id="パフォーマンスの秘密"><a class="header" href="#パフォーマンスの秘密">パフォーマンスの秘密</a></h2>
+<h3 id="omの探索時間"><a class="header" href="#omの探索時間">O(m)の探索時間</a></h3>
+<p>文字列の長さを m とすると、トライ木の探索は O(m) で完了します。</p>
+<ul>
+<li>データベースのLIKE検索: O(n)（n=レコード数）</li>
+<li>ハッシュマップ: O(m)（キーのハッシュ計算）</li>
+<li><strong>トライ木</strong>: O(m)（1文字ずつ辿るだけ）</li>
+</ul>
+<h3 id="メモリ共有による高速化"><a class="header" href="#メモリ共有による高速化">メモリ共有による高速化</a></h3>
+<p>SharedArrayBufferを使い、ワーカースレッド間でトライ木データを共有：</p>
+<ul>
+<li><strong>メモリコピー不要</strong>: Workerに送る際のシリアライゼーションが不要</li>
+<li><strong>並列検索</strong>: 複数のWorkerが同時に同じトライ木を参照可能</li>
+<li><strong>キャッシュ効率</strong>: CPUキャッシュに乗りやすいバイナリ形式</li>
+</ul>
+<h3 id="バッファベースの読み取り"><a class="header" href="#バッファベースの読み取り">バッファベースの読み取り</a></h3>
+<p>ファイルI/Oを行わず、メモリ上のBufferから直接ノードを読み取り：</p>
+<pre><code class="language-typescript">// オフセット位置からノードを読み取り
+const nodeSize = buffer.readUInt8(offset);
+const siblingOffset = buffer.readUInt32BE(offset + 1);
+const childOffset = buffer.readUInt32BE(offset + 5);
+const hashListHead = buffer.readUInt32BE(offset + 9);
+const name = buffer.toString('utf8', offset + 13, offset + nodeSize);
+</code></pre>
+<h2 id="コントリビューションのヒント-3"><a class="header" href="#コントリビューションのヒント-3">コントリビューションのヒント</a></h2>
+<h3 id="探索アルゴリズムの改善"><a class="header" href="#探索アルゴリズムの改善">探索アルゴリズムの改善</a></h3>
+<ul>
+<li><strong>枝刈り最適化</strong>: スコアが低い候補を早期に除外</li>
+<li><strong>キャッシング</strong>: 頻繁に検索される住所をキャッシュ</li>
+<li><strong>並列探索</strong>: 複数のトライ木を並列に探索</li>
+</ul>
+<h3 id="正規化ルールの追加"><a class="header" href="#正規化ルールの追加">正規化ルールの追加</a></h3>
+<ul>
+<li><strong>新しい表記ゆれ</strong>: 地域固有の表記ゆれに対応</li>
+<li><strong>略称対応</strong>: 「都庁」→「東京都庁」等の展開</li>
+<li><strong>誤字訂正</strong>: Levenshtein距離による編集距離計算</li>
+</ul>
+<h3 id="スコアリングの改善"><a class="header" href="#スコアリングの改善">スコアリングの改善</a></h3>
+<ul>
+<li><strong>機械学習</strong>: 過去の検索結果からスコアリングモデルを学習</li>
+<li><strong>文脈考慮</strong>: 前後の文脈から最適な候補を選択</li>
+<li><strong>ユーザーフィードバック</strong>: 選択された結果を学習に反映</li>
+</ul>
+<p>この探索戦略により、ABR Geocoderは高速かつ柔軟な住所ジオコーディングを実現しています！</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="parallelism並列処理とタスク整列"><a class="header" href="#parallelism並列処理とタスク整列">Parallelism（並列処理とタスク整列）</a></h1>
+<p>ABR Geocoderは、Node.jsのWorker Threadsを活用して高速な並列ジオコーディングを実現しています。このページでは、なぜ並列処理が必要か、どのように実装されているかを詳しく説明します。</p>
+<h2 id="なぜ並列処理が必要か"><a class="header" href="#なぜ並列処理が必要か">なぜ並列処理が必要か？</a></h2>
+<h3 id="シングルスレッドの限界"><a class="header" href="#シングルスレッドの限界">シングルスレッドの限界</a></h3>
+<p>Node.jsはシングルスレッドで動作するため、1つの処理が完了するまで次の処理を開始できません。</p>
+<p><strong>例</strong>：1万件の住所をジオコーディングする場合（1件あたり10ms）</p>
+<pre><code>シングルスレッド:
+  件数: 10,000件
+  1件あたり: 10ms
+  合計時間: 10,000 × 10ms = 100,000ms = 100秒
+</code></pre>
+<h3 id="マルチスレッドの威力"><a class="header" href="#マルチスレッドの威力">マルチスレッドの威力</a></h3>
+<p>4コアCPUでWorker Threadsを使うと、4倍の速度で処理できます。</p>
+<pre><code>マルチスレッド（4 Workers）:
+  件数: 10,000件
+  1件あたり: 10ms
+  合計時間: 10,000 / 4 × 10ms = 25,000ms = 25秒
+
+速度向上: 100秒 → 25秒（4倍高速）
+</code></pre>
+<p>実際には、オーバーヘッド（タスク分配、結果収集等）があるため、理論値の3〜3.5倍程度の速度向上が見込めます。</p>
+<h2 id="worker-threadsとは"><a class="header" href="#worker-threadsとは">Worker Threadsとは？</a></h2>
+<p>Node.jsの<code>worker_threads</code>モジュールを使うと、JavaScriptコードを別スレッドで実行できます。</p>
+<h3 id="従来のnodejsシングルスレッド"><a class="header" href="#従来のnodejsシングルスレッド">従来のNode.js（シングルスレッド）</a></h3>
+<pre><code>メインスレッド
+  ├─ HTTPリクエスト受信
+  ├─ ジオコーディング処理（重い！）
+  ├─ ジオコーディング処理（重い！）
+  └─ HTTPレスポンス返却
+
+問題: 処理中は他のリクエストを受け付けられない
+</code></pre>
+<h3 id="worker-threads利用時マルチスレッド"><a class="header" href="#worker-threads利用時マルチスレッド">Worker Threads利用時（マルチスレッド）</a></h3>
+<pre><code>メインスレッド
+  ├─ HTTPリクエスト受信
+  ├─ タスクをWorkerに投げる（軽い）
+  └─ HTTPレスポンス返却
+
+Worker 1 → ジオコーディング処理
+Worker 2 → ジオコーディング処理
+Worker 3 → ジオコーディング処理
+Worker 4 → ジオコーディング処理
+
+利点: メインスレッドはブロックされず、複数リクエストを並列処理
+</code></pre>
+<h2 id="abr-geocoderの並列処理アーキテクチャ"><a class="header" href="#abr-geocoderの並列処理アーキテクチャ">ABR Geocoderの並列処理アーキテクチャ</a></h2>
+<h3 id="全体像"><a class="header" href="#全体像">全体像</a></h3>
+<pre class="mermaid">sequenceDiagram
+  participant CLI/API
+  participant Main as Main Thread&lt;br/&gt;(AbrGeocoder)
+  participant Pool as WorkerThreadPool
+  participant W1 as Worker 1
+  participant W2 as Worker 2
+
+  CLI/API-&gt;&gt;Main: geocode(address1)
+  Main-&gt;&gt;Pool: run(task#1)
+  Pool-&gt;&gt;W1: task#1 (SharedMemory参照)
+
+  CLI/API-&gt;&gt;Main: geocode(address2)
+  Main-&gt;&gt;Pool: run(task#2)
+  Pool-&gt;&gt;W2: task#2 (SharedMemory参照)
+
+  W2--&gt;&gt;Pool: result#2 (完了)
+  W1--&gt;&gt;Pool: result#1 (完了)
+
+  Note over Main: TaskInfo連結リストで&lt;br/&gt;入力順を保持
+
+  Pool--&gt;&gt;Main: result#1 (入力順)
+  Main--&gt;&gt;CLI/API: result#1
+
+  Pool--&gt;&gt;Main: result#2 (入力順)
+  Main--&gt;&gt;CLI/API: result#2
+</pre>
+<h3 id="処理の流れ具体例"><a class="header" href="#処理の流れ具体例">処理の流れ（具体例）</a></h3>
+<p><strong>入力</strong>：3つの住所を連続で投入</p>
+<pre><code>1. 「東京都千代田区霞が関1-1-1」
+2. 「大阪府大阪市中央区大手前1-1-1」
+3. 「愛知県名古屋市中区三の丸3-1-2」
+</code></pre>
+<p><strong>ステップ1：タスク投入</strong></p>
+<pre><code>メインスレッド:
+  task#1 → Worker 1に割り当て
+  task#2 → Worker 2に割り当て
+  task#3 → Worker 1に割り当て（空きができたら）
+
+TaskInfo連結リスト:
+  [task#1] → [task#2] → [task#3] → null
+</code></pre>
+<p><strong>ステップ2：並列実行</strong></p>
+<pre><code>Worker 1:
+  task#1: 「東京都千代田区霞が関1-1-1」を処理中...
+  ↓
+  12ms後に完了
+
+Worker 2:
+  task#2: 「大阪府大阪市中央区大手前1-1-1」を処理中...
+  ↓
+  8ms後に完了（先に完了！）
+</code></pre>
+<p><strong>ステップ3：結果の整列</strong></p>
+<p>Worker 2が先に完了しましたが、入力順（task#1 → task#2）を保つため、task#1の完了を待ちます。</p>
+<pre><code>TaskInfo連結リスト:
+  [task#1: 完了待ち] → [task#2: 完了済み] → [task#3: 処理中]
+                        ↑
+                        結果は保持されているが、
+                        task#1が完了するまで返却しない
+</code></pre>
+<p><strong>ステップ4：入力順に返却</strong></p>
+<pre><code>12ms時点:
+  task#1が完了 → すぐに返却
+  task#2も完了済み → 続けて返却
+
+TaskInfo連結リスト:
+  [task#1: 返却済み] → [task#2: 返却済み] → [task#3: 処理中]
+</code></pre>
+<h2 id="sharedarraybufferメモリ共有の仕組み"><a class="header" href="#sharedarraybufferメモリ共有の仕組み">SharedArrayBuffer：メモリ共有の仕組み</a></h2>
+<h3 id="通常のデータ受け渡しコピー方式"><a class="header" href="#通常のデータ受け渡しコピー方式">通常のデータ受け渡し（コピー方式）</a></h3>
+<p>Workerにデータを渡す際、通常はシリアライゼーション（コピー）が必要です。</p>
+<pre><code class="language-javascript">// メインスレッド
+const largeData = new Uint8Array(100_000_000); // 100MB
+worker.postMessage(largeData); // 100MBをコピー（遅い！）
+
+問題:
+  - コピーに時間がかかる（100MBなら数百ms）
+  - メモリが2倍必要（メイン100MB + Worker100MB）
+</code></pre>
+<h3 id="sharedarraybuffer共有方式"><a class="header" href="#sharedarraybuffer共有方式">SharedArrayBuffer（共有方式）</a></h3>
+<p>SharedArrayBufferを使うと、コピーせずにメモリを共有できます。</p>
+<pre><code class="language-javascript">// メインスレッド
+const sharedBuffer = new SharedArrayBuffer(100_000_000); // 100MB
+worker.postMessage(sharedBuffer); // ポインタだけを渡す（一瞬！）
+
+// Workerスレッド
+onmessage = (e) =&gt; {
+  const buffer = e.data; // 同じメモリ領域を参照
+  const view = new Uint8Array(buffer);
+  // コピーなしで直接アクセス可能
+};
+
+利点:
+  - 転送時間ほぼゼロ
+  - メモリ使用量は1つ分のみ
+</code></pre>
+<h3 id="abr-geocoderでの活用"><a class="header" href="#abr-geocoderでの活用">ABR Geocoderでの活用</a></h3>
+<pre><code class="language-javascript">// メインスレッド（起動時）
+const trieBuffer = fs.readFileSync('pref-trie.abrg2'); // 50MB
+const sharedBuffer = new SharedArrayBuffer(trieBuffer.length);
+const view = new Uint8Array(sharedBuffer);
+view.set(trieBuffer); // SharedArrayBufferにコピー
+
+// 各Workerに共有
+workers.forEach(worker =&gt; {
+  worker.postMessage({ trieBuffer: sharedBuffer }); // 一瞬で転送
+});
+
+// Worker側
+onmessage = (e) =&gt; {
+  const buffer = e.data.trieBuffer;
+  const finder = new TrieAddressFinder2(buffer); // コピーなしで使用
+};
+
+結果:
+  - 4つのWorkerがあっても、メモリは50MB×1 = 50MBのみ
+  - 起動時のデータ転送が高速
+</code></pre>
+<h2 id="入力順序の保証taskinfo連結リスト"><a class="header" href="#入力順序の保証taskinfo連結リスト">入力順序の保証：TaskInfo連結リスト</a></h2>
+<h3 id="問題完了順序がバラバラ"><a class="header" href="#問題完了順序がバラバラ">問題：完了順序がバラバラ</a></h3>
+<p>並列処理では、完了順序が入力順序と異なることがあります。</p>
+<pre><code>入力順序: task#1 → task#2 → task#3
+
+完了順序: task#2 → task#1 → task#3
+           ↑
+          先に完了してしまった！
+</code></pre>
+<p>しかし、ストリーム処理では入力順に出力する必要があります。</p>
+<h3 id="解決策連結リスト"><a class="header" href="#解決策連結リスト">解決策：連結リスト</a></h3>
+<p>TaskInfoを連結リストで管理し、先頭から順に結果を取り出します。</p>
+<pre><code class="language-typescript">class WorkerPoolTaskInfo {
+  id: number;
+  data: any;
+  result: any = null;
+  isCompleted: boolean = false;
+  next: WorkerPoolTaskInfo | null = null;
+
+  // Promiseのresolve/rejectを保持
+  private resolve: ((value: any) =&gt; void) | null = null;
+  private reject: ((error: any) =&gt; void) | null = null;
+
+  setResolver(resolve: (value: any) =&gt; void) {
+    this.resolve = resolve;
+  }
+
+  setRejector(reject: (error: any) =&gt; void) {
+    this.reject = reject;
+  }
+
+  // 結果をセット
+  setResult(result: any) {
+    this.result = result;
+    this.isCompleted = true;
+    this.tryEmit(); // 先頭タスクなら即座に返却
+  }
+
+  // 先頭タスクかつ完了していれば、Promiseを解決
+  tryEmit() {
+    if (this.isCompleted &amp;&amp; this.isHead()) {
+      this.resolve(this.result);
+      // 次のタスクも完了しているか確認
+      if (this.next) {
+        this.next.tryEmit();
+      }
+    }
+  }
+}
+</code></pre>
+<h3 id="動作例"><a class="header" href="#動作例">動作例</a></h3>
+<pre><code>ステップ1：タスク投入
+
+head → [task#1] → [task#2] → [task#3] → null
+
+ステップ2：task#2が先に完了
+
+head → [task#1: 処理中] → [task#2: 完了] → [task#3: 処理中] → null
+
+task#2.tryEmit() が呼ばれるが、task#1が未完了なので返却しない
+
+ステップ3：task#1が完了
+
+head → [task#1: 完了] → [task#2: 完了] → [task#3: 処理中] → null
+
+task#1.tryEmit() → 返却！
+task#2.tryEmit() → 返却！（連鎖的に）
+
+ステップ4：task#3が完了
+
+head → [task#1: 返却済み] → [task#2: 返却済み] → [task#3: 完了] → null
+
+task#3.tryEmit() → 返却！
+</code></pre>
+<h2 id="バックプレッシャー制御"><a class="header" href="#バックプレッシャー制御">バックプレッシャー制御</a></h2>
+<h3 id="問題メモリ枯渇"><a class="header" href="#問題メモリ枯渇">問題：メモリ枯渇</a></h3>
+<p>大量のタスクを一度に投入すると、メモリが枯渇します。</p>
+<pre><code class="language-javascript">// 危険な例
+for (let i = 0; i &lt; 1_000_000; i++) {
+  pool.run(addresses[i]); // 100万件を一度に投入
+}
+
+問題:
+  - TaskInfoが100万個メモリに蓄積
+  - メモリ不足でクラッシュ
+</code></pre>
+<h3 id="解決策maxtasksperworker"><a class="header" href="#解決策maxtasksperworker">解決策：maxTasksPerWorker</a></h3>
+<p>同時実行タスク数を制限します。</p>
+<pre><code class="language-typescript">class WorkerThreadPool {
+  private maxTasksPerWorker = 10; // 1Workerあたり最大10タスク
+
+  async run(data: any): Promise&lt;any&gt; {
+    // 空きができるまで待機
+    while (this.pendingTasks &gt;= this.workers.length * this.maxTasksPerWorker) {
+      await this.waitForSlot();
+    }
+
+    // タスクを投入
+    const worker = this.getNextWorker();
+    return worker.addTask(data);
+  }
+}
+</code></pre>
+<p><strong>効果</strong>：</p>
+<pre><code>4 Workers × maxTasksPerWorker 10 = 最大40タスク同時実行
+
+入力が100万件でも、メモリには40タスク分しか蓄積されない
+</code></pre>
+<h2 id="セマフォによる同期制御"><a class="header" href="#セマフォによる同期制御">セマフォによる同期制御</a></h2>
+<h3 id="問題ファイル書き込みの競合"><a class="header" href="#問題ファイル書き込みの競合">問題：ファイル書き込みの競合</a></h3>
+<p>複数のWorkerが同時にキャッシュファイルを書き込むと、データが壊れます。</p>
+<pre><code>Worker 1: ファイルに書き込み中...
+Worker 2: ファイルに書き込み中...（衝突！）
+
+結果: ファイルが破損
+</code></pre>
+<h3 id="解決策semaphoremanager"><a class="header" href="#解決策semaphoremanager">解決策：SemaphoreManager</a></h3>
+<p>SharedArrayBufferベースのセマフォで排他制御します。</p>
+<pre><code class="language-typescript">class SemaphoreManager {
+  private semaphore: Int32Array; // SharedArrayBuffer
+
+  constructor(sharedBuffer: SharedArrayBuffer) {
+    this.semaphore = new Int32Array(sharedBuffer);
+    this.semaphore[0] = 1; // 初期値1（空き）
+  }
+
+  // セマフォ取得（ブロッキング）
+  async enterAwait(): Promise&lt;void&gt; {
+    while (true) {
+      // Atomics.compareExchange: 1→0に変更（取得成功）
+      const old = Atomics.compareExchange(this.semaphore, 0, 1, 0);
+      if (old === 1) {
+        return; // 取得成功
+      }
+      // 他のWorkerが解放するまで待機
+      Atomics.wait(this.semaphore, 0, 0, 100); // 100ms待機
+    }
+  }
+
+  // セマフォ解放
+  leave(): void {
+    Atomics.store(this.semaphore, 0, 1); // 1にセット（解放）
+    Atomics.notify(this.semaphore, 0, 1); // 待機中のWorkerに通知
+  }
+}
+</code></pre>
+<p><strong>使用例</strong>：</p>
+<pre><code class="language-typescript">// Workerスレッド
+const semaphore = new SemaphoreManager(sharedSemaphoreBuffer);
+
+await semaphore.enterAwait(); // 排他ロック取得
+try {
+  fs.writeFileSync('cache.abrg2', data); // ファイル書き込み
+} finally {
+  semaphore.leave(); // ロック解放
+}
+</code></pre>
+<h2 id="パフォーマンス計測例"><a class="header" href="#パフォーマンス計測例">パフォーマンス計測例</a></h2>
+<h3 id="テスト環境"><a class="header" href="#テスト環境">テスト環境</a></h3>
+<ul>
+<li>CPU: 4コア（8スレッド）</li>
+<li>メモリ: 16GB</li>
+<li>データ: 1万件の住所</li>
+</ul>
+<h3 id="結果"><a class="header" href="#結果">結果</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Workers数</th><th>処理時間</th><th>スループット</th><th>備考</th></tr></thead><tbody>
+<tr><td>1（シングルスレッド）</td><td>100秒</td><td>100件/秒</td><td>ベースライン</td></tr>
+<tr><td>2</td><td>55秒</td><td>182件/秒</td><td>1.82倍高速</td></tr>
+<tr><td>4</td><td>30秒</td><td>333件/秒</td><td>3.33倍高速</td></tr>
+<tr><td>8</td><td>28秒</td><td>357件/秒</td><td>3.57倍高速（ほぼ限界）</td></tr>
+</tbody></table>
+</div>
+<p><strong>考察</strong>：</p>
+<ul>
+<li>4コアCPUで4 Workersが最もコスパが良い</li>
+<li>8 Workersにしても大きな改善なし（ハイパースレッディングの限界）</li>
+<li>オーバーヘッドにより、理論値（4倍）には届かないが、3.3倍の高速化を実現</li>
+</ul>
+<h2 id="コントリビューションのヒント-4"><a class="header" href="#コントリビューションのヒント-4">コントリビューションのヒント</a></h2>
+<h3 id="タスクスケジューリングの改善"><a class="header" href="#タスクスケジューリングの改善">タスクスケジューリングの改善</a></h3>
+<p>現在はラウンドロビン方式ですが、以下の方式も検討できます：</p>
+<ul>
+<li><strong>優先度キュー</strong>: 緊急度の高いタスクを優先処理</li>
+<li><strong>負荷分散</strong>: Worker の負荷を監視し、空いているWorkerに優先割り当て</li>
+<li><strong>バッチ処理</strong>: 類似タスクをまとめて処理（キャッシュ効率向上）</li>
+</ul>
+<h3 id="メモリ使用量の最適化"><a class="header" href="#メモリ使用量の最適化">メモリ使用量の最適化</a></h3>
+<ul>
+<li><strong>動的Worker数</strong>: CPU使用率に応じてWorker数を動的に調整</li>
+<li><strong>メモリプール</strong>: TaskInfoを再利用してGC圧を軽減</li>
+<li><strong>Streamパイプライン</strong>: バックプレッシャーをより細かく制御</li>
+</ul>
+<h3 id="デバッグ機能の追加"><a class="header" href="#デバッグ機能の追加">デバッグ機能の追加</a></h3>
+<ul>
+<li><strong>Worker統計</strong>: 各Workerの処理件数、平均処理時間を表示</li>
+<li><strong>ボトルネック検出</strong>: 最も遅いWorkerを特定</li>
+<li><strong>デッドロック検出</strong>: セマフォのデッドロックを自動検出</li>
+</ul>
+<p>ABR Geocoderの並列処理により、大量の住所を高速にジオコーディングできます！</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="abrg2-file-format辞書バイナリ仕様"><a class="header" href="#abrg2-file-format辞書バイナリ仕様">ABRG2 File Format（辞書バイナリ仕様）</a></h1>
+<p>ABRG2 は、検索キー（正規化後の文字列）をトライ木で保持し、各ノードから圧縮済み値（JSON）へのハッシュ連結リストを参照する構造です。全体は Big Endian で整列し、オフセットは 4 バイト固定です。</p>
+<h2 id="ヘッダー"><a class="header" href="#ヘッダー">ヘッダー</a></h2>
+<ul>
+<li>マジック: <code>abrg</code>（ASCII 4B）</li>
+<li>ヘッダーサイズ: <code>u16</code>（2B）</li>
+<li>バージョン: <code>major(u8), minor(u8)</code>（2B）</li>
+<li>トライ木先頭オフセット: <code>u32</code>（4B）</li>
+<li>データ領域先頭オフセット: <code>u32</code>（4B）</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  A[&quot;magic: abrg 4B&quot;] --&gt; B[&quot;header_size u16&quot;]
+  B --&gt; C[&quot;version u8,u8&quot;]
+  C --&gt; D[&quot;trie_root u32&quot;]
+  D --&gt; E[&quot;data_head u32&quot;]
+</pre>
+<ul>
+<li>バージョンは <code>2.2</code> 以上をサポート（現行 2.2.x）。異なる場合は <code>readHeader()</code> で非対応扱い。</li>
+</ul>
+<h2 id="トライ木ノード"><a class="header" href="#トライ木ノード">トライ木ノード</a></h2>
+<ul>
+<li>構成: <code>size(u8)</code> + <code>sibling(u32)</code> + <code>child(u32)</code> + <code>hash_list_head(u32)</code> + <code>name(utf8)</code></li>
+<li><code>size</code> はノード全体長（1B; 実装上 255B までの想定）</li>
+<li><code>name</code> は当該ノードが表す一文字（UTF-8 可変長）</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  S[&quot;size:1&quot;] --&gt; SB[&quot;sibling_off:4&quot;]
+  SB --&gt; CH[&quot;child_off:4&quot;]
+  CH --&gt; HL[&quot;hash_list_head:4&quot;]
+  HL --&gt; NM[&quot;name: utf8 var&quot;]
+</pre>
+<ul>
+<li>兄弟/子オフセットは 0 のとき未設定</li>
+<li><code>hash_list_head</code> は「このノードに結びつくデータノードのオフセット」を連結リストで保持するための先頭ノード位置</li>
+</ul>
+<h2 id="ハッシュ連結リストノード側"><a class="header" href="#ハッシュ連結リストノード側">ハッシュ連結リスト（ノード側）</a></h2>
+<ul>
+<li>ノード → [HashLinkNode]* → データノード</li>
+<li>HashLinkNode 構造: <code>next(u32)</code> + <code>value_offset(u32)</code></li>
+<li><code>value_offset</code> はデータノード（下記）の先頭アドレス</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  N[&quot;TrieNode&quot;] --&gt; H1[&quot;HashLinkNode&quot;]
+  H1 --&gt; H2[&quot;HashLinkNode&quot;]
+  H2 --&gt; H3[&quot;...&quot;]
+  H1 -- value_offset --&gt; V1[&quot;DataNode&quot;]
+  H2 -- value_offset --&gt; V2[&quot;DataNode&quot;]
+</pre>
+<h2 id="データノード"><a class="header" href="#データノード">データノード</a></h2>
+<ul>
+<li>連結リスト: <code>next(u32)</code> + <code>size(u16)</code> + <code>hash(u64)</code> + <code>data(bytes)</code></li>
+<li><code>data</code> は <code>gzip(JSON.stringify(value) を json-stable-stringify で安定化)</code> のバイト列</li>
+<li><code>hash</code> は FNV-1a 64bit を <code>data</code>（=圧縮済みバイト）に対して計算</li>
+<li>同一ハッシュ衝突時は <code>next</code> で連結し、読み出し側で同一ハッシュを辿る</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  D1[&quot;next:4&quot;] --&gt; D2[&quot;size:2&quot;]
+  D2 --&gt; D3[&quot;hash:8&quot;]
+  D3 --&gt; D4[&quot;data: gzip(JSON)&quot;]
+</pre>
+<p>重複排除と衝突処理（Writer 側）:</p>
+<ul>
+<li>既知ハッシュがある場合、連結を辿って <code>data</code> バイト列比較で完全一致すれば再利用（追記しない）</li>
+<li>一致しなければ最終ノードの <code>next</code> に新規ノードを追加</li>
+<li>初回はヘッダーの <code>data_head</code> から連結を形成</li>
+</ul>
+<h2 id="生成フローfiletriewriter"><a class="header" href="#生成フローfiletriewriter">生成フロー（FileTrieWriter）</a></h2>
+<ol>
+<li>ヘッダー書込（<code>abrg</code>, version, エントリポイント）</li>
+<li>空のルートデータ <code>{}</code> を保存（オフセット 0 のキー）</li>
+<li>ルート Trie ノード（空文字）を保存し、ヘッダーのエントリポイントを更新</li>
+<li>各エントリについて <code>addNode(key, value)</code> を実行
+<ul>
+<li>キー文字列を先頭から子へ、未存在ならノードを追記</li>
+<li>末端/中間いずれでも値がある箇所で <code>hash_list</code> 末尾にオフセットを追加</li>
+</ul>
+</li>
+</ol>
+<pre class="mermaid">flowchart TB
+  subgraph Writer
+    A[&quot;writeHeader&quot;] --&gt; B[&quot;storeData({})&quot;]
+    B --&gt; C[&quot;writeTrieNode(root)&quot;]
+    C --&gt; D[&quot;loop addNode&quot;]
+    D --&gt; E[&quot;writeTrieNode(child/sibling)&quot;]
+    D --&gt; F[&quot;appendHashOffset&quot;]
+  end
+</pre>
+<h2 id="読み出しtrieaddressfinder2"><a class="header" href="#読み出しtrieaddressfinder2">読み出し（TrieAddressFinder2）</a></h2>
+<ul>
+<li>先頭 6B 読み出し→ヘッダー検証→全体ヘッダー取得</li>
+<li>探索は <code>readTrieNode(offset)</code> でノードをデコードし、<code>sibling/child</code> を辿りながら一致/あいまい一致/補助チャレンジを分岐</li>
+<li>一致ノードからハッシュ連結を辿り、<code>readDataNode()</code> で <code>data</code> を解凍・JSON へ復元</li>
+</ul>
+<p>パフォーマンス考慮:</p>
+<ul>
+<li>Writer は内部バッファ（8MB）で追記をバッファリング、前方書換（子/兄弟オフセット更新）は直接書込</li>
+<li>検索側はメモリ上の Buffer を直接参照（I/O 無し）</li>
+</ul>
+<p>互換性:</p>
+<ul>
+<li>バージョンやオフセットサイズ、エンディアンはヘッダー/定数に固定</li>
+<li>破損時は <code>magic</code>/<code>version</code>/<code>size</code> チェックで弾く</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="finder-internalstrieaddressfinder2"><a class="header" href="#finder-internalstrieaddressfinder2">Finder Internals（TrieAddressFinder2）</a></h1>
+<p>目的:</p>
+<ul>
+<li>メモリ上の ABRG2 バッファを読み取り、部分一致やワイルドカードを含む探索で候補集合を抽出</li>
+</ul>
+<p>入力:</p>
+<ul>
+<li><code>CharNode</code> 連結（正規化済み文字列を1文字単位で持つ、原文文字も保存）</li>
+<li>オプション: <code>fuzzy</code>（1文字のワイルドカード）, <code>extraChallenges</code>（前置語の補助探索）, <code>partialMatches</code></li>
+</ul>
+<p>探索アルゴリズム（概要）:</p>
+<ol>
+<li>ルート（空文字）から開始。探索キューに状態（一致数/曖昧数/現在オフセット/パス/部分一致）を積む</li>
+<li>現在ノードの <code>name</code> とターゲット文字を比較
+<ul>
+<li>完全一致 → <code>child</code> に進む</li>
+<li>不一致 → <code>sibling</code> に進む</li>
+<li><code>fuzzy</code> が一致する場合は、 sibling 分岐も追加（曖昧カウント加算）</li>
+<li><code>extraChallenges</code> は前置語が合致した場合に別キューとして探索を追加</li>
+</ul>
+</li>
+<li>途中ノードに <code>hashValueList</code> があれば部分一致候補として保持</li>
+<li>終端または子が無い場合、候補集合へ追加</li>
+<li>すべてのキューを処理後、候補集合を返却</li>
+</ol>
+<p>数値・表記の扱い:</p>
+<ul>
+<li><code>isKanjiNums</code>/<code>isDigit</code>/<code>toHankakuAlphaNum</code> により、漢数字と算用数字の同一視を行う</li>
+<li>ノード名/入力文字を数値同士に正規化して比較（<code>trie-finder2.ts</code> 参照）</li>
+</ul>
+<p>データ復元:</p>
+<ul>
+<li>候補ごとに <code>hashValueList</code> を辿り <code>readDataNode()</code> で DataNode 連結を読み出し、解凍(JSON) → <code>info</code> として返す</li>
+</ul>
+<p>出力:</p>
+<ul>
+<li><code>info</code>（辞書行の JSON）と <code>unmatched</code>（未消化の CharNode）、<code>depth</code>（一致深さ）、<code>ambiguousCnt</code>（曖昧一致回数）、<code>path</code>（一致パス）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="download--cacheダウンロードとキャッシュ生成"><a class="header" href="#download--cacheダウンロードとキャッシュ生成">Download &amp; Cache（ダウンロードとキャッシュ生成）</a></h1>
+<p>この章では、オープンデータのダウンロードから、SQLiteへの格納、ABRG2キャッシュファイル生成までの全体フローを説明します。</p>
+<p>ABR Geocoderは、政府が公開する住所データ（CSV/zip形式）をダウンロードし、検索に最適化されたバイナリ辞書（ABRG2形式）に変換します。この処理を高速化するため、Worker Threadsによる並列ダウンロードとStream処理を組み合わせています。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="overview全体像"><a class="header" href="#overview全体像">Overview（全体像）</a></h1>
+<p>ABR Geocoderのダウンロード&amp;キャッシュ生成システムは、大量のオープンデータを効率的に取得・変換するために設計されています。このページでは、全体の流れと並列処理の仕組みを詳しく説明します。</p>
+<h2 id="全体フロー"><a class="header" href="#全体フロー">全体フロー</a></h2>
+<pre class="mermaid">flowchart TD
+  START[&quot;開始&quot;] --&gt; DCAT[&quot;1. DCATメタデータ取得&quot;]
+  DCAT --&gt; EXTRACT[&quot;2. ダウンロードURL抽出&quot;]
+  EXTRACT --&gt; QUEUE[&quot;3. ダウンロードキュー生成&quot;]
+  QUEUE --&gt; PARALLEL[&quot;4. 並列ダウンロード&lt;br/&gt;(Worker Threads)&quot;]
+  PARALLEL --&gt; STREAM[&quot;5. Streamパイプライン&lt;br/&gt;Download → Unzip → Parse&quot;]
+  STREAM --&gt; DB[&quot;6. SQLite投入&quot;]
+  DB --&gt; CACHE[&quot;7. ABRG2キャッシュ生成&quot;]
+  CACHE --&gt; END[&quot;完了&quot;]
+</pre>
+<h2 id="処理の詳細"><a class="header" href="#処理の詳細">処理の詳細</a></h2>
+<h3 id="1-dcatメタデータ取得"><a class="header" href="#1-dcatメタデータ取得">1. DCATメタデータ取得</a></h3>
+<p>政府のオープンデータカタログ（DCAT形式）からデータセット情報を取得します。</p>
+<p><strong>DCATとは？</strong></p>
+<ul>
+<li>Data Catalog Vocabulary（データカタログ語彙）の略</li>
+<li>メタデータの標準形式で、データセットの所在やメタ情報を記述</li>
+<li>JSON形式でデータセット一覧と配布URLを提供</li>
+</ul>
+<p><strong>取得例</strong>：</p>
+<pre><code class="language-typescript">// download-process.ts:88-103
+const client = new HttpRequestAdapter({
+  hostname: url.hostname,
+  userAgent: this.container.env.userAgent,
+  peerMaxConcurrentStreams: 1, // メタデータ取得は1接続で十分
+});
+
+const response = await client.getJSON({ url });
+</code></pre>
+<p><strong>レスポンス構造</strong>：</p>
+<pre><code class="language-json">{
+  "dataset": [
+    {
+      "description": "最終更新日: 2025-09-30T15:41:43.000Z",
+      "distribution": [
+        {
+          "accessURL": "https://example.com/data_01.csv.zip"
+        }
+      ]
+    }
+  ]
+}
+</code></pre>
+<h3 id="2-ダウンロードurl抽出"><a class="header" href="#2-ダウンロードurl抽出">2. ダウンロードURL抽出</a></h3>
+<p>DCAT JSONから <code>.csv.zip</code> ファイルのURLと最終更新日を抽出します。</p>
+<pre><code class="language-typescript">// download-process.ts:228-254
+const downloadUrls: string[] = [];
+const urlToLastModified = new Map&lt;string, string&gt;();
+
+for (const dataset of dcatResponse.dataset) {
+  // descriptionから最終更新日を抽出
+  const match = dataset.description.match(/最終更新日:\s*(.+)/);
+  if (match) {
+    lastModified = match[1];
+  }
+
+  // .csv.zip のURLを収集
+  for (const dist of dataset.distribution) {
+    if (dist.accessURL &amp;&amp; dist.accessURL.includes('.csv.zip')) {
+      downloadUrls.push(dist.accessURL);
+      urlToLastModified.set(dist.accessURL, lastModified);
+    }
+  }
+}
+</code></pre>
+<h3 id="3-ダウンロードキュー生成"><a class="header" href="#3-ダウンロードキュー生成">3. ダウンロードキュー生成</a></h3>
+<p>抽出したURLを、自治体コード（LGコード）とデータセット種別でグルーピングします。</p>
+<p><strong>データセット種別</strong>：</p>
+<ul>
+<li><code>pref</code>: 都道府県マスター</li>
+<li><code>city</code>: 市区町村マスター</li>
+<li><code>rsdtdsp_blk</code>: 街区レベル住所</li>
+<li><code>rsdtdsp_rsdt</code>: 住居表示住所</li>
+<li><code>parcel</code>: 地番</li>
+</ul>
+<p><strong>LGコードによるフィルタリング</strong>：</p>
+<pre><code class="language-typescript">// download-process.ts:256-291
+const lgCodePackages = createPackageTree(downloadUrls);
+
+lgCodePackages.forEach((packages, lgCode) =&gt; {
+  // 都道府県コード（例: "01...." = 北海道）
+  const prefix = lgCode.substring(0, 2);
+
+  // ダウンロード対象かチェック
+  if (downloadTargetLgCodes.size &gt; 0 &amp;&amp; !targetPrefixes.has(prefix)) {
+    return; // スキップ
+  }
+
+  // ダウンロードリクエスト作成
+  for (const [dataset, packageId] of packages.entries()) {
+    results.push({
+      kind: 'download',
+      dataset,
+      packageId,
+      useCache: true,
+      lgCode,
+      lastModified: urlToLastModified.get(packageId),
+    });
+  }
+});
+</code></pre>
+<p><strong>キューのランダム化</strong>：</p>
+<pre><code class="language-typescript">// download-process.ts:129-132, 354
+// ランダムに並び替えることで、lgCodeが分散され、
+// DB書き込みのときに衝突を起こしにくくなる
+requests.sort(() =&gt; Math.random() * 3 - 2);
+</code></pre>
+<p>これにより、同じ自治体のデータが連続して処理されることを避け、SQLiteの書き込み競合を低減します。</p>
+<h2 id="並列ダウンロードの仕組み"><a class="header" href="#並列ダウンロードの仕組み">並列ダウンロードの仕組み</a></h2>
+<h3 id="なぜ並列処理が必要か-1"><a class="header" href="#なぜ並列処理が必要か-1">なぜ並列処理が必要か？</a></h3>
+<p><strong>問題</strong>：数百のCSV zipファイルを順次ダウンロードすると、時間がかかりすぎる</p>
+<pre><code>順次ダウンロード（300ファイル、1ファイル10秒）:
+  300ファイル × 10秒 = 3000秒 = 50分
+</code></pre>
+<p><strong>解決策</strong>：Worker Threadsで並列ダウンロード</p>
+<pre><code>並列ダウンロード（6 Workers）:
+  300ファイル / 6 Workers × 10秒 ≈ 500秒 = 8分20秒
+
+速度向上: 50分 → 8分20秒（6倍高速）
+</code></pre>
+<h3 id="worker-threadsとは-1"><a class="header" href="#worker-threadsとは-1">Worker Threadsとは？</a></h3>
+<p>Node.jsの <code>worker_threads</code> モジュールを使うと、JavaScriptコードを別スレッドで実行できます。</p>
+<p><strong>従来のNode.js（シングルスレッド）</strong>：</p>
+<pre><code>メインスレッド
+  ├─ ファイル1をダウンロード（10秒）
+  ├─ ファイル2をダウンロード（10秒）
+  ├─ ファイル3をダウンロード（10秒）
+  └─ ...
+
+問題: ダウンロード中は他の処理ができない
+</code></pre>
+<p><strong>Worker Threads利用時（マルチスレッド）</strong>：</p>
+<pre><code>メインスレッド
+  ├─ タスクキューを管理
+  └─ Workerに割り振り
+
+Worker 1 → ファイル1ダウンロード（10秒）
+Worker 2 → ファイル2ダウンロード（10秒）
+Worker 3 → ファイル3ダウンロード（10秒）
+Worker 4 → ファイル4ダウンロード（10秒）
+Worker 5 → ファイル5ダウンロード（10秒）
+Worker 6 → ファイル6ダウンロード（10秒）
+
+利点: 6倍の速度で並列処理可能
+</code></pre>
+<h3 id="worker数の決定ロジック"><a class="header" href="#worker数の決定ロジック">Worker数の決定ロジック</a></h3>
+<pre><code class="language-typescript">// download-process.ts:135-145
+// SQLite書き込み5コアに対して、ダウンロードを1コア、
+// 最大で6コアがダウンロードに割り当てる
+const numOfDownloadThreads = Math.min(
+  Math.max(params.numOfThreads / 5, 1),  // 全体の1/5をダウンロードに
+  6  // 最大6スレッド
+);
+
+const downloadTransform = await DownloadTransform.create({
+  maxConcurrency: numOfDownloadThreads,  // Worker数
+  maxTasksPerWorker: params.concurrentDownloads || 1,  // 1Workerあたりの並列接続数
+});
+</code></pre>
+<p><strong>考え方</strong>：</p>
+<ul>
+<li>ダウンロードはネットワークI/O待ちが多い（CPU負荷は低い）</li>
+<li>CSV解析とDB書き込みはCPU集約的（計算負荷が高い）</li>
+<li>そのため、ダウンロードWorkerは少なめ（最大6）、DB書き込みWorkerは多め（残りのコア）</li>
+</ul>
+<p><strong>例</strong>：CPUコア数が12の場合</p>
+<pre><code>総スレッド数: 12
+ダウンロードWorker: 12 / 5 = 2.4 → 2 Workers
+CSV/DB Worker: 12 - 2 = 10 Workers
+</code></pre>
+<h3 id="https接続プールによる並列接続"><a class="header" href="#https接続プールによる並列接続">HTTPS接続プールによる並列接続</a></h3>
+<p>各ダウンロードWorkerは、複数のHTTPS接続を同時に使えます。</p>
+<p><strong>HTTP/1.1の制限</strong>：</p>
+<ul>
+<li>1つの接続で1リクエストずつ処理（順次）</li>
+<li>同じサーバーへの並列リクエストには複数の接続が必要</li>
+</ul>
+<p><strong>接続プールとは？</strong>：</p>
+<ul>
+<li>複数のHTTPS接続を事前に確保し、再利用する仕組み</li>
+<li><code>https.Agent</code> の <code>keepAlive</code> オプションで有効化</li>
+<li><code>maxSockets</code> で同時接続数を制御</li>
+</ul>
+<pre><code class="language-typescript">// src/interface/http-request-adapter.ts:99
+this.agent = new https.Agent({
+  keepAlive: true,  // 接続を再利用
+  maxSockets: options.peerMaxConcurrentStreams,  // 同時接続数
+});
+</code></pre>
+<p><strong>具体例</strong>：</p>
+<pre><code class="language-typescript">// download-worker.ts:47
+peerMaxConcurrentStreams: params.initData.maxTasksPerWorker,
+</code></pre>
+<pre><code>Worker 1（maxSockets = 10）:
+  接続1 → file1.csv.zip ダウンロード中
+  接続2 → file2.csv.zip ダウンロード中
+  接続3 → file3.csv.zip ダウンロード中
+  ...
+  接続10 → file10.csv.zip ダウンロード中
+
+利点: 1つのWorkerで10ファイルを並列ダウンロード
+</code></pre>
+<h3 id="http2との違い"><a class="header" href="#http2との違い">HTTP/2との違い</a></h3>
+<p><strong>HTTP/2の多重化（multiplexing）</strong>：</p>
+<ul>
+<li>1つのTCP接続で複数のリクエストを同時処理</li>
+<li>ストリーム単位で並列化</li>
+</ul>
+<p><strong>ABR Geocoderのアプローチ</strong>：</p>
+<ul>
+<li>HTTP/1.1 + 接続プール</li>
+<li>複数のTCP接続で並列化</li>
+</ul>
+<pre><code>HTTP/2 (未使用):
+  1つの接続 → [Stream1][Stream2][Stream3]...
+
+ABR Geocoder (HTTP/1.1 + 接続プール):
+  接続1 → リクエスト1
+  接続2 → リクエスト2
+  接続3 → リクエスト3
+  ...
+</code></pre>
+<p><strong>なぜHTTP/2を使わないのか？</strong>：</p>
+<ul>
+<li>Node.jsの <code>http2</code> モジュールはAPIが複雑</li>
+<li>接続プールで十分な並列性が得られる</li>
+<li>サーバー側がHTTP/2に対応していない場合がある</li>
+</ul>
+<h2 id="streamパイプライン処理"><a class="header" href="#streamパイプライン処理">Streamパイプライン処理</a></h2>
+<p>ダウンロードしたzipファイルは、メモリに全て読み込まず、Streamで処理します。</p>
+<h3 id="stream処理とは"><a class="header" href="#stream処理とは">Stream処理とは？</a></h3>
+<p><strong>従来の方法（バッファ全読み込み）</strong>：</p>
+<pre><code class="language-javascript">// ❌ メモリを大量に消費
+const data = await fs.readFile('huge-file.csv.zip'); // 100MB全読み込み
+const unzipped = await unzip(data); // さらに200MBメモリ使用
+const parsed = parseCSV(unzipped);
+await insertDB(parsed);
+
+問題: 100MB × 300ファイル = 30GB必要！
+</code></pre>
+<p><strong>Stream方式（逐次処理）</strong>：</p>
+<pre><code class="language-javascript">// ✅ メモリ効率的
+downloadStream
+  .pipe(unzipStream)    // 読み込みながら解凍
+  .pipe(csvParseStream) // 解凍しながらパース
+  .pipe(dbInsertStream) // パースしながらDB投入
+
+利点: 常に数MB程度のメモリで処理可能
+</code></pre>
+<h3 id="パイプライン構成"><a class="header" href="#パイプライン構成">パイプライン構成</a></h3>
+<pre><code class="language-typescript">// download-process.ts:182-194
+await pipeline(
+  srcStream,                  // ダウンロードリクエストのストリーム
+  downloadTransform,          // HTTPダウンロード + unzip
+  csvParseTransform,          // CSVパース + DB投入
+  saveResourceInfoTransform,  // メタデータ保存
+  dst,                        // 完了カウント
+);
+</code></pre>
+<p><strong>各段階の詳細</strong>：</p>
+<h4 id="1-downloadtransform"><a class="header" href="#1-downloadtransform">1. DownloadTransform</a></h4>
+<pre><code>入力: DownloadRequest { dataset, packageId, lgCode, ... }
+処理: HTTPダウンロード + zip解凍
+出力: { zipBuffer: Buffer, request: DownloadRequest }
+</code></pre>
+<pre><code class="language-typescript">// transformations/download-transform.ts
+class DownloadTransform extends Transform {
+  async _transform(request: DownloadRequest, encoding, callback) {
+    // WorkerThreadPoolにタスクを投入
+    const result = await this.pool.run({
+      action: 'download',
+      url: request.packageId,
+      useCache: request.useCache,
+    });
+
+    callback(null, { zipBuffer: result.buffer, request });
+  }
+}
+</code></pre>
+<h4 id="2-csvparsetransform"><a class="header" href="#2-csvparsetransform">2. CsvParseTransform</a></h4>
+<pre><code>入力: { zipBuffer: Buffer, request: DownloadRequest }
+処理: zipからCSV抽出 → パース → DB投入
+出力: DownloadResult { lgCode, dataset, recordCount }
+</code></pre>
+<pre><code class="language-typescript">// transformations/csv-parse-transform.ts
+class CsvParseTransform extends Transform {
+  async _transform(data, encoding, callback) {
+    // WorkerThreadPoolでCSVパースとDB投入を並列実行
+    const result = await this.pool.run({
+      action: 'parse',
+      zipBuffer: data.zipBuffer,
+      dataset: data.request.dataset,
+      lgCode: data.request.lgCode,
+    });
+
+    callback(null, result);
+  }
+}
+</code></pre>
+<p><strong>セマフォによる競合制御</strong>：</p>
+<pre><code class="language-typescript">// download-process.ts:153-156
+semaphoreSize: 101,  // 101個のセマフォでDB書き込みを分散
+</code></pre>
+<p>複数のWorkerが同時にSQLiteに書き込むと競合が発生します。セマフォで排他制御しつつ、101個のスロットに分散することで、適度な並列性を維持します。</p>
+<pre><code>Worker 1 → セマフォ#0 取得 → DB書き込み → 解放
+Worker 2 → セマフォ#1 取得 → DB書き込み → 解放
+Worker 3 → セマフォ#2 取得 → DB書き込み → 解放
+...
+Worker 102 → セマフォ#0 待機（Worker 1が解放するまで）
+</code></pre>
+<h4 id="3-saveresourceinfotransform"><a class="header" href="#3-saveresourceinfotransform">3. SaveResourceInfoTransform</a></h4>
+<pre><code>入力: DownloadResult
+処理: ダウンロード済みファイルのETagとURLをDBに保存
+出力: DownloadResult（そのまま）
+</code></pre>
+<p><strong>ETagによる差分更新</strong>：</p>
+<pre><code class="language-typescript">// transformations/save-resource-info-transform.ts
+if (existingETag === newETag) {
+  // ファイルが更新されていないのでスキップ
+  return callback();
+}
+
+// 更新されているので再ダウンロード
+await download(url);
+</code></pre>
+<h2 id="abrg2キャッシュ生成"><a class="header" href="#abrg2キャッシュ生成">ABRG2キャッシュ生成</a></h2>
+<p>SQLiteへのデータ投入が完了したら、検索に最適化されたABRG2キャッシュファイルを生成します。</p>
+<h3 id="キャッシュファイルの種類"><a class="header" href="#キャッシュファイルの種類">キャッシュファイルの種類</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>ファイル名パターン</th><th>スコープ</th><th>内容</th></tr></thead><tbody>
+<tr><td><code>pref_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>都道府県一覧</td></tr>
+<tr><td><code>county-and-city_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>郡+市</td></tr>
+<tr><td><code>city-and-ward_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>市+区</td></tr>
+<tr><td><code>oaza-cho_&lt;hash&gt;_&lt;LG&gt;.abrg2</code></td><td>自治体別</td><td>大字+丁目+小字</td></tr>
+<tr><td><code>ward_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>区</td></tr>
+<tr><td><code>tokyo23-ward_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>東京23区</td></tr>
+</tbody></table>
+</div>
+<p><strong><code>&lt;hash&gt;</code> の役割</strong>：</p>
+<ul>
+<li>SQL生成式に対するCRC32ハッシュ値</li>
+<li>SQL文を変更すると、ハッシュ値が変わり、キャッシュが自動的に再生成される</li>
+</ul>
+<h3 id="キャッシュ生成のタイミング"><a class="header" href="#キャッシュ生成のタイミング">キャッシュ生成のタイミング</a></h3>
+<pre><code class="language-typescript">// download-process.ts:110-120
+const createDictionaryFileFunctions = [
+  PrefTrieFinder.loadDataFile,
+  CountyAndCityTrieFinder.loadDataFile,
+  CityAndWardTrieFinder.loadDataFile,
+  KyotoStreetTrieFinder.loadDataFile,
+  OazaChoTrieFinder.loadDataFile,
+  WardAndOazaTrieFinder.loadDataFile,
+  WardTrieFinder.loadDataFile,
+  Tokyo23WardTrieFinder.loadDataFile,
+  Tokyo23TownTrieFinder.loadDataFile,
+];
+</code></pre>
+<p>全てのダウンロードとDB投入が完了した後、各Finderの <code>loadDataFile()</code> が呼ばれます。</p>
+<h3 id="キャッシュ生成プロセス"><a class="header" href="#キャッシュ生成プロセス">キャッシュ生成プロセス</a></h3>
+<pre class="mermaid">flowchart TD
+  START[&quot;loadDataFile() 呼び出し&quot;] --&gt; CHECK[&quot;キャッシュファイル存在チェック&quot;]
+  CHECK --&gt;|存在する| VERIFY[&quot;ヘッダー検証&quot;]
+  CHECK --&gt;|存在しない| CREATE[&quot;createDictionaryFile()&quot;]
+  VERIFY --&gt;|OK| LOAD[&quot;バッファ読み込み&quot;]
+  VERIFY --&gt;|NG| CREATE
+  CREATE --&gt; SQL[&quot;SQLiteからデータ取得&quot;]
+  SQL --&gt; NORM[&quot;住所文字列の正規化&quot;]
+  NORM --&gt; TRIE[&quot;トライ木構築&quot;]
+  TRIE --&gt; WRITE[&quot;ABRG2ファイル書き込み&quot;]
+  WRITE --&gt; LOAD
+  LOAD --&gt; SHARED[&quot;SharedArrayBuffer化&quot;]
+  SHARED --&gt; END[&quot;完了&quot;]
+</pre>
+<p><strong>ステップ詳細</strong>：</p>
+<h4 id="1-キャッシュファイル存在チェック"><a class="header" href="#1-キャッシュファイル存在チェック">1. キャッシュファイル存在チェック</a></h4>
+<pre><code class="language-typescript">// models/trie/trie-finder2.ts
+const cacheFiles = await fs.readdir(cacheDir);
+const pattern = new RegExp(`^${this.cacheBaseName}_.*\\.abrg2$`);
+const existing = cacheFiles.filter(file =&gt; pattern.test(file));
+
+if (existing.length &gt; 0) {
+  // キャッシュが存在する場合
+  const buffer = await fs.readFile(path.join(cacheDir, existing[0]));
+
+  // ヘッダー検証（先頭100バイト）
+  if (this.verifyHeader(buffer)) {
+    return buffer; // キャッシュを使用
+  }
+}
+
+// キャッシュが無い、または破損している場合は再生成
+await this.createDictionaryFile();
+</code></pre>
+<h4 id="2-sqliteからデータ取得"><a class="header" href="#2-sqliteからデータ取得">2. SQLiteからデータ取得</a></h4>
+<pre><code class="language-typescript">// 例: pref-trie-finder.ts
+const rows = db.prepare(`
+  SELECT DISTINCT
+    pref_name,
+    pref_name_kana,
+    pref_name_roma,
+    lg_code
+  FROM pref
+  ORDER BY lg_code
+`).all();
+</code></pre>
+<h4 id="3-住所文字列の正規化"><a class="header" href="#3-住所文字列の正規化">3. 住所文字列の正規化</a></h4>
+<pre><code class="language-typescript">for (const row of rows) {
+  // 正規化処理
+  const normalized = normalizeAddress(row.pref_name);
+  // 全角 → 半角
+  // 漢数字 → 算用数字
+  // 異体字 → 標準字
+  // カタカナ → ひらがな
+}
+</code></pre>
+<h4 id="4-トライ木構築"><a class="header" href="#4-トライ木構築">4. トライ木構築</a></h4>
+<pre><code class="language-typescript">const writer = new FileTrieWriter(outputPath);
+
+for (const row of rows) {
+  const key = normalizeAddress(row.pref_name); // 例: "東京都"
+  const value = {
+    pref_name: row.pref_name,
+    pref_name_kana: row.pref_name_kana,
+    lg_code: row.lg_code,
+  };
+
+  writer.addNode(key, value);
+}
+
+await writer.close(); // ファイルにフラッシュ
+</code></pre>
+<p><strong>トライ木の構造</strong>：</p>
+<pre><code>(root)
+ ├─ 東
+ │  └─ 京
+ │     └─ 都 → {"pref_name":"東京都","lg_code":"130001"}
+ ├─ 大
+ │  └─ 阪
+ │     └─ 府 → {"pref_name":"大阪府","lg_code":"270008"}
+ └─ 京
+    └─ 都 → {"pref_name":"京都府","lg_code":"260002"}
+</code></pre>
+<p>詳細は <a href="download-and-cache/../geocoding/strategy.html">Geocoding &gt; Strategy</a> を参照してください。</p>
+<h4 id="5-abrg2ファイル書き込み"><a class="header" href="#5-abrg2ファイル書き込み">5. ABRG2ファイル書き込み</a></h4>
+<pre><code class="language-typescript">// file-trie-writer.ts
+class FileTrieWriter {
+  async close() {
+    // ヘッダー書き込み
+    this.writeHeader();
+
+    // トライノード書き込み（再帰）
+    this.writeTrieNode(this.rootNode);
+
+    // データノード書き込み（ハッシュ連結リスト）
+    this.writeDataNodes();
+
+    // ファイルに出力
+    await fs.writeFile(this.outputPath, this.buffer);
+  }
+}
+</code></pre>
+<p><strong>ABRG2フォーマット</strong>：</p>
+<pre><code>[Header]
+- magic: "abrg" (4 bytes)
+- version: 2.2 (2 bytes)
+- trie_root: offset (4 bytes)
+- data_head: offset (4 bytes)
+
+[Trie Nodes]
+- size (1B) + sibling (4B) + child (4B) + hash_list (4B) + name (var)
+
+[Data Nodes]
+- next (4B) + size (2B) + hash (8B) + data (gzip JSON)
+</code></pre>
+<p>詳細は <a href="download-and-cache/../geocoding/abrg2-format.html">Geocoding &gt; ABRG2 Format</a> を参照してください。</p>
+<h4 id="6-sharedarraybuffer化"><a class="header" href="#6-sharedarraybuffer化">6. SharedArrayBuffer化</a></h4>
+<pre><code class="language-typescript">// models/trie/trie-finder2.ts
+const fileBuffer = await fs.readFile(cachePath);
+
+// SharedArrayBufferにコピー
+const sharedBuffer = new SharedArrayBuffer(fileBuffer.length);
+const view = new Uint8Array(sharedBuffer);
+view.set(fileBuffer);
+
+// 各Workerに共有（コピーせずポインタだけ渡す）
+workers.forEach(worker =&gt; {
+  worker.postMessage({ trieBuffer: sharedBuffer });
+});
+</code></pre>
+<p><strong>SharedArrayBufferの利点</strong>：</p>
+<pre><code>通常のコピー方式:
+  メインスレッド: 50MB
+  Worker 1: 50MB（コピー）
+  Worker 2: 50MB（コピー）
+  Worker 3: 50MB（コピー）
+  合計: 200MB
+
+SharedArrayBuffer:
+  共有メモリ: 50MB
+  Worker 1: 参照のみ
+  Worker 2: 参照のみ
+  Worker 3: 参照のみ
+  合計: 50MB
+</code></pre>
+<p>詳細は <a href="download-and-cache/../geocoding/parallelism.html">Geocoding &gt; Parallelism</a> を参照してください。</p>
+<h2 id="パフォーマンス最適化"><a class="header" href="#パフォーマンス最適化">パフォーマンス最適化</a></h2>
+<h3 id="1-ダウンロード並列化"><a class="header" href="#1-ダウンロード並列化">1. ダウンロード並列化</a></h3>
+<pre><code>最適なWorker数 = CPU並列数 / 5（最大6）
+最適な接続数 = ダウンロード並列数
+
+例: 12コアCPU、並列ダウンロード数10
+  ダウンロードWorker: 12/5 = 2
+  各Workerの接続数: 10
+  合計並列ダウンロード: 2 × 10 = 20ファイル同時
+</code></pre>
+<h3 id="2-db書き込み分散"><a class="header" href="#2-db書き込み分散">2. DB書き込み分散</a></h3>
+<pre><code>ランダムキュー + 101個のセマフォ
+→ 同じ自治体への書き込み競合を低減
+→ デッドロックを回避
+</code></pre>
+<h3 id="3-stream処理"><a class="header" href="#3-stream処理">3. Stream処理</a></h3>
+<pre><code>メモリ使用量: 各Worker数MB程度
+→ 300ファイル × 100MBでも安定動作
+</code></pre>
+<h3 id="4-etagキャッシュ"><a class="header" href="#4-etagキャッシュ">4. ETagキャッシュ</a></h3>
+<pre><code>前回ダウンロード時のETagを保存
+→ 更新されていないファイルはスキップ
+→ 差分更新で高速化
+</code></pre>
+<h2 id="コントリビューションのヒント-5"><a class="header" href="#コントリビューションのヒント-5">コントリビューションのヒント</a></h2>
+<h3 id="ダウンロード速度の改善"><a class="header" href="#ダウンロード速度の改善">ダウンロード速度の改善</a></h3>
+<ul>
+<li><strong>HTTP/2対応</strong>: <code>http2</code> モジュールを使った実装</li>
+<li><strong>圧縮転送</strong>: <code>Accept-Encoding: gzip, br</code> の活用</li>
+<li><strong>CDN活用</strong>: データソースがCDN対応している場合の最適化</li>
+</ul>
+<h3 id="キャッシュ生成の最適化"><a class="header" href="#キャッシュ生成の最適化">キャッシュ生成の最適化</a></h3>
+<ul>
+<li><strong>並列生成</strong>: 複数のFinderを並列実行</li>
+<li><strong>インクリメンタル更新</strong>: 差分だけトライ木を更新</li>
+<li><strong>圧縮アルゴリズム</strong>: gzipよりbrotliやzstdで高圧縮</li>
+</ul>
+<h3 id="エラーハンドリング強化"><a class="header" href="#エラーハンドリング強化">エラーハンドリング強化</a></h3>
+<ul>
+<li><strong>リトライロジック</strong>: ネットワークエラー時の再試行</li>
+<li><strong>チェックサム検証</strong>: ダウンロードしたファイルの整合性確認</li>
+<li><strong>ロールバック機能</strong>: DB投入失敗時の自動ロールバック</li>
+</ul>
+<h3 id="モニタリング機能"><a class="header" href="#モニタリング機能">モニタリング機能</a></h3>
+<ul>
+<li><strong>進捗表示</strong>: ダウンロード速度、残り時間の推定</li>
+<li><strong>統計情報</strong>: Worker別の処理件数、平均速度</li>
+<li><strong>ボトルネック検出</strong>: どのWorkerが遅いか可視化</li>
+</ul>
+<p>このDownload &amp; Cacheシステムにより、大量のオープンデータを効率的に取得・変換し、高速なジオコーディングを実現しています！</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rest-api"><a class="header" href="#rest-api">REST API</a></h1>
+<p>この章では、/geocode エンドポイントの入出力と内部フロー、フォーマッタ、CORS 等を説明します。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rest-api-overview"><a class="header" href="#rest-api-overview">REST API Overview</a></h1>
+<p>エンドポイント（既定）:</p>
+<ul>
+<li><code>GET /geocode?address=&lt;文字列&gt;&amp;target=&lt;ALL|RESIDENTIAL|PARCEL&gt;&amp;fuzzy=?&amp;format=&lt;json|ndjson|geojson|csv&gt;</code></li>
+</ul>
+<p>処理の流れ:</p>
+<ol>
+<li><code>OnGeocodeRequest</code> がクエリを検証（<code>address</code> 必須, <code>fuzzy</code> は1文字, target/format はホワイトリスト）</li>
+<li>フォーマッタを生成（<code>FormatterProvider</code>）し、結果をストリームに流す</li>
+<li><code>AbrGeocoder.geocode()</code> を1件呼び出し、最終結果を整形</li>
+</ol>
+<p>CORS: すべての GET を許可（<code>hyper-express</code> のミドルウェアで設定）</p>
+<p>CLI サーバ（/command）:</p>
+<ul>
+<li><code>CliServer</code> は <code>/command</code> を POST で受け付け、CLI 操作をプロセス外から委譲できる</li>
+</ul>
+<h2 id="apicli-layerインターフェース層-1"><a class="header" href="#apicli-layerインターフェース層-1">API/CLI Layer（インターフェース層）</a></h2>
+<p>REST APIとCLIのエントリポイントです。</p>
+<pre class="mermaid">classDiagram
+    class AbrgApiServer {
+        -AbrGeocoder geocoder
+        +listen(port)
+    }
+
+    class CliServer {
+        -AbrGeocoder geocoder
+        +handleCommand(command)
+    }
+
+    class OnGeocodeRequest {
+        +handle(req, res)
+    }
+
+    class OnCommandRequest {
+        +handle(command)
+    }
+
+    class FormatterProvider {
+        +getFormatter(format) IFormatTransform
+    }
+
+    class HttpRequestAdapter {
+        +getJSON(url) Promise
+        +get(url) Promise
+        +post(url, data) Promise
+    }
+
+    AbrgApiServer --&gt; OnGeocodeRequest : uses
+    CliServer --&gt; OnCommandRequest : uses
+    AbrgApiServer --&gt; FormatterProvider : uses
+    CliServer --&gt; FormatterProvider : uses
+    AbrgApiServer --&gt; AbrGeocoder : calls
+    CliServer --&gt; AbrGeocoder : calls
+</pre>
+<p><strong>役割:</strong></p>
+<ul>
+<li><strong>AbrgApiServer</strong>: HTTP APIサーバー。RESTful APIでジオコーディングリクエストを受け付け</li>
+<li><strong>CliServer</strong>: CLIコマンド処理用サーバー</li>
+<li><strong>OnGeocodeRequest</strong>: ジオコードAPIリクエストハンドラー</li>
+<li><strong>OnCommandRequest</strong>: CLIコマンドリクエストハンドラー</li>
+<li><strong>FormatterProvider</strong>: 出力フォーマッター（CSV, JSON, GeoJSON等）を提供</li>
+<li><strong>HttpRequestAdapter</strong>: HTTP通信の抽象化レイヤー</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes"><a class="header" href="#classes">Classes</a></h1>
+<p>主要クラス群の責務・主要メソッド・連携関係をまとめます。</p>
+<ul>
+<li>Trie / Writer / Finder: ABRG2 の読み書き</li>
+<li>Geocoder / Worker: 並列ジオコーディングの中核</li>
+<li>API Server: REST/CLI サーバ層</li>
+<li>Download / DB: データ取得と辞書生成の基盤</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes-trie--writer--finder"><a class="header" href="#classes-trie--writer--finder">Classes: Trie / Writer / Finder</a></h1>
+<h2 id="filetriewritersrcusecasesgeocodemodelstriefile-trie-writerts"><a class="header" href="#filetriewritersrcusecasesgeocodemodelstriefile-trie-writerts">FileTrieWriter（<code>src/usecases/geocode/models/trie/file-trie-writer.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>ABRG2 ファイルの生成・追記・ヘッダー更新・重複排除</li>
+<li>トライ木ノード/ハッシュ連結/データノードの整合性管理</li>
+</ul>
+<p>主なメソッド:</p>
+<ul>
+<li><code>static create(path)</code> ヘッダー検証→再利用 or 新規初期化（ルート作成）</li>
+<li><code>writeHeader(header?)</code> マジック/ヘッダー/エントリポイントを更新</li>
+<li><code>addNode({key, value})</code> キーを1文字ずつ辿ってノード挿入・<code>appendHashOffset</code></li>
+<li><code>writeTrieNode({trieNode, hashValueOffset?})</code> ノードの固定部+名前を書込み</li>
+<li><code>appendHashOffset({trieNode, hashValueOffset})</code> ノードのハッシュ連結末尾に追記</li>
+<li><code>storeData(value)</code> JSON→gzip→FNV-1a64 計算→重複/衝突処理</li>
+<li><code>close()</code> バッファフラッシュと FD クローズ</li>
+</ul>
+<p>実装上のポイント:</p>
+<ul>
+<li>内部 8MB バッファで追記を集約。前方の小さな書換（子/兄弟オフセット）は直接書込</li>
+<li>重複判定は「圧縮後バイト列の完全一致」で実施（衝突時は連結を辿る）</li>
+<li>1ファイル内に <code>{}</code> を持つルートデータ（hash=0）を保存し、空文字の TrieRoot に紐付け</li>
+</ul>
+<h2 id="trietreebuilderbasesrcusecasesgeocodemodelstrietrie-tree-builder-basets"><a class="header" href="#trietreebuilderbasesrcusecasesgeocodemodelstrietrie-tree-builder-basets">TrieTreeBuilderBase（<code>src/usecases/geocode/models/trie/trie-tree-builder-base.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>低レベル I/O（バッファ読書き/整数読取/ヘッダー解釈/ノード復元）</li>
+</ul>
+<p>主なメソッド:</p>
+<ul>
+<li><code>readHeader()</code> マジック/バージョン/エントリポイントを検証</li>
+<li><code>readTrieNode(offset)</code> 固定部+文字列を復元し、<code>hash_list</code> を <code>createHashValueList()</code> で構築</li>
+<li><code>readDataNode(offset, expect?)</code> データノード連結を復元</li>
+<li><code>write(buf, pos)</code>/<code>read(pos, size)</code> 大域バッファ越しの I/O</li>
+</ul>
+<h2 id="trieaddressfinder2srcusecasesgeocodemodelstrietrie-finder2ts"><a class="header" href="#trieaddressfinder2srcusecasesgeocodemodelstrietrie-finder2ts">TrieAddressFinder2（<code>src/usecases/geocode/models/trie/trie-finder2.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>メモリ上の ABRG2 から Trie を辿り、候補（DataNode 連結）を復元</li>
+</ul>
+<p>主なメソッド:</p>
+<ul>
+<li><code>find({target, fuzzy, partialMatches, extraChallenges})</code> 候補リストを返却</li>
+<li><code>readDataNode(offset)</code> 解凍して JSON 復元（衝突連結を再帰で辿る）</li>
+<li><code>createHashValueList(nodeOffset)</code> ノードのハッシュ連結を復元</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes-geocoder--worker"><a class="header" href="#classes-geocoder--worker">Classes: Geocoder / Worker</a></h1>
+<h2 id="abrgeocodersrcusecasesgeocodeabr-geocoderts"><a class="header" href="#abrgeocodersrcusecasesgeocodeabr-geocoderts">AbrGeocoder（<code>src/usecases/geocode/abr-geocoder.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>タスク整列（入力順の維持）とワーカープールへの投入</li>
+<li>共有メモリ化した Trie バッファを初期化し、ワーカーへ配布</li>
+</ul>
+<p>主なメソッド:</p>
+<ul>
+<li><code>static create({container, numOfThreads, isSilentMode, signal})</code>
+<ul>
+<li>SQLite から Pref 一覧を取得</li>
+<li>各 Finder の <code>loadDataFile()</code> で ABRG2 を Buffer 読込</li>
+<li><code>toSharedMemory()</code> で共有メモリ化し、初期データを <code>GeocodeWorkerInitData</code> としてプールへ</li>
+<li>スレッド数 &lt; 2 or Jest 実行時はメインスレッドで <code>FakeWorkerThreadPool</code></li>
+</ul>
+</li>
+<li><code>geocode(input)</code>
+<ul>
+<li><code>WorkerPoolTaskInfo</code> 連結で順序を保持しつつ <code>WorkerThreadPool.run()</code> を呼ぶ</li>
+<li>結果は <code>flushResults()</code> で入力順に emit</li>
+</ul>
+</li>
+<li><code>close()</code> ワーカープールのクリーンアップ</li>
+</ul>
+<h2 id="geocodetransformsrcusecasesgeocodeworkergeocode-workerts"><a class="header" href="#geocodetransformsrcusecasesgeocodeworkergeocode-workerts">GeocodeTransform（<code>src/usecases/geocode/worker/geocode-worker.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>住所処理のストリームパイプライン</li>
+</ul>
+<p>パイプライン:</p>
+<ol>
+<li>Normalize → Banchome 正規化</li>
+<li>Pref → CountyAndCity → CityAndWard → Ward → Tokyo23（Ward/Town） → KyotoStreet → OazaChome</li>
+<li>RsdtBlk → RsdtDsp → Parcel</li>
+<li>GeocodeResultTransform（スコアリング/整形）</li>
+</ol>
+<h2 id="workerthreadpoolsrcdomainservicesthreadworker-thread-poolts"><a class="header" href="#workerthreadpoolsrcdomainservicesthreadworker-thread-poolts">WorkerThreadPool（<code>src/domain/services/thread/worker-thread-pool.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>N ワーカーに最大 M タスクを並列投入しつつ、バックプレッシャを制御</li>
+</ul>
+<p>関連:</p>
+<ul>
+<li><code>WorkerPoolTaskInfo</code> 入出力の順序管理</li>
+<li><code>toSharedMemory</code>/<code>fromSharedMemory</code> で辞書バッファを共有</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes-api-server"><a class="header" href="#classes-api-server">Classes: API Server</a></h1>
+<h2 id="abrgapiserversrcinterfaceabrg-api-serverindexts"><a class="header" href="#abrgapiserversrcinterfaceabrg-api-serverindexts">AbrgApiServer（<code>src/interface/abrg-api-server/index.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li><code>GET /geocode</code> ハンドリング（CORS 設定、入力検証、フォーマット変換）</li>
+<li>エラー応答（<code>500</code>/<code>404</code>）</li>
+</ul>
+<h2 id="ongeocoderequestsrcinterfaceabrg-api-serveron-geocode-requestts"><a class="header" href="#ongeocoderequestsrcinterfaceabrg-api-serveron-geocode-requestts">OnGeocodeRequest（<code>src/interface/abrg-api-server/on-geocode-request.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>クエリ検証（<code>address</code> 必須、<code>fuzzy</code> は1文字、<code>target/format</code> は既定集合）</li>
+<li><code>FormatterProvider</code> を用いて <code>json/csv/geojson/ndjson</code> へストリーム出力</li>
+<li>AbrGeocoder へ単発リクエストを発行</li>
+</ul>
+<h2 id="cliserversrcinterfacecli-serverindexts"><a class="header" href="#cliserversrcinterfacecli-serverindexts">CliServer（<code>src/interface/cli-server/index.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li><code>/command</code> POST を受け付け、CLI 操作を HTTP 化（CORS 設定）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes-download--db"><a class="header" href="#classes-download--db">Classes: Download / DB</a></h1>
+<h2 id="downloadprocesssrcusecasesdownloaddownload-processts"><a class="header" href="#downloadprocesssrcusecasesdownloaddownload-processts">DownloadProcess（<code>src/usecases/download/download-process.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>DCAT から <code>.csv.zip</code> を抽出→グルーピング→ダウンロード→CSV パース→SQLite 取込</li>
+<li>取込後の辞書生成（各 Finder の <code>createDictionaryFile</code>）をトリガ</li>
+</ul>
+<p>ポイント:</p>
+<ul>
+<li>LG コードの粒度（都道府県/市区町村）を集約し、競合/偏りを回避するためにシャッフル</li>
+<li>進捗表示やキャッシュ利用の制御を備える</li>
+</ul>
+<h2 id="commondbgeocodesqlite3srcdriversdatabasesqlite3geocodecommon-db-geocode-sqlite3ts"><a class="header" href="#commondbgeocodesqlite3srcdriversdatabasesqlite3geocodecommon-db-geocode-sqlite3ts">CommonDbGeocodeSqlite3（<code>src/drivers/database/sqlite3/geocode/common-db-geocode-sqlite3.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>地理辞書用のクエリ発行</li>
+<li>生成 SQL の CRC32 を <code>get*GeneratorHash()</code> で提供し、キャッシュの更新判定に利用</li>
+</ul>
+<p>主な提供データ:</p>
+<ul>
+<li>都道府県一覧、郡+市、市+区、京都通り、町字/丁目/小字 など</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="utilities抜粋"><a class="header" href="#utilities抜粋">Utilities（抜粋）</a></h1>
+<ul>
+<li><code>reg-exp-ex.ts</code> 正規表現ユーティリティ（タグ式置換、命名グループ対応の使い勝手改善）</li>
+<li><code>crc32-lib.ts</code> CRC32（ファイル/バッファ/文字列/レコード）</li>
+<li><code>make-dir-if-not-exists.ts</code> フォルダ作成</li>
+<li><code>remove-files.ts</code> パターン指定の削除（古いキャッシュ掃除）</li>
+<li><code>resolve-home.ts</code> <code>~</code> 展開</li>
+<li><code>thread/semaphore-manager.ts</code> 簡易セマフォ（Writer 内での排他）</li>
+<li><code>thread/shared-memory.ts</code> Buffer と SharedArrayBuffer の変換</li>
+<li><code>logger/debug-logger.ts</code> デバッグ出力（<code>debug</code> モードのみ）</li>
+<li><code>transformations/*</code> 行/コメントフィルタやカウンタなどストリーム補助</li>
+</ul>
+<p>表記変換（ジオコーディング前処理）:</p>
+<ul>
+<li>漢数字→算用数字、半角化、仮名変換、旧字→新字等（<code>toHankakuAlphaNum</code>, <code>toHiragana</code>, <code>jisKanji</code>, <code>kan2num</code>）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="operations運用"><a class="header" href="#operations運用">Operations（運用）</a></h1>
+<h2 id="キャッシュ再生成"><a class="header" href="#キャッシュ再生成">キャッシュ再生成</a></h2>
+<ul>
+<li>SQL を変更した場合は自動で <code>&lt;hash&gt;</code> が変わり、古いキャッシュは <code>removeFiles()</code> で掃除されます</li>
+<li>手動再生成を行う場合:
+<ul>
+<li>各 Finder の <code>createDictionaryFile(task)</code> を呼ぶ、または</li>
+<li>AbrGeocoder の初期化時に <code>loadDataFile()</code> がなければ自動生成</li>
+</ul>
+</li>
+</ul>
+<h2 id="バージョン互換性"><a class="header" href="#バージョン互換性">バージョン互換性</a></h2>
+<ul>
+<li>ABRG2 のヘッダー <code>version</code> は <code>2.2</code> 以上を想定。古い/新しいフォーマットは読み込み失敗で再生成</li>
+<li>破損（magic 不一致/size 異常）はファイル削除→再生成</li>
+</ul>
+<h2 id="共有メモリ"><a class="header" href="#共有メモリ">共有メモリ</a></h2>
+<ul>
+<li>大きな辞書はワーカーにコピーせず共有（起動時に一度だけマップ）。Node のメモリ制限に注意</li>
+</ul>
+<h2 id="検証"><a class="header" href="#検証">検証</a></h2>
+<ul>
+<li>先頭 100B でヘッダ検査する簡易チェックを各 Finder の <code>loadDataFile()</code> が実施</li>
+<li>さらに <code>TrieAddressFinder2</code> を試作成して整合性を確認（例外時は再生成）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h1>
+<ul>
+<li>ヘッダー不正（<code>magic!=abrg</code> / <code>version&lt;2.2</code>）
+<ul>
+<li>キャッシュ破損の可能性。該当ファイル削除→再生成</li>
+</ul>
+</li>
+<li>読み出し中の例外（オフセット異常/サイズ不一致）
+<ul>
+<li>途中中断などで破損。再生成</li>
+</ul>
+</li>
+<li>メモリ不足
+<ul>
+<li>共有メモリで辞書を載せるため、起動オプション/ハード制約を確認</li>
+</ul>
+</li>
+<li>結果が期待と違う
+<ul>
+<li>正規化規則（漢数字, 旧字体, 記号）を確認</li>
+<li>スコアリングは入力長/一致割合/曖昧回数/区分別に依存（<code>geocode-result-transform.ts</code>）</li>
+</ul>
+</li>
+<li>速度劣化
+<ul>
+<li>キャッシュが古い/分割不足。<code>oaza-cho</code> は LG ごとに分割されているか確認</li>
+<li>ワーカースレッド数と <code>maxTasksPerWorker</code> のバランス</li>
+</ul>
+</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="glossary用語集"><a class="header" href="#glossary用語集">Glossary（用語集）</a></h1>
+<ul>
+<li>ABRG2: 本プロジェクトの辞書バイナリ形式（マジック <code>abrg</code> + v2.x）</li>
+<li>Trie（トライ木）: 文字列キーを文字単位で共有する木構造</li>
+<li>HashLinkNode: Trie ノードからデータノードを参照するための連結リスト要素</li>
+<li>DataNode: <code>next</code> 連結 + <code>size</code> + <code>hash(FNV-1a 64)</code> + <code>gzip(JSON)</code> 本体</li>
+<li>FNV-1a 64: 64bit のハッシュ手法。ここでは圧縮済みデータに対して適用</li>
+<li>json-stable-stringify: JSON をキー順に並べ、安定化して文字列化する手法</li>
+<li>Shared Memory: <code>SharedArrayBuffer</code> ベースの共有メモリ。辞書バッファをワーカーと共有</li>
+<li>LGコード: 自治体コード。<code>oaza-cho</code> キャッシュは LG ごとに分割</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>

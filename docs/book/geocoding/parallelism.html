@@ -1,0 +1,612 @@
+<!DOCTYPE HTML>
+<html lang="ja" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Parallelism - ABR Geocoder 内部仕様</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="parallelism並列処理とタスク整列"><a class="header" href="#parallelism並列処理とタスク整列">Parallelism（並列処理とタスク整列）</a></h1>
+<p>ABR Geocoderは、Node.jsのWorker Threadsを活用して高速な並列ジオコーディングを実現しています。このページでは、なぜ並列処理が必要か、どのように実装されているかを詳しく説明します。</p>
+<h2 id="なぜ並列処理が必要か"><a class="header" href="#なぜ並列処理が必要か">なぜ並列処理が必要か？</a></h2>
+<h3 id="シングルスレッドの限界"><a class="header" href="#シングルスレッドの限界">シングルスレッドの限界</a></h3>
+<p>Node.jsはシングルスレッドで動作するため、1つの処理が完了するまで次の処理を開始できません。</p>
+<p><strong>例</strong>：1万件の住所をジオコーディングする場合（1件あたり10ms）</p>
+<pre><code>シングルスレッド:
+  件数: 10,000件
+  1件あたり: 10ms
+  合計時間: 10,000 × 10ms = 100,000ms = 100秒
+</code></pre>
+<h3 id="マルチスレッドの威力"><a class="header" href="#マルチスレッドの威力">マルチスレッドの威力</a></h3>
+<p>4コアCPUでWorker Threadsを使うと、4倍の速度で処理できます。</p>
+<pre><code>マルチスレッド（4 Workers）:
+  件数: 10,000件
+  1件あたり: 10ms
+  合計時間: 10,000 / 4 × 10ms = 25,000ms = 25秒
+
+速度向上: 100秒 → 25秒（4倍高速）
+</code></pre>
+<p>実際には、オーバーヘッド（タスク分配、結果収集等）があるため、理論値の3〜3.5倍程度の速度向上が見込めます。</p>
+<h2 id="worker-threadsとは"><a class="header" href="#worker-threadsとは">Worker Threadsとは？</a></h2>
+<p>Node.jsの<code>worker_threads</code>モジュールを使うと、JavaScriptコードを別スレッドで実行できます。</p>
+<h3 id="従来のnodejsシングルスレッド"><a class="header" href="#従来のnodejsシングルスレッド">従来のNode.js（シングルスレッド）</a></h3>
+<pre><code>メインスレッド
+  ├─ HTTPリクエスト受信
+  ├─ ジオコーディング処理（重い！）
+  ├─ ジオコーディング処理（重い！）
+  └─ HTTPレスポンス返却
+
+問題: 処理中は他のリクエストを受け付けられない
+</code></pre>
+<h3 id="worker-threads利用時マルチスレッド"><a class="header" href="#worker-threads利用時マルチスレッド">Worker Threads利用時（マルチスレッド）</a></h3>
+<pre><code>メインスレッド
+  ├─ HTTPリクエスト受信
+  ├─ タスクをWorkerに投げる（軽い）
+  └─ HTTPレスポンス返却
+
+Worker 1 → ジオコーディング処理
+Worker 2 → ジオコーディング処理
+Worker 3 → ジオコーディング処理
+Worker 4 → ジオコーディング処理
+
+利点: メインスレッドはブロックされず、複数リクエストを並列処理
+</code></pre>
+<h2 id="abr-geocoderの並列処理アーキテクチャ"><a class="header" href="#abr-geocoderの並列処理アーキテクチャ">ABR Geocoderの並列処理アーキテクチャ</a></h2>
+<h3 id="全体像"><a class="header" href="#全体像">全体像</a></h3>
+<pre class="mermaid">sequenceDiagram
+  participant CLI/API
+  participant Main as Main Thread&lt;br/&gt;(AbrGeocoder)
+  participant Pool as WorkerThreadPool
+  participant W1 as Worker 1
+  participant W2 as Worker 2
+
+  CLI/API-&gt;&gt;Main: geocode(address1)
+  Main-&gt;&gt;Pool: run(task#1)
+  Pool-&gt;&gt;W1: task#1 (SharedMemory参照)
+
+  CLI/API-&gt;&gt;Main: geocode(address2)
+  Main-&gt;&gt;Pool: run(task#2)
+  Pool-&gt;&gt;W2: task#2 (SharedMemory参照)
+
+  W2--&gt;&gt;Pool: result#2 (完了)
+  W1--&gt;&gt;Pool: result#1 (完了)
+
+  Note over Main: TaskInfo連結リストで&lt;br/&gt;入力順を保持
+
+  Pool--&gt;&gt;Main: result#1 (入力順)
+  Main--&gt;&gt;CLI/API: result#1
+
+  Pool--&gt;&gt;Main: result#2 (入力順)
+  Main--&gt;&gt;CLI/API: result#2
+</pre>
+<h3 id="処理の流れ具体例"><a class="header" href="#処理の流れ具体例">処理の流れ（具体例）</a></h3>
+<p><strong>入力</strong>：3つの住所を連続で投入</p>
+<pre><code>1. 「東京都千代田区霞が関1-1-1」
+2. 「大阪府大阪市中央区大手前1-1-1」
+3. 「愛知県名古屋市中区三の丸3-1-2」
+</code></pre>
+<p><strong>ステップ1：タスク投入</strong></p>
+<pre><code>メインスレッド:
+  task#1 → Worker 1に割り当て
+  task#2 → Worker 2に割り当て
+  task#3 → Worker 1に割り当て（空きができたら）
+
+TaskInfo連結リスト:
+  [task#1] → [task#2] → [task#3] → null
+</code></pre>
+<p><strong>ステップ2：並列実行</strong></p>
+<pre><code>Worker 1:
+  task#1: 「東京都千代田区霞が関1-1-1」を処理中...
+  ↓
+  12ms後に完了
+
+Worker 2:
+  task#2: 「大阪府大阪市中央区大手前1-1-1」を処理中...
+  ↓
+  8ms後に完了（先に完了！）
+</code></pre>
+<p><strong>ステップ3：結果の整列</strong></p>
+<p>Worker 2が先に完了しましたが、入力順（task#1 → task#2）を保つため、task#1の完了を待ちます。</p>
+<pre><code>TaskInfo連結リスト:
+  [task#1: 完了待ち] → [task#2: 完了済み] → [task#3: 処理中]
+                        ↑
+                        結果は保持されているが、
+                        task#1が完了するまで返却しない
+</code></pre>
+<p><strong>ステップ4：入力順に返却</strong></p>
+<pre><code>12ms時点:
+  task#1が完了 → すぐに返却
+  task#2も完了済み → 続けて返却
+
+TaskInfo連結リスト:
+  [task#1: 返却済み] → [task#2: 返却済み] → [task#3: 処理中]
+</code></pre>
+<h2 id="sharedarraybufferメモリ共有の仕組み"><a class="header" href="#sharedarraybufferメモリ共有の仕組み">SharedArrayBuffer：メモリ共有の仕組み</a></h2>
+<h3 id="通常のデータ受け渡しコピー方式"><a class="header" href="#通常のデータ受け渡しコピー方式">通常のデータ受け渡し（コピー方式）</a></h3>
+<p>Workerにデータを渡す際、通常はシリアライゼーション（コピー）が必要です。</p>
+<pre><code class="language-javascript">// メインスレッド
+const largeData = new Uint8Array(100_000_000); // 100MB
+worker.postMessage(largeData); // 100MBをコピー（遅い！）
+
+問題:
+  - コピーに時間がかかる（100MBなら数百ms）
+  - メモリが2倍必要（メイン100MB + Worker100MB）
+</code></pre>
+<h3 id="sharedarraybuffer共有方式"><a class="header" href="#sharedarraybuffer共有方式">SharedArrayBuffer（共有方式）</a></h3>
+<p>SharedArrayBufferを使うと、コピーせずにメモリを共有できます。</p>
+<pre><code class="language-javascript">// メインスレッド
+const sharedBuffer = new SharedArrayBuffer(100_000_000); // 100MB
+worker.postMessage(sharedBuffer); // ポインタだけを渡す（一瞬！）
+
+// Workerスレッド
+onmessage = (e) =&gt; {
+  const buffer = e.data; // 同じメモリ領域を参照
+  const view = new Uint8Array(buffer);
+  // コピーなしで直接アクセス可能
+};
+
+利点:
+  - 転送時間ほぼゼロ
+  - メモリ使用量は1つ分のみ
+</code></pre>
+<h3 id="abr-geocoderでの活用"><a class="header" href="#abr-geocoderでの活用">ABR Geocoderでの活用</a></h3>
+<pre><code class="language-javascript">// メインスレッド（起動時）
+const trieBuffer = fs.readFileSync('pref-trie.abrg2'); // 50MB
+const sharedBuffer = new SharedArrayBuffer(trieBuffer.length);
+const view = new Uint8Array(sharedBuffer);
+view.set(trieBuffer); // SharedArrayBufferにコピー
+
+// 各Workerに共有
+workers.forEach(worker =&gt; {
+  worker.postMessage({ trieBuffer: sharedBuffer }); // 一瞬で転送
+});
+
+// Worker側
+onmessage = (e) =&gt; {
+  const buffer = e.data.trieBuffer;
+  const finder = new TrieAddressFinder2(buffer); // コピーなしで使用
+};
+
+結果:
+  - 4つのWorkerがあっても、メモリは50MB×1 = 50MBのみ
+  - 起動時のデータ転送が高速
+</code></pre>
+<h2 id="入力順序の保証taskinfo連結リスト"><a class="header" href="#入力順序の保証taskinfo連結リスト">入力順序の保証：TaskInfo連結リスト</a></h2>
+<h3 id="問題完了順序がバラバラ"><a class="header" href="#問題完了順序がバラバラ">問題：完了順序がバラバラ</a></h3>
+<p>並列処理では、完了順序が入力順序と異なることがあります。</p>
+<pre><code>入力順序: task#1 → task#2 → task#3
+
+完了順序: task#2 → task#1 → task#3
+           ↑
+          先に完了してしまった！
+</code></pre>
+<p>しかし、ストリーム処理では入力順に出力する必要があります。</p>
+<h3 id="解決策連結リスト"><a class="header" href="#解決策連結リスト">解決策：連結リスト</a></h3>
+<p>TaskInfoを連結リストで管理し、先頭から順に結果を取り出します。</p>
+<pre><code class="language-typescript">class WorkerPoolTaskInfo {
+  id: number;
+  data: any;
+  result: any = null;
+  isCompleted: boolean = false;
+  next: WorkerPoolTaskInfo | null = null;
+
+  // Promiseのresolve/rejectを保持
+  private resolve: ((value: any) =&gt; void) | null = null;
+  private reject: ((error: any) =&gt; void) | null = null;
+
+  setResolver(resolve: (value: any) =&gt; void) {
+    this.resolve = resolve;
+  }
+
+  setRejector(reject: (error: any) =&gt; void) {
+    this.reject = reject;
+  }
+
+  // 結果をセット
+  setResult(result: any) {
+    this.result = result;
+    this.isCompleted = true;
+    this.tryEmit(); // 先頭タスクなら即座に返却
+  }
+
+  // 先頭タスクかつ完了していれば、Promiseを解決
+  tryEmit() {
+    if (this.isCompleted &amp;&amp; this.isHead()) {
+      this.resolve(this.result);
+      // 次のタスクも完了しているか確認
+      if (this.next) {
+        this.next.tryEmit();
+      }
+    }
+  }
+}
+</code></pre>
+<h3 id="動作例"><a class="header" href="#動作例">動作例</a></h3>
+<pre><code>ステップ1：タスク投入
+
+head → [task#1] → [task#2] → [task#3] → null
+
+ステップ2：task#2が先に完了
+
+head → [task#1: 処理中] → [task#2: 完了] → [task#3: 処理中] → null
+
+task#2.tryEmit() が呼ばれるが、task#1が未完了なので返却しない
+
+ステップ3：task#1が完了
+
+head → [task#1: 完了] → [task#2: 完了] → [task#3: 処理中] → null
+
+task#1.tryEmit() → 返却！
+task#2.tryEmit() → 返却！（連鎖的に）
+
+ステップ4：task#3が完了
+
+head → [task#1: 返却済み] → [task#2: 返却済み] → [task#3: 完了] → null
+
+task#3.tryEmit() → 返却！
+</code></pre>
+<h2 id="バックプレッシャー制御"><a class="header" href="#バックプレッシャー制御">バックプレッシャー制御</a></h2>
+<h3 id="問題メモリ枯渇"><a class="header" href="#問題メモリ枯渇">問題：メモリ枯渇</a></h3>
+<p>大量のタスクを一度に投入すると、メモリが枯渇します。</p>
+<pre><code class="language-javascript">// 危険な例
+for (let i = 0; i &lt; 1_000_000; i++) {
+  pool.run(addresses[i]); // 100万件を一度に投入
+}
+
+問題:
+  - TaskInfoが100万個メモリに蓄積
+  - メモリ不足でクラッシュ
+</code></pre>
+<h3 id="解決策maxtasksperworker"><a class="header" href="#解決策maxtasksperworker">解決策：maxTasksPerWorker</a></h3>
+<p>同時実行タスク数を制限します。</p>
+<pre><code class="language-typescript">class WorkerThreadPool {
+  private maxTasksPerWorker = 10; // 1Workerあたり最大10タスク
+
+  async run(data: any): Promise&lt;any&gt; {
+    // 空きができるまで待機
+    while (this.pendingTasks &gt;= this.workers.length * this.maxTasksPerWorker) {
+      await this.waitForSlot();
+    }
+
+    // タスクを投入
+    const worker = this.getNextWorker();
+    return worker.addTask(data);
+  }
+}
+</code></pre>
+<p><strong>効果</strong>：</p>
+<pre><code>4 Workers × maxTasksPerWorker 10 = 最大40タスク同時実行
+
+入力が100万件でも、メモリには40タスク分しか蓄積されない
+</code></pre>
+<h2 id="セマフォによる同期制御"><a class="header" href="#セマフォによる同期制御">セマフォによる同期制御</a></h2>
+<h3 id="問題ファイル書き込みの競合"><a class="header" href="#問題ファイル書き込みの競合">問題：ファイル書き込みの競合</a></h3>
+<p>複数のWorkerが同時にキャッシュファイルを書き込むと、データが壊れます。</p>
+<pre><code>Worker 1: ファイルに書き込み中...
+Worker 2: ファイルに書き込み中...（衝突！）
+
+結果: ファイルが破損
+</code></pre>
+<h3 id="解決策semaphoremanager"><a class="header" href="#解決策semaphoremanager">解決策：SemaphoreManager</a></h3>
+<p>SharedArrayBufferベースのセマフォで排他制御します。</p>
+<pre><code class="language-typescript">class SemaphoreManager {
+  private semaphore: Int32Array; // SharedArrayBuffer
+
+  constructor(sharedBuffer: SharedArrayBuffer) {
+    this.semaphore = new Int32Array(sharedBuffer);
+    this.semaphore[0] = 1; // 初期値1（空き）
+  }
+
+  // セマフォ取得（ブロッキング）
+  async enterAwait(): Promise&lt;void&gt; {
+    while (true) {
+      // Atomics.compareExchange: 1→0に変更（取得成功）
+      const old = Atomics.compareExchange(this.semaphore, 0, 1, 0);
+      if (old === 1) {
+        return; // 取得成功
+      }
+      // 他のWorkerが解放するまで待機
+      Atomics.wait(this.semaphore, 0, 0, 100); // 100ms待機
+    }
+  }
+
+  // セマフォ解放
+  leave(): void {
+    Atomics.store(this.semaphore, 0, 1); // 1にセット（解放）
+    Atomics.notify(this.semaphore, 0, 1); // 待機中のWorkerに通知
+  }
+}
+</code></pre>
+<p><strong>使用例</strong>：</p>
+<pre><code class="language-typescript">// Workerスレッド
+const semaphore = new SemaphoreManager(sharedSemaphoreBuffer);
+
+await semaphore.enterAwait(); // 排他ロック取得
+try {
+  fs.writeFileSync('cache.abrg2', data); // ファイル書き込み
+} finally {
+  semaphore.leave(); // ロック解放
+}
+</code></pre>
+<h2 id="パフォーマンス計測例"><a class="header" href="#パフォーマンス計測例">パフォーマンス計測例</a></h2>
+<h3 id="テスト環境"><a class="header" href="#テスト環境">テスト環境</a></h3>
+<ul>
+<li>CPU: 4コア（8スレッド）</li>
+<li>メモリ: 16GB</li>
+<li>データ: 1万件の住所</li>
+</ul>
+<h3 id="結果"><a class="header" href="#結果">結果</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Workers数</th><th>処理時間</th><th>スループット</th><th>備考</th></tr></thead><tbody>
+<tr><td>1（シングルスレッド）</td><td>100秒</td><td>100件/秒</td><td>ベースライン</td></tr>
+<tr><td>2</td><td>55秒</td><td>182件/秒</td><td>1.82倍高速</td></tr>
+<tr><td>4</td><td>30秒</td><td>333件/秒</td><td>3.33倍高速</td></tr>
+<tr><td>8</td><td>28秒</td><td>357件/秒</td><td>3.57倍高速（ほぼ限界）</td></tr>
+</tbody></table>
+</div>
+<p><strong>考察</strong>：</p>
+<ul>
+<li>4コアCPUで4 Workersが最もコスパが良い</li>
+<li>8 Workersにしても大きな改善なし（ハイパースレッディングの限界）</li>
+<li>オーバーヘッドにより、理論値（4倍）には届かないが、3.3倍の高速化を実現</li>
+</ul>
+<h2 id="コントリビューションのヒント"><a class="header" href="#コントリビューションのヒント">コントリビューションのヒント</a></h2>
+<h3 id="タスクスケジューリングの改善"><a class="header" href="#タスクスケジューリングの改善">タスクスケジューリングの改善</a></h3>
+<p>現在はラウンドロビン方式ですが、以下の方式も検討できます：</p>
+<ul>
+<li><strong>優先度キュー</strong>: 緊急度の高いタスクを優先処理</li>
+<li><strong>負荷分散</strong>: Worker の負荷を監視し、空いているWorkerに優先割り当て</li>
+<li><strong>バッチ処理</strong>: 類似タスクをまとめて処理（キャッシュ効率向上）</li>
+</ul>
+<h3 id="メモリ使用量の最適化"><a class="header" href="#メモリ使用量の最適化">メモリ使用量の最適化</a></h3>
+<ul>
+<li><strong>動的Worker数</strong>: CPU使用率に応じてWorker数を動的に調整</li>
+<li><strong>メモリプール</strong>: TaskInfoを再利用してGC圧を軽減</li>
+<li><strong>Streamパイプライン</strong>: バックプレッシャーをより細かく制御</li>
+</ul>
+<h3 id="デバッグ機能の追加"><a class="header" href="#デバッグ機能の追加">デバッグ機能の追加</a></h3>
+<ul>
+<li><strong>Worker統計</strong>: 各Workerの処理件数、平均処理時間を表示</li>
+<li><strong>ボトルネック検出</strong>: 最も遅いWorkerを特定</li>
+<li><strong>デッドロック検出</strong>: セマフォのデッドロックを自動検出</li>
+</ul>
+<p>ABR Geocoderの並列処理により、大量の住所を高速にジオコーディングできます！</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../geocoding/strategy.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../geocoding/abrg2-format.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../geocoding/strategy.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../geocoding/abrg2-format.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

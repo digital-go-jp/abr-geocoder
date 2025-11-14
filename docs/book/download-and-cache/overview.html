@@ -1,0 +1,805 @@
+<!DOCTYPE HTML>
+<html lang="ja" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Overview - ABR Geocoder 内部仕様</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="overview全体像"><a class="header" href="#overview全体像">Overview（全体像）</a></h1>
+<p>ABR Geocoderのダウンロード&amp;キャッシュ生成システムは、大量のオープンデータを効率的に取得・変換するために設計されています。このページでは、全体の流れと並列処理の仕組みを詳しく説明します。</p>
+<h2 id="全体フロー"><a class="header" href="#全体フロー">全体フロー</a></h2>
+<pre class="mermaid">flowchart TD
+  START[&quot;開始&quot;] --&gt; DCAT[&quot;1. DCATメタデータ取得&quot;]
+  DCAT --&gt; EXTRACT[&quot;2. ダウンロードURL抽出&quot;]
+  EXTRACT --&gt; QUEUE[&quot;3. ダウンロードキュー生成&quot;]
+  QUEUE --&gt; PARALLEL[&quot;4. 並列ダウンロード&lt;br/&gt;(Worker Threads)&quot;]
+  PARALLEL --&gt; STREAM[&quot;5. Streamパイプライン&lt;br/&gt;Download → Unzip → Parse&quot;]
+  STREAM --&gt; DB[&quot;6. SQLite投入&quot;]
+  DB --&gt; CACHE[&quot;7. ABRG2キャッシュ生成&quot;]
+  CACHE --&gt; END[&quot;完了&quot;]
+</pre>
+<h2 id="処理の詳細"><a class="header" href="#処理の詳細">処理の詳細</a></h2>
+<h3 id="1-dcatメタデータ取得"><a class="header" href="#1-dcatメタデータ取得">1. DCATメタデータ取得</a></h3>
+<p>政府のオープンデータカタログ（DCAT形式）からデータセット情報を取得します。</p>
+<p><strong>DCATとは？</strong></p>
+<ul>
+<li>Data Catalog Vocabulary（データカタログ語彙）の略</li>
+<li>メタデータの標準形式で、データセットの所在やメタ情報を記述</li>
+<li>JSON形式でデータセット一覧と配布URLを提供</li>
+</ul>
+<p><strong>取得例</strong>：</p>
+<pre><code class="language-typescript">// download-process.ts:88-103
+const client = new HttpRequestAdapter({
+  hostname: url.hostname,
+  userAgent: this.container.env.userAgent,
+  peerMaxConcurrentStreams: 1, // メタデータ取得は1接続で十分
+});
+
+const response = await client.getJSON({ url });
+</code></pre>
+<p><strong>レスポンス構造</strong>：</p>
+<pre><code class="language-json">{
+  "dataset": [
+    {
+      "description": "最終更新日: 2025-09-30T15:41:43.000Z",
+      "distribution": [
+        {
+          "accessURL": "https://example.com/data_01.csv.zip"
+        }
+      ]
+    }
+  ]
+}
+</code></pre>
+<h3 id="2-ダウンロードurl抽出"><a class="header" href="#2-ダウンロードurl抽出">2. ダウンロードURL抽出</a></h3>
+<p>DCAT JSONから <code>.csv.zip</code> ファイルのURLと最終更新日を抽出します。</p>
+<pre><code class="language-typescript">// download-process.ts:228-254
+const downloadUrls: string[] = [];
+const urlToLastModified = new Map&lt;string, string&gt;();
+
+for (const dataset of dcatResponse.dataset) {
+  // descriptionから最終更新日を抽出
+  const match = dataset.description.match(/最終更新日:\s*(.+)/);
+  if (match) {
+    lastModified = match[1];
+  }
+
+  // .csv.zip のURLを収集
+  for (const dist of dataset.distribution) {
+    if (dist.accessURL &amp;&amp; dist.accessURL.includes('.csv.zip')) {
+      downloadUrls.push(dist.accessURL);
+      urlToLastModified.set(dist.accessURL, lastModified);
+    }
+  }
+}
+</code></pre>
+<h3 id="3-ダウンロードキュー生成"><a class="header" href="#3-ダウンロードキュー生成">3. ダウンロードキュー生成</a></h3>
+<p>抽出したURLを、自治体コード（LGコード）とデータセット種別でグルーピングします。</p>
+<p><strong>データセット種別</strong>：</p>
+<ul>
+<li><code>pref</code>: 都道府県マスター</li>
+<li><code>city</code>: 市区町村マスター</li>
+<li><code>rsdtdsp_blk</code>: 街区レベル住所</li>
+<li><code>rsdtdsp_rsdt</code>: 住居表示住所</li>
+<li><code>parcel</code>: 地番</li>
+</ul>
+<p><strong>LGコードによるフィルタリング</strong>：</p>
+<pre><code class="language-typescript">// download-process.ts:256-291
+const lgCodePackages = createPackageTree(downloadUrls);
+
+lgCodePackages.forEach((packages, lgCode) =&gt; {
+  // 都道府県コード（例: "01...." = 北海道）
+  const prefix = lgCode.substring(0, 2);
+
+  // ダウンロード対象かチェック
+  if (downloadTargetLgCodes.size &gt; 0 &amp;&amp; !targetPrefixes.has(prefix)) {
+    return; // スキップ
+  }
+
+  // ダウンロードリクエスト作成
+  for (const [dataset, packageId] of packages.entries()) {
+    results.push({
+      kind: 'download',
+      dataset,
+      packageId,
+      useCache: true,
+      lgCode,
+      lastModified: urlToLastModified.get(packageId),
+    });
+  }
+});
+</code></pre>
+<p><strong>キューのランダム化</strong>：</p>
+<pre><code class="language-typescript">// download-process.ts:129-132, 354
+// ランダムに並び替えることで、lgCodeが分散され、
+// DB書き込みのときに衝突を起こしにくくなる
+requests.sort(() =&gt; Math.random() * 3 - 2);
+</code></pre>
+<p>これにより、同じ自治体のデータが連続して処理されることを避け、SQLiteの書き込み競合を低減します。</p>
+<h2 id="並列ダウンロードの仕組み"><a class="header" href="#並列ダウンロードの仕組み">並列ダウンロードの仕組み</a></h2>
+<h3 id="なぜ並列処理が必要か"><a class="header" href="#なぜ並列処理が必要か">なぜ並列処理が必要か？</a></h3>
+<p><strong>問題</strong>：数百のCSV zipファイルを順次ダウンロードすると、時間がかかりすぎる</p>
+<pre><code>順次ダウンロード（300ファイル、1ファイル10秒）:
+  300ファイル × 10秒 = 3000秒 = 50分
+</code></pre>
+<p><strong>解決策</strong>：Worker Threadsで並列ダウンロード</p>
+<pre><code>並列ダウンロード（6 Workers）:
+  300ファイル / 6 Workers × 10秒 ≈ 500秒 = 8分20秒
+
+速度向上: 50分 → 8分20秒（6倍高速）
+</code></pre>
+<h3 id="worker-threadsとは"><a class="header" href="#worker-threadsとは">Worker Threadsとは？</a></h3>
+<p>Node.jsの <code>worker_threads</code> モジュールを使うと、JavaScriptコードを別スレッドで実行できます。</p>
+<p><strong>従来のNode.js（シングルスレッド）</strong>：</p>
+<pre><code>メインスレッド
+  ├─ ファイル1をダウンロード（10秒）
+  ├─ ファイル2をダウンロード（10秒）
+  ├─ ファイル3をダウンロード（10秒）
+  └─ ...
+
+問題: ダウンロード中は他の処理ができない
+</code></pre>
+<p><strong>Worker Threads利用時（マルチスレッド）</strong>：</p>
+<pre><code>メインスレッド
+  ├─ タスクキューを管理
+  └─ Workerに割り振り
+
+Worker 1 → ファイル1ダウンロード（10秒）
+Worker 2 → ファイル2ダウンロード（10秒）
+Worker 3 → ファイル3ダウンロード（10秒）
+Worker 4 → ファイル4ダウンロード（10秒）
+Worker 5 → ファイル5ダウンロード（10秒）
+Worker 6 → ファイル6ダウンロード（10秒）
+
+利点: 6倍の速度で並列処理可能
+</code></pre>
+<h3 id="worker数の決定ロジック"><a class="header" href="#worker数の決定ロジック">Worker数の決定ロジック</a></h3>
+<pre><code class="language-typescript">// download-process.ts:135-145
+// SQLite書き込み5コアに対して、ダウンロードを1コア、
+// 最大で6コアがダウンロードに割り当てる
+const numOfDownloadThreads = Math.min(
+  Math.max(params.numOfThreads / 5, 1),  // 全体の1/5をダウンロードに
+  6  // 最大6スレッド
+);
+
+const downloadTransform = await DownloadTransform.create({
+  maxConcurrency: numOfDownloadThreads,  // Worker数
+  maxTasksPerWorker: params.concurrentDownloads || 1,  // 1Workerあたりの並列接続数
+});
+</code></pre>
+<p><strong>考え方</strong>：</p>
+<ul>
+<li>ダウンロードはネットワークI/O待ちが多い（CPU負荷は低い）</li>
+<li>CSV解析とDB書き込みはCPU集約的（計算負荷が高い）</li>
+<li>そのため、ダウンロードWorkerは少なめ（最大6）、DB書き込みWorkerは多め（残りのコア）</li>
+</ul>
+<p><strong>例</strong>：CPUコア数が12の場合</p>
+<pre><code>総スレッド数: 12
+ダウンロードWorker: 12 / 5 = 2.4 → 2 Workers
+CSV/DB Worker: 12 - 2 = 10 Workers
+</code></pre>
+<h3 id="https接続プールによる並列接続"><a class="header" href="#https接続プールによる並列接続">HTTPS接続プールによる並列接続</a></h3>
+<p>各ダウンロードWorkerは、複数のHTTPS接続を同時に使えます。</p>
+<p><strong>HTTP/1.1の制限</strong>：</p>
+<ul>
+<li>1つの接続で1リクエストずつ処理（順次）</li>
+<li>同じサーバーへの並列リクエストには複数の接続が必要</li>
+</ul>
+<p><strong>接続プールとは？</strong>：</p>
+<ul>
+<li>複数のHTTPS接続を事前に確保し、再利用する仕組み</li>
+<li><code>https.Agent</code> の <code>keepAlive</code> オプションで有効化</li>
+<li><code>maxSockets</code> で同時接続数を制御</li>
+</ul>
+<pre><code class="language-typescript">// src/interface/http-request-adapter.ts:99
+this.agent = new https.Agent({
+  keepAlive: true,  // 接続を再利用
+  maxSockets: options.peerMaxConcurrentStreams,  // 同時接続数
+});
+</code></pre>
+<p><strong>具体例</strong>：</p>
+<pre><code class="language-typescript">// download-worker.ts:47
+peerMaxConcurrentStreams: params.initData.maxTasksPerWorker,
+</code></pre>
+<pre><code>Worker 1（maxSockets = 10）:
+  接続1 → file1.csv.zip ダウンロード中
+  接続2 → file2.csv.zip ダウンロード中
+  接続3 → file3.csv.zip ダウンロード中
+  ...
+  接続10 → file10.csv.zip ダウンロード中
+
+利点: 1つのWorkerで10ファイルを並列ダウンロード
+</code></pre>
+<h3 id="http2との違い"><a class="header" href="#http2との違い">HTTP/2との違い</a></h3>
+<p><strong>HTTP/2の多重化（multiplexing）</strong>：</p>
+<ul>
+<li>1つのTCP接続で複数のリクエストを同時処理</li>
+<li>ストリーム単位で並列化</li>
+</ul>
+<p><strong>ABR Geocoderのアプローチ</strong>：</p>
+<ul>
+<li>HTTP/1.1 + 接続プール</li>
+<li>複数のTCP接続で並列化</li>
+</ul>
+<pre><code>HTTP/2 (未使用):
+  1つの接続 → [Stream1][Stream2][Stream3]...
+
+ABR Geocoder (HTTP/1.1 + 接続プール):
+  接続1 → リクエスト1
+  接続2 → リクエスト2
+  接続3 → リクエスト3
+  ...
+</code></pre>
+<p><strong>なぜHTTP/2を使わないのか？</strong>：</p>
+<ul>
+<li>Node.jsの <code>http2</code> モジュールはAPIが複雑</li>
+<li>接続プールで十分な並列性が得られる</li>
+<li>サーバー側がHTTP/2に対応していない場合がある</li>
+</ul>
+<h2 id="streamパイプライン処理"><a class="header" href="#streamパイプライン処理">Streamパイプライン処理</a></h2>
+<p>ダウンロードしたzipファイルは、メモリに全て読み込まず、Streamで処理します。</p>
+<h3 id="stream処理とは"><a class="header" href="#stream処理とは">Stream処理とは？</a></h3>
+<p><strong>従来の方法（バッファ全読み込み）</strong>：</p>
+<pre><code class="language-javascript">// ❌ メモリを大量に消費
+const data = await fs.readFile('huge-file.csv.zip'); // 100MB全読み込み
+const unzipped = await unzip(data); // さらに200MBメモリ使用
+const parsed = parseCSV(unzipped);
+await insertDB(parsed);
+
+問題: 100MB × 300ファイル = 30GB必要！
+</code></pre>
+<p><strong>Stream方式（逐次処理）</strong>：</p>
+<pre><code class="language-javascript">// ✅ メモリ効率的
+downloadStream
+  .pipe(unzipStream)    // 読み込みながら解凍
+  .pipe(csvParseStream) // 解凍しながらパース
+  .pipe(dbInsertStream) // パースしながらDB投入
+
+利点: 常に数MB程度のメモリで処理可能
+</code></pre>
+<h3 id="パイプライン構成"><a class="header" href="#パイプライン構成">パイプライン構成</a></h3>
+<pre><code class="language-typescript">// download-process.ts:182-194
+await pipeline(
+  srcStream,                  // ダウンロードリクエストのストリーム
+  downloadTransform,          // HTTPダウンロード + unzip
+  csvParseTransform,          // CSVパース + DB投入
+  saveResourceInfoTransform,  // メタデータ保存
+  dst,                        // 完了カウント
+);
+</code></pre>
+<p><strong>各段階の詳細</strong>：</p>
+<h4 id="1-downloadtransform"><a class="header" href="#1-downloadtransform">1. DownloadTransform</a></h4>
+<pre><code>入力: DownloadRequest { dataset, packageId, lgCode, ... }
+処理: HTTPダウンロード + zip解凍
+出力: { zipBuffer: Buffer, request: DownloadRequest }
+</code></pre>
+<pre><code class="language-typescript">// transformations/download-transform.ts
+class DownloadTransform extends Transform {
+  async _transform(request: DownloadRequest, encoding, callback) {
+    // WorkerThreadPoolにタスクを投入
+    const result = await this.pool.run({
+      action: 'download',
+      url: request.packageId,
+      useCache: request.useCache,
+    });
+
+    callback(null, { zipBuffer: result.buffer, request });
+  }
+}
+</code></pre>
+<h4 id="2-csvparsetransform"><a class="header" href="#2-csvparsetransform">2. CsvParseTransform</a></h4>
+<pre><code>入力: { zipBuffer: Buffer, request: DownloadRequest }
+処理: zipからCSV抽出 → パース → DB投入
+出力: DownloadResult { lgCode, dataset, recordCount }
+</code></pre>
+<pre><code class="language-typescript">// transformations/csv-parse-transform.ts
+class CsvParseTransform extends Transform {
+  async _transform(data, encoding, callback) {
+    // WorkerThreadPoolでCSVパースとDB投入を並列実行
+    const result = await this.pool.run({
+      action: 'parse',
+      zipBuffer: data.zipBuffer,
+      dataset: data.request.dataset,
+      lgCode: data.request.lgCode,
+    });
+
+    callback(null, result);
+  }
+}
+</code></pre>
+<p><strong>セマフォによる競合制御</strong>：</p>
+<pre><code class="language-typescript">// download-process.ts:153-156
+semaphoreSize: 101,  // 101個のセマフォでDB書き込みを分散
+</code></pre>
+<p>複数のWorkerが同時にSQLiteに書き込むと競合が発生します。セマフォで排他制御しつつ、101個のスロットに分散することで、適度な並列性を維持します。</p>
+<pre><code>Worker 1 → セマフォ#0 取得 → DB書き込み → 解放
+Worker 2 → セマフォ#1 取得 → DB書き込み → 解放
+Worker 3 → セマフォ#2 取得 → DB書き込み → 解放
+...
+Worker 102 → セマフォ#0 待機（Worker 1が解放するまで）
+</code></pre>
+<h4 id="3-saveresourceinfotransform"><a class="header" href="#3-saveresourceinfotransform">3. SaveResourceInfoTransform</a></h4>
+<pre><code>入力: DownloadResult
+処理: ダウンロード済みファイルのETagとURLをDBに保存
+出力: DownloadResult（そのまま）
+</code></pre>
+<p><strong>ETagによる差分更新</strong>：</p>
+<pre><code class="language-typescript">// transformations/save-resource-info-transform.ts
+if (existingETag === newETag) {
+  // ファイルが更新されていないのでスキップ
+  return callback();
+}
+
+// 更新されているので再ダウンロード
+await download(url);
+</code></pre>
+<h2 id="abrg2キャッシュ生成"><a class="header" href="#abrg2キャッシュ生成">ABRG2キャッシュ生成</a></h2>
+<p>SQLiteへのデータ投入が完了したら、検索に最適化されたABRG2キャッシュファイルを生成します。</p>
+<h3 id="キャッシュファイルの種類"><a class="header" href="#キャッシュファイルの種類">キャッシュファイルの種類</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>ファイル名パターン</th><th>スコープ</th><th>内容</th></tr></thead><tbody>
+<tr><td><code>pref_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>都道府県一覧</td></tr>
+<tr><td><code>county-and-city_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>郡+市</td></tr>
+<tr><td><code>city-and-ward_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>市+区</td></tr>
+<tr><td><code>oaza-cho_&lt;hash&gt;_&lt;LG&gt;.abrg2</code></td><td>自治体別</td><td>大字+丁目+小字</td></tr>
+<tr><td><code>ward_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>区</td></tr>
+<tr><td><code>tokyo23-ward_&lt;hash&gt;.abrg2</code></td><td>全国（単一）</td><td>東京23区</td></tr>
+</tbody></table>
+</div>
+<p><strong><code>&lt;hash&gt;</code> の役割</strong>：</p>
+<ul>
+<li>SQL生成式に対するCRC32ハッシュ値</li>
+<li>SQL文を変更すると、ハッシュ値が変わり、キャッシュが自動的に再生成される</li>
+</ul>
+<h3 id="キャッシュ生成のタイミング"><a class="header" href="#キャッシュ生成のタイミング">キャッシュ生成のタイミング</a></h3>
+<pre><code class="language-typescript">// download-process.ts:110-120
+const createDictionaryFileFunctions = [
+  PrefTrieFinder.loadDataFile,
+  CountyAndCityTrieFinder.loadDataFile,
+  CityAndWardTrieFinder.loadDataFile,
+  KyotoStreetTrieFinder.loadDataFile,
+  OazaChoTrieFinder.loadDataFile,
+  WardAndOazaTrieFinder.loadDataFile,
+  WardTrieFinder.loadDataFile,
+  Tokyo23WardTrieFinder.loadDataFile,
+  Tokyo23TownTrieFinder.loadDataFile,
+];
+</code></pre>
+<p>全てのダウンロードとDB投入が完了した後、各Finderの <code>loadDataFile()</code> が呼ばれます。</p>
+<h3 id="キャッシュ生成プロセス"><a class="header" href="#キャッシュ生成プロセス">キャッシュ生成プロセス</a></h3>
+<pre class="mermaid">flowchart TD
+  START[&quot;loadDataFile() 呼び出し&quot;] --&gt; CHECK[&quot;キャッシュファイル存在チェック&quot;]
+  CHECK --&gt;|存在する| VERIFY[&quot;ヘッダー検証&quot;]
+  CHECK --&gt;|存在しない| CREATE[&quot;createDictionaryFile()&quot;]
+  VERIFY --&gt;|OK| LOAD[&quot;バッファ読み込み&quot;]
+  VERIFY --&gt;|NG| CREATE
+  CREATE --&gt; SQL[&quot;SQLiteからデータ取得&quot;]
+  SQL --&gt; NORM[&quot;住所文字列の正規化&quot;]
+  NORM --&gt; TRIE[&quot;トライ木構築&quot;]
+  TRIE --&gt; WRITE[&quot;ABRG2ファイル書き込み&quot;]
+  WRITE --&gt; LOAD
+  LOAD --&gt; SHARED[&quot;SharedArrayBuffer化&quot;]
+  SHARED --&gt; END[&quot;完了&quot;]
+</pre>
+<p><strong>ステップ詳細</strong>：</p>
+<h4 id="1-キャッシュファイル存在チェック"><a class="header" href="#1-キャッシュファイル存在チェック">1. キャッシュファイル存在チェック</a></h4>
+<pre><code class="language-typescript">// models/trie/trie-finder2.ts
+const cacheFiles = await fs.readdir(cacheDir);
+const pattern = new RegExp(`^${this.cacheBaseName}_.*\\.abrg2$`);
+const existing = cacheFiles.filter(file =&gt; pattern.test(file));
+
+if (existing.length &gt; 0) {
+  // キャッシュが存在する場合
+  const buffer = await fs.readFile(path.join(cacheDir, existing[0]));
+
+  // ヘッダー検証（先頭100バイト）
+  if (this.verifyHeader(buffer)) {
+    return buffer; // キャッシュを使用
+  }
+}
+
+// キャッシュが無い、または破損している場合は再生成
+await this.createDictionaryFile();
+</code></pre>
+<h4 id="2-sqliteからデータ取得"><a class="header" href="#2-sqliteからデータ取得">2. SQLiteからデータ取得</a></h4>
+<pre><code class="language-typescript">// 例: pref-trie-finder.ts
+const rows = db.prepare(`
+  SELECT DISTINCT
+    pref_name,
+    pref_name_kana,
+    pref_name_roma,
+    lg_code
+  FROM pref
+  ORDER BY lg_code
+`).all();
+</code></pre>
+<h4 id="3-住所文字列の正規化"><a class="header" href="#3-住所文字列の正規化">3. 住所文字列の正規化</a></h4>
+<pre><code class="language-typescript">for (const row of rows) {
+  // 正規化処理
+  const normalized = normalizeAddress(row.pref_name);
+  // 全角 → 半角
+  // 漢数字 → 算用数字
+  // 異体字 → 標準字
+  // カタカナ → ひらがな
+}
+</code></pre>
+<h4 id="4-トライ木構築"><a class="header" href="#4-トライ木構築">4. トライ木構築</a></h4>
+<pre><code class="language-typescript">const writer = new FileTrieWriter(outputPath);
+
+for (const row of rows) {
+  const key = normalizeAddress(row.pref_name); // 例: "東京都"
+  const value = {
+    pref_name: row.pref_name,
+    pref_name_kana: row.pref_name_kana,
+    lg_code: row.lg_code,
+  };
+
+  writer.addNode(key, value);
+}
+
+await writer.close(); // ファイルにフラッシュ
+</code></pre>
+<p><strong>トライ木の構造</strong>：</p>
+<pre><code>(root)
+ ├─ 東
+ │  └─ 京
+ │     └─ 都 → {"pref_name":"東京都","lg_code":"130001"}
+ ├─ 大
+ │  └─ 阪
+ │     └─ 府 → {"pref_name":"大阪府","lg_code":"270008"}
+ └─ 京
+    └─ 都 → {"pref_name":"京都府","lg_code":"260002"}
+</code></pre>
+<p>詳細は <a href="../geocoding/strategy.html">Geocoding &gt; Strategy</a> を参照してください。</p>
+<h4 id="5-abrg2ファイル書き込み"><a class="header" href="#5-abrg2ファイル書き込み">5. ABRG2ファイル書き込み</a></h4>
+<pre><code class="language-typescript">// file-trie-writer.ts
+class FileTrieWriter {
+  async close() {
+    // ヘッダー書き込み
+    this.writeHeader();
+
+    // トライノード書き込み（再帰）
+    this.writeTrieNode(this.rootNode);
+
+    // データノード書き込み（ハッシュ連結リスト）
+    this.writeDataNodes();
+
+    // ファイルに出力
+    await fs.writeFile(this.outputPath, this.buffer);
+  }
+}
+</code></pre>
+<p><strong>ABRG2フォーマット</strong>：</p>
+<pre><code>[Header]
+- magic: "abrg" (4 bytes)
+- version: 2.2 (2 bytes)
+- trie_root: offset (4 bytes)
+- data_head: offset (4 bytes)
+
+[Trie Nodes]
+- size (1B) + sibling (4B) + child (4B) + hash_list (4B) + name (var)
+
+[Data Nodes]
+- next (4B) + size (2B) + hash (8B) + data (gzip JSON)
+</code></pre>
+<p>詳細は <a href="../geocoding/abrg2-format.html">Geocoding &gt; ABRG2 Format</a> を参照してください。</p>
+<h4 id="6-sharedarraybuffer化"><a class="header" href="#6-sharedarraybuffer化">6. SharedArrayBuffer化</a></h4>
+<pre><code class="language-typescript">// models/trie/trie-finder2.ts
+const fileBuffer = await fs.readFile(cachePath);
+
+// SharedArrayBufferにコピー
+const sharedBuffer = new SharedArrayBuffer(fileBuffer.length);
+const view = new Uint8Array(sharedBuffer);
+view.set(fileBuffer);
+
+// 各Workerに共有（コピーせずポインタだけ渡す）
+workers.forEach(worker =&gt; {
+  worker.postMessage({ trieBuffer: sharedBuffer });
+});
+</code></pre>
+<p><strong>SharedArrayBufferの利点</strong>：</p>
+<pre><code>通常のコピー方式:
+  メインスレッド: 50MB
+  Worker 1: 50MB（コピー）
+  Worker 2: 50MB（コピー）
+  Worker 3: 50MB（コピー）
+  合計: 200MB
+
+SharedArrayBuffer:
+  共有メモリ: 50MB
+  Worker 1: 参照のみ
+  Worker 2: 参照のみ
+  Worker 3: 参照のみ
+  合計: 50MB
+</code></pre>
+<p>詳細は <a href="../geocoding/parallelism.html">Geocoding &gt; Parallelism</a> を参照してください。</p>
+<h2 id="パフォーマンス最適化"><a class="header" href="#パフォーマンス最適化">パフォーマンス最適化</a></h2>
+<h3 id="1-ダウンロード並列化"><a class="header" href="#1-ダウンロード並列化">1. ダウンロード並列化</a></h3>
+<pre><code>最適なWorker数 = CPU並列数 / 5（最大6）
+最適な接続数 = ダウンロード並列数
+
+例: 12コアCPU、並列ダウンロード数10
+  ダウンロードWorker: 12/5 = 2
+  各Workerの接続数: 10
+  合計並列ダウンロード: 2 × 10 = 20ファイル同時
+</code></pre>
+<h3 id="2-db書き込み分散"><a class="header" href="#2-db書き込み分散">2. DB書き込み分散</a></h3>
+<pre><code>ランダムキュー + 101個のセマフォ
+→ 同じ自治体への書き込み競合を低減
+→ デッドロックを回避
+</code></pre>
+<h3 id="3-stream処理"><a class="header" href="#3-stream処理">3. Stream処理</a></h3>
+<pre><code>メモリ使用量: 各Worker数MB程度
+→ 300ファイル × 100MBでも安定動作
+</code></pre>
+<h3 id="4-etagキャッシュ"><a class="header" href="#4-etagキャッシュ">4. ETagキャッシュ</a></h3>
+<pre><code>前回ダウンロード時のETagを保存
+→ 更新されていないファイルはスキップ
+→ 差分更新で高速化
+</code></pre>
+<h2 id="コントリビューションのヒント"><a class="header" href="#コントリビューションのヒント">コントリビューションのヒント</a></h2>
+<h3 id="ダウンロード速度の改善"><a class="header" href="#ダウンロード速度の改善">ダウンロード速度の改善</a></h3>
+<ul>
+<li><strong>HTTP/2対応</strong>: <code>http2</code> モジュールを使った実装</li>
+<li><strong>圧縮転送</strong>: <code>Accept-Encoding: gzip, br</code> の活用</li>
+<li><strong>CDN活用</strong>: データソースがCDN対応している場合の最適化</li>
+</ul>
+<h3 id="キャッシュ生成の最適化"><a class="header" href="#キャッシュ生成の最適化">キャッシュ生成の最適化</a></h3>
+<ul>
+<li><strong>並列生成</strong>: 複数のFinderを並列実行</li>
+<li><strong>インクリメンタル更新</strong>: 差分だけトライ木を更新</li>
+<li><strong>圧縮アルゴリズム</strong>: gzipよりbrotliやzstdで高圧縮</li>
+</ul>
+<h3 id="エラーハンドリング強化"><a class="header" href="#エラーハンドリング強化">エラーハンドリング強化</a></h3>
+<ul>
+<li><strong>リトライロジック</strong>: ネットワークエラー時の再試行</li>
+<li><strong>チェックサム検証</strong>: ダウンロードしたファイルの整合性確認</li>
+<li><strong>ロールバック機能</strong>: DB投入失敗時の自動ロールバック</li>
+</ul>
+<h3 id="モニタリング機能"><a class="header" href="#モニタリング機能">モニタリング機能</a></h3>
+<ul>
+<li><strong>進捗表示</strong>: ダウンロード速度、残り時間の推定</li>
+<li><strong>統計情報</strong>: Worker別の処理件数、平均速度</li>
+<li><strong>ボトルネック検出</strong>: どのWorkerが遅いか可視化</li>
+</ul>
+<p>このDownload &amp; Cacheシステムにより、大量のオープンデータを効率的に取得・変換し、高速なジオコーディングを実現しています！</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../download-and-cache/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../rest-api/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../download-and-cache/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../rest-api/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

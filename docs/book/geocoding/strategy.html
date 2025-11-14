@@ -1,0 +1,588 @@
+<!DOCTYPE HTML>
+<html lang="ja" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Strategy - ABR Geocoder 内部仕様</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="strategy探索戦略"><a class="header" href="#strategy探索戦略">Strategy（探索戦略）</a></h1>
+<p>住所ジオコーディングの核心部分です。入力された住所文字列を段階的に探索し、最適な位置情報（緯度経度）を返します。</p>
+<h2 id="概要どうやって住所を見つけるのか"><a class="header" href="#概要どうやって住所を見つけるのか">概要：どうやって住所を見つけるのか</a></h2>
+<p>住所「東京都千代田区霞が関1-1-1」を探す場合、以下のステップで処理します：</p>
+<ol>
+<li><strong>正規化</strong>: 「東京都千代田区霞が関１ー１ー１」→「東京都千代田区霞が関1-1-1」（全角→半角、漢数字→算用数字）</li>
+<li><strong>段階的探索</strong>: 都道府県 → 市区 → 町字 → 番地 の順にトライ木で探索</li>
+<li><strong>候補収集</strong>: 各階層でマッチした候補をすべて保持</li>
+<li><strong>スコアリング</strong>: 候補の中から最も一致度が高いものを選択</li>
+</ol>
+<h2 id="トライ木とは"><a class="header" href="#トライ木とは">トライ木とは？</a></h2>
+<p>トライ木（Trie）は、文字列を効率的に検索するためのデータ構造です。</p>
+<h3 id="簡単な例都道府県の検索"><a class="header" href="#簡単な例都道府県の検索">簡単な例：都道府県の検索</a></h3>
+<p>都道府県「東京都」「大阪府」「京都府」をトライ木に格納すると、以下のような木構造になります：</p>
+<pre><code>       (root)
+      /  |  \
+     東  大  京
+     |   |   |
+     京  阪  都
+     |   |   |
+     都  府  府
+     ↓   ↓   ↓
+   [東京] [大阪] [京都]
+</code></pre>
+<p><strong>検索の流れ</strong>（「東京都」を探す場合）：</p>
+<ol>
+<li>ルートから「東」を探す → 見つかった</li>
+<li>「東」の子ノードから「京」を探す → 見つかった</li>
+<li>「京」の子ノードから「都」を探す → 見つかった</li>
+<li>「都」ノードに関連付けられたデータ（緯度経度等）を取得</li>
+</ol>
+<p><strong>メリット</strong>:</p>
+<ul>
+<li>1文字ずつ辿るので、O(m)（m=文字列長）の高速検索</li>
+<li>前方一致検索が簡単（「東京」で検索すると「東京都」が見つかる）</li>
+<li>メモリ効率的（共通接頭辞を共有）</li>
+</ul>
+<h3 id="abr-geocoderでの実装"><a class="header" href="#abr-geocoderでの実装">ABR Geocoderでの実装</a></h3>
+<p>実際には、各階層（都道府県、市区、町字等）ごとに別々のトライ木を用意しています：</p>
+<ul>
+<li><strong>PrefTrie</strong>: 都道府県用（「東京都」「大阪府」等）</li>
+<li><strong>CityTrie</strong>: 市区町村用（「千代田区」「中央区」等）</li>
+<li><strong>OazaTrie</strong>: 大字・町丁目用（「霞が関」「丸の内」等）</li>
+<li><strong>RsdtBlkTrie</strong>: 街区符号・住居番号用（「1-1-1」等）</li>
+</ul>
+<h2 id="処理フローの全体像"><a class="header" href="#処理フローの全体像">処理フローの全体像</a></h2>
+<pre class="mermaid">flowchart TD
+  A[&quot;入力: 住所文字列&quot;] --&gt; NORM[&quot;正規化&lt;br/&gt;(全/半角, 仮名, 漢数字→算用数字, 記号整理)&quot;]
+  NORM --&gt; PREF[&quot;都道府県 Trie&quot;]
+  PREF --&gt; CC[&quot;郡+市 Trie&quot;]
+  CC --&gt; CW[&quot;市+区 Trie&quot;]
+  CW --&gt; WARD[&quot;区 Trie&quot;]
+  WARD --&gt; T23W[&quot;東京23区 Trie&quot;]
+  T23W --&gt; T23T[&quot;東京23区+大字 Trie&quot;]
+  T23T --&gt; KYOTO[&quot;京都通り名 Trie&quot;]
+  KYOTO --&gt; OAZA[&quot;大字+丁目+小字 Trie&lt;br/&gt;(LGコード別)&quot;]
+  OAZA --&gt; RBLK[&quot;街区符号 / 住居番号 / 地番&quot;]
+  RBLK --&gt; SCORE[&quot;スコアリング&quot;]
+  SCORE --&gt; OUT[&quot;最終結果&quot;]
+</pre>
+<h2 id="具体例東京都千代田区霞が関1-1-1の探索"><a class="header" href="#具体例東京都千代田区霞が関1-1-1の探索">具体例：「東京都千代田区霞が関1-1-1」の探索</a></h2>
+<h3 id="ステップ1正規化"><a class="header" href="#ステップ1正規化">ステップ1：正規化</a></h3>
+<p>入力が「東京都千代田区霞ヶ関１ー１ー１」の場合：</p>
+<div class="table-wrapper"><table><thead><tr><th>処理</th><th>結果</th></tr></thead><tbody>
+<tr><td>元の入力</td><td><code>東京都千代田区霞ヶ関１ー１ー１</code></td></tr>
+<tr><td>全角→半角</td><td><code>東京都千代田区霞ヶ関1ー1ー1</code></td></tr>
+<tr><td>漢数字→算用数字</td><td><code>東京都千代田区霞ヶ関1ー1ー1</code></td></tr>
+<tr><td>記号統一（ー→-）</td><td><code>東京都千代田区霞ヶ関1-1-1</code></td></tr>
+<tr><td>異体字統一（ヶ→が）</td><td><code>東京都千代田区霞が関1-1-1</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="ステップ2都道府県の探索preftrie"><a class="header" href="#ステップ2都道府県の探索preftrie">ステップ2：都道府県の探索（PrefTrie）</a></h3>
+<p>入力文字列を先頭から1文字ずつトライ木に照合：</p>
+<pre><code>入力: 「東京都千代田区霞が関1-1-1」
+      ↑
+      ここから探索開始
+
+トライ木の探索:
+  root → 「東」 → 「京」 → 「都」 → [マッチ！]
+
+結果:
+  - 都道府県: 東京都
+  - 都道府県コード: 13
+  - 残りの文字列: 「千代田区霞が関1-1-1」
+</code></pre>
+<h3 id="ステップ3市区の探索citytrie"><a class="header" href="#ステップ3市区の探索citytrie">ステップ3：市区の探索（CityTrie）</a></h3>
+<p>残りの文字列「千代田区霞が関1-1-1」を探索：</p>
+<pre><code>入力: 「千代田区霞が関1-1-1」
+      ↑
+      ここから探索開始
+
+トライ木の探索:
+  root → 「千」 → 「代」 → 「田」 → 「区」 → [マッチ！]
+
+結果:
+  - 市区: 千代田区
+  - 市区コード: 13101
+  - 残りの文字列: 「霞が関1-1-1」
+</code></pre>
+<h3 id="ステップ4大字町丁目の探索oazatrie"><a class="header" href="#ステップ4大字町丁目の探索oazatrie">ステップ4：大字・町丁目の探索（OazaTrie）</a></h3>
+<p>残りの文字列「霞が関1-1-1」を探索：</p>
+<pre><code>入力: 「霞が関1-1-1」
+      ↑
+      ここから探索開始
+
+トライ木の探索:
+  root → 「霞」 → 「が」 → 「関」 → [マッチ！]
+
+結果:
+  - 町字: 霞が関
+  - 町字コード: 131010012000
+  - 残りの文字列: 「1-1-1」
+</code></pre>
+<h3 id="ステップ5街区符号住居番号の探索rsdtblktrie"><a class="header" href="#ステップ5街区符号住居番号の探索rsdtblktrie">ステップ5：街区符号・住居番号の探索（RsdtBlkTrie）</a></h3>
+<p>残りの文字列「1-1-1」を探索：</p>
+<pre><code>入力: 「1-1-1」
+      ↑
+      ここから探索開始
+
+トライ木の探索:
+  root → 「1」 → 「-」 → 「1」 → 「-」 → 「1」 → [マッチ！]
+
+結果:
+  - 街区符号: 1
+  - 住居番号: 1
+  - 住居番号2: 1
+  - 緯度: 35.674176
+  - 経度: 139.751774
+</code></pre>
+<h3 id="ステップ6スコアリング"><a class="header" href="#ステップ6スコアリング">ステップ6：スコアリング</a></h3>
+<p>複数の候補がある場合、以下の基準でスコアリングして最適な結果を選択：</p>
+<div class="table-wrapper"><table><thead><tr><th>項目</th><th>スコア</th><th>説明</th></tr></thead><tbody>
+<tr><td>マッチレベル</td><td>80点</td><td>住居番号まで完全一致</td></tr>
+<tr><td>文字一致率</td><td>100%</td><td>入力文字列の100%が一致</td></tr>
+<tr><td>あいまい一致</td><td>0点減点</td><td>ワイルドカードや補助チャレンジなし</td></tr>
+<tr><td>表記差</td><td>0点減点</td><td>完全一致（「ヶ」と「が」は正規化済み）</td></tr>
+<tr><td><strong>合計</strong></td><td><strong>180点</strong></td><td>最高スコア</td></tr>
+</tbody></table>
+</div>
+<h2 id="正規化の詳細"><a class="header" href="#正規化の詳細">正規化の詳細</a></h2>
+<h3 id="全角半角の統一"><a class="header" href="#全角半角の統一">全角/半角の統一</a></h3>
+<pre><code class="language-javascript">入力: 「１２３」→「123」
+入力: 「ＡＢＣ」→「ABC」
+入力: 「　」（全角スペース）→「 」（半角スペース）
+</code></pre>
+<h3 id="漢数字算用数字"><a class="header" href="#漢数字算用数字">漢数字→算用数字</a></h3>
+<pre><code class="language-javascript">入力: 「一丁目二番三号」→「1丁目2番3号」
+入力: 「十五番地」→「15番地」
+</code></pre>
+<h3 id="異体字表記ゆれの統一"><a class="header" href="#異体字表記ゆれの統一">異体字・表記ゆれの統一</a></h3>
+<pre><code class="language-javascript">入力: 「霞ヶ関」→「霞が関」
+入力: 「竈門」→「竃門」（Unicode正規化）
+入力: 「丁目」「町目」→「丁目」
+</code></pre>
+<h3 id="記号の統一"><a class="header" href="#記号の統一">記号の統一</a></h3>
+<pre><code class="language-javascript">入力: 「1ー1ー1」→「1-1-1」（長音符号をハイフンに）
+入力: 「1−1−1」→「1-1-1」（全角ハイフンを半角に）
+入力: 「1の1の1」→「1-1-1」
+</code></pre>
+<h2 id="あいまい一致とワイルドカード"><a class="header" href="#あいまい一致とワイルドカード">あいまい一致とワイルドカード</a></h2>
+<p>完全一致しない場合でも、以下の方法で候補を探します。</p>
+<h3 id="ワイルドカード"><a class="header" href="#ワイルドカード">ワイルドカード（<code>?</code>）</a></h3>
+<p>トライ木のノードに「?」（ワイルドカード）が設定されている場合、任意の1文字にマッチします。</p>
+<p><strong>例</strong>：「霞?関」というパターンで「霞が関」「霞ケ関」「霞ヶ関」すべてにマッチ</p>
+<pre><code>トライ木:
+  霞 → ? → 関
+       ↑
+       任意の1文字にマッチ
+
+入力「霞が関」: 霞 → が → 関 [マッチ！]
+入力「霞ケ関」: 霞 → ケ → 関 [マッチ！]
+</code></pre>
+<h3 id="補助チャレンジextrachallenges"><a class="header" href="#補助チャレンジextrachallenges">補助チャレンジ（extraChallenges）</a></h3>
+<p>通常の探索で見つからない場合、以下の代替表記を試します：</p>
+<div class="table-wrapper"><table><thead><tr><th>元の文字</th><th>補助チャレンジ</th><th>例</th></tr></thead><tbody>
+<tr><td>が</td><td>ケ、ヶ、ガ、カ</td><td>霞が関 → 霞ケ関</td></tr>
+<tr><td>の</td><td>ノ</td><td>二の丸 → 二ノ丸</td></tr>
+<tr><td>条</td><td>條</td><td>四条 → 四條</td></tr>
+<tr><td>崎</td><td>﨑</td><td>宮崎 → 宮﨑</td></tr>
+</tbody></table>
+</div>
+<p><strong>スコアへの影響</strong>：補助チャレンジでマッチした場合、スコアが減点されます（完全一致より優先度が低い）</p>
+<h2 id="部分一致の処理"><a class="header" href="#部分一致の処理">部分一致の処理</a></h2>
+<p>入力文字列の途中までしか一致しない場合でも、候補として保持します。</p>
+<p><strong>例</strong>：「東京都千代田区霞が関一丁目」を探す場合</p>
+<ol>
+<li>「霞が関」までマッチ → 候補1（町字レベル）</li>
+<li>「一丁目」が見つからない → 候補1のスコアを調整</li>
+<li>最終的に「霞が関」レベルの結果を返却（一丁目は無視）</li>
+</ol>
+<p><strong>スコアへの影響</strong>：文字一致率が下がるため、スコアは減点されます</p>
+<h2 id="スコアリングの詳細"><a class="header" href="#スコアリングの詳細">スコアリングの詳細</a></h2>
+<h3 id="マッチレベルによる基本点"><a class="header" href="#マッチレベルによる基本点">マッチレベルによる基本点</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>マッチレベル</th><th>基本点</th><th>説明</th></tr></thead><tbody>
+<tr><td>住居番号まで完全一致</td><td>80点</td><td>「霞が関1-1-1」まで完全一致</td></tr>
+<tr><td>街区符号まで一致</td><td>70点</td><td>「霞が関1-1」まで一致</td></tr>
+<tr><td>町字まで一致</td><td>60点</td><td>「霞が関」まで一致</td></tr>
+<tr><td>市区まで一致</td><td>40点</td><td>「千代田区」まで一致</td></tr>
+<tr><td>都道府県まで一致</td><td>20点</td><td>「東京都」まで一致</td></tr>
+</tbody></table>
+</div>
+<h3 id="文字一致率による加点"><a class="header" href="#文字一致率による加点">文字一致率による加点</a></h3>
+<pre><code>文字一致率 = (マッチした文字数) / (入力文字列の総文字数) × 100
+
+例：「東京都千代田区霞が関1-1-1」(15文字) が完全一致
+  → 文字一致率 = 15 / 15 × 100 = 100%
+  → 加点: +20点
+
+例：「東京都千代田区霞が関」(11文字) のみ一致、「1-1-1」が不一致
+  → 文字一致率 = 11 / 15 × 100 = 73%
+  → 加点: +15点（減点）
+</code></pre>
+<h3 id="あいまい一致による減点"><a class="header" href="#あいまい一致による減点">あいまい一致による減点</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>あいまい一致の種類</th><th>減点</th></tr></thead><tbody>
+<tr><td>ワイルドカード（?）でマッチ</td><td>-5点/箇所</td></tr>
+<tr><td>補助チャレンジでマッチ</td><td>-10点/箇所</td></tr>
+</tbody></table>
+</div>
+<h3 id="最終スコア計算例"><a class="header" href="#最終スコア計算例">最終スコア計算例</a></h3>
+<p><strong>入力</strong>：「東京都千代田区霞ヶ関1-1-1」（「ヶ」が異なる）</p>
+<div class="table-wrapper"><table><thead><tr><th>項目</th><th>点数</th><th>説明</th></tr></thead><tbody>
+<tr><td>マッチレベル</td><td>80点</td><td>住居番号まで一致</td></tr>
+<tr><td>文字一致率</td><td>+20点</td><td>100%一致</td></tr>
+<tr><td>あいまい一致</td><td>-10点</td><td>「ヶ」→「が」の補助チャレンジ</td></tr>
+<tr><td><strong>合計</strong></td><td><strong>90点</strong></td><td>良いマッチング</td></tr>
+</tbody></table>
+</div>
+<h2 id="複数候補がある場合"><a class="header" href="#複数候補がある場合">複数候補がある場合</a></h2>
+<p>同じ文字列に複数の解釈がある場合、すべての候補を探索してスコアリングします。</p>
+<p><strong>例</strong>：「中央区」は複数存在</p>
+<ol>
+<li>東京都中央区</li>
+<li>大阪府大阪市中央区</li>
+<li>神戸市中央区</li>
+<li>...（他多数）</li>
+</ol>
+<p><strong>処理</strong>：</p>
+<ol>
+<li>すべての「中央区」を候補として取得</li>
+<li>入力文字列の残り部分と照合して、それぞれスコアリング</li>
+<li>最高スコアの候補を返却</li>
+</ol>
+<p><strong>ヒント</strong>：より詳細な住所（「東京都中央区」）を入力すると、スコアが高くなり正確な結果が得られます</p>
+<h2 id="探索のキーポイント"><a class="header" href="#探索のキーポイント">探索のキーポイント</a></h2>
+<h3 id="1-再帰的な探索"><a class="header" href="#1-再帰的な探索">1. 再帰的な探索</a></h3>
+<p>トライ木の探索は再帰的に実行されます：</p>
+<pre><code class="language-typescript">function find(node, inputChars, index) {
+  if (index &gt;= inputChars.length) {
+    return node.data; // 文字列の終端に到達
+  }
+
+  const char = inputChars[index];
+
+  // 1. 完全一致を探す
+  const exactMatch = node.findChild(char);
+  if (exactMatch) {
+    return find(exactMatch, inputChars, index + 1);
+  }
+
+  // 2. ワイルドカードを探す
+  const wildcardMatch = node.findChild('?');
+  if (wildcardMatch) {
+    return find(wildcardMatch, inputChars, index + 1);
+  }
+
+  // 3. 補助チャレンジを試す
+  for (const altChar of getAlternatives(char)) {
+    const altMatch = node.findChild(altChar);
+    if (altMatch) {
+      return find(altMatch, inputChars, index + 1);
+    }
+  }
+
+  return null; // 見つからない
+}
+</code></pre>
+<h3 id="2-中間ノードでのデータ収集"><a class="header" href="#2-中間ノードでのデータ収集">2. 中間ノードでのデータ収集</a></h3>
+<p>トライ木の途中のノードにもデータが格納されている場合があります。</p>
+<p><strong>例</strong>：「霞が関」と「霞が関一丁目」が両方存在する場合</p>
+<pre><code>トライ木:
+  霞 → が → 関 → [データ1: 霞が関]
+              ↓
+              一 → 丁 → 目 → [データ2: 霞が関一丁目]
+</code></pre>
+<p>探索中、「関」ノードでデータ1を収集し、さらに「目」ノードでデータ2も収集します。最終的に両方をスコアリングして最適な結果を選びます。</p>
+<h3 id="3-ハッシュ連結リストによる重複排除"><a class="header" href="#3-ハッシュ連結リストによる重複排除">3. ハッシュ連結リストによる重複排除</a></h3>
+<p>同じキーに複数の値がある場合、ハッシュ連結リストで管理します。</p>
+<p><strong>例</strong>：「中央区1-1-1」が複数の都市に存在</p>
+<pre><code>「1-1-1」ノード
+  ↓
+[ハッシュ連結リスト]
+  → 東京都中央区1-1-1（緯度経度A）
+  → 大阪市中央区1-1-1（緯度経度B）
+  → 神戸市中央区1-1-1（緯度経度C）
+</code></pre>
+<p>すべての候補を取得し、上位階層（市区町村等）の情報と照合してスコアリングします。</p>
+<h2 id="パフォーマンスの秘密"><a class="header" href="#パフォーマンスの秘密">パフォーマンスの秘密</a></h2>
+<h3 id="omの探索時間"><a class="header" href="#omの探索時間">O(m)の探索時間</a></h3>
+<p>文字列の長さを m とすると、トライ木の探索は O(m) で完了します。</p>
+<ul>
+<li>データベースのLIKE検索: O(n)（n=レコード数）</li>
+<li>ハッシュマップ: O(m)（キーのハッシュ計算）</li>
+<li><strong>トライ木</strong>: O(m)（1文字ずつ辿るだけ）</li>
+</ul>
+<h3 id="メモリ共有による高速化"><a class="header" href="#メモリ共有による高速化">メモリ共有による高速化</a></h3>
+<p>SharedArrayBufferを使い、ワーカースレッド間でトライ木データを共有：</p>
+<ul>
+<li><strong>メモリコピー不要</strong>: Workerに送る際のシリアライゼーションが不要</li>
+<li><strong>並列検索</strong>: 複数のWorkerが同時に同じトライ木を参照可能</li>
+<li><strong>キャッシュ効率</strong>: CPUキャッシュに乗りやすいバイナリ形式</li>
+</ul>
+<h3 id="バッファベースの読み取り"><a class="header" href="#バッファベースの読み取り">バッファベースの読み取り</a></h3>
+<p>ファイルI/Oを行わず、メモリ上のBufferから直接ノードを読み取り：</p>
+<pre><code class="language-typescript">// オフセット位置からノードを読み取り
+const nodeSize = buffer.readUInt8(offset);
+const siblingOffset = buffer.readUInt32BE(offset + 1);
+const childOffset = buffer.readUInt32BE(offset + 5);
+const hashListHead = buffer.readUInt32BE(offset + 9);
+const name = buffer.toString('utf8', offset + 13, offset + nodeSize);
+</code></pre>
+<h2 id="コントリビューションのヒント"><a class="header" href="#コントリビューションのヒント">コントリビューションのヒント</a></h2>
+<h3 id="探索アルゴリズムの改善"><a class="header" href="#探索アルゴリズムの改善">探索アルゴリズムの改善</a></h3>
+<ul>
+<li><strong>枝刈り最適化</strong>: スコアが低い候補を早期に除外</li>
+<li><strong>キャッシング</strong>: 頻繁に検索される住所をキャッシュ</li>
+<li><strong>並列探索</strong>: 複数のトライ木を並列に探索</li>
+</ul>
+<h3 id="正規化ルールの追加"><a class="header" href="#正規化ルールの追加">正規化ルールの追加</a></h3>
+<ul>
+<li><strong>新しい表記ゆれ</strong>: 地域固有の表記ゆれに対応</li>
+<li><strong>略称対応</strong>: 「都庁」→「東京都庁」等の展開</li>
+<li><strong>誤字訂正</strong>: Levenshtein距離による編集距離計算</li>
+</ul>
+<h3 id="スコアリングの改善"><a class="header" href="#スコアリングの改善">スコアリングの改善</a></h3>
+<ul>
+<li><strong>機械学習</strong>: 過去の検索結果からスコアリングモデルを学習</li>
+<li><strong>文脈考慮</strong>: 前後の文脈から最適な候補を選択</li>
+<li><strong>ユーザーフィードバック</strong>: 選択された結果を学習に反映</li>
+</ul>
+<p>この探索戦略により、ABR Geocoderは高速かつ柔軟な住所ジオコーディングを実現しています！</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../geocoding/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../geocoding/parallelism.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../geocoding/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../geocoding/parallelism.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

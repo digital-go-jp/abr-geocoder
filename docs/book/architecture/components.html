@@ -1,0 +1,506 @@
+<!DOCTYPE HTML>
+<html lang="ja" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Components - ABR Geocoder 内部仕様</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="componentsコンポーネント構成"><a class="header" href="#componentsコンポーネント構成">Components（コンポーネント構成）</a></h1>
+<p>ABR Geocoderのソースコード構成を、ディレクトリ単位で説明します。各ディレクトリは明確な責務を持ち、Clean Architectureの層構造に従っています。</p>
+<h2 id="ディレクトリ構成の概要"><a class="header" href="#ディレクトリ構成の概要">ディレクトリ構成の概要</a></h2>
+<pre class="mermaid">flowchart TD
+  CLI[&quot;src/interface/cli&lt;br/&gt;(CLI)&quot;] --&gt; UC_GEO[&quot;src/usecases/geocode&lt;br/&gt;(Geocoding UseCase)&quot;]
+  API[&quot;src/interface/abrg-api-server&lt;br/&gt;(REST API)&quot;] --&gt; UC_GEO
+  UC_GEO --&gt; DB[&quot;src/drivers/database/sqlite3&lt;br/&gt;(SQLite Driver)&quot;]
+  UC_GEO --&gt; TRIE[&quot;src/usecases/geocode/models/trie&lt;br/&gt;(ABRG2 Trie)&quot;]
+  UC_DOWN[&quot;src/usecases/download&lt;br/&gt;(Download UseCase)&quot;] --&gt; DB
+  UC_DOWN --&gt; TRIE
+  UC_GEO -.-&gt; DOMAIN[&quot;src/domain/services&lt;br/&gt;(Domain Services)&quot;]
+  UC_DOWN -.-&gt; DOMAIN
+
+  subgraph &quot;Domain Services&quot;
+    DOMAIN
+  end
+</pre>
+<h2 id="interface-layerインターフェース層"><a class="header" href="#interface-layerインターフェース層">Interface Layer（インターフェース層）</a></h2>
+<p>ユーザーとシステムの接点となる層です。</p>
+<h3 id="srcinterfaceabrg-api-server"><a class="header" href="#srcinterfaceabrg-api-server">src/interface/abrg-api-server</a></h3>
+<p>RESTful APIサーバーの実装。hyper-expressベースで高速なHTTP処理を提供します。</p>
+<p><strong>主要ファイル</strong>:</p>
+<ul>
+<li><code>index.ts</code>: サーバー起動とルーティング設定</li>
+<li><code>on-geocode-request.ts</code>: <code>/geocode</code> エンドポイントのハンドラー</li>
+<li><code>cors.ts</code>: CORS設定（クロスオリジンリクエスト対応）</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>hyper-expressは Express互換で、より高速な処理が可能</li>
+<li>クエリパラメータを受け取り、AbrGeocoderを呼び出し</li>
+<li>結果をJSON形式で返却（または指定されたフォーマット）</li>
+</ul>
+<p><strong>使用例</strong>:</p>
+<pre><code class="language-bash">curl "http://localhost:3000/geocode?address=東京都千代田区霞が関1-1-1"
+</code></pre>
+<h3 id="srcinterfacecli"><a class="header" href="#srcinterfacecli">src/interface/cli</a></h3>
+<p>コマンドラインインターフェースの実装。標準入出力を使ったストリーム処理。</p>
+<p><strong>主要ファイル</strong>:</p>
+<ul>
+<li><code>index.ts</code>: CLI起動とコマンド解析</li>
+<li><code>geocode-command.ts</code>: <code>geocode</code> コマンドの実装</li>
+<li><code>download-command.ts</code>: <code>download</code> コマンドの実装</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li><code>process.stdin</code> から住所を1行ずつ読み込み</li>
+<li>Transformストリームでジオコーディング処理</li>
+<li><code>process.stdout</code> に結果を出力（パイプライン処理に最適）</li>
+</ul>
+<p><strong>使用例</strong>:</p>
+<pre><code class="language-bash"># ファイルから一括ジオコーディング
+cat addresses.txt | abr-geocoder geocode --format=csv &gt; results.csv
+
+# ストリーム処理で大量データを効率的に処理
+zcat huge-addresses.txt.gz | abr-geocoder geocode | gzip &gt; results.json.gz
+</code></pre>
+<h3 id="srcinterfaceformat"><a class="header" href="#srcinterfaceformat">src/interface/format</a></h3>
+<p>出力フォーマッターの実装。Strategy パターンで複数形式に対応。</p>
+<p><strong>主要ファイル</strong>:</p>
+<ul>
+<li><code>formatter-provider.ts</code>: フォーマッター取得のファクトリ</li>
+<li><code>json-formatter.ts</code>: JSON形式</li>
+<li><code>csv-formatter.ts</code>: CSV形式</li>
+<li><code>geojson-formatter.ts</code>: GeoJSON形式</li>
+<li><code>ndjson-formatter.ts</code>: NDJSON形式（ストリーム処理向け）</li>
+</ul>
+<p><strong>設計ポイント</strong>:</p>
+<ul>
+<li>各フォーマッターは <code>IFormatTransform</code> インターフェースを実装</li>
+<li>Transformストリームなので、パイプラインに組み込み可能</li>
+</ul>
+<h2 id="usecase-layerユースケース層"><a class="header" href="#usecase-layerユースケース層">UseCase Layer（ユースケース層）</a></h2>
+<p>アプリケーションロジックを実装する層です。</p>
+<h3 id="srcusecasesgeocode"><a class="header" href="#srcusecasesgeocode">src/usecases/geocode</a></h3>
+<p>ジオコーディング処理のユースケース実装。</p>
+<p><strong>ディレクトリ構成</strong>:</p>
+<pre><code>src/usecases/geocode/
+├── abr-geocoder.ts           # メインエントリポイント
+├── worker/
+│   └── geocode-worker.ts     # Workerスレッドで動作する処理
+├── models/
+│   ├── query.ts              # ジオコード結果のモデル
+│   ├── trie/                 # トライ木関連
+│   │   ├── trie-finder2.ts   # 基底クラス
+│   │   └── file-trie-writer.ts
+│   ├── pref-trie-finder.ts
+│   ├── city-and-ward-trie-finder.ts
+│   └── ...（各種Finder）
+└── services/
+    ├── normalization.ts      # 住所正規化
+    └── scoring.ts            # スコアリング
+</code></pre>
+<p><strong>主要な処理フロー</strong>:</p>
+<ol>
+<li><strong>AbrGeocoder</strong>: Worker Poolを管理し、タスクを分配</li>
+<li><strong>Worker</strong>: ストリーム処理で住所を正規化 → Trie探索 → スコアリング</li>
+<li><strong>Finder</strong>: 各階層（都道府県、市区、町字等）のトライ木を探索</li>
+<li><strong>Query</strong>: 結果を構造化したオブジェクトとして返却</li>
+</ol>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Worker Threadsで並列処理を実現（CPUコア数に応じて自動スケール）</li>
+<li>SharedArrayBufferでトライ木データを共有（メモリコピー不要）</li>
+<li>TaskInfo連結リストで入力順序を保証</li>
+</ul>
+<h3 id="srcusecasesdownload"><a class="header" href="#srcusecasesdownload">src/usecases/download</a></h3>
+<p>データセットのダウンロードとDB投入のユースケース実装。</p>
+<p><strong>ディレクトリ構成</strong>:</p>
+<pre><code>src/usecases/download/
+├── download-process.ts       # ダウンロードオーケストレーター
+├── transformations/
+│   ├── download-transform.ts # HTTPダウンロード
+│   ├── csv-parse-transform.ts # CSVパース→DB投入
+│   └── save-resource-info-transform.ts # メタデータ保存
+└── models/
+    └── download-di-container.ts # DI Container
+</code></pre>
+<p><strong>主要な処理フロー</strong>:</p>
+<ol>
+<li>DCATメタデータから配布URLを抽出</li>
+<li>URLをキューに投入し、並列ダウンロード</li>
+<li>Streamパイプライン: Download → Unzip → CSV Parse → DB Insert</li>
+<li>完了後、各FinderがABRG2キャッシュを生成</li>
+</ol>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Streamのバックプレッシャー制御で、メモリを節約しつつ高速処理</li>
+<li>ETagベースの差分更新（変更されたファイルのみダウンロード）</li>
+<li>トランザクション制御でDB一貫性を保証</li>
+</ul>
+<h2 id="driver-layerドライバー層"><a class="header" href="#driver-layerドライバー層">Driver Layer（ドライバー層）</a></h2>
+<p>外部システム（DB、ファイルシステム等）への アクセスを抽象化します。</p>
+<h3 id="srcdriversdatabasesqlite3"><a class="header" href="#srcdriversdatabasesqlite3">src/drivers/database/sqlite3</a></h3>
+<p>SQLiteデータベースドライバーの実装。</p>
+<p><strong>ディレクトリ構成</strong>:</p>
+<pre><code>src/drivers/database/sqlite3/
+├── better-sqlite3-wrap.ts    # better-sqlite3ラッパー
+├── geocode/
+│   ├── common-db-geocode-sqlite3.ts    # 検索用（読み取り専用）
+│   ├── rsdt-blk-db-sqlite3.ts
+│   └── parcel-db-sqlite3.ts
+└── download/
+    └── common-db-download-sqlite3.ts   # 更新用（書き込み）
+</code></pre>
+<p><strong>設計ポイント</strong>:</p>
+<ul>
+<li>読み取りと書き込みでクラスを分離（CQRS的なアプローチ）</li>
+<li>Prepared Statementでパフォーマンスとセキュリティを両立</li>
+<li>WALモードで複数Workerからの同時読み取りに対応</li>
+</ul>
+<p><strong>Node.js的なポイント</strong>:</p>
+<ul>
+<li>better-sqlite3は同期APIなので、コードがシンプル</li>
+<li>ただし、同期処理はEventLoopをブロックするため、CPUバウンドな処理に限定</li>
+</ul>
+<h2 id="domain-layerドメイン層"><a class="header" href="#domain-layerドメイン層">Domain Layer（ドメイン層）</a></h2>
+<p>ビジネスロジックやドメイン固有のサービスを提供します。</p>
+<h3 id="srcdomainservices"><a class="header" href="#srcdomainservices">src/domain/services</a></h3>
+<p>再利用可能なドメインサービスの実装。</p>
+<p><strong>主要なサービス</strong>:</p>
+<h4 id="threadスレッド管理"><a class="header" href="#threadスレッド管理">thread（スレッド管理）</a></h4>
+<ul>
+<li><code>worker-thread-pool.ts</code>: Worker Threadsの管理</li>
+<li><code>worker-thread.ts</code>: 個別Workerのラッパー</li>
+<li><code>semaphore-manager.ts</code>: SharedArrayBuffer版セマフォ</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li><code>Atomics.wait()</code> / <code>Atomics.notify()</code> でスレッド間同期</li>
+<li>連結リストでタスク順序を保証</li>
+</ul>
+<h4 id="regex正規表現と正規化"><a class="header" href="#regex正規表現と正規化">regex（正規表現と正規化）</a></h4>
+<ul>
+<li><code>address-normalizer.ts</code>: 住所文字列の正規化</li>
+<li><code>kan-to-num.ts</code>: 漢数字→算用数字変換</li>
+<li><code>zen-to-han.ts</code>: 全角→半角変換</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Unicode正規化（NFC）で異体字を統一</li>
+<li>正規表現のキャッシングでパフォーマンス向上</li>
+</ul>
+<h4 id="hashハッシュ関数"><a class="header" href="#hashハッシュ関数">hash（ハッシュ関数）</a></h4>
+<ul>
+<li><code>fnv1a.ts</code>: FNV-1a 64bitハッシュ</li>
+<li><code>crc32.ts</code>: CRC32チェックサム</li>
+</ul>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Bufferを直接操作して高速計算</li>
+<li>ハッシュ衝突時の連結リスト処理</li>
+</ul>
+<h4 id="fileファイルシステム"><a class="header" href="#fileファイルシステム">file（ファイルシステム）</a></h4>
+<ul>
+<li><code>file-utils.ts</code>: ファイル操作のユーティリティ</li>
+<li><code>directory-scanner.ts</code>: ディレクトリ走査</li>
+</ul>
+<h2 id="trie-modelsトライ木データ構造"><a class="header" href="#trie-modelsトライ木データ構造">Trie Models（トライ木データ構造）</a></h2>
+<h3 id="srcusecasesgeocodemodelstrie"><a class="header" href="#srcusecasesgeocodemodelstrie">src/usecases/geocode/models/trie</a></h3>
+<p>ABRG2形式のトライ木実装。</p>
+<p><strong>主要ファイル</strong>:</p>
+<ul>
+<li><code>file-trie-writer.ts</code>: バイナリ書き込み</li>
+<li><code>trie-finder2.ts</code>: バイナリ読み込みと探索</li>
+<li><code>expandable-buffer.ts</code>: 動的拡張バッファ</li>
+<li><code>char-node.ts</code>: 文字ノード（連結リスト）</li>
+</ul>
+<p><strong>ABRG2フォーマット</strong>:</p>
+<pre><code>[Header]
+- magic: "abrg" (4B)
+- version: 2.2 (2B)
+- trie_root: offset (4B)
+- data_head: offset (4B)
+
+[Trie Nodes]
+- size (1B) + sibling (4B) + child (4B) + hash_list (4B) + name (var)
+
+[Data Nodes]
+- next (4B) + size (2B) + hash (8B) + data (gzip JSON)
+</code></pre>
+<p><strong>技術的特徴</strong>:</p>
+<ul>
+<li>Big Endianで整列（クロスプラットフォーム対応）</li>
+<li>ハッシュ連結リストで重複データを排除</li>
+<li>gzip圧縮でディスク使用量を削減</li>
+</ul>
+<h2 id="層間の依存関係"><a class="header" href="#層間の依存関係">層間の依存関係</a></h2>
+<pre><code>Interface Layer (CLI, REST API)
+    ↓
+UseCase Layer (Geocode, Download)
+    ↓
+Driver Layer (SQLite, FileSystem)
+    ↓
+Infrastructure (OS, Node.js Runtime)
+</code></pre>
+<p><strong>依存の方向</strong>: 常に外側から内側（上位層 → 下位層）</p>
+<p><strong>Domain Layerは独立</strong>: すべての層から参照されるが、他層に依存しない</p>
+<h2 id="コントリビューションのヒント"><a class="header" href="#コントリビューションのヒント">コントリビューションのヒント</a></h2>
+<h3 id="新しいfinderの追加"><a class="header" href="#新しいfinderの追加">新しいFinderの追加</a></h3>
+<ol>
+<li><code>src/usecases/geocode/models/</code> に新しいFinderクラスを作成</li>
+<li><code>TrieAddressFinder2</code> を継承</li>
+<li><code>createDictionaryFile()</code> をオーバーライドしてDB→Trie変換を実装</li>
+</ol>
+<h3 id="新しいフォーマッターの追加"><a class="header" href="#新しいフォーマッターの追加">新しいフォーマッターの追加</a></h3>
+<ol>
+<li><code>src/interface/format/</code> に新しいFormatterを作成</li>
+<li><code>IFormatTransform</code> インターフェースを実装</li>
+<li><code>formatter-provider.ts</code> に登録</li>
+</ol>
+<h3 id="パフォーマンス改善"><a class="header" href="#パフォーマンス改善">パフォーマンス改善</a></h3>
+<ul>
+<li><code>src/domain/services/thread/</code>: Worker管理の最適化</li>
+<li><code>src/usecases/geocode/models/trie/</code>: トライ木探索アルゴリズムの改善</li>
+<li><code>src/drivers/database/sqlite3/</code>: クエリ最適化、インデックス追加</li>
+</ul>
+<p>このコンポーネント構成を理解することで、変更すべきファイルが明確になり、効率的な開発が可能になります。</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../architecture/clean-architecture.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../architecture/classes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../architecture/clean-architecture.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../architecture/classes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

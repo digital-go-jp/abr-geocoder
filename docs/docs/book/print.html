@@ -1,0 +1,853 @@
+<!DOCTYPE HTML>
+<html lang="ja" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>ABR Geocoder 内部仕様</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="abr-geocoder-内部仕様"><a class="header" href="#abr-geocoder-内部仕様">ABR Geocoder 内部仕様</a></h1>
+<p>このドキュメントは、ABR Geocoder の内部アーキテクチャ、設計思想、並列処理、そして SQLite を起点に生成されるキャッシュ（ABRG2 バイナリ辞書）の仕様をまとめたものです。公開前提の日本語ドキュメントであり、Mermaid 図を用いて構造を可視化しています。</p>
+<p>主対象:</p>
+<ul>
+<li>コア開発者・レビュアー（内部仕様の把握）</li>
+<li>運用担当（キャッシュ再生成や互換性の判断）</li>
+<li>外部コントリビュータ（拡張/改修の際の参照）</li>
+</ul>
+<p>このドキュメントの読み方:</p>
+<ul>
+<li>Architecture でシステム全体像とクリーンアーキテクチャ/DI 方針を把握</li>
+<li>Geocoding で探索戦略・並列化・ABRG2 仕様の詳細を把握</li>
+<li>Classes/Utilities で要素技術の API と責務を把握</li>
+<li>Operations/Troubleshooting で実運用の要点を確認</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="architecture"><a class="header" href="#architecture">Architecture</a></h1>
+<p>この章では、全体像・レイヤー・主要コンポーネントを概観します。詳細は各小章を参照してください。</p>
+<ul>
+<li>Overview: システムの高レベル構成</li>
+<li>Clean Architecture: レイヤー責務/依存関係/DI</li>
+<li>Components: ディレクトリ別の責務</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="overview"><a class="header" href="#overview">Overview</a></h1>
+<p>ABR Geocoder は、オープンデータ（CSV/zip）を収集・SQLite にロードし、検索に最適化したバイナリ辞書（ABRG2）を生成して高速ジオコーディングを行います。REST API/CLI から同一コアを呼び出せる構成です。</p>
+<pre class="mermaid">flowchart LR
+  DCAT[&quot;オープンデータ
+  DCAT/配布&quot;] --&gt; DL[&quot;Download
+  (CSV/zip)&quot;]
+  DL --&gt;|パース| DB[(SQLite)]
+  DB --&gt;|辞書生成| CACHE[&quot;ABRG2 キャッシュ
+  (Trie + Data)&quot;]
+  CACHE --&gt;|SharedMemory| WK1[Worker 1]
+  CACHE --&gt;|SharedMemory| WK2[Worker 2]
+  subgraph Geocoding Core
+    GEOCODER[AbrGeocoder
+    (Task整列/ThreadPool)] --&gt; WK1
+    GEOCODER --&gt; WK2
+  end
+  API[REST API / CLI] --&gt; GEOCODER
+</pre>
+<p>要点:</p>
+<ul>
+<li>Download: データ収集/整形/SQLite 取込</li>
+<li>Cache: データセット由来の辞書を ABRG2 バイナリで保存（トライ木 + 圧縮データ）</li>
+<li>Geocoding: 住所の正規化 → トライ木探索を段階的に実施 → スコアリングで最終結果</li>
+<li>REST API: <code>GET /geocode?address=...</code> で 1件検索（ストリーム版は CLI）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="clean-architecture--di-方針"><a class="header" href="#clean-architecture--di-方針">Clean Architecture / DI 方針</a></h1>
+<p>本プロジェクトは、層間の依存を一方向に保ち、実装差し替えやテスト容易性を確保するためのクリーンアーキテクチャ/DI を採用しています。</p>
+<pre class="mermaid">flowchart TB
+  UI[Interface
+  (CLI/REST)] --&gt; UseCases[UseCases
+  (Geocoding/Download)]
+  UseCases --&gt; Domain[Domain Models/Services]
+  UseCases --&gt; Drivers[Drivers
+  (DB/Binary/FS)]
+  subgraph Crosscutting
+  DI[DI Container]-- 依存解決 --&gt;UseCases
+  end
+</pre>
+<p>レイヤーの役割:</p>
+<ul>
+<li>Interface: CLI/REST API（入出力/プロトコル変換）</li>
+<li>UseCases: アプリケーションフロー（ジオコーディング・ダウンロード）</li>
+<li>Domain: 値オブジェクト/ユーティリティ（正規化、ハッシュ、スレッド制御、表記変換など）</li>
+<li>Drivers: SQLite アクセス、ABRG2 読み書き（IO 層）</li>
+</ul>
+<p>DI による分岐削減:</p>
+<ul>
+<li><code>AbrGeocoderDiContainer</code>/<code>DownloadDiContainer</code> が DB 接続情報やキャッシュディレクトリ、ロガー等を提供し、UseCase 側の条件分岐を最小化</li>
+<li>テストではモック DB/HTTP を注入してユースケースの分岐を抑制</li>
+</ul>
+<p>依存方向:</p>
+<ul>
+<li>Interface → UseCases → Domain/Drivers（内向き依存）。Domain は最小依存。</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="components"><a class="header" href="#components">Components</a></h1>
+<p>主要ディレクトリと責務（抜粋）:</p>
+<ul>
+<li><code>src/usecases/geocode</code> ジオコーディングのユースケース/パイプライン/Trie 検索</li>
+<li><code>src/usecases/download</code> データセットの取得→CSV→SQLite 取込→キャッシュ生成</li>
+<li><code>src/drivers/database/sqlite3</code> SQLite ドライバ（クエリ/行→辞書エントリ）</li>
+<li><code>src/usecases/geocode/models/trie</code> ABRG2 書込/読出（Writer/Finder）</li>
+<li><code>src/interface/abrg-api-server</code> REST API 実装</li>
+<li><code>src/interface/cli</code> CLI 実装</li>
+<li><code>src/domain/services</code> ユーティリティ（正規化、ハッシュ、スレッド、正規表現、FS 等）</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  CLI[CLI] &amp; API[REST API] --&gt; UC[UseCases]
+  UC --&gt; DB[(SQLite)]
+  UC --&gt; BIN[ABRG2 Cache]
+  subgraph Helpers
+    REGEX[正規表現/正規化]
+    THREAD[スレッド/共有メモリ]
+    HASH[CRC32/FNV-1a]
+  end
+  UC -.-&gt; Helpers
+</pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="geocoding"><a class="header" href="#geocoding">Geocoding</a></h1>
+<p>この章では、探索戦略・並列処理・ABRG2 仕様・Finder 実装について解説します。</p>
+<ul>
+<li>Strategy: トライ木を用いた段階的探索とスコアリング</li>
+<li>Parallelism: ワーカープール/共有メモリ/順序維持</li>
+<li>ABRG2 Format: 辞書のバイナリ仕様</li>
+<li>Finder Internals: 読み出しと探索アルゴリズム</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="strategy探索戦略"><a class="header" href="#strategy探索戦略">Strategy（探索戦略）</a></h1>
+<p>住所は段階的に正規化しつつ、各パートごとに対応するトライ木で探索し、候補を集約した後にスコアリングで最良結果を選びます。</p>
+<pre class="mermaid">flowchart LR
+  A[入力: 住所文字列] --&gt; NORM[正規化 (全/半角, 仮名, 漢数字→算用数字, 記号整理)]
+  NORM --&gt; PREF[都道府県 Trie]
+  PREF --&gt; CC[郡+市 Trie]
+  CC --&gt; CW[市+区 Trie]
+  CW --&gt; WARD[区 Trie]
+  WARD --&gt; T23W[東京23区 Trie]
+  T23W --&gt; T23T[東京23区+大字 Trie]
+  T23T --&gt; KYOTO[京都通り名 Trie]
+  KYOTO --&gt; OAZA[大字+丁目+小字 Trie (LGコード別)]
+  OAZA --&gt; RBLK[街区符号 / 住居番号 / 地番]
+  RBLK --&gt; SCORE[スコアリング]
+  SCORE --&gt; OUT[最終結果]
+</pre>
+<p>スコアリング（概要）:</p>
+<ul>
+<li>基本点: マッチレベル（都道府県/市/町字/街区/地番等）に応じた重み（<code>geocode-result-transform.ts</code>）</li>
+<li>文字一致率: 入力全長に対する一致割合（閾値あり）</li>
+<li>あいまい一致: <code>?</code> や補助チャレンジ（extraChallenges）で一致した分は減点</li>
+<li>表記差: 似ている/異なる差分で微調整</li>
+<li>住居表示/地番フラグ優先: 対象（RESIDENTIAL/PARCEL）ごとに重み調整</li>
+</ul>
+<p>探索のキーポイント:</p>
+<ul>
+<li>Finder はノードごとに「確定一致」「ワイルドカード一致」「補助チャレンジ」を分岐させ、部分一致も保持</li>
+<li>各中間ノードでもハッシュ連結リストの値（候補）を収集し、最後にまとめてスコアリング</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="parallelism並列処理とタスク整列"><a class="header" href="#parallelism並列処理とタスク整列">Parallelism（並列処理とタスク整列）</a></h1>
+<p>AbrGeocoder はワーカースレッドプールで並列処理しつつ、入力順で結果を取り出します。</p>
+<pre class="mermaid">sequenceDiagram
+  participant CLI/API
+  participant Main as Main(AbrGeocoder)
+  participant Pool as WorkerThreadPool
+  participant W1 as Worker 1
+  participant W2 as Worker 2
+
+  CLI/API-&gt;&gt;Main: geocode(address)
+  Main-&gt;&gt;Pool: run(task)
+  Pool-&gt;&gt;W1: task#1 (SharedMemory参照)
+  Pool-&gt;&gt;W2: task#2 (SharedMemory参照)
+  W2--&gt;&gt;Pool: result#2
+  W1--&gt;&gt;Pool: result#1
+  Note over Main: TaskInfo連結リストで入力順を保持
+  Pool--&gt;&gt;Main: 完了通知(順不同)
+  Main--&gt;&gt;CLI/API: result#1 → result#2（入力順にflush）
+</pre>
+<p>データ共有:</p>
+<ul>
+<li>ABRG2 キャッシュはメインスレッドで読み込み、<code>SharedArrayBuffer</code> → <code>Uint8Array</code> 経由でワーカーに共有</li>
+<li>ワーカーはコピーなしで辞書検索（<code>TrieAddressFinder2</code> は Buffer ビューで読取）</li>
+</ul>
+<p>同期:</p>
+<ul>
+<li><code>SemaphoreManager</code> はファイル書込時（キャッシュ生成）に使用（<code>FileTrieWriter</code> 内）。検索（読み取り）はロックレス。</li>
+</ul>
+<p>バックプレッシャ:</p>
+<ul>
+<li>プールは <code>maxTasksPerWorker</code> を固定してストリーム圧力を制御</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="abrg2-file-format辞書バイナリ仕様"><a class="header" href="#abrg2-file-format辞書バイナリ仕様">ABRG2 File Format（辞書バイナリ仕様）</a></h1>
+<p>ABRG2 は、検索キー（正規化後の文字列）をトライ木で保持し、各ノードから圧縮済み値（JSON）へのハッシュ連結リストを参照する構造です。全体は Big Endian で整列し、オフセットは 4 バイト固定です。</p>
+<h2 id="ヘッダー"><a class="header" href="#ヘッダー">ヘッダー</a></h2>
+<ul>
+<li>マジック: <code>abrg</code>（ASCII 4B）</li>
+<li>ヘッダーサイズ: <code>u16</code>（2B）</li>
+<li>バージョン: <code>major(u8), minor(u8)</code>（2B）</li>
+<li>トライ木先頭オフセット: <code>u32</code>（4B）</li>
+<li>データ領域先頭オフセット: <code>u32</code>（4B）</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  A[magic: &quot;abrg&quot; 4B] --&gt; B[header_size u16]
+  B --&gt; C[version u8,u8]
+  C --&gt; D[trie_root u32]
+  D --&gt; E[data_head u32]
+</pre>
+<ul>
+<li>バージョンは <code>2.2</code> 以上をサポート（現行 2.2.x）。異なる場合は <code>readHeader()</code> で非対応扱い。</li>
+</ul>
+<h2 id="トライ木ノード"><a class="header" href="#トライ木ノード">トライ木ノード</a></h2>
+<ul>
+<li>構成: <code>size(u8)</code> + <code>sibling(u32)</code> + <code>child(u32)</code> + <code>hash_list_head(u32)</code> + <code>name(utf8)</code></li>
+<li><code>size</code> はノード全体長（1B; 実装上 255B までの想定）</li>
+<li><code>name</code> は当該ノードが表す一文字（UTF-8 可変長）</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  S[size:1] --&gt; SB[sibling_off:4]
+  SB --&gt; CH[child_off:4]
+  CH --&gt; HL[hash_list_head:4]
+  HL --&gt; NM[name: utf8 var]
+</pre>
+<ul>
+<li>兄弟/子オフセットは 0 のとき未設定</li>
+<li><code>hash_list_head</code> は「このノードに結びつくデータノードのオフセット」を連結リストで保持するための先頭ノード位置</li>
+</ul>
+<h2 id="ハッシュ連結リストノード側"><a class="header" href="#ハッシュ連結リストノード側">ハッシュ連結リスト（ノード側）</a></h2>
+<ul>
+<li>ノード → [HashLinkNode]* → データノード</li>
+<li>HashLinkNode 構造: <code>next(u32)</code> + <code>value_offset(u32)</code></li>
+<li><code>value_offset</code> はデータノード（下記）の先頭アドレス</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  N[TrieNode] --&gt; H1[HashLinkNode]
+  H1 --&gt; H2[HashLinkNode]
+  H2 --&gt; H3[...]
+  H1 -- value_offset --&gt; V1[DataNode]
+  H2 -- value_offset --&gt; V2[DataNode]
+</pre>
+<h2 id="データノード"><a class="header" href="#データノード">データノード</a></h2>
+<ul>
+<li>連結リスト: <code>next(u32)</code> + <code>size(u16)</code> + <code>hash(u64)</code> + <code>data(bytes)</code></li>
+<li><code>data</code> は <code>gzip(JSON.stringify(value) を json-stable-stringify で安定化)</code> のバイト列</li>
+<li><code>hash</code> は FNV-1a 64bit を <code>data</code>（=圧縮済みバイト）に対して計算</li>
+<li>同一ハッシュ衝突時は <code>next</code> で連結し、読み出し側で同一ハッシュを辿る</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  D1[next:4] --&gt; D2[size:2]
+  D2 --&gt; D3[hash:8]
+  D3 --&gt; D4[data: gzip(JSON)]
+</pre>
+<p>重複排除と衝突処理（Writer 側）:</p>
+<ul>
+<li>既知ハッシュがある場合、連結を辿って <code>data</code> バイト列比較で完全一致すれば再利用（追記しない）</li>
+<li>一致しなければ最終ノードの <code>next</code> に新規ノードを追加</li>
+<li>初回はヘッダーの <code>data_head</code> から連結を形成</li>
+</ul>
+<h2 id="生成フローfiletriewriter"><a class="header" href="#生成フローfiletriewriter">生成フロー（FileTrieWriter）</a></h2>
+<ol>
+<li>ヘッダー書込（<code>abrg</code>, version, エントリポイント）</li>
+<li>空のルートデータ <code>{}</code> を保存（オフセット 0 のキー）</li>
+<li>ルート Trie ノード（空文字）を保存し、ヘッダーのエントリポイントを更新</li>
+<li>各エントリについて <code>addNode(key, value)</code> を実行
+<ul>
+<li>キー文字列を先頭から子へ、未存在ならノードを追記</li>
+<li>末端/中間いずれでも値がある箇所で <code>hash_list</code> 末尾にオフセットを追加</li>
+</ul>
+</li>
+</ol>
+<pre class="mermaid">flowchart TB
+  subgraph Writer
+    A[writeHeader] --&gt; B[storeData({})]
+    B --&gt; C[writeTrieNode(root)]
+    C --&gt; D[loop addNode]
+    D --&gt; E[writeTrieNode(child/sibling)]
+    D --&gt; F[appendHashOffset]
+  end
+</pre>
+<h2 id="読み出しtrieaddressfinder2"><a class="header" href="#読み出しtrieaddressfinder2">読み出し（TrieAddressFinder2）</a></h2>
+<ul>
+<li>先頭 6B 読み出し→ヘッダー検証→全体ヘッダー取得</li>
+<li>探索は <code>readTrieNode(offset)</code> でノードをデコードし、<code>sibling/child</code> を辿りながら一致/あいまい一致/補助チャレンジを分岐</li>
+<li>一致ノードからハッシュ連結を辿り、<code>readDataNode()</code> で <code>data</code> を解凍・JSON へ復元</li>
+</ul>
+<p>パフォーマンス考慮:</p>
+<ul>
+<li>Writer は内部バッファ（8MB）で追記をバッファリング、前方書換（子/兄弟オフセット更新）は直接書込</li>
+<li>検索側はメモリ上の Buffer を直接参照（I/O 無し）</li>
+</ul>
+<p>互換性:</p>
+<ul>
+<li>バージョンやオフセットサイズ、エンディアンはヘッダー/定数に固定</li>
+<li>破損時は <code>magic</code>/<code>version</code>/<code>size</code> チェックで弾く</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="finder-internalstrieaddressfinder2"><a class="header" href="#finder-internalstrieaddressfinder2">Finder Internals（TrieAddressFinder2）</a></h1>
+<p>目的:</p>
+<ul>
+<li>メモリ上の ABRG2 バッファを読み取り、部分一致やワイルドカードを含む探索で候補集合を抽出</li>
+</ul>
+<p>入力:</p>
+<ul>
+<li><code>CharNode</code> 連結（正規化済み文字列を1文字単位で持つ、原文文字も保存）</li>
+<li>オプション: <code>fuzzy</code>（1文字のワイルドカード）, <code>extraChallenges</code>（前置語の補助探索）, <code>partialMatches</code></li>
+</ul>
+<p>探索アルゴリズム（概要）:</p>
+<ol>
+<li>ルート（空文字）から開始。探索キューに状態（一致数/曖昧数/現在オフセット/パス/部分一致）を積む</li>
+<li>現在ノードの <code>name</code> とターゲット文字を比較
+<ul>
+<li>完全一致 → <code>child</code> に進む</li>
+<li>不一致 → <code>sibling</code> に進む</li>
+<li><code>fuzzy</code> が一致する場合は、 sibling 分岐も追加（曖昧カウント加算）</li>
+<li><code>extraChallenges</code> は前置語が合致した場合に別キューとして探索を追加</li>
+</ul>
+</li>
+<li>途中ノードに <code>hashValueList</code> があれば部分一致候補として保持</li>
+<li>終端または子が無い場合、候補集合へ追加</li>
+<li>すべてのキューを処理後、候補集合を返却</li>
+</ol>
+<p>数値・表記の扱い:</p>
+<ul>
+<li><code>isKanjiNums</code>/<code>isDigit</code>/<code>toHankakuAlphaNum</code> により、漢数字と算用数字の同一視を行う</li>
+<li>ノード名/入力文字を数値同士に正規化して比較（<code>trie-finder2.ts</code> 参照）</li>
+</ul>
+<p>データ復元:</p>
+<ul>
+<li>候補ごとに <code>hashValueList</code> を辿り <code>readDataNode()</code> で DataNode 連結を読み出し、解凍(JSON) → <code>info</code> として返す</li>
+</ul>
+<p>出力:</p>
+<ul>
+<li><code>info</code>（辞書行の JSON）と <code>unmatched</code>（未消化の CharNode）、<code>depth</code>（一致深さ）、<code>ambiguousCnt</code>（曖昧一致回数）、<code>path</code>（一致パス）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cache"><a class="header" href="#cache">Cache</a></h1>
+<p>この章では、辞書キャッシュ（ABRG2）ファイルの種類、命名規則、作成/読込手順を説明します。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cache-overview辞書キャッシュ"><a class="header" href="#cache-overview辞書キャッシュ">Cache Overview（辞書キャッシュ）</a></h1>
+<p>生成対象（ファイル名の例）とスコープ:</p>
+<ul>
+<li><code>pref_&lt;hash&gt;.abrg2</code>: 都道府県一覧（全国, 単一ファイル）</li>
+<li><code>county-and-city_&lt;hash&gt;.abrg2</code>: 郡+市（全国, 単一）</li>
+<li><code>city-and-ward_&lt;hash&gt;.abrg2</code>: 市+区（全国, 単一）</li>
+<li><code>kyoto-street_&lt;hash&gt;.abrg2</code>: 京都の通り名（全国, 単一）</li>
+<li><code>oaza-cho_&lt;hash&gt;_&lt;LG&gt;.abrg2</code>: 大字+丁目+小字（自治体別, LGコードごと）</li>
+<li><code>ward_&lt;hash&gt;.abrg2</code>: 区（全国, 単一）</li>
+<li><code>tokyo23-ward_&lt;hash&gt;.abrg2</code>, <code>tokyo23-town_&lt;hash&gt;.abrg2</code>: 東京23区系</li>
+</ul>
+<p>ここで <code>&lt;hash&gt;</code> は各 SQL 生成式に対する CRC32（<code>get*GeneratorHash()</code>）で、SQL 改変時にキャッシュを作り直すトリガとして機能します。</p>
+<p>作成手順（各 Finder の <code>createDictionaryFile</code>）:</p>
+<ol>
+<li>旧ファイルをパターン削除（<code>removeFiles()</code>）</li>
+<li>SQLite から行を取得</li>
+<li>正規化（仮名/漢数字/記号 等）</li>
+<li><code>FileTrieWriter.addNode(key, value)</code> を反復</li>
+<li><code>close()</code> でフラッシュ</li>
+</ol>
+<p>読み込み手順（各 Finder の <code>loadDataFile</code>）:</p>
+<ol>
+<li>キャッシュ存在時は先頭100Bを検査 → ヘッダー検証が通れば採用</li>
+<li>無ければ <code>createDictionaryFile()</code> 実行</li>
+<li>読み出した Buffer を Shared Memory 化してワーカーに共有</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="download"><a class="header" href="#download">Download</a></h1>
+<p>この章では、DCAT からの取得、CSV パース、SQLite 取込、および辞書生成への接続について解説します。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="download-pipeline"><a class="header" href="#download-pipeline">Download Pipeline</a></h1>
+<p>目的: DCAT の配布一覧から CSV/zip を取得し、SQLite へ投入して辞書生成の基礎を作る。</p>
+<pre class="mermaid">flowchart LR
+  DCAT[DCAT JSON] --&gt; P[URL抽出/最終更新日]
+  P --&gt; Q[パッケージ識別/グルーピング]
+  Q --&gt; DL[ダウンロード]
+  DL --&gt; CSV[CSVパース]
+  CSV --&gt; SQL[(SQLite 取込)]
+  SQL --&gt; GEN[辞書生成 (ABRG2)]
+</pre>
+<p>要点:</p>
+<ul>
+<li>DCAT から <code>.csv.zip</code> を抽出し、LGコード×データセット種別にグルーピング</li>
+<li>キューを分散させて DB 書込競合を低減（ランダム化）</li>
+<li>取込後に各 Finder の <code>createDictionaryFile</code> が走り、キャッシュを生成</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rest-api"><a class="header" href="#rest-api">REST API</a></h1>
+<p>この章では、/geocode エンドポイントの入出力と内部フロー、フォーマッタ、CORS 等を説明します。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rest-api-overview"><a class="header" href="#rest-api-overview">REST API Overview</a></h1>
+<p>エンドポイント（既定）:</p>
+<ul>
+<li><code>GET /geocode?address=&lt;文字列&gt;&amp;target=&lt;ALL|RESIDENTIAL|PARCEL&gt;&amp;fuzzy=?&amp;format=&lt;json|ndjson|geojson|csv&gt;</code></li>
+</ul>
+<p>処理の流れ:</p>
+<ol>
+<li><code>OnGeocodeRequest</code> がクエリを検証（<code>address</code> 必須, <code>fuzzy</code> は1文字, target/format はホワイトリスト）</li>
+<li>フォーマッタを生成（<code>FormatterProvider</code>）し、結果をストリームに流す</li>
+<li><code>AbrGeocoder.geocode()</code> を1件呼び出し、最終結果を整形</li>
+</ol>
+<p>CORS: すべての GET を許可（<code>hyper-express</code> のミドルウェアで設定）</p>
+<p>CLI サーバ（/command）:</p>
+<ul>
+<li><code>CliServer</code> は <code>/command</code> を POST で受け付け、CLI 操作をプロセス外から委譲できる</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="design"><a class="header" href="#design">Design</a></h1>
+<p>この章では、DI 方針、クリーンアーキテクチャに基づく分離、テスタビリティ向上策をまとめます。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="di-方針分岐削減とテスタビリティ"><a class="header" href="#di-方針分岐削減とテスタビリティ">DI 方針（分岐削減とテスタビリティ）</a></h1>
+<p>DI コンテナはユースケースに必要な依存（DB・キャッシュディレクトリ・ロガー・HTTP など）を集約します。これにより、ユースケースはインフラ選択の分岐から解放され、分岐はコンテナ初期化時に吸収されます。</p>
+<ul>
+<li><code>AbrGeocoderDiContainer</code>: ジオコーディング用（DB 接続, キャッシュ, ロガー）</li>
+<li><code>DownloadDiContainer</code>: ダウンロード用（ダウンロード/キャッシュディレクトリ, DB 接続, 既定の DCAT URL）</li>
+</ul>
+<p>ユースケース側のメリット:</p>
+<ul>
+<li>どの DB/どのパスを使うかの if/else を排除</li>
+<li>モック注入で I/O を外してテスト可能</li>
+</ul>
+<p>層の独立性:</p>
+<ul>
+<li>UseCases は Interface に依存せず（逆も同様）、Domain/Drivers への依存もコンテナ経由で完結</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes"><a class="header" href="#classes">Classes</a></h1>
+<p>主要クラス群の責務・主要メソッド・連携関係をまとめます。</p>
+<ul>
+<li>Trie / Writer / Finder: ABRG2 の読み書き</li>
+<li>Geocoder / Worker: 並列ジオコーディングの中核</li>
+<li>API Server: REST/CLI サーバ層</li>
+<li>Download / DB: データ取得と辞書生成の基盤</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes-trie--writer--finder"><a class="header" href="#classes-trie--writer--finder">Classes: Trie / Writer / Finder</a></h1>
+<h2 id="filetriewritersrcusecasesgeocodemodelstriefile-trie-writerts"><a class="header" href="#filetriewritersrcusecasesgeocodemodelstriefile-trie-writerts">FileTrieWriter（<code>src/usecases/geocode/models/trie/file-trie-writer.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>ABRG2 ファイルの生成・追記・ヘッダー更新・重複排除</li>
+<li>トライ木ノード/ハッシュ連結/データノードの整合性管理</li>
+</ul>
+<p>主なメソッド:</p>
+<ul>
+<li><code>static create(path)</code> ヘッダー検証→再利用 or 新規初期化（ルート作成）</li>
+<li><code>writeHeader(header?)</code> マジック/ヘッダー/エントリポイントを更新</li>
+<li><code>addNode({key, value})</code> キーを1文字ずつ辿ってノード挿入・<code>appendHashOffset</code></li>
+<li><code>writeTrieNode({trieNode, hashValueOffset?})</code> ノードの固定部+名前を書込み</li>
+<li><code>appendHashOffset({trieNode, hashValueOffset})</code> ノードのハッシュ連結末尾に追記</li>
+<li><code>storeData(value)</code> JSON→gzip→FNV-1a64 計算→重複/衝突処理</li>
+<li><code>close()</code> バッファフラッシュと FD クローズ</li>
+</ul>
+<p>実装上のポイント:</p>
+<ul>
+<li>内部 8MB バッファで追記を集約。前方の小さな書換（子/兄弟オフセット）は直接書込</li>
+<li>重複判定は「圧縮後バイト列の完全一致」で実施（衝突時は連結を辿る）</li>
+<li>1ファイル内に <code>{}</code> を持つルートデータ（hash=0）を保存し、空文字の TrieRoot に紐付け</li>
+</ul>
+<h2 id="trietreebuilderbasesrcusecasesgeocodemodelstrietrie-tree-builder-basets"><a class="header" href="#trietreebuilderbasesrcusecasesgeocodemodelstrietrie-tree-builder-basets">TrieTreeBuilderBase（<code>src/usecases/geocode/models/trie/trie-tree-builder-base.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>低レベル I/O（バッファ読書き/整数読取/ヘッダー解釈/ノード復元）</li>
+</ul>
+<p>主なメソッド:</p>
+<ul>
+<li><code>readHeader()</code> マジック/バージョン/エントリポイントを検証</li>
+<li><code>readTrieNode(offset)</code> 固定部+文字列を復元し、<code>hash_list</code> を <code>createHashValueList()</code> で構築</li>
+<li><code>readDataNode(offset, expect?)</code> データノード連結を復元</li>
+<li><code>write(buf, pos)</code>/<code>read(pos, size)</code> 大域バッファ越しの I/O</li>
+</ul>
+<h2 id="trieaddressfinder2srcusecasesgeocodemodelstrietrie-finder2ts"><a class="header" href="#trieaddressfinder2srcusecasesgeocodemodelstrietrie-finder2ts">TrieAddressFinder2（<code>src/usecases/geocode/models/trie/trie-finder2.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>メモリ上の ABRG2 から Trie を辿り、候補（DataNode 連結）を復元</li>
+</ul>
+<p>主なメソッド:</p>
+<ul>
+<li><code>find({target, fuzzy, partialMatches, extraChallenges})</code> 候補リストを返却</li>
+<li><code>readDataNode(offset)</code> 解凍して JSON 復元（衝突連結を再帰で辿る）</li>
+<li><code>createHashValueList(nodeOffset)</code> ノードのハッシュ連結を復元</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes-geocoder--worker"><a class="header" href="#classes-geocoder--worker">Classes: Geocoder / Worker</a></h1>
+<h2 id="abrgeocodersrcusecasesgeocodeabr-geocoderts"><a class="header" href="#abrgeocodersrcusecasesgeocodeabr-geocoderts">AbrGeocoder（<code>src/usecases/geocode/abr-geocoder.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>タスク整列（入力順の維持）とワーカープールへの投入</li>
+<li>共有メモリ化した Trie バッファを初期化し、ワーカーへ配布</li>
+</ul>
+<p>主なメソッド:</p>
+<ul>
+<li><code>static create({container, numOfThreads, isSilentMode, signal})</code>
+<ul>
+<li>SQLite から Pref 一覧を取得</li>
+<li>各 Finder の <code>loadDataFile()</code> で ABRG2 を Buffer 読込</li>
+<li><code>toSharedMemory()</code> で共有メモリ化し、初期データを <code>GeocodeWorkerInitData</code> としてプールへ</li>
+<li>スレッド数 &lt; 2 or Jest 実行時はメインスレッドで <code>FakeWorkerThreadPool</code></li>
+</ul>
+</li>
+<li><code>geocode(input)</code>
+<ul>
+<li><code>WorkerPoolTaskInfo</code> 連結で順序を保持しつつ <code>WorkerThreadPool.run()</code> を呼ぶ</li>
+<li>結果は <code>flushResults()</code> で入力順に emit</li>
+</ul>
+</li>
+<li><code>close()</code> ワーカープールのクリーンアップ</li>
+</ul>
+<h2 id="geocodetransformsrcusecasesgeocodeworkergeocode-workerts"><a class="header" href="#geocodetransformsrcusecasesgeocodeworkergeocode-workerts">GeocodeTransform（<code>src/usecases/geocode/worker/geocode-worker.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>住所処理のストリームパイプライン</li>
+</ul>
+<p>パイプライン:</p>
+<ol>
+<li>Normalize → Banchome 正規化</li>
+<li>Pref → CountyAndCity → CityAndWard → Ward → Tokyo23（Ward/Town） → KyotoStreet → OazaChome</li>
+<li>RsdtBlk → RsdtDsp → Parcel</li>
+<li>GeocodeResultTransform（スコアリング/整形）</li>
+</ol>
+<h2 id="workerthreadpoolsrcdomainservicesthreadworker-thread-poolts"><a class="header" href="#workerthreadpoolsrcdomainservicesthreadworker-thread-poolts">WorkerThreadPool（<code>src/domain/services/thread/worker-thread-pool.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>N ワーカーに最大 M タスクを並列投入しつつ、バックプレッシャを制御</li>
+</ul>
+<p>関連:</p>
+<ul>
+<li><code>WorkerPoolTaskInfo</code> 入出力の順序管理</li>
+<li><code>toSharedMemory</code>/<code>fromSharedMemory</code> で辞書バッファを共有</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes-api-server"><a class="header" href="#classes-api-server">Classes: API Server</a></h1>
+<h2 id="abrgapiserversrcinterfaceabrg-api-serverindexts"><a class="header" href="#abrgapiserversrcinterfaceabrg-api-serverindexts">AbrgApiServer（<code>src/interface/abrg-api-server/index.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li><code>GET /geocode</code> ハンドリング（CORS 設定、入力検証、フォーマット変換）</li>
+<li>エラー応答（<code>500</code>/<code>404</code>）</li>
+</ul>
+<h2 id="ongeocoderequestsrcinterfaceabrg-api-serveron-geocode-requestts"><a class="header" href="#ongeocoderequestsrcinterfaceabrg-api-serveron-geocode-requestts">OnGeocodeRequest（<code>src/interface/abrg-api-server/on-geocode-request.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>クエリ検証（<code>address</code> 必須、<code>fuzzy</code> は1文字、<code>target/format</code> は既定集合）</li>
+<li><code>FormatterProvider</code> を用いて <code>json/csv/geojson/ndjson</code> へストリーム出力</li>
+<li>AbrGeocoder へ単発リクエストを発行</li>
+</ul>
+<h2 id="cliserversrcinterfacecli-serverindexts"><a class="header" href="#cliserversrcinterfacecli-serverindexts">CliServer（<code>src/interface/cli-server/index.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li><code>/command</code> POST を受け付け、CLI 操作を HTTP 化（CORS 設定）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="classes-download--db"><a class="header" href="#classes-download--db">Classes: Download / DB</a></h1>
+<h2 id="downloadprocesssrcusecasesdownloaddownload-processts"><a class="header" href="#downloadprocesssrcusecasesdownloaddownload-processts">DownloadProcess（<code>src/usecases/download/download-process.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>DCAT から <code>.csv.zip</code> を抽出→グルーピング→ダウンロード→CSV パース→SQLite 取込</li>
+<li>取込後の辞書生成（各 Finder の <code>createDictionaryFile</code>）をトリガ</li>
+</ul>
+<p>ポイント:</p>
+<ul>
+<li>LG コードの粒度（都道府県/市区町村）を集約し、競合/偏りを回避するためにシャッフル</li>
+<li>進捗表示やキャッシュ利用の制御を備える</li>
+</ul>
+<h2 id="commondbgeocodesqlite3srcdriversdatabasesqlite3geocodecommon-db-geocode-sqlite3ts"><a class="header" href="#commondbgeocodesqlite3srcdriversdatabasesqlite3geocodecommon-db-geocode-sqlite3ts">CommonDbGeocodeSqlite3（<code>src/drivers/database/sqlite3/geocode/common-db-geocode-sqlite3.ts</code>）</a></h2>
+<p>責務:</p>
+<ul>
+<li>地理辞書用のクエリ発行</li>
+<li>生成 SQL の CRC32 を <code>get*GeneratorHash()</code> で提供し、キャッシュの更新判定に利用</li>
+</ul>
+<p>主な提供データ:</p>
+<ul>
+<li>都道府県一覧、郡+市、市+区、京都通り、町字/丁目/小字 など</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="utilities抜粋"><a class="header" href="#utilities抜粋">Utilities（抜粋）</a></h1>
+<ul>
+<li><code>reg-exp-ex.ts</code> 正規表現ユーティリティ（タグ式置換、命名グループ対応の使い勝手改善）</li>
+<li><code>crc32-lib.ts</code> CRC32（ファイル/バッファ/文字列/レコード）</li>
+<li><code>make-dir-if-not-exists.ts</code> フォルダ作成</li>
+<li><code>remove-files.ts</code> パターン指定の削除（古いキャッシュ掃除）</li>
+<li><code>resolve-home.ts</code> <code>~</code> 展開</li>
+<li><code>thread/semaphore-manager.ts</code> 簡易セマフォ（Writer 内での排他）</li>
+<li><code>thread/shared-memory.ts</code> Buffer と SharedArrayBuffer の変換</li>
+<li><code>logger/debug-logger.ts</code> デバッグ出力（<code>debug</code> モードのみ）</li>
+<li><code>transformations/*</code> 行/コメントフィルタやカウンタなどストリーム補助</li>
+</ul>
+<p>表記変換（ジオコーディング前処理）:</p>
+<ul>
+<li>漢数字→算用数字、半角化、仮名変換、旧字→新字等（<code>toHankakuAlphaNum</code>, <code>toHiragana</code>, <code>jisKanji</code>, <code>kan2num</code>）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="operations運用"><a class="header" href="#operations運用">Operations（運用）</a></h1>
+<h2 id="キャッシュ再生成"><a class="header" href="#キャッシュ再生成">キャッシュ再生成</a></h2>
+<ul>
+<li>SQL を変更した場合は自動で <code>&lt;hash&gt;</code> が変わり、古いキャッシュは <code>removeFiles()</code> で掃除されます</li>
+<li>手動再生成を行う場合:
+<ul>
+<li>各 Finder の <code>createDictionaryFile(task)</code> を呼ぶ、または</li>
+<li>AbrGeocoder の初期化時に <code>loadDataFile()</code> がなければ自動生成</li>
+</ul>
+</li>
+</ul>
+<h2 id="バージョン互換性"><a class="header" href="#バージョン互換性">バージョン互換性</a></h2>
+<ul>
+<li>ABRG2 のヘッダー <code>version</code> は <code>2.2</code> 以上を想定。古い/新しいフォーマットは読み込み失敗で再生成</li>
+<li>破損（magic 不一致/size 異常）はファイル削除→再生成</li>
+</ul>
+<h2 id="共有メモリ"><a class="header" href="#共有メモリ">共有メモリ</a></h2>
+<ul>
+<li>大きな辞書はワーカーにコピーせず共有（起動時に一度だけマップ）。Node のメモリ制限に注意</li>
+</ul>
+<h2 id="検証"><a class="header" href="#検証">検証</a></h2>
+<ul>
+<li>先頭 100B でヘッダ検査する簡易チェックを各 Finder の <code>loadDataFile()</code> が実施</li>
+<li>さらに <code>TrieAddressFinder2</code> を試作成して整合性を確認（例外時は再生成）</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h1>
+<ul>
+<li>ヘッダー不正（<code>magic!=abrg</code> / <code>version&lt;2.2</code>）
+<ul>
+<li>キャッシュ破損の可能性。該当ファイル削除→再生成</li>
+</ul>
+</li>
+<li>読み出し中の例外（オフセット異常/サイズ不一致）
+<ul>
+<li>途中中断などで破損。再生成</li>
+</ul>
+</li>
+<li>メモリ不足
+<ul>
+<li>共有メモリで辞書を載せるため、起動オプション/ハード制約を確認</li>
+</ul>
+</li>
+<li>結果が期待と違う
+<ul>
+<li>正規化規則（漢数字, 旧字体, 記号）を確認</li>
+<li>スコアリングは入力長/一致割合/曖昧回数/区分別に依存（<code>geocode-result-transform.ts</code>）</li>
+</ul>
+</li>
+<li>速度劣化
+<ul>
+<li>キャッシュが古い/分割不足。<code>oaza-cho</code> は LG ごとに分割されているか確認</li>
+<li>ワーカースレッド数と <code>maxTasksPerWorker</code> のバランス</li>
+</ul>
+</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="glossary用語集"><a class="header" href="#glossary用語集">Glossary（用語集）</a></h1>
+<ul>
+<li>ABRG2: 本プロジェクトの辞書バイナリ形式（マジック <code>abrg</code> + v2.x）</li>
+<li>Trie（トライ木）: 文字列キーを文字単位で共有する木構造</li>
+<li>HashLinkNode: Trie ノードからデータノードを参照するための連結リスト要素</li>
+<li>DataNode: <code>next</code> 連結 + <code>size</code> + <code>hash(FNV-1a 64)</code> + <code>gzip(JSON)</code> 本体</li>
+<li>FNV-1a 64: 64bit のハッシュ手法。ここでは圧縮済みデータに対して適用</li>
+<li>json-stable-stringify: JSON をキー順に並べ、安定化して文字列化する手法</li>
+<li>Shared Memory: <code>SharedArrayBuffer</code> ベースの共有メモリ。辞書バッファをワーカーと共有</li>
+<li>LGコード: 自治体コード。<code>oaza-cho</code> キャッシュは LG ごとに分割</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
