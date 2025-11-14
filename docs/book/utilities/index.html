@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Utilities - ABR Geocoder 内部仕様</title>
+        <title>Utilities - ABR Geocoder v2.2 内部仕様</title>
 
 
         <!-- Custom HTML head -->
@@ -138,7 +138,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+                    <h1 class="menu-title">ABR Geocoder v2.2 内部仕様</h1>
 
                     <div class="right-buttons">
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
@@ -187,10 +187,166 @@
 <li><code>logger/debug-logger.ts</code> デバッグ出力（<code>debug</code> モードのみ）</li>
 <li><code>transformations/*</code> 行/コメントフィルタやカウンタなどストリーム補助</li>
 </ul>
-<p>表記変換（ジオコーディング前処理）:</p>
+<h2 id="表記変換ジオコーディング前処理"><a class="header" href="#表記変換ジオコーディング前処理">表記変換（ジオコーディング前処理）</a></h2>
+<p>住所の表記ゆれを吸収するため、以下の順序で正規化します（実装の流れの一例）。</p>
+<ol>
+<li>半角英数字への統一: <code>toHankakuAlphaNum</code></li>
+<li>仮名の統一（片/半角→ひらがな等）: <code>toHiragana</code></li>
+<li>旧字体/第2水準→新字体/第1水準: <code>jisKanji</code></li>
+<li>漢数字→算用数字: <code>kan2num</code></li>
+</ol>
+<p>それぞれの関数は <code>string</code> と <code>CharNode</code>（ノード連結）の両方に対応します。<code>CharNode</code> 版では <code>originalChar</code> を保持したまま <code>char</code> を置換し、必要に応じて <code>ignore</code> を使って後段処理に影響を与えないように調整します。</p>
+<h3 id="tohankakualphanum全角英数字半角"><a class="header" href="#tohankakualphanum全角英数字半角">toHankakuAlphaNum（全角英数字→半角）</a></h3>
 <ul>
-<li>漢数字→算用数字、半角化、仮名変換、旧字→新字等（<code>toHankakuAlphaNum</code>, <code>toHiragana</code>, <code>jisKanji</code>, <code>kan2num</code>）</li>
+<li>目的: 全角の英字/数字を半角へ置換（記号は対象外）</li>
+<li>実装: マップ置換（例: <code>Ａ→A</code>, <code>１→1</code>）。<code>CharNode</code> 版は各ノードの <code>char</code> をその場で置換</li>
+<li>計算量: O(n)（n=文字数）</li>
+<li>例:
+<ul>
+<li><code>ＡＢＣ１２３</code> → <code>ABC123</code></li>
 </ul>
+</li>
+</ul>
+<h3 id="tohiragana仮名をひらがな系へ統一--特殊表記"><a class="header" href="#tohiragana仮名をひらがな系へ統一--特殊表記">toHiragana（仮名をひらがな系へ統一 + 特殊表記）</a></h3>
+<ul>
+<li>目的: 片仮名/半角片仮名などをひらがなへ統一。地名の表記慣習に合わせた特別扱いあり</li>
+<li>特徴:
+<ul>
+<li><code>String.normalize('NFKC')</code>で濁音付き半角カナを正規化した上で、詳細マップで置換</li>
+<li>「龍ケ崎/霞ヶ関」のような「ケ/ヶ/ガ」ゆれを地名整合のために「け」へ寄せる等、地名固有の表記揺れに対処</li>
+<li><code>CharNode</code> 版は <code>ignore === true</code> のノードは変換しない（後段の整合維持が目的）</li>
+</ul>
+</li>
+<li>計算量: O(n)</li>
+<li>例:
+<ul>
+<li><code>ｶﾞｯｺｳ</code> → <code>がっこう</code></li>
+<li><code>霞ヶ関</code>/<code>霞が関</code>/<code>霞ケ関</code> → <code>霞け関</code>（内部比較用の統一）</li>
+</ul>
+</li>
+</ul>
+<h3 id="jiskanji旧字体第2水準新字体第1水準"><a class="header" href="#jiskanji旧字体第2水準新字体第1水準">jisKanji（旧字体/第2水準→新字体/第1水準）</a></h3>
+<ul>
+<li>目的: 旧字体やJIS第2水準の漢字を、検索キーと一致しやすい新字体/第1水準に統一</li>
+<li>実装の要点:
+<ul>
+<li>古→新の置換テーブルを <code>TrieAddressFinder</code> に投入し、最長一致で変換（1文字以上の置換に対応）</li>
+<li><code>CharNode</code> 版では一致長に合わせて新文字列へ展開。展開しきれない分は <code>ignore: true</code> を立てて桁合わせ</li>
+</ul>
+</li>
+<li>計算量: O(n·α)（αは平均マッチ長）</li>
+<li>例:
+<ul>
+<li><code>川﨑</code> → <code>川崎</code></li>
+<li><code>澤</code> → <code>沢</code>、<code>舊</code> → <code>旧</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="kan2num漢数字算用数字monotonic-stack"><a class="header" href="#kan2num漢数字算用数字monotonic-stack">kan2num（漢数字→算用数字、Monotonic Stack）</a></h3>
+<ul>
+<li>目的: 住所に含まれる漢数字（例: <code>十二</code>, <code>三十八</code>）を算用数字へ変換し、<code>丁目/番/号/線/条</code> などの単位表記に柔軟に対応</li>
+<li>変換対象の区切り: <code>軒/通/丁/町/字/番/部/所/社/線/号/条/里</code>、ダッシュ・スペース、「の/之/ノ/丿」などに遭遇したら直前の数値塊を確定</li>
+<li>コアアイデア（Monotonic Stack + アキュムレータ）:
+<ul>
+<li>走査しつつ「数値候補」をスタック/バッファに溜め、非数値の区切りでまとめて数値にする</li>
+<li>単位（<code>十</code>=10）に遭遇したときは「掛け算→加算」の順で更新（<code>二十</code>→2×10、次に<code>三</code>が来れば<code>20+3</code>）</li>
+<li>例: <code>二十五</code> → (2×10)+5 = 25、<code>一〇一</code> → (((1×10)+0)×10)+1 = 101</li>
+<li><code>CharNode</code> 版は元のノード列（buffer）に対して、確定した数値の各桁を左から順に上書き/追加して整形（<code>originalChar</code>は保持）</li>
+</ul>
+</li>
+<li>擬似コード（概念）:</li>
+</ul>
+<pre><code class="language-text">current = 0; lastWasTen = false; buffer=[]; result=[]
+for ch of input + SENTINEL:
+  if isKanjiDigit(ch):
+    v = value(ch)
+    if v == 10:              // 十
+      current = (current==0) ? 10 : current*10
+      lastWasTen = true
+    else:
+      current = lastWasTen ? current + v : current*10 + v
+      lastWasTen = false
+    buffer.push(ch)
+  else: // 区切り到来
+    if current&gt;0:
+      emit digits(current) into result, aligned to buffer length
+    flush buffer/current/flags
+    result.push(ch)
+</code></pre>
+<ul>
+<li>計算量: O(n)</li>
+<li>例:
+<ul>
+<li><code>東十二丁目</code> → <code>東12丁目</code></li>
+<li><code>西六線北二十六号</code> → <code>西6線北26号</code></li>
+<li><code>九十九里町</code> → <code>99里町</code></li>
+</ul>
+</li>
+</ul>
+<p>注意:</p>
+<ul>
+<li><code>kan2num</code> は「区切り候補」に依存して数値塊を確定するため、文脈による意図せぬ変換を避けやすい設計です</li>
+<li>ただし特殊な地名で漢数字が意味を持つケースは変換しないこともありえます（テーブル/区切りの調整で改善）</li>
+</ul>
+<h2 id="簡易図正規化フローと-kan2num-の概念図"><a class="header" href="#簡易図正規化フローと-kan2num-の概念図">簡易図（正規化フローと kan2num の概念図）</a></h2>
+<h3 id="全体の正規化パイプライン"><a class="header" href="#全体の正規化パイプライン">全体の正規化パイプライン</a></h3>
+<pre class="mermaid">flowchart LR
+  IN[入力文字列] --&gt; HN[toHankakuAlphaNum\n全角英数字→半角]
+  HN --&gt; HI[toHiragana\n仮名統一/地名ゆれ]
+  HI --&gt; JK[jisKanji\n旧字体→新字体/第2→第1]
+  JK --&gt; KN[kan2num\n漢数字→算用数字]
+  KN --&gt; OUT[比較用の文字列/CharNode]
+</pre>
+<h3 id="kan2num-の流れ概念"><a class="header" href="#kan2num-の流れ概念">kan2num の流れ（概念）</a></h3>
+<pre class="mermaid">stateDiagram-v2
+  [*] --&gt; Reading
+  Reading --&gt; Reading: 漢数字なら current を更新&lt;br/&gt;(×10, +n)
+  Reading --&gt; Flushing: 区切り(丁目/番/号/線/条/里/ダッシュ/スペース/の…)
+  Flushing: 桁配分して出力&lt;br/&gt;(buffer長に合わせて上書き/追加)
+  Flushing --&gt; Reading: current=0 にリセット
+  Reading --&gt; [*]: 末尾(SENTINEL)で確定
+</pre>
+<h3 id="ステップ例二十六号"><a class="header" href="#ステップ例二十六号">ステップ例:「二十六号」</a></h3>
+<pre class="mermaid">sequenceDiagram
+  participant I as 入力
+  participant S as Stack/Buffer
+  participant A as Acc(current)
+  participant O as 出力
+  I-&gt;&gt;A: 二(2) → current=2
+  I-&gt;&gt;A: 十(10) → current=2×10=20
+  I-&gt;&gt;A: 六(6) → current=20+6=26
+  I-&gt;&gt;S: 区切り「号」到来
+  S-&gt;&gt;O: 2,6 を桁順で配置/追加
+  O-&gt;&gt;O: 「26」+「号」
+</pre>
+<h3 id="charnode-版の置換イメージ"><a class="header" href="#charnode-版の置換イメージ">CharNode 版の置換イメージ</a></h3>
+<pre class="mermaid">flowchart LR
+
+  %% 入力ノード列
+  subgraph 入力ノード列
+    K1[&quot;二&quot;]
+    K2[&quot;十&quot;]
+    K3[&quot;六&quot;]
+    K4[&quot;号&quot;]
+    K1 --&gt; K2 --&gt; K3 --&gt; K4
+  end
+
+  %% 変換
+  subgraph 変換
+    D1[&quot;2（上書き）&quot;]
+    D2[&quot;6（上書き）&quot;]
+    D3[&quot;（不要なら空／削除）&quot;]
+    K1 -.-&gt; D1
+    K2 -.-&gt; D2
+    K3 -.-&gt; D3
+  end
+
+  %% 出力ノード列
+  subgraph 出力ノード列
+    D1 --&gt; D2 --&gt; K4
+  end
+
+</pre>
 
                     </main>
 

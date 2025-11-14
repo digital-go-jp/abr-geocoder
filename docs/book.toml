@@ -1,5 +1,5 @@
 [book]
-title = "ABR Geocoder 内部仕様"
+title = "ABR Geocoder v2.2 内部仕様"
 description = "ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様"
 language = "ja"
 multilingual = false

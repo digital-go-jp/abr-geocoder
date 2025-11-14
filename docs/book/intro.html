@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - ABR Geocoder 内部仕様</title>
+        <title>Introduction - ABR Geocoder v2.2 内部仕様</title>
 
 
         <!-- Custom HTML head -->
@@ -138,7 +138,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+                    <h1 class="menu-title">ABR Geocoder v2.2 内部仕様</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -175,20 +175,63 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="abr-geocoder-内部仕様"><a class="header" href="#abr-geocoder-内部仕様">ABR Geocoder 内部仕様</a></h1>
-<p>このドキュメントは、ABR Geocoder の内部アーキテクチャ、設計思想、並列処理、そして SQLite を起点に生成されるキャッシュ（ABRG2 バイナリ辞書）の仕様をまとめたものです。公開前提の日本語ドキュメントであり、Mermaid 図を用いて構造を可視化しています。</p>
-<p>主対象:</p>
+                        <h1 id="abr-geocoder-v22-内部仕様nodejs-中級者向け"><a class="header" href="#abr-geocoder-v22-内部仕様nodejs-中級者向け">ABR Geocoder v2.2 内部仕様（Node.js 中級者向け）</a></h1>
+<p>このドキュメントは、ABR Geocoder の内部アーキテクチャ、設計思想、並列処理、そして SQLite を起点に生成されるキャッシュ（ABRG2 バイナリ辞書）の仕様をまとめたものです。公開前提の日本語ドキュメントで、Mermaid 図で構造を可視化しています。</p>
+<h2 id="これは何ひとことで"><a class="header" href="#これは何ひとことで">これは何？（ひとことで）</a></h2>
 <ul>
-<li>コア開発者・レビュアー（内部仕様の把握）</li>
-<li>運用担当（キャッシュ再生成や互換性の判断）</li>
-<li>外部コントリビュータ（拡張/改修の際の参照）</li>
+<li>「住所 → 緯度経度」を高速に引くための、Node.js 製ジオコーダです。</li>
+<li>コアは「トライ木（Trie）で検索」「辞書（ABRG2）をバイナリで持ち、Bufferで直接読む」仕組みです。</li>
+<li>検索はストリーム変換のパイプライン、並列化は worker_threads、共有は SharedArrayBuffer で行います。</li>
 </ul>
-<p>このドキュメントの読み方:</p>
+<h2 id="nodejs-の用語でざっくり全体像"><a class="header" href="#nodejs-の用語でざっくり全体像">Node.js の用語でざっくり全体像</a></h2>
 <ul>
-<li>Architecture でシステム全体像とクリーンアーキテクチャ/DI 方針を把握</li>
-<li>Geocoding で探索戦略・並列化・ABRG2 仕様の詳細を把握</li>
-<li>Classes/Utilities で要素技術の API と責務を把握</li>
-<li>Operations/Troubleshooting で実運用の要点を確認</li>
+<li>Buffer/TypedArray: ABRG2 は Big Endian の整数＋UTF-8 文字列で直に詰めたバイナリ。Finder は Buffer をコピーせず read します。</li>
+<li>Stream: 住所正規化→段階的探索→スコアリングは Transform をつないだパイプラインです。</li>
+<li>worker_threads: 複数のワーカーに入力を投げ、SharedArrayBuffer で辞書を共有。結果は入力順に戻すための連結リストで整列します。</li>
+<li>DI: DB 接続やキャッシュパスなどはコンテナから注入（UseCase に if 分岐を持ち込まない）。</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  IN[CLI/REST] --&gt; PIPE[&quot;Stream Pipeline&lt;br/&gt;(正規化→探索→スコア)&quot;]
+  PIPE --&gt; G[AbrGeocoder]
+  subgraph Workers
+    G --&gt; W1
+    G --&gt; W2
+  end
+  DB[(SQLite)] --&gt; GEN[辞書生成 Writer]
+  GEN --&gt; CACHE[&quot;ABRG2(Trie+Data)&quot;]
+  CACHE -.SharedArrayBuffer.-&gt; Workers
+</pre>
+<h2 id="まず押さえておくと楽になるポイント"><a class="header" href="#まず押さえておくと楽になるポイント">まず押さえておくと楽になるポイント</a></h2>
+<ul>
+<li>Trie は「文字列を1文字ずつ辿る木」。共通接頭辞を共有でき、前方一致や部分一致に強い。</li>
+<li>ABRG2 は Trie ノード（子/兄弟/値リスト+1文字）＋ Data ノード（gzip(JSON)＋ハッシュ）の連結。Finder は Buffer から直接 decode。</li>
+<li>あいまい検索は、正規化後の比較用文字（<code>char</code>）と元の文字（<code>originalChar</code>）を CharNode が両持ち、分岐時は <code>.clone()</code>。</li>
+<li>並列化は「ワーカーに投げる」だけでなく、「入力順に結果を返す」ための整列（連結リスト）がカギ。</li>
+</ul>
+<h2 id="何が作れる拡張の方向性"><a class="header" href="#何が作れる拡張の方向性">何が作れる？（拡張の方向性）</a></h2>
+<ul>
+<li>住所の新しい分解ルールや置換（正規化）を Transform として追加</li>
+<li>新しい辞書（Trie）の追加：Writer で生成、Finder を継承</li>
+<li>API 拡張：フォーマッタ追加、CLI サーバ連携</li>
+</ul>
+<h2 id="読み進め方おすすめ順"><a class="header" href="#読み進め方おすすめ順">読み進め方（おすすめ順）</a></h2>
+<ol>
+<li>Architecture: 全体像と Clean Architecture/DI の理由</li>
+<li>Geocoding → Strategy/あいまい検索/Parallelism: 住所探索の流れと並列・整列の考え方</li>
+<li>Geocoding → ABRG2 Format/Finder Internals: 辞書の中身と検索の仕組み</li>
+<li>Classes/Utilities: 主要クラス・表記変換の詳細（kan2num など）</li>
+<li>Operations/Troubleshooting: 運用とハマりどころ</li>
+</ol>
+<p>時間がない方向けの最短ルート：</p>
+<ul>
+<li>Geocoding/Strategy → Geocoding/あいまい検索 → Geocoding/Parallelism → Geocoding/ABRG2 Format</li>
+</ul>
+<h2 id="便利な対応表知っていると読みやすい"><a class="header" href="#便利な対応表知っていると読みやすい">便利な対応表（知っていると読みやすい）</a></h2>
+<ul>
+<li>「バイナリ辞書」= JSON を安定化（json-stable-stringify）して gzip → FNV-1a 64 でキー付け → 連結ノードに保存</li>
+<li>「Trie の値リスト」= データノードへのオフセットの連結リスト</li>
+<li>「SharedArrayBuffer」= Finder 側で Buffer を共有、コピーが発生しない</li>
+<li>「整列」= Worker の結果を入力順に返すための連結リスト（WorkerPoolTaskInfo）</li>
 </ul>
 
                     </main>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Geocoding - ABR Geocoder 内部仕様</title>
+        <title>Geocoding - ABR Geocoder v2.2 内部仕様</title>
 
 
         <!-- Custom HTML head -->
@@ -138,7 +138,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+                    <h1 class="menu-title">ABR Geocoder v2.2 内部仕様</h1>
 
                     <div class="right-buttons">
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
@@ -182,6 +182,8 @@
 <li>Parallelism: ワーカープール/共有メモリ/順序維持</li>
 <li>ABRG2 Format: 辞書のバイナリ仕様</li>
 <li>Finder Internals: 読み出しと探索アルゴリズム</li>
+<li>Fuzzy Search: あいまい検索の仕組み（CharNode の複製/ambiguousCnt/復元）</li>
+<li>Kyoto Streets: 京都の通り名（DBの取り扱いとキー投入・代表点補完）</li>
 </ul>
 <h2 id="geocoding-coreジオコーディング中核"><a class="header" href="#geocoding-coreジオコーディング中核">Geocoding Core（ジオコーディング中核）</a></h2>
 <p>ジオコーディング処理を担当する主要クラス群です。</p>

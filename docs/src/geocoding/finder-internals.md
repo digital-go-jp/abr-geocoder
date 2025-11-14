@@ -34,3 +34,6 @@
 
 - `info`（辞書行の JSON）と `unmatched`（未消化の CharNode）、`depth`（一致深さ）、`ambiguousCnt`（曖昧一致回数）、`path`（一致パス）
 
+関連:
+
+- あいまい検索の背景と具体例は「[あいまい検索](fuzzy-search.md)」を参照してください（正規化後の比較用文字と元文字の両立、分岐時の `.clone()`、`ambiguousCnt` の取り扱い）。

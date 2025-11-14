@@ -6,6 +6,8 @@
 - Parallelism: ワーカープール/共有メモリ/順序維持
 - ABRG2 Format: 辞書のバイナリ仕様
 - Finder Internals: 読み出しと探索アルゴリズム
+- Fuzzy Search: あいまい検索の仕組み（CharNode の複製/ambiguousCnt/復元）
+ - Kyoto Streets: 京都の通り名（DBの取り扱いとキー投入・代表点補完）
 
 
 ## Geocoding Core（ジオコーディング中核）

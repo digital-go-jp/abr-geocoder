@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Finder Internals - ABR Geocoder 内部仕様</title>
+        <title>Finder Internals - ABR Geocoder v2.2 内部仕様</title>
 
 
         <!-- Custom HTML head -->
@@ -138,7 +138,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+                    <h1 class="menu-title">ABR Geocoder v2.2 内部仕様</h1>
 
                     <div class="right-buttons">
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
@@ -213,6 +213,10 @@
 <ul>
 <li><code>info</code>（辞書行の JSON）と <code>unmatched</code>（未消化の CharNode）、<code>depth</code>（一致深さ）、<code>ambiguousCnt</code>（曖昧一致回数）、<code>path</code>（一致パス）</li>
 </ul>
+<p>関連:</p>
+<ul>
+<li>あいまい検索の背景と具体例は「<a href="fuzzy-search.html">あいまい検索</a>」を参照してください（正規化後の比較用文字と元文字の両立、分岐時の <code>.clone()</code>、<code>ambiguousCnt</code> の取り扱い）。</li>
+</ul>
 
                     </main>
 
@@ -222,7 +226,7 @@
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../download-and-cache/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../geocoding/fuzzy-search.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -236,7 +240,7 @@
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../download-and-cache/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../geocoding/fuzzy-search.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

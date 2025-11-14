@@ -6,13 +6,13 @@ ABR Geocoderのダウンロード&キャッシュ生成システムは、大量�
 
 ```mermaid
 flowchart TD
-  START["開始"] --> DCAT["1. DCATメタデータ取得"]
-  DCAT --> EXTRACT["2. ダウンロードURL抽出"]
-  EXTRACT --> QUEUE["3. ダウンロードキュー生成"]
-  QUEUE --> PARALLEL["4. 並列ダウンロード<br/>(Worker Threads)"]
-  PARALLEL --> STREAM["5. Streamパイプライン<br/>Download → Unzip → Parse"]
-  STREAM --> DB["6. SQLite投入"]
-  DB --> CACHE["7. ABRG2キャッシュ生成"]
+  START["開始"] --> DCAT["1\. DCATメタデータ取得"]
+  DCAT --> EXTRACT["2\. ダウンロードURL抽出"]
+  EXTRACT --> QUEUE["3\. ダウンロードキュー生成"]
+  QUEUE --> PARALLEL["4\. 並列ダウンロード<br/>(Worker Threads)"]
+  PARALLEL --> STREAM["5\. Streamパイプライン<br/>Download → Unzip → Parse"]
+  STREAM --> DB["6\. SQLite投入"]
+  DB --> CACHE["7\. ABRG2キャッシュ生成"]
   CACHE --> END["完了"]
 ```
 

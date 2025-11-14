@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Strategy - ABR Geocoder 内部仕様</title>
+        <title>Strategy - ABR Geocoder v2.2 内部仕様</title>
 
 
         <!-- Custom HTML head -->
@@ -138,7 +138,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+                    <h1 class="menu-title">ABR Geocoder v2.2 内部仕様</h1>
 
                     <div class="right-buttons">
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
@@ -485,6 +485,10 @@
 <li><strong>メモリコピー不要</strong>: Workerに送る際のシリアライゼーションが不要</li>
 <li><strong>並列検索</strong>: 複数のWorkerが同時に同じトライ木を参照可能</li>
 <li><strong>キャッシュ効率</strong>: CPUキャッシュに乗りやすいバイナリ形式</li>
+</ul>
+<h2 id="関連ドキュメント"><a class="header" href="#関連ドキュメント">関連ドキュメント</a></h2>
+<ul>
+<li>あいまい検索の詳細（<code>CharNode</code> の <code>originalChar</code>/<code>char</code> 併存、<code>clone()</code> による分岐保持、<code>ambiguousCnt</code> とスコアの関係）は「<a href="fuzzy-search.html">あいまい検索</a>」を参照してください。</li>
 </ul>
 <h3 id="バッファベースの読み取り"><a class="header" href="#バッファベースの読み取り">バッファベースの読み取り</a></h3>
 <p>ファイルI/Oを行わず、メモリ上のBufferから直接ノードを読み取り：</p>

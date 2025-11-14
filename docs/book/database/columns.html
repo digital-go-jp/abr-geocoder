@@ -1,0 +1,393 @@
+<!DOCTYPE HTML>
+<html lang="ja" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Columns 役割 - ABR Geocoder v2.2 内部仕様</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="ABR Geocoder の内部設計・アーキテクチャと ABRG2 キャッシュ仕様">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">ABR Geocoder v2.2 内部仕様</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="columns-役割主要カラムの意味"><a class="header" href="#columns-役割主要カラムの意味">Columns 役割（主要カラムの意味）</a></h1>
+<p>この節では、テーブルごとのカラムの意味を簡潔にまとめます。型は実装上 <code>TEXT/INTEGER</code> が中心です（座標など数値文字列も含む）。主キー（*_key）は <code>TableKeyProvider</code> により LGコード等から安定的に導出されます。</p>
+<h2 id="共通メタ"><a class="header" href="#共通メタ">共通・メタ</a></h2>
+<ul>
+<li><code>lg_code</code> 全国地方公共団体コード（都道府県/市区町村を一意に表す6桁プレフィックス）</li>
+<li><code>efct_date</code> 効力発生日（データの有効化日）</li>
+<li><code>ablt_date</code> 廃止日（データの失効日）</li>
+<li><code>remarks</code> 備考</li>
+</ul>
+<p>座標系/位置参照</p>
+<ul>
+<li><code>rep_lat</code>, <code>rep_lon</code> 代表点（緯度/経度）</li>
+<li><code>rep_srid</code> 代表点の座標参照系（SRID）</li>
+</ul>
+<p>データセットメタ</p>
+<ul>
+<li><code>url_key</code> URLキャッシュ用のキー（ハッシュ）</li>
+<li><code>etag</code> HTTP ETag</li>
+<li><code>content_length</code> コンテンツサイズ</li>
+<li><code>last_modified</code> 最終更新日時</li>
+<li><code>url</code> ダウンロード元 URL</li>
+<li><code>crc32</code> レコードの内容に対する CRC32（更新検知/整合性用）</li>
+</ul>
+<h2 id="pref都道府県"><a class="header" href="#pref都道府県">PREF（都道府県）</a></h2>
+<p>キー</p>
+<ul>
+<li><code>pref_key</code> 都道府県の内部キー（導出）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>pref</code> 都道府県名（例: 東京都）</li>
+<li><code>pref_kana</code> 都道府県名（カナ）</li>
+<li><code>pref_roma</code> 都道府県名（ローマ字）</li>
+<li><code>lg_code</code> 全国地方公共団体コード（都道府県桁）</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 都道府県代表点</li>
+</ul>
+<h2 id="city郡市区"><a class="header" href="#city郡市区">CITY（郡・市・区）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>city_key</code> 市区の内部キー（導出）</li>
+<li><code>pref_key</code> 所属都道府県のキー（外部参照）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>lg_code</code> 市区町村の LGコード</li>
+<li><code>county</code> 郡名（例: 〇〇郡）</li>
+<li><code>county_kana</code>, <code>county_roma</code> 郡名（カナ/ローマ字）</li>
+<li><code>city</code> 市区町村名（例: 千代田区）</li>
+<li><code>city_kana</code>, <code>city_roma</code> 市区町村名（カナ/ローマ字）</li>
+<li><code>ward</code> 政令市の区名（該当時）</li>
+<li><code>ward_kana</code>, <code>ward_roma</code> 区名（カナ/ローマ字）</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 市区の代表点</li>
+</ul>
+<h2 id="town町字丁目小字"><a class="header" href="#town町字丁目小字">TOWN（町字・丁目・小字）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>town_key</code> 町字の内部キー（導出）</li>
+<li><code>city_key</code> 所属市区のキー（外部参照）</li>
+</ul>
+<p>属性（名称）</p>
+<ul>
+<li><code>machiaza_id</code> 町字ID（地区コード）</li>
+<li><code>machiaza_type</code> 町字区分コード</li>
+<li><code>oaza_cho</code> 大字・町名（例: 霞が関）</li>
+<li><code>oaza_cho_kana</code>, <code>oaza_cho_roma</code> 大字・町名（カナ/ローマ字）</li>
+<li><code>chome</code> 丁目名（例: 1丁目 → 正規化後は数値化されることがある）</li>
+<li><code>chome_kana</code> 丁目名（カナ）</li>
+<li><code>chome_num</code> 丁目の数値表現</li>
+<li><code>koaza</code> 小字名</li>
+<li><code>koaza_kana</code>, <code>koaza_roma</code> 小字名（カナ/ローマ字）</li>
+<li><code>machiaza_dist</code> 同一町字識別（同名の区別情報）</li>
+</ul>
+<p>属性（フラグ/識別/郵便）</p>
+<ul>
+<li><code>rsdt_addr_flg</code> 住居表示フラグ（1: 住居表示、0: 地番）</li>
+<li><code>rsdt_addr_mtd_code</code> 住居表示方式コード</li>
+<li><code>oaza_cho_aka_flg</code> 大字・町名の通称フラグ</li>
+<li><code>koaza_aka_code</code> 小字名の通称コード（例: 京都の通称通り名で特別扱い）</li>
+<li><code>oaza_cho_gsi_uncmn</code>, <code>koaza_gsi_uncmn</code> 電子国土基本図の外字</li>
+<li><code>status_flg</code> 状態フラグ（現/廃等）</li>
+<li><code>wake_num_flg</code> 起番（番号振り開始）フラグ</li>
+<li><code>src_code</code> 原典資料コード</li>
+<li><code>post_code</code> 郵便番号</li>
+</ul>
+<p>座標</p>
+<ul>
+<li><code>rep_lat</code>, <code>rep_lon</code> 町字代表点（欠落時は上位で補完する場合あり）</li>
+</ul>
+<h2 id="rsdt_blk住居表示-街区"><a class="header" href="#rsdt_blk住居表示-街区">RSDT_BLK（住居表示-街区）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>rsdtblk_key</code> 街区キー（導出）</li>
+<li><code>town_key</code> 所属町字のキー（外部参照）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>blk_id</code> 街区ID</li>
+<li><code>blk_num</code> 街区符号</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 街区代表点</li>
+</ul>
+<h2 id="rsdt_dsp住居表示-住居番号"><a class="header" href="#rsdt_dsp住居表示-住居番号">RSDT_DSP（住居表示-住居番号）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>rsdtdsp_key</code> 住居番号キー（導出）</li>
+<li><code>rsdtblk_key</code> 所属街区のキー（外部参照）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>rsdt_id</code> 住居ID（基礎番号）</li>
+<li><code>rsdt2_id</code> 住居2ID（枝番等）</li>
+<li><code>rsdt_num</code> 住居番号（数値化投影）</li>
+<li><code>rsdt_num2</code> 住居番号2（数値化投影）</li>
+<li><code>basic_rsdt_div</code> 基礎番号・住居番号区分</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 住居代表点</li>
+</ul>
+<h2 id="parcel地番"><a class="header" href="#parcel地番">PARCEL（地番）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>parcel_key</code> 地番キー（導出）</li>
+<li><code>town_key</code> 所属町字のキー（外部参照/NULL許容）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>prc_id</code> 地番ID</li>
+<li><code>prc_num1</code>, <code>prc_num2</code>, <code>prc_num3</code> 地番の構成要素</li>
+<li><code>prc_rec_flg</code> 地番レコード区分フラグ</li>
+<li><code>prc_area_code</code> 地番区域コード</li>
+<li><code>real_prop_num</code> 不動産番号</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 地番代表点（posデータから注入）</li>
+</ul>
+<h2 id="datasetダウンロード更新用メタ"><a class="header" href="#datasetダウンロード更新用メタ">DATASET（ダウンロード/更新用メタ）</a></h2>
+<ul>
+<li><code>url_key</code> URLハッシュ（主キー）</li>
+<li><code>url</code> 取得対象のURL</li>
+<li><code>etag</code> ETag（If-None-Match に使用）</li>
+<li><code>content_length</code> コンテンツサイズ</li>
+<li><code>last_modified</code> 最終更新日時（If-Modified-Since 等に対応）</li>
+<li><code>crc32</code> ローカル算出の CRC32（キャッシュ検証）</li>
+</ul>
+<hr />
+<p>補足:</p>
+<ul>
+<li>実テーブルでは <code>crc32</code> カラムは pref/city/town/rsdt_blk/rsdt_dsp/parcel に配置され、CSV取り込み時の変更検出・重複挿入抑止に用いられます。</li>
+<li>代表点は <code>*_pos</code> 系CSVにより後補されることがあり、ON CONFLICT UPDATE で差分のみ更新します。</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../database/schema.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../primer/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../database/schema.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../primer/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>ABR Geocoder 内部仕様</title>
+        <title>ABR Geocoder v2.2 内部仕様</title>
         <meta name="robots" content="noindex">
 
 
@@ -139,7 +139,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">ABR Geocoder 内部仕様</h1>
+                    <h1 class="menu-title">ABR Geocoder v2.2 内部仕様</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -176,20 +176,63 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="abr-geocoder-内部仕様"><a class="header" href="#abr-geocoder-内部仕様">ABR Geocoder 内部仕様</a></h1>
-<p>このドキュメントは、ABR Geocoder の内部アーキテクチャ、設計思想、並列処理、そして SQLite を起点に生成されるキャッシュ（ABRG2 バイナリ辞書）の仕様をまとめたものです。公開前提の日本語ドキュメントであり、Mermaid 図を用いて構造を可視化しています。</p>
-<p>主対象:</p>
+                        <h1 id="abr-geocoder-v22-内部仕様nodejs-中級者向け"><a class="header" href="#abr-geocoder-v22-内部仕様nodejs-中級者向け">ABR Geocoder v2.2 内部仕様（Node.js 中級者向け）</a></h1>
+<p>このドキュメントは、ABR Geocoder の内部アーキテクチャ、設計思想、並列処理、そして SQLite を起点に生成されるキャッシュ（ABRG2 バイナリ辞書）の仕様をまとめたものです。公開前提の日本語ドキュメントで、Mermaid 図で構造を可視化しています。</p>
+<h2 id="これは何ひとことで"><a class="header" href="#これは何ひとことで">これは何？（ひとことで）</a></h2>
 <ul>
-<li>コア開発者・レビュアー（内部仕様の把握）</li>
-<li>運用担当（キャッシュ再生成や互換性の判断）</li>
-<li>外部コントリビュータ（拡張/改修の際の参照）</li>
+<li>「住所 → 緯度経度」を高速に引くための、Node.js 製ジオコーダです。</li>
+<li>コアは「トライ木（Trie）で検索」「辞書（ABRG2）をバイナリで持ち、Bufferで直接読む」仕組みです。</li>
+<li>検索はストリーム変換のパイプライン、並列化は worker_threads、共有は SharedArrayBuffer で行います。</li>
 </ul>
-<p>このドキュメントの読み方:</p>
+<h2 id="nodejs-の用語でざっくり全体像"><a class="header" href="#nodejs-の用語でざっくり全体像">Node.js の用語でざっくり全体像</a></h2>
 <ul>
-<li>Architecture でシステム全体像とクリーンアーキテクチャ/DI 方針を把握</li>
-<li>Geocoding で探索戦略・並列化・ABRG2 仕様の詳細を把握</li>
-<li>Classes/Utilities で要素技術の API と責務を把握</li>
-<li>Operations/Troubleshooting で実運用の要点を確認</li>
+<li>Buffer/TypedArray: ABRG2 は Big Endian の整数＋UTF-8 文字列で直に詰めたバイナリ。Finder は Buffer をコピーせず read します。</li>
+<li>Stream: 住所正規化→段階的探索→スコアリングは Transform をつないだパイプラインです。</li>
+<li>worker_threads: 複数のワーカーに入力を投げ、SharedArrayBuffer で辞書を共有。結果は入力順に戻すための連結リストで整列します。</li>
+<li>DI: DB 接続やキャッシュパスなどはコンテナから注入（UseCase に if 分岐を持ち込まない）。</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  IN[CLI/REST] --&gt; PIPE[&quot;Stream Pipeline&lt;br/&gt;(正規化→探索→スコア)&quot;]
+  PIPE --&gt; G[AbrGeocoder]
+  subgraph Workers
+    G --&gt; W1
+    G --&gt; W2
+  end
+  DB[(SQLite)] --&gt; GEN[辞書生成 Writer]
+  GEN --&gt; CACHE[&quot;ABRG2(Trie+Data)&quot;]
+  CACHE -.SharedArrayBuffer.-&gt; Workers
+</pre>
+<h2 id="まず押さえておくと楽になるポイント"><a class="header" href="#まず押さえておくと楽になるポイント">まず押さえておくと楽になるポイント</a></h2>
+<ul>
+<li>Trie は「文字列を1文字ずつ辿る木」。共通接頭辞を共有でき、前方一致や部分一致に強い。</li>
+<li>ABRG2 は Trie ノード（子/兄弟/値リスト+1文字）＋ Data ノード（gzip(JSON)＋ハッシュ）の連結。Finder は Buffer から直接 decode。</li>
+<li>あいまい検索は、正規化後の比較用文字（<code>char</code>）と元の文字（<code>originalChar</code>）を CharNode が両持ち、分岐時は <code>.clone()</code>。</li>
+<li>並列化は「ワーカーに投げる」だけでなく、「入力順に結果を返す」ための整列（連結リスト）がカギ。</li>
+</ul>
+<h2 id="何が作れる拡張の方向性"><a class="header" href="#何が作れる拡張の方向性">何が作れる？（拡張の方向性）</a></h2>
+<ul>
+<li>住所の新しい分解ルールや置換（正規化）を Transform として追加</li>
+<li>新しい辞書（Trie）の追加：Writer で生成、Finder を継承</li>
+<li>API 拡張：フォーマッタ追加、CLI サーバ連携</li>
+</ul>
+<h2 id="読み進め方おすすめ順"><a class="header" href="#読み進め方おすすめ順">読み進め方（おすすめ順）</a></h2>
+<ol>
+<li>Architecture: 全体像と Clean Architecture/DI の理由</li>
+<li>Geocoding → Strategy/あいまい検索/Parallelism: 住所探索の流れと並列・整列の考え方</li>
+<li>Geocoding → ABRG2 Format/Finder Internals: 辞書の中身と検索の仕組み</li>
+<li>Classes/Utilities: 主要クラス・表記変換の詳細（kan2num など）</li>
+<li>Operations/Troubleshooting: 運用とハマりどころ</li>
+</ol>
+<p>時間がない方向けの最短ルート：</p>
+<ul>
+<li>Geocoding/Strategy → Geocoding/あいまい検索 → Geocoding/Parallelism → Geocoding/ABRG2 Format</li>
+</ul>
+<h2 id="便利な対応表知っていると読みやすい"><a class="header" href="#便利な対応表知っていると読みやすい">便利な対応表（知っていると読みやすい）</a></h2>
+<ul>
+<li>「バイナリ辞書」= JSON を安定化（json-stable-stringify）して gzip → FNV-1a 64 でキー付け → 連結ノードに保存</li>
+<li>「Trie の値リスト」= データノードへのオフセットの連結リスト</li>
+<li>「SharedArrayBuffer」= Finder 側で Buffer を共有、コピーが発生しない</li>
+<li>「整列」= Worker の結果を入力順に返すための連結リスト（WorkerPoolTaskInfo）</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="architecture"><a class="header" href="#architecture">Architecture</a></h1>
 <p>この章では、ABR Geocoderのアーキテクチャ設計について解説します。全体像からレイヤー構成、コンポーネント、クラス設計、依存性注入まで、システムの構造を理解するための情報を提供します。</p>
@@ -1870,6 +1913,8 @@ const container = createTestContainer({ debug: true });
 <li>Parallelism: ワーカープール/共有メモリ/順序維持</li>
 <li>ABRG2 Format: 辞書のバイナリ仕様</li>
 <li>Finder Internals: 読み出しと探索アルゴリズム</li>
+<li>Fuzzy Search: あいまい検索の仕組み（CharNode の複製/ambiguousCnt/復元）</li>
+<li>Kyoto Streets: 京都の通り名（DBの取り扱いとキー投入・代表点補完）</li>
 </ul>
 <h2 id="geocoding-coreジオコーディング中核-1"><a class="header" href="#geocoding-coreジオコーディング中核-1">Geocoding Core（ジオコーディング中核）</a></h2>
 <p>ジオコーディング処理を担当する主要クラス群です。</p>
@@ -2297,6 +2342,10 @@ const container = createTestContainer({ debug: true });
 <li><strong>メモリコピー不要</strong>: Workerに送る際のシリアライゼーションが不要</li>
 <li><strong>並列検索</strong>: 複数のWorkerが同時に同じトライ木を参照可能</li>
 <li><strong>キャッシュ効率</strong>: CPUキャッシュに乗りやすいバイナリ形式</li>
+</ul>
+<h2 id="関連ドキュメント"><a class="header" href="#関連ドキュメント">関連ドキュメント</a></h2>
+<ul>
+<li>あいまい検索の詳細（<code>CharNode</code> の <code>originalChar</code>/<code>char</code> 併存、<code>clone()</code> による分岐保持、<code>ambiguousCnt</code> とスコアの関係）は「<a href="geocoding/fuzzy-search.html">あいまい検索</a>」を参照してください。</li>
 </ul>
 <h3 id="バッファベースの読み取り"><a class="header" href="#バッファベースの読み取り">バッファベースの読み取り</a></h3>
 <p>ファイルI/Oを行わず、メモリ上のBufferから直接ノードを読み取り：</p>
@@ -2832,6 +2881,211 @@ try {
 <ul>
 <li><code>info</code>（辞書行の JSON）と <code>unmatched</code>（未消化の CharNode）、<code>depth</code>（一致深さ）、<code>ambiguousCnt</code>（曖昧一致回数）、<code>path</code>（一致パス）</li>
 </ul>
+<p>関連:</p>
+<ul>
+<li>あいまい検索の背景と具体例は「<a href="geocoding/fuzzy-search.html">あいまい検索</a>」を参照してください（正規化後の比較用文字と元文字の両立、分岐時の <code>.clone()</code>、<code>ambiguousCnt</code> の取り扱い）。</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="あいまい検索fuzzy-search"><a class="header" href="#あいまい検索fuzzy-search">あいまい検索（Fuzzy Search）</a></h1>
+<p>本プロジェクトでは、入力文字列を1文字ごとのノード列に分解し（<code>CharNode</code>）、各ノードが</p>
+<ul>
+<li><code>originalChar</code>: 入力の元文字（例: 全角の「１」、漢数字「一」など）</li>
+<li><code>char</code>: 正規化後の比較用文字（例: 半角の「1」）</li>
+</ul>
+<p>を同時に保持します。これにより、Trie への照合は正規化後の <code>char</code> で行いつつ、結果出力やデバッグでは <code>originalChar</code> を復元して表示できます。</p>
+<pre class="mermaid">flowchart LR
+  A[&quot;入力『一丁目-２』&quot;] --&gt; N[&quot;CharNode 連結&quot;]
+  N --&gt;|originalChar| O[&quot;['一','丁','目','-','２']&quot;]
+  N --&gt;|char| C[&quot;['1','丁','目','-','2']&quot;]
+  C --&gt; T[&quot;Trie 照合&quot;]
+</pre>
+<h2 id="文字列の分解と複製"><a class="header" href="#文字列の分解と複製">文字列の分解と複製</a></h2>
+<p><code>CharNode</code> は単方向リスト構造です。探索時に枝分かれ（兄弟・ワイルドカード・追加チャレンジ）が発生するため、現在の探索状態（未消化の文字列・一致パス）を安全に保持するために随所で <code>.clone()</code> を使って複製します。</p>
+<p>Trie 探索（<code>TrieAddressFinder2</code>）では次のような分岐が行われます。</p>
+<ul>
+<li>兄弟ノードへ進むとき: ターゲット（探索対象）やパスを <code>.clone()</code> して別分岐としてキューへ追加</li>
+<li><code>fuzzy</code>（ワイルドカード）で一致させるとき: 現在の文字を曖昧一致として分岐し、<code>ambiguousCnt</code> を加算</li>
+<li><code>extraChallenges</code>（前置語などの補助チャレンジ）: 追加した文字列＋残りのターゲットを連結して新たな探索としてキューへ追加</li>
+</ul>
+<p>擬似コード（概念）:</p>
+<pre><code class="language-text">if target.char != node.name:
+  if node.sibling:
+    enqueue({ target: target.clone(), offset: node.sibling, path: path.clone() })
+  if target.char == fuzzy:
+    // ワイルドカード: 一致「したこと」にする分岐
+    enqueue({... ambiguousCnt: ambiguousCnt + 1 })
+  if allowExtraChallenge:
+    for word in extraChallenges:
+      if word[0] == node.name:
+        enqueue({ target: (word + target).clone(), offset, allowExtraChallenge: false })
+  continue
+</code></pre>
+<h2 id="あいまい度ambiguouscntとスコア"><a class="header" href="#あいまい度ambiguouscntとスコア">あいまい度（ambiguousCnt）とスコア</a></h2>
+<p>曖昧一致（<code>fuzzy</code> や追加チャレンジ）を使った分岐は、<code>ambiguousCnt</code> を増やします。最終スコア計算（<code>GeocodeResultTransform</code>）では、</p>
+<ul>
+<li>マッチレベル（都道府県/市/町/街区/地番）</li>
+<li>文字一致率（入力長に対する一致割合）</li>
+<li>あいまい度（ambiguousCnt）</li>
+<li>表記差のペナルティ など</li>
+</ul>
+<p>を総合して最良候補を選定します。これにより、多少曖昧にしても上位候補には入るが、完全一致があればそちらが優先される挙動になります。</p>
+<h2 id="出力時の復元"><a class="header" href="#出力時の復元">出力時の復元</a></h2>
+<p>正規化のために内部的に置換した記号や <code>fuzzy</code> 文字は、結果整形段階で可能な限り元に戻します（<code>restoreCharNode()</code>）。</p>
+<ul>
+<li><code>DEFAULT_FUZZY_CHAR</code> を元の <code>fuzzy</code> 入力に戻す</li>
+<li>内部記号（例: <code>DASH</code>/<code>SPACE</code>）を人間可読の形へ再置換</li>
+<li>建物名や号など、先頭/末尾の省略可能記号の整形</li>
+</ul>
+<p>これにより、検索の都合で内部表現を変えつつも、出力は自然な文字列になります。</p>
+<h2 id="まとめ-1"><a class="header" href="#まとめ-1">まとめ</a></h2>
+<ul>
+<li><code>CharNode</code> が「元の文字」と「比較用の文字」を併存させることで、正規化と復元を両立</li>
+<li>分岐探索では <code>.clone()</code> により状態を安全に分岐</li>
+<li><code>fuzzy</code>/<code>extraChallenges</code> による曖昧一致は <code>ambiguousCnt</code> を通じてスコアに反映</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="京都の通り名dbの取り扱いと探索"><a class="header" href="#京都の通り名dbの取り扱いと探索">京都の通り名（DBの取り扱いと探索）</a></h1>
+<p>本ソフトウェア v2.2 では、京都市に特有の「通り名 + 大字/丁目/小字」の表記揺れに対応するため、DBからの行の取り扱いと Trie への投入ルールを見直しています。</p>
+<h2 id="ポイント実装に即した要約"><a class="header" href="#ポイント実装に即した要約">ポイント（実装に即した要約）</a></h2>
+<ul>
+<li>データ取得は <code>getKyotoStreetRows()</code>（<code>CommonDbGeocodeSqlite3</code>）
+<ul>
+<li><code>town</code> と <code>city</code> を結合し、京都市（LGコード先頭が<code>261</code>）のみ抽出</li>
+<li>代表点が欠落するレコードは、同一 <code>machiaza_id</code> の上位（4桁）を代表とみなして緯度経度を補完</li>
+<li><code>match_level</code> と <code>coordinate_level</code> をレコードごとに設定（町字 or 町字詳細）</li>
+</ul>
+</li>
+<li>Trie 生成は <code>KyotoStreetTrieFinder.createDictionaryFile()</code>
+<ul>
+<li><code>koaza_aka_code === 2</code> のときは「通り名 + 大字」をキー化（通称扱い）</li>
+<li>それ以外は、用途に応じて複数キーを投入
+<ul>
+<li>小字のみ: <code>(koaza)</code></li>
+<li>大字+小字: <code>(oaza_cho + koaza)</code></li>
+<li>大字+丁目: <code>(oaza_cho + chome)</code></li>
+<li>大字+丁目+小字: <code>(oaza_cho + chome + koaza)</code></li>
+</ul>
+</li>
+<li>町字のみ（<code>match_level=MACHIAZA</code>）の行は「通り名がヒットしない場合の後方互換」として、大字のみ <code>(oaza_cho)</code> を投入</li>
+</ul>
+</li>
+</ul>
+<h2 id="正規化kyoto-向けの追加"><a class="header" href="#正規化kyoto-向けの追加">正規化（Kyoto 向けの追加）</a></h2>
+<p><code>KyotoStreetTrieFinder.normalize()</code> では、以下の正規化を行います。</p>
+<ul>
+<li>漢数字→算用数字（<code>kan2num</code>）</li>
+<li>全角英数字→半角（<code>toHankakuAlphaNum</code>）</li>
+<li>片/半角カナ→ひらがな、および地名ゆれの統一（<code>toHiragana</code> + 部分特例）</li>
+<li>旧字→新字/JIS第2→第1（<code>jisKanji</code>）</li>
+<li>「の」→ダッシュ（<code>-</code>）変換（数字の連結として現れる場合）</li>
+<li>「丁目」→ダッシュ（<code>-</code>）</li>
+<li>先頭/末尾の余分な空白/ダッシュの除去</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  IN[入力: 京都の住所] --&gt; K2N[kan2num]
+  K2N --&gt; HN[toHankakuAlphaNum]
+  HN --&gt; HIRA[toHiragana]
+  HIRA --&gt; JIS[jisKanji]
+  SYM[&quot;記号整理&lt;br/&gt;『の』→『-』, 『丁目』→『-』&quot;]
+  JIS --&gt; SYM
+  SYM --&gt; KEY[Trieキー]
+
+</pre>
+<p>備考:</p>
+<ul>
+<li>コメントにある「1丁目上る/下る/東入/西入 の省略補完」は現状無効化（コメントアウト）です。必要に応じて将来の拡張で復帰可能な構造にしています。</li>
+</ul>
+<h2 id="代表点の扱い補完ロジック"><a class="header" href="#代表点の扱い補完ロジック">代表点の扱い（補完ロジック）</a></h2>
+<p><code>getKyotoStreetRows()</code> 内では、<code>rep_lat/rep_lon</code> が欠落している行に対して、同一 <code>city_key</code> の <code>machiaza_id</code> 上位4桁（末尾<code>000</code>）の代表点で補完します。</p>
+<ul>
+<li>例: <code>machiaza_id=XXXXYYY</code> で YYY≠<code>000</code> かつ代表点がない → <code>XXXX000</code> の代表点を採用し、<code>coordinate_level</code> を町字レベルに下げる</li>
+</ul>
+<p>これにより、通り名のみの行や細粒度の行でも、最低限の座標が返せるようにしています。</p>
+<h2 id="検索キーの多面化入力表記に強く"><a class="header" href="#検索キーの多面化入力表記に強く">検索キーの多面化（入力表記に強く）</a></h2>
+<p>京都では、利用者の入力が「通り名中心」だったり「大字中心」だったり揺れます。そこで1レコードから複数のキーを投入して、入力の多様性に耐えるようにしています。</p>
+<ul>
+<li>通称（<code>koaza_aka_code===2</code>）: <code>(通り名 + 大字)</code> で直接ヒットさせる</li>
+<li>詳細（<code>MACHIAZA_DETAIL</code>）: <code>(小字)</code>, <code>(大字+小字)</code>, <code>(大字+丁目)</code>, <code>(大字+丁目+小字)</code></li>
+<li>町字（<code>MACHIAZA</code>）: <code>(大字)</code> だけでもヒット</li>
+</ul>
+<pre class="mermaid">flowchart TB
+  subgraph 1行のレコード
+    O[oaza_cho]
+    C[chome]
+    K[koaza]
+    A[aka_code]
+    L[match_level]
+  end
+  L --&gt;|MACHIAZA_DETAIL| MD[(複数キー投入)]
+  L --&gt;|MACHIAZA| MZ[(大字のみ)]
+  A --&gt;|==2| T((通り名+大字))
+  MD --&gt; K1[oaza+koaza]
+  MD --&gt; K2[oaza+chome]
+  MD --&gt; K3[oaza+chome+koaza]
+  MD --&gt; K4[koaza]
+  MZ --&gt; K0[oaza]
+  T --&gt; Kt[通り+大字]
+</pre>
+<h2 id="ユーザーへの挙動検索時"><a class="header" href="#ユーザーへの挙動検索時">ユーザーへの挙動（検索時）</a></h2>
+<ul>
+<li>住所に「条」「丁目」「の」などが混在していても、正規化後に同一キーへ寄せます</li>
+<li>通り名だけでも候補が出ます（<code>aka_code===2</code> のケース）</li>
+<li>代表点がない詳細行は、上位の町字代表点で代替することがあります（結果の <code>coordinate_level</code> が下がる）</li>
+</ul>
+<h2 id="変更の背景v22仕様の要旨"><a class="header" href="#変更の背景v22仕様の要旨">変更の背景（v2.2仕様の要旨）</a></h2>
+<ul>
+<li>通り名を含むレコードの表現・検索を強化（通称の取り扱いと複数キー投入）</li>
+<li>代表点の欠落を上位N字（<code>machiaza_id</code>）の代表点で補完（地理的に大きく外れない範囲の近似）</li>
+<li>京都特有の記法（「の」「丁目」「条」など）を単純な連結に正規化し、Trieでの一致性を向上</li>
+</ul>
+<p>以上により、京都の住所入力に対しても、従来より頑健にヒットするよう改善されています。</p>
+<h2 id="具体例入力正規化キーヒット例"><a class="header" href="#具体例入力正規化キーヒット例">具体例（入力→正規化→キー→ヒット例）</a></h2>
+<p>例1: 通り名のみ（通称扱い）</p>
+<ul>
+<li>入力: 「寺町通下る」</li>
+<li>正規化: 「寺町通-下る」</li>
+<li>生成キー（候補）:
+<ul>
+<li>通り名のみは原則キー化しないが、<code>aka_code===2</code> の通称行があれば <code>(通り+大字)</code> でヒットを狙う</li>
+</ul>
+</li>
+<li>挙動: 大字が未入力のため候補は弱いが、通称の組合せで候補が出る場合がある</li>
+</ul>
+<p>例2: 大字+通り名（通称: aka_code===2）</p>
+<ul>
+<li>入力: 「室町通烏丸 通り周辺」（例）</li>
+<li>正規化: 「室町-烏丸」相当の連結（「の」は<code>-</code>へ）</li>
+<li>生成キー: <code>(通り名 + 大字)</code></li>
+<li>挙動: 通称行が存在する場合に最短でヒット</li>
+</ul>
+<p>例3: 大字+丁目+小字</p>
+<ul>
+<li>入力: 「四条通一丁目上る 小字〇〇」</li>
+<li>正規化:
+<ul>
+<li>「一」→「1」, 「丁目」→「-」, 「の」→「-」</li>
+<li>例: 「四条通-1-上る-〇〇」 → （内部的には <code>oaza_cho</code>/<code>chome</code>/<code>koaza</code> で連結）</li>
+</ul>
+</li>
+<li>生成キー:
+<ul>
+<li><code>(oaza_cho + chome)</code></li>
+<li><code>(oaza_cho + chome + koaza)</code></li>
+</ul>
+</li>
+<li>挙動: 丁目や小字の有無に応じて、より詳細な候補が優先される</li>
+</ul>
+<p>例4: 代表点欠落の補完</p>
+<ul>
+<li>入力: 「河原町通二条下る」</li>
+<li>正規化: 「河原町-2-下る」</li>
+<li>生成キー: <code>(oaza_cho + chome)</code> など</li>
+<li>挙動: 行に代表点が無い場合でも、同一 <code>machiaza_id</code> 上位4桁の代表点を採用し、町字レベルとして座標を返す</li>
+</ul>
+<p>ヒント:</p>
+<ul>
+<li>「の」「條/条」「丁目」などの語は連結子として<code>-</code>に寄せられます</li>
+<li>全角/半角・漢数字/算用数字・仮名の揺れは正規化段で解消されます</li>
+<li>通称（<code>aka_code===2</code>）が存在すれば「通り+大字」のキーが投入され、通り名中心の入力でもヒットしやすくなります</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="download--cacheダウンロードとキャッシュ生成"><a class="header" href="#download--cacheダウンロードとキャッシュ生成">Download &amp; Cache（ダウンロードとキャッシュ生成）</a></h1>
 <p>この章では、オープンデータのダウンロードから、SQLiteへの格納、ABRG2キャッシュファイル生成までの全体フローを説明します。</p>
 <p>ABR Geocoderは、政府が公開する住所データ（CSV/zip形式）をダウンロードし、検索に最適化されたバイナリ辞書（ABRG2形式）に変換します。この処理を高速化するため、Worker Threadsによる並列ダウンロードとStream処理を組み合わせています。</p>
@@ -2839,13 +3093,13 @@ try {
 <p>ABR Geocoderのダウンロード&amp;キャッシュ生成システムは、大量のオープンデータを効率的に取得・変換するために設計されています。このページでは、全体の流れと並列処理の仕組みを詳しく説明します。</p>
 <h2 id="全体フロー"><a class="header" href="#全体フロー">全体フロー</a></h2>
 <pre class="mermaid">flowchart TD
-  START[&quot;開始&quot;] --&gt; DCAT[&quot;1. DCATメタデータ取得&quot;]
-  DCAT --&gt; EXTRACT[&quot;2. ダウンロードURL抽出&quot;]
-  EXTRACT --&gt; QUEUE[&quot;3. ダウンロードキュー生成&quot;]
-  QUEUE --&gt; PARALLEL[&quot;4. 並列ダウンロード&lt;br/&gt;(Worker Threads)&quot;]
-  PARALLEL --&gt; STREAM[&quot;5. Streamパイプライン&lt;br/&gt;Download → Unzip → Parse&quot;]
-  STREAM --&gt; DB[&quot;6. SQLite投入&quot;]
-  DB --&gt; CACHE[&quot;7. ABRG2キャッシュ生成&quot;]
+  START[&quot;開始&quot;] --&gt; DCAT[&quot;1\. DCATメタデータ取得&quot;]
+  DCAT --&gt; EXTRACT[&quot;2\. ダウンロードURL抽出&quot;]
+  EXTRACT --&gt; QUEUE[&quot;3\. ダウンロードキュー生成&quot;]
+  QUEUE --&gt; PARALLEL[&quot;4\. 並列ダウンロード&lt;br/&gt;(Worker Threads)&quot;]
+  PARALLEL --&gt; STREAM[&quot;5\. Streamパイプライン&lt;br/&gt;Download → Unzip → Parse&quot;]
+  STREAM --&gt; DB[&quot;6\. SQLite投入&quot;]
+  DB --&gt; CACHE[&quot;7\. ABRG2キャッシュ生成&quot;]
   CACHE --&gt; END[&quot;完了&quot;]
 </pre>
 <h2 id="処理の詳細"><a class="header" href="#処理の詳細">処理の詳細</a></h2>
@@ -3457,6 +3711,713 @@ SharedArrayBuffer:
 <li><strong>FormatterProvider</strong>: 出力フォーマッター（CSV, JSON, GeoJSON等）を提供</li>
 <li><strong>HttpRequestAdapter</strong>: HTTP通信の抽象化レイヤー</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cli-server"><a class="header" href="#cli-server">CLI Server</a></h1>
+<p>CLIサーバーは、HTTP経由で「CLI相当のコマンド」を受け付けられる薄いラッパーです。サーバー・プロセスを外部から制御したい運用（例: コンテナ内の優雅な停止）に向きます。</p>
+<h2 id="目的と位置づけ"><a class="header" href="#目的と位置づけ">目的と位置づけ</a></h2>
+<ul>
+<li>REST API（<code>/geocode</code>）は検索用、CLIサーバー（<code>/command</code>）は制御用</li>
+<li>yargs を使って受け取った文字列をコマンドとして解釈し、必要な依存（<code>AbrgApiServer</code>, <code>CliServer</code> など）を注入して実行</li>
+<li>CORSはワイドオープン（任意オリジン許可）</li>
+</ul>
+<pre class="mermaid">sequenceDiagram
+  participant Client
+  participant CLI as CliServer(/command)
+  participant API as AbrgApiServer
+  Client-&gt;&gt;CLI: POST /command (body: &quot;shutdown&quot;)
+  CLI-&gt;&gt;CLI: yargs で解析/依存注入
+  CLI-&gt;&gt;API: apiServer.shutdown()
+  CLI--&gt;&gt;Client: shutdown!
+</pre>
+<h2 id="エンドポイント"><a class="header" href="#エンドポイント">エンドポイント</a></h2>
+<ul>
+<li><code>POST /command</code>
+<ul>
+<li>Body: プレーンテキスト（例: <code>shutdown</code>）</li>
+<li>成功時: 200 OK とメッセージ</li>
+<li>失敗時: 500 エラーメッセージ</li>
+</ul>
+</li>
+</ul>
+<p>CORS/ヘッダーは <code>CliServer</code> 内で設定（<code>Access-Control-Allow-Origin: *</code> など）。</p>
+<h2 id="実装の要点"><a class="header" href="#実装の要点">実装の要点</a></h2>
+<ul>
+<li>入口: <code>src/interface/cli-server/index.ts</code>
+<ul>
+<li><code>CliServer</code> は <code>hyper-express</code> の <code>Server</code> を継承</li>
+<li>ルーター <code>/command</code> で <code>OnCommandRequest.run()</code> を呼び出す</li>
+</ul>
+</li>
+<li>ハンドラー: <code>src/interface/cli-server/on-command-request.ts</code>
+<ul>
+<li><code>request.text()</code> をそのまま yargs に渡し、パース（空白区切り）</li>
+<li><code>middleware</code> で以下を注入
+<ul>
+<li><code>apiServer</code>（<code>AbrgApiServer</code> インスタンス）</li>
+<li><code>cliServer</code>（<code>CliServer</code> 自身）</li>
+<li><code>request</code>, <code>response</code>（<code>hyper-express</code>）</li>
+</ul>
+</li>
+<li>定義済みコマンドを登録（現状: <code>shutdown</code>）</li>
+</ul>
+</li>
+<li>コマンド: <code>src/interface/cli-server/commands/shutdown.ts</code>
+<ul>
+<li><code>shutdown</code> 実行で、<code>response.send('shutdown!')</code> の後</li>
+<li><code>apiServer.shutdown()</code> → <code>cliServer.shutdown()</code> の順に停止</li>
+</ul>
+</li>
+</ul>
+<h2 id="使い方例"><a class="header" href="#使い方例">使い方（例）</a></h2>
+<ul>
+<li>ローカルから停止
+<ul>
+<li><code>curl -X POST http://localhost:PORT/command --data "shutdown"</code></li>
+</ul>
+</li>
+<li>任意の独自コマンドを足す場合
+<ol>
+<li><code>src/interface/cli-server/commands</code> に <code>foo.ts</code> を追加</li>
+<li><code>OnCommandRequest</code> 内の <code>.command(FooCommand)</code> に登録</li>
+<li><code>handler(argv)</code> に処理を実装（<code>extras</code> に注入される <code>apiServer/cliServer/response</code> などが使えます）</li>
+</ol>
+</li>
+</ul>
+<h2 id="セキュリティ運用上の注意"><a class="header" href="#セキュリティ運用上の注意">セキュリティ/運用上の注意</a></h2>
+<ul>
+<li>コマンドの実行は強力です。公開環境では必ずネットワーク境界/認証のレイヤで制限してください</li>
+<li>CORS はオープン設定のため、イントラネット用途やリバースプロキシでの制限を推奨</li>
+<li><code>shutdown</code> は即座にサーバーを停止させるため、ヘルスチェック/グレースフルシャットダウン戦略と合わせて利用してください</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="database"><a class="header" href="#database">Database</a></h1>
+<p>この章では、コードから読み取れる SQLite スキーマをまとめ、ER 図と主要テーブルの関係、主キーの生成方法（TableKeyProvider）を説明します。</p>
+<ul>
+<li>Schema / ER 図: 主要テーブル（pref/city/town/rsdt_blk/rsdt_dsp/parcel/dataset）とリレーション</li>
+<li>キー生成: <code>pref_key/city_key/town_key/rsdtblk_key/rsdtdsp_key/parcel_key</code> の導出</li>
+<li>代表的なクエリ: ジオコーディングで参照する結合とフィルタ</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="schema--er-図コードから復元"><a class="header" href="#schema--er-図コードから復元">Schema / ER 図（コードから復元）</a></h1>
+<h2 id="er-図mermaid"><a class="header" href="#er-図mermaid">ER 図（Mermaid）</a></h2>
+<pre class="mermaid">erDiagram
+  PREF {
+    INTEGER pref_key PK
+    TEXT lg_code
+    TEXT pref
+    TEXT rep_lat
+    TEXT rep_lon
+  }
+
+  CITY {
+    INTEGER city_key PK
+    INTEGER pref_key FK
+    TEXT lg_code UK
+    TEXT county
+    TEXT city
+    TEXT ward
+    TEXT rep_lat
+    TEXT rep_lon
+  }
+
+  TOWN {
+    INTEGER town_key PK
+    INTEGER city_key FK
+    TEXT machiaza_id
+    TEXT oaza_cho
+    TEXT chome
+    TEXT koaza
+    TEXT rsdt_addr_flg
+    TEXT koaza_aka_code
+    TEXT rep_lat
+    TEXT rep_lon
+  }
+
+  RSDT_BLK {
+    INTEGER rsdtblk_key PK
+    INTEGER town_key FK
+    TEXT blk_id
+    TEXT blk_num
+    TEXT rep_lat
+    TEXT rep_lon
+  }
+
+  RSDT_DSP {
+    INTEGER rsdtdsp_key PK
+    INTEGER rsdtblk_key FK
+    TEXT rsdt_id
+    TEXT rsdt2_id
+    TEXT rsdt_num
+    TEXT rsdt_num2
+    TEXT rep_lat
+    TEXT rep_lon
+  }
+
+  PARCEL {
+    INTEGER parcel_key PK
+    INTEGER town_key FK &quot;nullable&quot;
+    TEXT prc_id
+    TEXT prc_num1
+    TEXT prc_num2
+    TEXT prc_num3
+    TEXT rep_lat
+    TEXT rep_lon
+  }
+
+  DATASET {
+    TEXT url_key PK
+    TEXT url
+    TEXT etag
+    INTEGER content_length
+    TEXT last_modified
+    TEXT crc32
+  }
+
+  PREF ||--o{ CITY : contains
+  CITY ||--o{ TOWN : contains
+  TOWN ||--o{ RSDT_BLK : has
+  RSDT_BLK ||--o{ RSDT_DSP : has
+  TOWN ||--o{ PARCEL : has
+
+</pre>
+<p>備考:</p>
+<ul>
+<li>実際の CREATE TABLE は <code>src/drivers/database/sqlite3/download/*.ts</code> に定義があります（pref/city/town/rsdt_blk/rsdt_dsp/parcel）。</li>
+<li><code>DATASET</code> は URL キャッシュメタを保持する論理テーブルを示します（実装は <code>dataset-db.ts</code> に準拠）。</li>
+</ul>
+<h2 id="主キーの生成tablekeyprovider"><a class="header" href="#主キーの生成tablekeyprovider">主キーの生成（TableKeyProvider）</a></h2>
+<p>主キーは LGコードやIDを元に安定して導出されます。これにより UPSERT と参照がシンプルになります。</p>
+<ul>
+<li>pref_key = f(lg_code)</li>
+<li>city_key = f(lg_code)</li>
+<li>town_key = f(lg_code, machiaza_id)</li>
+<li>rsdtblk_key = f(lg_code, machiaza_id, blk_id)</li>
+<li>rsdtdsp_key = f(lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id)</li>
+<li>parcel_key = f(lg_code, machiaza_id, prc_id)</li>
+</ul>
+<h2 id="代表的な参照クエリ抜粋"><a class="header" href="#代表的な参照クエリ抜粋">代表的な参照クエリ（抜粋）</a></h2>
+<ul>
+<li>京都通り名（pref→city→town 結合）
+<ul>
+<li>FROM pref p JOIN city c ON p.pref_key=c.pref_key JOIN town t ON c.city_key=t.city_key</li>
+<li>WHERE substr(c.lg_code,1,3)='261' AND t.oaza_cho IS NOT NULL</li>
+</ul>
+</li>
+<li>町丁目一覧（pref→city→town）
+<ul>
+<li>GROUP BY (pref_key,city_key,town_key,chome)</li>
+</ul>
+</li>
+<li>街区符号（rsdt_blk）
+<ul>
+<li>WHERE town_key=@town_key AND blk_num=@blk_num</li>
+</ul>
+</li>
+<li>住居番号（rsdt_dsp）
+<ul>
+<li>WHERE rsdtblk_key=@rsdtblk_key</li>
+</ul>
+</li>
+<li>地番（parcel）
+<ul>
+<li>WHERE town_key=@town_key AND prc_id LIKE @prc_id</li>
+</ul>
+</li>
+</ul>
+<h2 id="インデックス抜粋"><a class="header" href="#インデックス抜粋">インデックス（抜粋）</a></h2>
+<ul>
+<li>CITY.lg_code UNIQUE</li>
+<li>RSDT_BLK: idx_rsdt_blk_town_key, idx_rsdt_blk_town_key_and_blk_num</li>
+<li>RSDT_DSP: idx_rsdt_dsp_rsdtblk_key</li>
+<li>PARCEL: idx_parcel_town_key(town_key, prc_id)</li>
+</ul>
+<h2 id="テーブル定義create-table-抜粋"><a class="header" href="#テーブル定義create-table-抜粋">テーブル定義（CREATE TABLE 抜粋）</a></h2>
+<p>各テーブルの定義は download 用ドライバに実装されています（better-sqlite3）。以下は要点の抜粋です。</p>
+<ul>
+<li>
+<p>PREF（src/drivers/database/sqlite3/download/common-db-download-sqlite3.ts）</p>
+<ul>
+<li><code>pref_key INTEGER PRIMARY KEY</code></li>
+<li><code>lg_code TEXT</code>, <code>pref TEXT</code>, <code>rep_lat TEXT</code>, <code>rep_lon TEXT</code></li>
+</ul>
+</li>
+<li>
+<p>CITY（同上）</p>
+<ul>
+<li><code>city_key INTEGER PRIMARY KEY</code>, <code>pref_key INTEGER</code></li>
+<li><code>lg_code TEXT UNIQUE</code>, <code>county TEXT</code>, <code>city TEXT</code>, <code>ward TEXT</code></li>
+<li><code>rep_lat TEXT</code>, <code>rep_lon TEXT</code></li>
+</ul>
+</li>
+<li>
+<p>TOWN（同上）</p>
+<ul>
+<li><code>town_key INTEGER PRIMARY KEY</code>, <code>city_key INTEGER</code></li>
+<li><code>machiaza_id TEXT</code>, <code>oaza_cho TEXT</code>, <code>chome TEXT</code>, <code>koaza TEXT</code></li>
+<li><code>rsdt_addr_flg TEXT</code>, <code>koaza_aka_code TEXT</code>, <code>crc32 TEXT</code></li>
+<li><code>rep_lat TEXT</code>, <code>rep_lon TEXT</code></li>
+</ul>
+</li>
+<li>
+<p>RSDT_BLK（src/drivers/database/sqlite3/download/rsdt-blk-db-download-sqlite3.ts）</p>
+<ul>
+<li><code>rsdtblk_key INTEGER PRIMARY KEY</code>, <code>town_key INTEGER</code></li>
+<li><code>blk_id TEXT</code>, <code>blk_num TEXT</code>, <code>crc32 TEXT</code></li>
+<li><code>rep_lat TEXT</code>, <code>rep_lon TEXT</code></li>
+</ul>
+</li>
+<li>
+<p>RSDT_DSP（src/drivers/database/sqlite3/download/rsdt-dsp-db-download-sqlite3.ts）</p>
+<ul>
+<li><code>rsdtdsp_key INTEGER PRIMARY KEY</code>, <code>rsdtblk_key INTEGER</code></li>
+<li><code>rsdt_id TEXT</code>, <code>rsdt2_id TEXT</code>, <code>rsdt_num TEXT</code>, <code>rsdt_num2 TEXT</code>, <code>crc32 TEXT</code></li>
+<li><code>rep_lat TEXT</code>, <code>rep_lon TEXT</code></li>
+</ul>
+</li>
+<li>
+<p>PARCEL（src/drivers/database/sqlite3/download/parcel-db-download-sqlite3.ts）</p>
+<ul>
+<li><code>parcel_key INTEGER PRIMARY KEY</code>, <code>town_key INTEGER DEFAULT null</code></li>
+<li><code>prc_id TEXT</code>, <code>prc_num1 TEXT</code>, <code>prc_num2 TEXT</code>, <code>prc_num3 TEXT</code>, <code>crc32 TEXT</code></li>
+<li><code>rep_lat TEXT</code>, <code>rep_lon TEXT</code></li>
+<li>INDEX: <code>idx_parcel_town_key (town_key, prc_id)</code></li>
+</ul>
+</li>
+</ul>
+<p>注意:</p>
+<ul>
+<li>外部キー制約（FOREIGN KEY）は明示的には定義していません（キー整合はアプリ側で担保）。</li>
+<li>緯度経度は TEXT 型で格納されています（必要に応じて取り出し時に数値化）。</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="columns-役割主要カラムの意味"><a class="header" href="#columns-役割主要カラムの意味">Columns 役割（主要カラムの意味）</a></h1>
+<p>この節では、テーブルごとのカラムの意味を簡潔にまとめます。型は実装上 <code>TEXT/INTEGER</code> が中心です（座標など数値文字列も含む）。主キー（*_key）は <code>TableKeyProvider</code> により LGコード等から安定的に導出されます。</p>
+<h2 id="共通メタ"><a class="header" href="#共通メタ">共通・メタ</a></h2>
+<ul>
+<li><code>lg_code</code> 全国地方公共団体コード（都道府県/市区町村を一意に表す6桁プレフィックス）</li>
+<li><code>efct_date</code> 効力発生日（データの有効化日）</li>
+<li><code>ablt_date</code> 廃止日（データの失効日）</li>
+<li><code>remarks</code> 備考</li>
+</ul>
+<p>座標系/位置参照</p>
+<ul>
+<li><code>rep_lat</code>, <code>rep_lon</code> 代表点（緯度/経度）</li>
+<li><code>rep_srid</code> 代表点の座標参照系（SRID）</li>
+</ul>
+<p>データセットメタ</p>
+<ul>
+<li><code>url_key</code> URLキャッシュ用のキー（ハッシュ）</li>
+<li><code>etag</code> HTTP ETag</li>
+<li><code>content_length</code> コンテンツサイズ</li>
+<li><code>last_modified</code> 最終更新日時</li>
+<li><code>url</code> ダウンロード元 URL</li>
+<li><code>crc32</code> レコードの内容に対する CRC32（更新検知/整合性用）</li>
+</ul>
+<h2 id="pref都道府県"><a class="header" href="#pref都道府県">PREF（都道府県）</a></h2>
+<p>キー</p>
+<ul>
+<li><code>pref_key</code> 都道府県の内部キー（導出）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>pref</code> 都道府県名（例: 東京都）</li>
+<li><code>pref_kana</code> 都道府県名（カナ）</li>
+<li><code>pref_roma</code> 都道府県名（ローマ字）</li>
+<li><code>lg_code</code> 全国地方公共団体コード（都道府県桁）</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 都道府県代表点</li>
+</ul>
+<h2 id="city郡市区"><a class="header" href="#city郡市区">CITY（郡・市・区）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>city_key</code> 市区の内部キー（導出）</li>
+<li><code>pref_key</code> 所属都道府県のキー（外部参照）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>lg_code</code> 市区町村の LGコード</li>
+<li><code>county</code> 郡名（例: 〇〇郡）</li>
+<li><code>county_kana</code>, <code>county_roma</code> 郡名（カナ/ローマ字）</li>
+<li><code>city</code> 市区町村名（例: 千代田区）</li>
+<li><code>city_kana</code>, <code>city_roma</code> 市区町村名（カナ/ローマ字）</li>
+<li><code>ward</code> 政令市の区名（該当時）</li>
+<li><code>ward_kana</code>, <code>ward_roma</code> 区名（カナ/ローマ字）</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 市区の代表点</li>
+</ul>
+<h2 id="town町字丁目小字"><a class="header" href="#town町字丁目小字">TOWN（町字・丁目・小字）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>town_key</code> 町字の内部キー（導出）</li>
+<li><code>city_key</code> 所属市区のキー（外部参照）</li>
+</ul>
+<p>属性（名称）</p>
+<ul>
+<li><code>machiaza_id</code> 町字ID（地区コード）</li>
+<li><code>machiaza_type</code> 町字区分コード</li>
+<li><code>oaza_cho</code> 大字・町名（例: 霞が関）</li>
+<li><code>oaza_cho_kana</code>, <code>oaza_cho_roma</code> 大字・町名（カナ/ローマ字）</li>
+<li><code>chome</code> 丁目名（例: 1丁目 → 正規化後は数値化されることがある）</li>
+<li><code>chome_kana</code> 丁目名（カナ）</li>
+<li><code>chome_num</code> 丁目の数値表現</li>
+<li><code>koaza</code> 小字名</li>
+<li><code>koaza_kana</code>, <code>koaza_roma</code> 小字名（カナ/ローマ字）</li>
+<li><code>machiaza_dist</code> 同一町字識別（同名の区別情報）</li>
+</ul>
+<p>属性（フラグ/識別/郵便）</p>
+<ul>
+<li><code>rsdt_addr_flg</code> 住居表示フラグ（1: 住居表示、0: 地番）</li>
+<li><code>rsdt_addr_mtd_code</code> 住居表示方式コード</li>
+<li><code>oaza_cho_aka_flg</code> 大字・町名の通称フラグ</li>
+<li><code>koaza_aka_code</code> 小字名の通称コード（例: 京都の通称通り名で特別扱い）</li>
+<li><code>oaza_cho_gsi_uncmn</code>, <code>koaza_gsi_uncmn</code> 電子国土基本図の外字</li>
+<li><code>status_flg</code> 状態フラグ（現/廃等）</li>
+<li><code>wake_num_flg</code> 起番（番号振り開始）フラグ</li>
+<li><code>src_code</code> 原典資料コード</li>
+<li><code>post_code</code> 郵便番号</li>
+</ul>
+<p>座標</p>
+<ul>
+<li><code>rep_lat</code>, <code>rep_lon</code> 町字代表点（欠落時は上位で補完する場合あり）</li>
+</ul>
+<h2 id="rsdt_blk住居表示-街区"><a class="header" href="#rsdt_blk住居表示-街区">RSDT_BLK（住居表示-街区）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>rsdtblk_key</code> 街区キー（導出）</li>
+<li><code>town_key</code> 所属町字のキー（外部参照）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>blk_id</code> 街区ID</li>
+<li><code>blk_num</code> 街区符号</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 街区代表点</li>
+</ul>
+<h2 id="rsdt_dsp住居表示-住居番号"><a class="header" href="#rsdt_dsp住居表示-住居番号">RSDT_DSP（住居表示-住居番号）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>rsdtdsp_key</code> 住居番号キー（導出）</li>
+<li><code>rsdtblk_key</code> 所属街区のキー（外部参照）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>rsdt_id</code> 住居ID（基礎番号）</li>
+<li><code>rsdt2_id</code> 住居2ID（枝番等）</li>
+<li><code>rsdt_num</code> 住居番号（数値化投影）</li>
+<li><code>rsdt_num2</code> 住居番号2（数値化投影）</li>
+<li><code>basic_rsdt_div</code> 基礎番号・住居番号区分</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 住居代表点</li>
+</ul>
+<h2 id="parcel地番"><a class="header" href="#parcel地番">PARCEL（地番）</a></h2>
+<p>キー/外部参照</p>
+<ul>
+<li><code>parcel_key</code> 地番キー（導出）</li>
+<li><code>town_key</code> 所属町字のキー（外部参照/NULL許容）</li>
+</ul>
+<p>属性</p>
+<ul>
+<li><code>prc_id</code> 地番ID</li>
+<li><code>prc_num1</code>, <code>prc_num2</code>, <code>prc_num3</code> 地番の構成要素</li>
+<li><code>prc_rec_flg</code> 地番レコード区分フラグ</li>
+<li><code>prc_area_code</code> 地番区域コード</li>
+<li><code>real_prop_num</code> 不動産番号</li>
+<li><code>rep_lat</code>, <code>rep_lon</code> 地番代表点（posデータから注入）</li>
+</ul>
+<h2 id="datasetダウンロード更新用メタ"><a class="header" href="#datasetダウンロード更新用メタ">DATASET（ダウンロード/更新用メタ）</a></h2>
+<ul>
+<li><code>url_key</code> URLハッシュ（主キー）</li>
+<li><code>url</code> 取得対象のURL</li>
+<li><code>etag</code> ETag（If-None-Match に使用）</li>
+<li><code>content_length</code> コンテンツサイズ</li>
+<li><code>last_modified</code> 最終更新日時（If-Modified-Since 等に対応）</li>
+<li><code>crc32</code> ローカル算出の CRC32（キャッシュ検証）</li>
+</ul>
+<hr />
+<p>補足:</p>
+<ul>
+<li>実テーブルでは <code>crc32</code> カラムは pref/city/town/rsdt_blk/rsdt_dsp/parcel に配置され、CSV取り込み時の変更検出・重複挿入抑止に用いられます。</li>
+<li>代表点は <code>*_pos</code> 系CSVにより後補されることがあり、ON CONFLICT UPDATE で差分のみ更新します。</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="入門ガイドnodejs-中級者向け"><a class="header" href="#入門ガイドnodejs-中級者向け">入門ガイド（Node.js 中級者向け）</a></h1>
+<p>対象読者:</p>
+<ul>
+<li>Node.js/TypeScript は書けるが、アルゴリズムやデータ構造に自信がない方</li>
+</ul>
+<p>この章では、本プロジェクトで重要な「トライ木（Trie）」「バイナリファイル」「ハッシュと重複排除」「ストリーム/Buffer」「Worker による並列処理」を、実装の背景から丁寧に解説します。実コードへ近いサンプルや図を多用し、概念→実装の順で学べる構成にしています。</p>
+<p>学び方の順序（推奨）:</p>
+<ol>
+<li>Trie と探索の考え方</li>
+<li>バイナリファイルの基礎</li>
+<li>ハッシュと重複排除</li>
+<li>ストリームと Buffer</li>
+<li>並列処理と Worker</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="trie-と探索の考え方"><a class="header" href="#trie-と探索の考え方">Trie と探索の考え方</a></h1>
+<h2 id="なぜ-trie-なのか"><a class="header" href="#なぜ-trie-なのか">なぜ Trie なのか</a></h2>
+<p>住所のように「文字列の先頭から共通部分が長い」データは、キーを1文字ずつ辿る Trie（トライ木）で効率よく表現できます。共通接頭辞を共有できるため、単純な連想配列の羅列よりメモリ効率に優れ、前方一致検索も自然に行えます。</p>
+<pre class="mermaid">flowchart TB
+    root([&quot;''&quot;])
+    a1[&quot;a&quot;]
+    b1[&quot;b&quot;]
+    c1[&quot;c&quot;]
+    b2[&quot;b&quot;]
+
+    root --&gt; a1
+    a1 --&gt; b1
+    a1 --&gt; c1
+    root --&gt; b2
+
+    %% キー: &quot;ab&quot;, &quot;ac&quot;, &quot;b&quot; の例
+
+</pre>
+<p>このプロジェクトでは、各ノードが「兄弟(sibling)」「子(child)」「値への参照リスト(hash_list)」を持ち、ノード名は「その位置の1文字」です。</p>
+<pre class="mermaid">flowchart LR
+  N[&quot;TrieNode(name)&quot;] --&gt;|child| C[child]
+  N --&gt;|sibling| S[sibling]
+  N --&gt;|hash_list| H[ハッシュ連結の先頭]
+</pre>
+<h2 id="どうやって検索するか"><a class="header" href="#どうやって検索するか">どうやって検索するか</a></h2>
+<ol>
+<li>入力文字列を正規化（全/半角・仮名・漢数字など）</li>
+<li>ルートから target の先頭1文字とノード名を比較
+<ul>
+<li>等しい → 子へ</li>
+<li>異なる → 兄弟へ</li>
+<li><code>fuzzy</code>（ワイルドカード）が指定されていて target が <code>?</code> の場合は、兄弟へ分岐する探索も追加</li>
+</ul>
+</li>
+<li>途中のノードに値（=ハッシュ連結リスト）があれば部分一致候補として記録</li>
+<li>末尾 or 子がないところで候補を確定し、最後にスコアリングで最良の候補を選ぶ</li>
+</ol>
+<p>擬似コード（概略）:</p>
+<pre><code class="language-text">queue = [{ node: root, i: -1, path: "" }]
+while queue not empty:
+  task = queue.pop()
+  node = readTrieNode(task.node)
+  if mismatch(target[i+1], node.name):
+    if node.sibling: queue.push({node: node.sibling, i: task.i, path: task.path})
+    if fuzzy:        queue.push(… ワイルドカード分岐 …)
+    continue
+
+  if node.hash_list: keep as partial match
+  if end-of-target or !node.child: finalize candidate
+  else queue.push({node: node.child, i: task.i+1, path: task.path + node.name})
+</code></pre>
+<h2 id="計算量の直感"><a class="header" href="#計算量の直感">計算量の直感</a></h2>
+<ul>
+<li>挿入/探索は概ね O(|key|)。兄弟の横移動が多い場合はその分だけ増える</li>
+<li>値の重複はデータノードの再利用（重複排除）で節約</li>
+</ul>
+<h2 id="よくある疑問"><a class="header" href="#よくある疑問">よくある疑問</a></h2>
+<ul>
+<li>連想配列（オブジェクト/Map）ではダメ？
+<ul>
+<li>前方一致系や「途中までの一致」を多用するので、Trie のほうが自然。共通接頭辞の共有でメモリ効率も良い</li>
+</ul>
+</li>
+<li>マルチバイト文字は？
+<ul>
+<li>ノード名は UTF-8 で可変長ですが、ノード先頭の <code>size</code> で全体長を把握し安全に復元します</li>
+</ul>
+</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="バイナリファイルの基礎"><a class="header" href="#バイナリファイルの基礎">バイナリファイルの基礎</a></h1>
+<p>このプロジェクトの辞書（ABRG2）は、Node.js の <code>Buffer</code> を使って Big Endian で読み書きします。ファイル内のアドレス（オフセット）を数値で指し示し、ノード同士をつなぎます。</p>
+<h2 id="ヘッダーの読み方"><a class="header" href="#ヘッダーの読み方">ヘッダーの読み方</a></h2>
+<ul>
+<li>先頭4バイト: マジック <code>"abrg"</code></li>
+<li>次の2バイト: ヘッダーサイズ <code>u16</code></li>
+<li>次の2バイト: バージョン <code>u8,u8</code></li>
+<li>次の4バイト: Trie のエントリポイント <code>u32</code></li>
+<li>次の4バイト: Data のエントリポイント <code>u32</code></li>
+</ul>
+<pre class="mermaid">flowchart LR
+  A[magic 4B] --&gt; B[header_size 2B]
+  B --&gt; C[version 2B]
+  C --&gt; D[trie_root 4B]
+  D --&gt; E[data_head 4B]
+</pre>
+<p>Node.js での読書き（抜粋）:</p>
+<pre><code class="language-ts">const buf = Buffer.alloc(4);
+buf.writeUInt32BE(0x01020304, 0); // Big Endian で u32 を書く
+const value = buf.readUInt32BE(0);
+</code></pre>
+<h2 id="ノードの構成"><a class="header" href="#ノードの構成">ノードの構成</a></h2>
+<p>Trie ノード:</p>
+<ul>
+<li><code>size(u8)</code> → ノード全体の長さ</li>
+<li><code>sibling(u32)</code> → 兄弟ノードの先頭オフセット（0なら未設定）</li>
+<li><code>child(u32)</code> → 子ノードの先頭オフセット</li>
+<li><code>hash_list(u32)</code> → 値リストの先頭</li>
+<li><code>name(utf8)</code> → 1文字ぶん（UTF-8, 可変長）</li>
+</ul>
+<p>可変長の <code>name</code> があるため、先頭の <code>size</code> を読んでから残りを解釈します。</p>
+<p>データノード（値）:</p>
+<ul>
+<li><code>next(u32)</code> → 次のデータノード（同一ハッシュ連結）</li>
+<li><code>size(u16)</code> → このノード全体のサイズ</li>
+<li><code>hash(u64)</code> → 圧縮後データの FNV-1a 64bit ハッシュ</li>
+<li><code>data(bytes)</code> → <code>gzip(JSON)</code> の実データ</li>
+</ul>
+<h2 id="実装時の注意"><a class="header" href="#実装時の注意">実装時の注意</a></h2>
+<ul>
+<li>すべて Big Endian 系の API（<code>readUInt32BE</code>, <code>writeUInt32BE</code> 等）を使う</li>
+<li>オフセット演算を間違えると復元不能になるので、<code>size</code> を基準に安全に移動する</li>
+<li>UTF-8 は可変長。必ず <code>size</code> で区切る</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ハッシュと重複排除"><a class="header" href="#ハッシュと重複排除">ハッシュと重複排除</a></h1>
+<p>同じ値（JSON行）が何度も出現すると、ファイルサイズが膨らみます。そこで、値を <code>gzip</code> したバイト列に対して 64bit の FNV-1a ハッシュを計算し、同一ハッシュの値は連結リストで束ねます。完全一致なら追記せず再利用します。</p>
+<h2 id="なぜ圧縮後にハッシュ"><a class="header" href="#なぜ圧縮後にハッシュ">なぜ圧縮後にハッシュ？</a></h2>
+<ul>
+<li>JSON はキー順などでバイト列が揺れやすい。<code>json-stable-stringify</code> で安定化し、さらに <code>gzip</code> で圧縮した結果にハッシュを取ると、重複検出の精度が上がります</li>
+</ul>
+<h2 id="fnv-1a-64抜粋"><a class="header" href="#fnv-1a-64抜粋">FNV-1a 64（抜粋）</a></h2>
+<pre><code class="language-ts">function fnv1a64(data: Buffer): bigint {
+  let hash = 0xcbf29ce484222325n;
+  const prime = 0x00000100000001b3n;
+  for (const byte of data) {
+    hash ^= BigInt(byte);
+    hash = (hash * prime) &amp; 0xffffffffffffffffn;
+  }
+  return hash;
+}
+</code></pre>
+<h2 id="連結と検証"><a class="header" href="#連結と検証">連結と検証</a></h2>
+<ol>
+<li>ハッシュが既知なら、そのハッシュの先頭データノードから <code>next</code> を辿る</li>
+<li>各ノードの <code>data</code> を取り出し、<code>Buffer.compare()</code> で完全一致を確認</li>
+<li>一致が見つかれば再利用。なければ連結末尾に新規ノードを追加</li>
+</ol>
+<pre class="mermaid">flowchart LR
+  H[hash -&gt; offset] --&gt; D1[DataNode]
+  D1 -- next --&gt; D2[DataNode]
+  D2 -- next --&gt; D3[...]
+</pre>
+<p>読み出し側は、期待ハッシュを渡して <code>readDataNode(offset, expectHash)</code> を呼ぶことで、衝突時も同一ハッシュのみ辿る最適化が可能です。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ストリームと-buffer"><a class="header" href="#ストリームと-buffer">ストリームと Buffer</a></h1>
+<p>このページは「Node.js に詳しくないが本ソフトを使いたい」方向けに、できるだけ平易にストリームと Buffer を説明します。</p>
+<h2 id="そもそもストリームとは"><a class="header" href="#そもそもストリームとは">そもそもストリームとは</a></h2>
+<ul>
+<li>「データを少しずつ（チャンク単位で）順に流す仕組み」です。</li>
+<li>一度に全データを読み込まず、到着した分だけ処理するので、メモリ効率が良く、大量データでもスムーズに処理できます。</li>
+<li>役割ごとに以下の4種類があります。
+<ul>
+<li>Readable: 読み出せる側（データの出どころ）</li>
+<li>Writable: 書き込める側（データの行き先）</li>
+<li>Transform: 入力を受けて変換して出力（中間フィルタ）</li>
+<li>Duplex: 読み書き両方（双方向）</li>
+</ul>
+</li>
+</ul>
+<pre class="mermaid">flowchart LR
+  R[Readable] --&gt; T1[Transform A]
+  T1 --&gt; T2[Transform B]
+  T2 --&gt; W[Writable]
+</pre>
+<p>現実での例え: ホース（Readable）から水が出て、フィルタ（Transform）を何段か通って、貯水タンク（Writable）にたまるイメージです。</p>
+<h3 id="なぜ使うのか利点"><a class="header" href="#なぜ使うのか利点">なぜ使うのか（利点）</a></h3>
+<ul>
+<li>メモリ節約: 1行/1件ずつ処理できる</li>
+<li>速度: I/O と処理を重ねられる（流しながら処理）</li>
+<li>構成が明快: 機能ごとに Transform を足していける</li>
+</ul>
+<h2 id="まず動く最小コード"><a class="header" href="#まず動く最小コード">まず動く最小コード</a></h2>
+<pre><code class="language-ts">import { Readable, Transform, Writable } from 'node:stream'
+
+// 1) データ源（配列から行を読み出す）
+const src = Readable.from(['tokyo', 'osaka', 'kyoto'], { objectMode: true })
+
+// 2) 変換（大文字化）
+class Upper extends Transform {
+  constructor(){ super({ objectMode: true }) }
+  _transform(chunk: string, _enc, cb){ this.push(chunk.toUpperCase()); cb() }
+}
+
+// 3) 行き先（コンソール出力）
+const dst = new Writable({
+  objectMode: true,
+  write(chunk, _enc, cb){ console.log(chunk); cb() }
+})
+
+src.pipe(new Upper()).pipe(dst)
+</code></pre>
+<p>ポイント:</p>
+<ul>
+<li><code>objectMode: true</code> は「文字列やオブジェクトを1件ずつ扱う」設定（バイト列ではなくレコード志向）</li>
+<li><code>pipe()</code> でつなぐと、<code>Readable → Transform → Writable</code> の順に流れます</li>
+<li>エラーは <code>.on('error')</code> で拾えます</li>
+</ul>
+<h2 id="バックプレッシャ詰まり対策"><a class="header" href="#バックプレッシャ詰まり対策">バックプレッシャ（詰まり対策）</a></h2>
+<p>ストリームは「早すぎると待つ」仕組みを持ちます。書き込み先が遅いと、上流に「待って」と合図が返ります（内部でハイウォーターマークを超えると <code>write()</code> が false を返し、<code>drain</code> で再開）。</p>
+<p>実際の対処は通常 <code>pipe()</code> がよしなにやるので、手で制御する場面は多くありません。本ソフトでは、ワーカープール側で同時タスク数を絞って、全体の流量を安定させています。</p>
+<h2 id="このソフトでの使い所"><a class="header" href="#このソフトでの使い所">このソフトでの使い所</a></h2>
+<ul>
+<li>住所処理は Transform を積み重ねたパイプラインです（正規化 → 丁目・通り名など段階的探索 → スコアリング）。</li>
+<li>大量の入力でも 1件ずつ流し、最終結果だけを書き出します。</li>
+</ul>
+<pre class="mermaid">flowchart TB
+  In[入力] --&gt; N[&quot;NormalizeBanchome&lt;br&gt;入力文字列の正規化&quot;]
+  N --&gt; B[&quot;NormalizeBanchome&lt;br&gt;番・町目の正規化&quot;]
+  B --&gt; P[&quot;Pref&lt;br&gt;都道府県の探索&quot;]
+  P --&gt; C[&quot;County/City&lt;br&gt;郡・市町村の探索&quot;]
+  C --&gt; W[&quot;Ward&lt;br&gt;区の探索&quot;]
+  W --&gt; K[&quot;Kyoto&lt;br&gt;京都通り名の探索&quot;]
+  K --&gt; O[&quot;OazaChome&lt;br&gt;大字・丁目の探索&quot;]
+  O --&gt; R[&quot;RsdtBlk/Dsp/Parcel&lt;br&gt;住居表示・地番の探索&quot;]
+  R --&gt; S[&quot;Score&lt;br&gt;スコアリング&quot;]
+  S --&gt; Out[出力]
+</pre>
+<h2 id="buffer-とはバイナリの箱"><a class="header" href="#buffer-とはバイナリの箱">Buffer とは（バイナリの箱）</a></h2>
+<ul>
+<li><code>Buffer</code> は「バイナリ（生のバイト配列）」を表すオブジェクトです。</li>
+<li>文字列はエンコード（<code>utf8</code>, <code>ascii</code> など）を経由してバイト列になります。</li>
+<li>数値をバイト列にする/バイト列から数値を読むときは、エンディアン（ビッグ/リトル）を意識します。</li>
+</ul>
+<p>例（ビッグエンディアンで整数を書き/読む）:</p>
+<pre><code class="language-ts">const buf = Buffer.alloc(4)
+buf.writeUInt32BE(0x01020304, 0) // 4バイトの数値を書き込む
+const n = buf.readUInt32BE(0)     // =&gt; 16909060 (0x01020304)
+</code></pre>
+<p>このソフトでは、辞書ファイル（ABRG2）を Buffer で読み、<code>readUInt8/16/32BE</code>, <code>readBigUInt64BE</code> などで数値や文字列を復元しています。ワーカーには <code>SharedArrayBuffer</code> として共有するため、巨大な辞書でもコピーせずに検索できます。</p>
+<h2 id="典型的な落とし穴とコツ"><a class="header" href="#典型的な落とし穴とコツ">典型的な落とし穴とコツ</a></h2>
+<ul>
+<li>objectMode の混在: バイト列のストリームとオブジェクトのストリームは別物。混ぜる場合は変換点を明確に</li>
+<li>Transform のコールバック忘れ: <code>cb()</code> を呼ばないと流れが止まります</li>
+<li>エラー処理: どこかで <code>.on('error')</code> を付けるか、<code>pipeline()</code>（promises）でまとめて扱う</li>
+<li>文字化け: 文字列⇔Buffer でエンコード指定をミスらない（<code>utf8</code> が基本）</li>
+</ul>
+<h2 id="本ソフトの実装にひも付け"><a class="header" href="#本ソフトの実装にひも付け">本ソフトの実装にひも付け</a></h2>
+<ul>
+<li>Geocode パイプラインは <code>GeocodeTransform</code> が構築（複数の Transform を <code>pipe</code> で接続）</li>
+<li>バイナリ辞書は <code>TrieAddressFinder2</code> が Buffer を直接読み込み（I/Oレスで高速）</li>
+<li>共有メモリ（<code>toSharedMemory</code>/<code>fromSharedMemory</code>）でワーカースレッドに配布し、コピーを避けます</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="並列処理とworker"><a class="header" href="#並列処理とworker">並列処理とWorker</a></h1>
+<h2 id="worker-threads-の基本"><a class="header" href="#worker-threads-の基本">Worker Threads の基本</a></h2>
+<ul>
+<li>Node.js の <code>worker_threads</code> で別スレッドを起動し、メッセージでやり取りします</li>
+<li>大きな辞書バッファは <code>SharedArrayBuffer</code> で共有し、コピーを避けます</li>
+</ul>
+<pre class="mermaid">sequenceDiagram
+  participant Main
+  participant Pool
+  participant W1
+  participant W2
+  Main-&gt;&gt;Pool: run(task)
+  Pool-&gt;&gt;W1: task#1 (shared mem)
+  Pool-&gt;&gt;W2: task#2 (shared mem)
+  W2--&gt;&gt;Pool: result#2
+  W1--&gt;&gt;Pool: result#1
+  Pool--&gt;&gt;Main: completion (unordered)
+  Main--&gt;&gt;Main: flush in input order
+</pre>
+<h2 id="順序の保持"><a class="header" href="#順序の保持">順序の保持</a></h2>
+<ul>
+<li>入力順で結果を返すため、<code>WorkerPoolTaskInfo</code> を連結リストとして管理</li>
+<li>完了通知は順不同でも、<code>flushResults()</code> で先頭から順に emit</li>
+</ul>
+<h2 id="簡易セマフォ書き込み時のみ"><a class="header" href="#簡易セマフォ書き込み時のみ">簡易セマフォ（書き込み時のみ）</a></h2>
+<ul>
+<li>キャッシュ生成（書き込み）では <code>SemaphoreManager</code> が共有配列に <code>Atomics</code> で排他制御</li>
+<li>検索（読み出し）はロック不要（参照専用）</li>
+</ul>
+<h2 id="実用上の注意"><a class="header" href="#実用上の注意">実用上の注意</a></h2>
+<ul>
+<li>共有メモリはプロセスのメモリを消費します。サイズに上限を設け、必要な辞書のみ共有する設計が重要です</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="classes"><a class="header" href="#classes">Classes</a></h1>
 <p>主要クラス群の責務・主要メソッド・連携関係をまとめます。</p>
 <ul>
@@ -3611,10 +4572,166 @@ SharedArrayBuffer:
 <li><code>logger/debug-logger.ts</code> デバッグ出力（<code>debug</code> モードのみ）</li>
 <li><code>transformations/*</code> 行/コメントフィルタやカウンタなどストリーム補助</li>
 </ul>
-<p>表記変換（ジオコーディング前処理）:</p>
+<h2 id="表記変換ジオコーディング前処理"><a class="header" href="#表記変換ジオコーディング前処理">表記変換（ジオコーディング前処理）</a></h2>
+<p>住所の表記ゆれを吸収するため、以下の順序で正規化します（実装の流れの一例）。</p>
+<ol>
+<li>半角英数字への統一: <code>toHankakuAlphaNum</code></li>
+<li>仮名の統一（片/半角→ひらがな等）: <code>toHiragana</code></li>
+<li>旧字体/第2水準→新字体/第1水準: <code>jisKanji</code></li>
+<li>漢数字→算用数字: <code>kan2num</code></li>
+</ol>
+<p>それぞれの関数は <code>string</code> と <code>CharNode</code>（ノード連結）の両方に対応します。<code>CharNode</code> 版では <code>originalChar</code> を保持したまま <code>char</code> を置換し、必要に応じて <code>ignore</code> を使って後段処理に影響を与えないように調整します。</p>
+<h3 id="tohankakualphanum全角英数字半角"><a class="header" href="#tohankakualphanum全角英数字半角">toHankakuAlphaNum（全角英数字→半角）</a></h3>
 <ul>
-<li>漢数字→算用数字、半角化、仮名変換、旧字→新字等（<code>toHankakuAlphaNum</code>, <code>toHiragana</code>, <code>jisKanji</code>, <code>kan2num</code>）</li>
+<li>目的: 全角の英字/数字を半角へ置換（記号は対象外）</li>
+<li>実装: マップ置換（例: <code>Ａ→A</code>, <code>１→1</code>）。<code>CharNode</code> 版は各ノードの <code>char</code> をその場で置換</li>
+<li>計算量: O(n)（n=文字数）</li>
+<li>例:
+<ul>
+<li><code>ＡＢＣ１２３</code> → <code>ABC123</code></li>
 </ul>
+</li>
+</ul>
+<h3 id="tohiragana仮名をひらがな系へ統一--特殊表記"><a class="header" href="#tohiragana仮名をひらがな系へ統一--特殊表記">toHiragana（仮名をひらがな系へ統一 + 特殊表記）</a></h3>
+<ul>
+<li>目的: 片仮名/半角片仮名などをひらがなへ統一。地名の表記慣習に合わせた特別扱いあり</li>
+<li>特徴:
+<ul>
+<li><code>String.normalize('NFKC')</code>で濁音付き半角カナを正規化した上で、詳細マップで置換</li>
+<li>「龍ケ崎/霞ヶ関」のような「ケ/ヶ/ガ」ゆれを地名整合のために「け」へ寄せる等、地名固有の表記揺れに対処</li>
+<li><code>CharNode</code> 版は <code>ignore === true</code> のノードは変換しない（後段の整合維持が目的）</li>
+</ul>
+</li>
+<li>計算量: O(n)</li>
+<li>例:
+<ul>
+<li><code>ｶﾞｯｺｳ</code> → <code>がっこう</code></li>
+<li><code>霞ヶ関</code>/<code>霞が関</code>/<code>霞ケ関</code> → <code>霞け関</code>（内部比較用の統一）</li>
+</ul>
+</li>
+</ul>
+<h3 id="jiskanji旧字体第2水準新字体第1水準"><a class="header" href="#jiskanji旧字体第2水準新字体第1水準">jisKanji（旧字体/第2水準→新字体/第1水準）</a></h3>
+<ul>
+<li>目的: 旧字体やJIS第2水準の漢字を、検索キーと一致しやすい新字体/第1水準に統一</li>
+<li>実装の要点:
+<ul>
+<li>古→新の置換テーブルを <code>TrieAddressFinder</code> に投入し、最長一致で変換（1文字以上の置換に対応）</li>
+<li><code>CharNode</code> 版では一致長に合わせて新文字列へ展開。展開しきれない分は <code>ignore: true</code> を立てて桁合わせ</li>
+</ul>
+</li>
+<li>計算量: O(n·α)（αは平均マッチ長）</li>
+<li>例:
+<ul>
+<li><code>川﨑</code> → <code>川崎</code></li>
+<li><code>澤</code> → <code>沢</code>、<code>舊</code> → <code>旧</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="kan2num漢数字算用数字monotonic-stack"><a class="header" href="#kan2num漢数字算用数字monotonic-stack">kan2num（漢数字→算用数字、Monotonic Stack）</a></h3>
+<ul>
+<li>目的: 住所に含まれる漢数字（例: <code>十二</code>, <code>三十八</code>）を算用数字へ変換し、<code>丁目/番/号/線/条</code> などの単位表記に柔軟に対応</li>
+<li>変換対象の区切り: <code>軒/通/丁/町/字/番/部/所/社/線/号/条/里</code>、ダッシュ・スペース、「の/之/ノ/丿」などに遭遇したら直前の数値塊を確定</li>
+<li>コアアイデア（Monotonic Stack + アキュムレータ）:
+<ul>
+<li>走査しつつ「数値候補」をスタック/バッファに溜め、非数値の区切りでまとめて数値にする</li>
+<li>単位（<code>十</code>=10）に遭遇したときは「掛け算→加算」の順で更新（<code>二十</code>→2×10、次に<code>三</code>が来れば<code>20+3</code>）</li>
+<li>例: <code>二十五</code> → (2×10)+5 = 25、<code>一〇一</code> → (((1×10)+0)×10)+1 = 101</li>
+<li><code>CharNode</code> 版は元のノード列（buffer）に対して、確定した数値の各桁を左から順に上書き/追加して整形（<code>originalChar</code>は保持）</li>
+</ul>
+</li>
+<li>擬似コード（概念）:</li>
+</ul>
+<pre><code class="language-text">current = 0; lastWasTen = false; buffer=[]; result=[]
+for ch of input + SENTINEL:
+  if isKanjiDigit(ch):
+    v = value(ch)
+    if v == 10:              // 十
+      current = (current==0) ? 10 : current*10
+      lastWasTen = true
+    else:
+      current = lastWasTen ? current + v : current*10 + v
+      lastWasTen = false
+    buffer.push(ch)
+  else: // 区切り到来
+    if current&gt;0:
+      emit digits(current) into result, aligned to buffer length
+    flush buffer/current/flags
+    result.push(ch)
+</code></pre>
+<ul>
+<li>計算量: O(n)</li>
+<li>例:
+<ul>
+<li><code>東十二丁目</code> → <code>東12丁目</code></li>
+<li><code>西六線北二十六号</code> → <code>西6線北26号</code></li>
+<li><code>九十九里町</code> → <code>99里町</code></li>
+</ul>
+</li>
+</ul>
+<p>注意:</p>
+<ul>
+<li><code>kan2num</code> は「区切り候補」に依存して数値塊を確定するため、文脈による意図せぬ変換を避けやすい設計です</li>
+<li>ただし特殊な地名で漢数字が意味を持つケースは変換しないこともありえます（テーブル/区切りの調整で改善）</li>
+</ul>
+<h2 id="簡易図正規化フローと-kan2num-の概念図"><a class="header" href="#簡易図正規化フローと-kan2num-の概念図">簡易図（正規化フローと kan2num の概念図）</a></h2>
+<h3 id="全体の正規化パイプライン"><a class="header" href="#全体の正規化パイプライン">全体の正規化パイプライン</a></h3>
+<pre class="mermaid">flowchart LR
+  IN[入力文字列] --&gt; HN[toHankakuAlphaNum\n全角英数字→半角]
+  HN --&gt; HI[toHiragana\n仮名統一/地名ゆれ]
+  HI --&gt; JK[jisKanji\n旧字体→新字体/第2→第1]
+  JK --&gt; KN[kan2num\n漢数字→算用数字]
+  KN --&gt; OUT[比較用の文字列/CharNode]
+</pre>
+<h3 id="kan2num-の流れ概念"><a class="header" href="#kan2num-の流れ概念">kan2num の流れ（概念）</a></h3>
+<pre class="mermaid">stateDiagram-v2
+  [*] --&gt; Reading
+  Reading --&gt; Reading: 漢数字なら current を更新&lt;br/&gt;(×10, +n)
+  Reading --&gt; Flushing: 区切り(丁目/番/号/線/条/里/ダッシュ/スペース/の…)
+  Flushing: 桁配分して出力&lt;br/&gt;(buffer長に合わせて上書き/追加)
+  Flushing --&gt; Reading: current=0 にリセット
+  Reading --&gt; [*]: 末尾(SENTINEL)で確定
+</pre>
+<h3 id="ステップ例二十六号"><a class="header" href="#ステップ例二十六号">ステップ例:「二十六号」</a></h3>
+<pre class="mermaid">sequenceDiagram
+  participant I as 入力
+  participant S as Stack/Buffer
+  participant A as Acc(current)
+  participant O as 出力
+  I-&gt;&gt;A: 二(2) → current=2
+  I-&gt;&gt;A: 十(10) → current=2×10=20
+  I-&gt;&gt;A: 六(6) → current=20+6=26
+  I-&gt;&gt;S: 区切り「号」到来
+  S-&gt;&gt;O: 2,6 を桁順で配置/追加
+  O-&gt;&gt;O: 「26」+「号」
+</pre>
+<h3 id="charnode-版の置換イメージ"><a class="header" href="#charnode-版の置換イメージ">CharNode 版の置換イメージ</a></h3>
+<pre class="mermaid">flowchart LR
+
+  %% 入力ノード列
+  subgraph 入力ノード列
+    K1[&quot;二&quot;]
+    K2[&quot;十&quot;]
+    K3[&quot;六&quot;]
+    K4[&quot;号&quot;]
+    K1 --&gt; K2 --&gt; K3 --&gt; K4
+  end
+
+  %% 変換
+  subgraph 変換
+    D1[&quot;2（上書き）&quot;]
+    D2[&quot;6（上書き）&quot;]
+    D3[&quot;（不要なら空／削除）&quot;]
+    K1 -.-&gt; D1
+    K2 -.-&gt; D2
+    K3 -.-&gt; D3
+  end
+
+  %% 出力ノード列
+  subgraph 出力ノード列
+    D1 --&gt; D2 --&gt; K4
+  end
+
+</pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="operations運用"><a class="header" href="#operations運用">Operations（運用）</a></h1>
 <h2 id="キャッシュ再生成"><a class="header" href="#キャッシュ再生成">キャッシュ再生成</a></h2>
 <ul>
