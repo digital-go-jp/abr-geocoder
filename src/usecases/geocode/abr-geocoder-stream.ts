@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 import { DEFAULT_FUZZY_CHAR } from '@config/constant-values';
+import { MatchLevel } from '@domain/types/geocode/match-level';
 import { SearchTarget } from '@domain/types/search-target';
 import { Duplex } from 'node:stream';
 import { AbrGeocoder } from './abr-geocoder';
@@ -40,7 +41,7 @@ export class AbrGeocoderStream extends Duplex {
   private halfWatermark: number;
 
   constructor(params: {
-    geocoder: AbrGeocoder,
+    geocoder: AbrGeocoder;
     fuzzy: string;
     searchTarget?: SearchTarget;
     highWatermark?: number;
@@ -91,9 +92,9 @@ export class AbrGeocoderStream extends Duplex {
 
   // 前のstreamからデータが渡されてくる
   async _write(
-    input: string, 
+    input: string,
     _: BufferEncoding,
-    callback: (error?: Error | null | undefined) => void,
+    callback: (error?: Error | null | undefined) => void
   ) {
     this.waiter();
 
@@ -102,29 +103,43 @@ export class AbrGeocoderStream extends Duplex {
     // 次のタスクをもらうために、callbackを呼び出す
     callback();
 
-    this.geocoder.geocode({
-      address: input.toString(),
-      searchTarget: this.searchTarget,
-      fuzzy: this.fuzzy,
-      tag: {
-        lineId,
-      },
-    })
+    this.geocoder
+      .geocode({
+        address: input.toString(),
+        searchTarget: this.searchTarget,
+        fuzzy: this.fuzzy,
+        tag: {
+          lineId,
+        },
+      })
       // 処理が成功したら、別スレッドで処理した結果をQueryに変換する
       .then((result: Query) => {
         this.push(result);
         this.nextIdx++;
         this.closer();
         // this.emit(this.kShiftEvent, result);
+      })
+      // エラーが発生した
+      .catch((_error: Error | string) => {
+        const query = Query.create({
+          data: {
+            address: input.toString(),
+            searchTarget: this.searchTarget,
+            fuzzy: this.fuzzy,
+            tag: {
+              lineId,
+            },
+          },
+          taskId: -1,
+        });
+        this.push(
+          query.copy({
+            match_level: MatchLevel.ERROR,
+          })
+        );
+        this.nextIdx++;
+        this.closer();
       });
-    // エラーが発生した
-    // .catch((error: Error | string) => {
-    //   const query = Query.create(input);
-    //   this.emit(this.kShiftEvent, query.copy({
-    //     match_level: MatchLevel.ERROR,
-    //   }));
-    // })
-
   }
 
   // 前のストリームからの書き込みが終了した
@@ -136,5 +151,3 @@ export class AbrGeocoderStream extends Duplex {
     callback();
   }
 }
-
-
