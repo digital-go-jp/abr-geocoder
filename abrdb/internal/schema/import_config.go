@@ -1,0 +1,225 @@
+// Package schema provides import configuration parsing from YAML files.
+package schema
+
+import (
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+
+	"abrdb/internal/model"
+)
+
+type ImportConfig struct {
+	Version  int                        `yaml:"version"`
+	Category map[string]*CategoryConfig `yaml:"category"`
+}
+
+type CategoryConfig struct {
+	TableName   string        `yaml:"table_name"`
+	S3TextPath  string        `yaml:"s3_text_path"`
+	S3PosPath   string        `yaml:"s3_pos_path"`
+	TextColumns []ColumnDef   `yaml:"text_columns"`
+	PosColumns  []ColumnDef   `yaml:"pos_columns"`
+	JoinColumns []string      `yaml:"join_columns"`
+	Filters     *FilterConfig `yaml:"filters,omitempty"`
+}
+
+type ColumnDef struct {
+	Name             string `yaml:"name"`
+	Type             string `yaml:"type"`
+	Nullable         bool   `yaml:"nullable"`          // default: false (NOT NULL)
+	ConvertFullwidth bool   `yaml:"convert_fullwidth"` // default: false, apply full-width to half-width conversion
+}
+
+// FilterConfig maps column names to allowed values for IN clause filtering.
+type FilterConfig map[string][]string
+
+func ParseImportConfig(data []byte) (*ImportConfig, error) {
+	var cfg ImportConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("validate config: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+var validCategory = func() map[string]struct{} {
+	m := make(map[string]struct{}, len(model.AllCategory))
+	for _, cat := range model.AllCategory {
+		m[string(cat)] = struct{}{}
+	}
+	return m
+}()
+
+func (c *ImportConfig) Validate() error {
+	if c.Version != 1 {
+		return fmt.Errorf("unsupported config version: %d (expected 1)", c.Version)
+	}
+	if len(c.Category) == 0 {
+		return fmt.Errorf("no category defined")
+	}
+
+	for name, cat := range c.Category {
+		if _, ok := validCategory[name]; !ok {
+			return fmt.Errorf("unknown category: %s", name)
+		}
+		if len(cat.TextColumns) == 0 {
+			return fmt.Errorf("category %s: text_columns is required", name)
+		}
+		if len(cat.PosColumns) == 0 {
+			return fmt.Errorf("category %s: pos_columns is required", name)
+		}
+		if len(cat.JoinColumns) == 0 {
+			return fmt.Errorf("category %s: join_columns is required", name)
+		}
+	}
+	return nil
+}
+
+func (c *ImportConfig) ToCategoryInfoMap() map[string]*CategoryInfo {
+	result := make(map[string]*CategoryInfo, len(c.Category))
+	for name, cat := range c.Category {
+		result[name] = cat.toCategoryInfo()
+	}
+	return result
+}
+
+func (cat *CategoryConfig) toCategoryInfo() *CategoryInfo {
+	textCols, textColTypes, fullwidthCols := extractColumnInfo(cat.TextColumns, true)
+	posCols, posColTypes, _ := extractColumnInfo(cat.PosColumns, false)
+
+	var filters FilterConfig
+	if cat.Filters != nil {
+		filters = *cat.Filters
+	}
+
+	return &CategoryInfo{
+		TableName:        cat.TableName,
+		S3TextPath:       cat.S3TextPath,
+		S3PosPath:        cat.S3PosPath,
+		TextColumns:      textCols,
+		PosColumns:       posCols,
+		JoinColumns:      cat.JoinColumns,
+		Filters:          filters,
+		TextColumnTypes:  textColTypes,
+		PosColumnTypes:   posColTypes,
+		FullwidthColumns: fullwidthCols,
+	}
+}
+
+func extractColumnInfo(columns []ColumnDef, trackFullwidth bool) ([]string, map[string]string, map[string]bool) {
+	names := make([]string, len(columns))
+	types := make(map[string]string, len(columns))
+	var fullwidth map[string]bool
+	if trackFullwidth {
+		fullwidth = make(map[string]bool)
+	}
+
+	for i, col := range columns {
+		names[i] = col.Name
+		types[col.Name] = pgTypeToDuckDB(col.Type)
+		if trackFullwidth && col.ConvertFullwidth {
+			fullwidth[col.Name] = true
+		}
+	}
+	return names, types, fullwidth
+}
+
+var pgTypeToDuckDBMap = map[string]string{
+	"TEXT":             "VARCHAR",
+	"SMALLINT":         "SMALLINT",
+	"INTEGER":          "INTEGER",
+	"DOUBLE PRECISION": "DOUBLE",
+	"REAL":             "FLOAT",
+	"DATE":             "DATE",
+}
+
+func pgTypeToDuckDB(pgType string) string {
+	if strings.HasPrefix(pgType, "CHAR") {
+		return "VARCHAR"
+	}
+	if t, ok := pgTypeToDuckDBMap[pgType]; ok {
+		return t
+	}
+	return "VARCHAR"
+}
+
+// CategoryInfo holds all metadata for a category used by ETL processing.
+type CategoryInfo struct {
+	TableName        string
+	S3TextPath       string
+	S3PosPath        string
+	TextColumns      []string
+	PosColumns       []string
+	JoinColumns      []string
+	Filters          FilterConfig
+	TextColumnTypes  map[string]string // column name -> DuckDB type for text CSV
+	PosColumnTypes   map[string]string // column name -> DuckDB type for position CSV
+	FullwidthColumns map[string]bool   // columns that need full-width to half-width conversion
+}
+
+func (c *ImportConfig) GenerateDDL() string {
+	var sb strings.Builder
+	names := slices.Sorted(maps.Keys(c.Category))
+
+	for i, name := range names {
+		cat := c.Category[name]
+		if i > 0 {
+			sb.WriteString("\n")
+		}
+		sb.WriteString(cat.GenerateDDL())
+	}
+
+	return sb.String()
+}
+
+func (cat *CategoryConfig) GenerateDDL() string {
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "DROP TABLE IF EXISTS %s CASCADE;\n\n", cat.TableName)
+	fmt.Fprintf(&sb, "CREATE TABLE IF NOT EXISTS %s (\n", cat.TableName)
+
+	columns := cat.mergeColumns()
+	for i, col := range columns {
+		nullable := ""
+		if !col.Nullable {
+			nullable = " NOT NULL"
+		}
+		comma := ","
+		if i == len(columns)-1 {
+			comma = ""
+		}
+		fmt.Fprintf(&sb, "    %-18s %s%s%s\n", col.Name, col.Type, nullable, comma)
+	}
+
+	sb.WriteString(");\n")
+	return sb.String()
+}
+
+func (cat *CategoryConfig) mergeColumns() []ColumnDef {
+	seen := make(map[string]struct{})
+	result := make([]ColumnDef, 0, len(cat.TextColumns)+len(cat.PosColumns))
+
+	addUnique := func(col ColumnDef) {
+		if _, exists := seen[col.Name]; exists {
+			return
+		}
+		seen[col.Name] = struct{}{}
+		result = append(result, col)
+	}
+
+	for _, col := range cat.TextColumns {
+		addUnique(col)
+	}
+	for _, col := range cat.PosColumns {
+		addUnique(col)
+	}
+	return result
+}

@@ -1,0 +1,267 @@
+# Geocoder (abrg) Import Configuration
+# Minimal column definitions required for geocoding operations
+# This config defines which columns are needed from PostgreSQL for DuckDB cache generation
+version: 1
+
+category:
+  # 都道府県マスタ
+  mt_pref:
+    table_name: mt_pref_unified
+    s3_text_path: mt_pref/
+    s3_pos_path: mt_pref_pos/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: pref
+        type: TEXT
+        nullable: false
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: rep_lon
+        type: REAL
+        nullable: true
+      - name: rep_lat
+        type: REAL
+        nullable: true
+    join_columns:
+      - lg_code
+
+  # 市区町村マスタ
+  mt_city:
+    table_name: mt_city_unified
+    s3_text_path: mt_city/pref/
+    s3_pos_path: mt_city_pos/pref/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: county
+        type: TEXT
+        nullable: true
+        convert_fullwidth: true
+      - name: city
+        type: TEXT
+        nullable: false
+        convert_fullwidth: true
+      - name: ward
+        type: TEXT
+        nullable: true
+        convert_fullwidth: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: rep_lon
+        type: REAL
+        nullable: true
+      - name: rep_lat
+        type: REAL
+        nullable: true
+    join_columns:
+      - lg_code
+
+  # 町字マスタ
+  mt_town:
+    table_name: mt_town_unified
+    s3_text_path: mt_town_fullset/pref/
+    s3_pos_path: mt_town_pos/pref/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: oaza_cho
+        type: TEXT
+        nullable: true
+        convert_fullwidth: true
+      - name: chome
+        type: TEXT
+        nullable: true
+        convert_fullwidth: true
+      - name: koaza
+        type: TEXT
+        nullable: true
+        convert_fullwidth: true
+      - name: machiaza_dist
+        type: TEXT
+        nullable: true
+        convert_fullwidth: true
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: false
+      - name: koaza_aka_code
+        type: SMALLINT
+        nullable: true
+      - name: wake_num_flg
+        type: SMALLINT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: false
+      - name: rep_lon
+        type: REAL
+        nullable: true
+      - name: rep_lat
+        type: REAL
+        nullable: true
+    join_columns:
+      - lg_code
+      - machiaza_id
+      - rsdt_addr_flg
+    filters:
+      status_flg: ["1", "2"]
+
+  # 住居表示-街区
+  mt_rsdtdsp_blk:
+    table_name: mt_rsdtdsp_blk_unified
+    s3_text_path: mt_rsdtdsp_blk/pref/
+    s3_pos_path: mt_rsdtdsp_blk_pos/pref/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: blk_id
+        type: CHAR(3)
+        nullable: false
+      - name: blk_num
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: blk_id
+        type: CHAR(3)
+        nullable: false
+      - name: rep_lon
+        type: REAL
+        nullable: true
+      - name: rep_lat
+        type: REAL
+        nullable: true
+    join_columns:
+      - lg_code
+      - machiaza_id
+      - blk_id
+
+  # 住居表示-住居
+  mt_rsdtdsp_rsdt:
+    table_name: mt_rsdtdsp_rsdt_unified
+    s3_text_path: mt_rsdtdsp_rsdt/pref/
+    s3_pos_path: mt_rsdtdsp_rsdt_pos/pref/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: blk_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt2_id
+        type: CHAR(5)
+        nullable: true
+      - name: blk_num
+        type: TEXT
+        nullable: true
+      - name: rsdt_num
+        type: TEXT
+        nullable: true
+      - name: rsdt_num2
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: blk_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt2_id
+        type: CHAR(5)
+        nullable: true
+      - name: rep_lon
+        type: REAL
+        nullable: true
+      - name: rep_lat
+        type: REAL
+        nullable: true
+    join_columns:
+      - lg_code
+      - machiaza_id
+      - blk_id
+      - rsdt_id
+      - rsdt2_id
+
+  # 地番マスタ
+  mt_parcel:
+    table_name: mt_parcel_unified
+    s3_text_path: mt_parcel/city/
+    s3_pos_path: mt_parcel_pos/city/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: prc_id
+        type: CHAR(15)
+        nullable: false
+      - name: prc_num1
+        type: TEXT
+        nullable: true
+      - name: prc_num2
+        type: TEXT
+        nullable: true
+      - name: prc_num3
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: prc_id
+        type: CHAR(15)
+        nullable: false
+      - name: rep_lon
+        type: REAL
+        nullable: true
+      - name: rep_lat
+        type: REAL
+        nullable: true
+    join_columns:
+      - lg_code
+      - machiaza_id
+      - prc_id

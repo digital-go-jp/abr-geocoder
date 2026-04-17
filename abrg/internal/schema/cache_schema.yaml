@@ -1,0 +1,164 @@
+# DuckDB Cache Schema for abrg geocoder
+version: 1
+
+tables:
+  cache_machiaza:
+    description: "Town/machiaza-level address data"
+    columns:
+      - name: pref_code
+        type: SMALLINT
+      - name: lg_code
+        type: CHAR(6)
+      - name: machiaza_id
+        type: CHAR(7)
+      - name: rsdt_addr_flg
+        type: SMALLINT
+      - name: pref
+        type: VARCHAR
+      - name: county
+        type: VARCHAR
+      - name: city
+        type: VARCHAR
+      - name: ward
+        type: VARCHAR
+      - name: kyoto_st
+        type: VARCHAR
+      - name: oaza_cho
+        type: VARCHAR
+      - name: chome
+        type: VARCHAR
+      - name: koaza
+        type: VARCHAR
+      - name: machiaza_dist
+        type: VARCHAR
+      - name: wake_num_flg
+        type: SMALLINT
+      - name: normalized_address
+        type: VARCHAR
+      - name: has_chome
+        type: BOOLEAN
+        default: "FALSE"
+      - name: parcel_count
+        type: INTEGER
+        default: "0"
+      - name: rsdtdsp_count
+        type: INTEGER
+        default: "0"
+      - name: geom
+        type: GEOMETRY
+    indexes:
+      - name: idx_machiaza_normalized
+        columns: [normalized_address]
+    spatial_indexes:
+      - name: idx_machiaza_geom
+        column: geom
+
+  cache_city:
+    description: "City-level address data"
+    columns:
+      - name: pref_code
+        type: SMALLINT
+      - name: lg_code
+        type: CHAR(6)
+      - name: pref
+        type: VARCHAR
+      - name: county
+        type: VARCHAR
+      - name: city
+        type: VARCHAR
+      - name: ward
+        type: VARCHAR
+      - name: normalized_address
+        type: VARCHAR
+      - name: geom
+        type: GEOMETRY
+    spatial_indexes:
+      - name: idx_city_geom
+        column: geom
+
+  cache_pref:
+    description: "Prefecture-level address data"
+    columns:
+      - name: pref_code
+        type: SMALLINT
+      - name: lg_code
+        type: CHAR(6)
+      - name: pref
+        type: VARCHAR
+      - name: normalized_address
+        type: VARCHAR
+      - name: geom
+        type: GEOMETRY
+    spatial_indexes:
+      - name: idx_pref_geom
+        column: geom
+
+  cache_rsdtdsp:
+    description: "Residential address data (block and resident)"
+    columns:
+      - name: pref_code
+        type: SMALLINT
+      - name: lg_code
+        type: CHAR(6)
+      - name: machiaza_id
+        type: CHAR(7)
+      - name: blk_id
+        type: CHAR(3)
+      - name: rsdt_id
+        type: CHAR(3)
+      - name: rsdt2_id
+        type: CHAR(5)
+      - name: blk_num
+        type: VARCHAR
+      - name: rsdt_num
+        type: VARCHAR
+      - name: rsdt_num2
+        type: VARCHAR
+      - name: geom
+        type: GEOMETRY
+    # Note: No index on (lg_code, machiaza_id) - Row Group statistics provide sufficient filtering
+    spatial_indexes:
+      - name: idx_rsdtdsp_geom
+        column: geom
+
+  cache_parcel:
+    description: "Parcel (land lot) data"
+    columns:
+      - name: pref_code
+        type: SMALLINT
+      - name: lg_code
+        type: CHAR(6)
+      - name: machiaza_id
+        type: CHAR(7)
+      - name: prc_id
+        type: CHAR(15)
+      - name: prc_num1
+        type: VARCHAR
+      - name: prc_num2
+        type: VARCHAR
+      - name: prc_num3
+        type: VARCHAR
+      - name: geom
+        type: GEOMETRY
+    # Note: No index on (lg_code, machiaza_id) - Row Group statistics provide sufficient filtering
+    spatial_indexes:
+      - name: idx_parcel_geom
+        column: geom
+
+  cache_config:
+    description: "Cache metadata and configuration"
+    columns:
+      - name: config_key
+        type: VARCHAR
+        constraints: "PRIMARY KEY"
+      - name: config_value
+        type: VARCHAR
+
+# PostgreSQL source table names
+source_tables:
+  pref: mt_pref_unified
+  city: mt_city_unified
+  town: mt_town_unified
+  rsdtdsp_blk: mt_rsdtdsp_blk_unified
+  rsdtdsp_rsdt: mt_rsdtdsp_rsdt_unified
+  parcel: mt_parcel_unified

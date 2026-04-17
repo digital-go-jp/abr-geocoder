@@ -1,0 +1,376 @@
+package util
+
+import (
+	"strings"
+
+	"abrg/internal/model"
+)
+
+// CreateUnmatchedResult creates a result with the entire address as unmatched.
+// Uses original address format for user-friendly display.
+func CreateUnmatchedResult(originalAddr string) model.MatchedResult {
+	// Use original address parts for unmatched display
+	parts := strings.Split(originalAddr, " ")
+
+	return model.MatchedResult{
+		MatchedAddress:    "",
+		UnmatchedAddress:  parts,
+		MatchLevel:        model.MatchLevelUnknown,
+		Score:             -1,
+		IDs:               model.IDs{},
+		StructuredAddress: model.StructuredAddress{},
+	}
+}
+
+// ExtractUnmatchedParts extracts unmatched parts from standardized addresses.
+// Returns user-friendly unmatched parts with building names as separate elements.
+//
+// Parameters:
+//   - originalAddr: original user input (used for preserving format where possible)
+//   - normalizedAddr: lightly standardized with building names (e.g., "東京都中央区八丁堀四丁目12-7 サニービル")
+//   - matchedAddr: matched address from database (e.g., "東京都文京区大塚1丁目"), used for chome pattern detection
+//   - searchAddr: fully transformed for search (e.g., "中央区8丁堀4@:12-7")
+//
+// Note: Currently uses searchAddr for address portion (may contain transformed forms like "8丁" and "@").
+func ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, searchAddr string) []string {
+	var unmatchedParts []string
+
+	// Split normalizedAddr into address part and building name
+	standardizedAddrPart, buildingParts := SplitStandardizedAddress(normalizedAddr)
+
+	// Use matchedAddr for chome pattern detection (e.g., "東京都文京区大塚1丁目")
+	// This contains the address that was actually matched in the database
+	addressPart := matchedAddr
+
+	// If searchAddr contains ":" notation, it indicates internal processing format
+	// e.g., "港区虎ノ門:23-1" means "虎ノ門" is matched, and "23-1" is unmatched
+	// e.g., "千代田区紀尾井町1@:3" means "紀尾井町" is matched, and "1@:3" (1丁目3) is unmatched
+	beforeColon, afterColon, hasColon := strings.Cut(searchAddr, ":")
+
+	unmatchedAddr := addressPart
+	if hasColon && afterColon != "" {
+		unmatchedAddr = extractUnmatchedWithColon(originalAddr, standardizedAddrPart, addressPart, beforeColon, afterColon)
+	} else if searchAddr == "" {
+		// Empty searchAddr means no specific unmatched portion to extract
+		// This happens when everything matched or we only want building names
+		unmatchedAddr = ""
+	} else if strings.Contains(searchAddr, "@") && !hasColon {
+		// If searchAddr contains "@" without ":", check if there are numbers after "@"
+		// e.g., "中央区入舟3@4-1" means "入舟3丁目" is matched, and "4-1" is unmatched
+		// e.g., "文京区大塚1@" means "大塚1丁目" is fully matched (no unmatched part)
+
+		unmatchedAddr = extractUnmatchedWithAt(searchAddr)
+	} else if !hasColon && searchAddr != "" {
+		// No ":" or "@" in searchAddr
+		// Try to extract unmatched from normalizedAddr by comparing with matchedAddr
+		// This preserves original form (e.g., kanji numerals)
+		unmatchedAddr = extractUnmatchedFromStandardized(standardizedAddrPart, matchedAddr)
+		if unmatchedAddr == "" {
+			// Fallback to extracting trailing numbers from searchAddr
+			unmatchedAddr = ExtractTrailingAddressNumbers(searchAddr)
+		}
+	}
+
+	// Add the unmatched address part
+	if unmatchedAddr != "" {
+		unmatchedParts = append(unmatchedParts, unmatchedAddr)
+	}
+
+	// Add building name parts (from normalizedAddr) as separate elements
+	// This ensures building names, floor numbers, and room numbers appear separately
+	if len(buildingParts) > 0 {
+		unmatchedParts = append(unmatchedParts, buildingParts...)
+	}
+
+	return unmatchedParts
+}
+
+// SplitStandardizedAddress splits a space-delimited standardized address into
+// the address proper (first element) and building/floor/room tokens (remaining).
+func SplitStandardizedAddress(normalizedAddr string) (string, []string) {
+	standardizedParts := strings.Split(normalizedAddr, " ")
+	return standardizedParts[0], standardizedParts[1:]
+}
+
+func extractUnmatchedWithColon(originalAddr, standardizedAddrPart, matchedAddr, beforeColon, afterColon string) string {
+	// Check if there's a "@" before the colon (e.g., "千代田区紀尾井町1@:3")
+	// This indicates chome number that should be included in unmatched part
+	if strings.Contains(beforeColon, "@") {
+		return extractUnmatchedWithColonAt(originalAddr, standardizedAddrPart, matchedAddr, beforeColon, afterColon)
+	}
+
+	// No "@" before ":", extract unmatched portion
+	// e.g., searchAddr="文京区大塚:1-0" means "大塚" matched, "1-0" unmatched
+	// But if normalizedAddr contains "X丁目", it means "1" was interpreted as chome
+	// and we should only extract after the chome (e.g., "0")
+
+	// First, check if beforeColon contains more than what matchedAddr covers
+	// e.g., beforeColon="嬉野市嬉野町下野長波須ハ丙", matchedAddr="佐賀県嬉野市嬉野町大字下野"
+	// The unmatched prefix is "長波須ハ丙" (koaza not in DB)
+	unmatchedPrefix := extractUnmatchedPrefixFromBeforeColon(beforeColon, matchedAddr)
+
+	// When extractUnmatchedPrefixFromBeforeColon fails (e.g., due to 之→ノ normalization mismatch
+	// or katakana/hiragana differences), try to extract from standardizedAddrPart which preserves
+	// the original characters (including "字" and "之").
+	if after, found := strings.CutPrefix(standardizedAddrPart, matchedAddr); found && afterColon != "" {
+		trimmed := strings.TrimSuffix(after, afterColon)
+		if trimmed != "" && trimmed != after {
+			// Strip "字" when it's just a marker (字 alone) or when the koaza name
+			// ends with a kanji numeral (e.g., "字家六" → "家六", "字東三分一" → "東三分一").
+			// Preserve "字" when followed by a place name (e.g., "字上ノ原" stays).
+			trimmed = stripAzaMarker(trimmed)
+			if trimmed != "" {
+				unmatchedPrefix = trimmed
+			}
+		}
+	}
+
+	afterPart := extractUnmatchedWithColonNoAt(originalAddr, standardizedAddrPart, matchedAddr, afterColon)
+
+	if unmatchedPrefix != "" && afterPart != "" {
+		return unmatchedPrefix + afterPart
+	}
+	if unmatchedPrefix != "" {
+		return unmatchedPrefix
+	}
+	return afterPart
+}
+
+func extractUnmatchedWithColonAt(originalAddr, standardizedAddrPart, matchedAddr, beforeColon, afterColon string) string {
+	// Extract chome number that comes after @ but before :
+	// e.g., "千代田区紀尾井町1@" -> we need to extract "1"
+	atIndex := strings.LastIndex(beforeColon, "@")
+	if atIndex == -1 || atIndex <= 0 {
+		return afterColon
+	}
+
+	// Get everything after @ (e.g., "1@" -> "")
+	// We need to find the chome number before @
+	// Split by @ to find what's before it
+	parts := strings.Split(beforeColon, "@")
+	if len(parts) < 2 {
+		return afterColon
+	}
+
+	// Find the chome number at the end of the part before @
+	beforeAt := parts[0]
+	// Extract trailing digits from beforeAt (e.g., "千代田区紀尾井町1" -> "1")
+	chomeNum := ExtractChomeDigits(beforeAt)
+
+	// Get the part after @ (e.g., "大阪市中央区久太郎町4@渡辺" -> "渡辺")
+	afterAt := parts[1]
+
+	if chomeNum != "" {
+		// Check if matchedAddr contains "丁目" - if yes, the chome was matched
+		// This handles both arabic (3丁目) and kanji (三丁目) numerals
+		if strings.Contains(matchedAddr, "丁目") {
+			// Chome was matched (either as "3丁目" or "三丁目")
+			// Include the part after @ (e.g., "渡辺") if it's not empty, not just numbers,
+			// AND not already matched (not in matchedAddr)
+			// e.g., "久太郎町4@渡辺:3" -> "渡辺3" (渡辺 is not in matchedAddr)
+			// e.g., "京町8@横町:63" -> "63" (横町 is already in matchedAddr)
+			if afterAt != "" && !isAllDigits(afterAt) && !strings.Contains(matchedAddr, afterAt) {
+				if afterColon != "" {
+					return afterAt + afterColon
+				}
+				return afterAt
+			}
+			return afterColon
+		}
+
+		// Chome was NOT matched, need to include it in unmatched
+		// Look for chomeNum + "丁目" pattern in standardizedAddrPart to get the full unmatched portion
+		pattern := chomeNum + "丁目"
+		idx := strings.Index(standardizedAddrPart, pattern)
+
+		if idx != -1 {
+			// Found the pattern in standardizedAddrPart
+			afterChome := standardizedAddrPart[idx+len(pattern):]
+
+			// Check if user explicitly specified "X丁目"
+			hasChomeInOriginal := strings.Contains(originalAddr, pattern) || strings.Contains(originalAddr, "丁目")
+			if hasChomeInOriginal && afterChome == afterColon && !strings.Contains(afterColon, "-") {
+				// Chome was NOT matched, include it in unmatched
+				return standardizedAddrPart[idx:]
+			}
+			// This shouldn't happen if matchedAddr doesn't contain "丁目"
+			return afterColon
+		}
+
+		// Pattern not found even in standardizedAddrPart
+		// Combine chomeNum with afterColon
+		if afterColon != "" {
+			return chomeNum + "-" + afterColon
+		}
+		return chomeNum
+	}
+
+	if afterColon != "" {
+		return afterColon
+	}
+	return matchedAddr
+}
+
+// extractUnmatchedPrefixFromBeforeColon extracts the unmatched portion from beforeColon
+// by comparing with matchedAddr. This handles cases where the search address contains
+// koaza (小字) that doesn't exist in the database.
+//
+// Example: beforeColon="嬉野市嬉野町下野長波須ハ丙", matchedAddr="佐賀県嬉野市嬉野町大字下野"
+// returns "長波須ハ丙".
+func extractUnmatchedPrefixFromBeforeColon(beforeColon, matchedAddr string) string {
+	// Normalize both for comparison (remove prefecture, 大字, 字)
+	normalizedBefore := beforeColon
+	normalizedMatched := matchedAddr
+
+	// Remove prefecture prefix from matchedAddr for comparison
+	// Prefecture is in matchedAddr but not in beforeColon (which is from searchAddr)
+	normalizedMatched = stripPrefecture(normalizedMatched)
+
+	// Remove 大字 and 字 from both
+	normalizedBefore, _ = RemoveOazaAza(normalizedBefore)
+	normalizedMatched, _ = RemoveOazaAza(normalizedMatched)
+
+	// Find where normalizedMatched ends in normalizedBefore
+	// e.g., normalizedBefore="嬉野市嬉野町下野長波須ハ丙", normalizedMatched="嬉野市嬉野町下野"
+	// -> unmatched is "長波須ハ丙"
+	if strings.HasPrefix(normalizedBefore, normalizedMatched) {
+		unmatched := normalizedBefore[len(normalizedMatched):]
+		if unmatched != "" {
+			return unmatched
+		}
+	}
+
+	// Try to find the longest common suffix of matchedAddr in beforeColon
+	// and extract what comes after it
+	matchedRunes := []rune(normalizedMatched)
+	for suffixLen := min(len(matchedRunes), 10); suffixLen >= 2; suffixLen-- {
+		suffix := string(matchedRunes[len(matchedRunes)-suffixLen:])
+		if idx := strings.LastIndex(normalizedBefore, suffix); idx >= 0 {
+			unmatched := normalizedBefore[idx+len(suffix):]
+			if unmatched != "" {
+				return unmatched
+			}
+			break
+		}
+	}
+
+	return ""
+}
+
+func extractUnmatchedWithColonNoAt(originalAddr, standardizedAddrPart, matchedAddr, afterColon string) string {
+	// Check if afterColon starts with digits followed by hyphen
+	// and matchedAddr/normalizedAddr contains "X丁目" pattern
+	if strings.Contains(afterColon, "-") {
+		// e.g., afterColon = "1-0" or "3-5-3-2414"
+		// Extract the leading number before first hyphen
+		firstHyphenIdx := strings.Index(afterColon, "-")
+		if firstHyphenIdx > 0 {
+			leadingNum := afterColon[:firstHyphenIdx]
+			chomePattern := leadingNum + "丁目"
+			// Check if matchedAddr or standardizedAddrPart contains the specific chome pattern (arabic or kanji)
+			// e.g., "3丁目" (arabic) or "三丁目" (kanji)
+			hasChome := strings.Contains(matchedAddr, chomePattern) ||
+				strings.Contains(standardizedAddrPart, chomePattern)
+			if hasChome {
+				// The leading number is the chome, return what comes after first hyphen
+				return afterColon[firstHyphenIdx+1:]
+			}
+
+			// Trailing hyphen after digits (e.g., "1-") → chome number with nothing after
+			// The digits are consumed as chome, trailing hyphen is just punctuation
+			if afterColon[firstHyphenIdx+1:] == "" && isAllDigits(leadingNum) {
+				return ""
+			}
+		}
+		// No chome pattern, use afterColon as-is
+		return afterColon
+	}
+
+	// afterColon doesn't contain hyphen
+
+	// Check if the bare number was fully consumed as chome
+	// e.g., afterColon="2" and matchedAddr contains "二丁目" → nothing unmatched
+	if strings.Contains(matchedAddr, "丁目") && isAllDigits(afterColon) {
+		return ""
+	}
+
+	// For N線M号 pattern, map back to original kanji representation
+	// e.g., afterColon="1号" should map back to "一号" from originalAddr
+	if strings.HasSuffix(afterColon, "号") && strings.Contains(originalAddr, "号") {
+		if originalNum, ok := extractOriginalGoNumber(originalAddr); ok {
+			return originalNum
+		}
+	}
+	return afterColon
+}
+
+// isAllDigits checks if a string is non-empty and consists entirely of ASCII digits.
+func isAllDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func extractOriginalGoNumber(originalAddr string) (string, bool) {
+	// Convert to runes for proper UTF-8 handling
+	runes := []rune(originalAddr)
+	// Find the last 号 in originalAddr
+	goIdx := -1
+	for i := len(runes) - 1; i >= 0; i-- {
+		if runes[i] == '号' {
+			goIdx = i
+			break
+		}
+	}
+	if goIdx <= 0 {
+		return "", false
+	}
+
+	// Walk backwards to find the start of the number representation
+	start := goIdx - 1
+	for start >= 0 {
+		r := runes[start]
+		// Check if this is a kanji numeral or regular digit
+		if IsAddressNumberRune(r) {
+			start--
+		} else {
+			break
+		}
+	}
+	start++ // Move back to the first character of the number
+	if start <= goIdx {
+		return string(runes[start : goIdx+1]), true
+	}
+	return "", false
+}
+
+func extractUnmatchedWithAt(searchAddr string) string {
+	if _, afterAt, found := strings.Cut(searchAddr, "@"); found && afterAt != "" {
+		return afterAt
+	}
+	return ""
+}
+
+func ExtractTrailingAddressNumbers(searchAddr string) string {
+	return extractTrailingBytes(searchAddr, func(b byte) bool {
+		return (b >= '0' && b <= '9') || b == '-'
+	})
+}
+
+// extractUnmatchedFromStandardized extracts unmatched portion by comparing
+// normalizedAddr with matchedAddr using prefix matching.
+//
+// Example: normalizedAddr="愛知県清須市助七一", matchedAddr="愛知県清須市助七"
+// returns "一".
+func extractUnmatchedFromStandardized(normalizedAddr, matchedAddr string) string {
+	if strings.HasPrefix(normalizedAddr, matchedAddr) {
+		return normalizedAddr[len(matchedAddr):]
+	}
+	return ""
+}

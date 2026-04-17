@@ -1,0 +1,176 @@
+// Package command provides CLI commands for the abrg server.
+package command
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"abr.local/common/version"
+
+	"abrg/internal/api"
+	"abrg/internal/cache"
+	"abrg/internal/infra/config"
+)
+
+// NewServerCmd creates a new server command.
+func NewServerCmd() *cobra.Command {
+	var cachePath string
+
+	cmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Start the ABR Geocoder server",
+		Long:  `Start the ABR Geocoder server that provides geocoding and reverse geocoding APIs.`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runServer(cmd.Context(), cachePath)
+		},
+	}
+
+	cmd.Flags().StringVarP(&cachePath, "cache", "c", "", "Cache file path (default: ~/.abrg/cache/abrg.duckdb)")
+
+	return cmd
+}
+
+// serverConfig holds the configuration needed to start the server
+type serverConfig struct {
+	DBVersion       string
+	EnabledCategory string
+	EnabledPref     string
+	EnabledPos      bool
+}
+
+func runServer(ctx context.Context, cacheFlag string) error {
+	cfg := config.Load()
+	cachePath, err := resolveCachePath(cacheFlag)
+	if err != nil {
+		return err
+	}
+
+	// Open cache once and read config from the same connection
+	dbCache, srvCfg, err := loadServerConfig(ctx, cachePath)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("server configuration",
+		"event", "server_config",
+		"api_version", version.Version,
+		"db_version", srvCfg.DBVersion,
+		"category", srvCfg.EnabledCategory,
+		"pref", srvCfg.EnabledPref,
+		"pos", srvCfg.EnabledPos)
+
+	server, err := api.NewGinServer(api.ServerConfig{
+		APIVersion:      version.Version,
+		DBVersion:       srvCfg.DBVersion,
+		EnabledPos:      srvCfg.EnabledPos,
+		EnabledCategory: srvCfg.EnabledCategory,
+		EnabledPref:     srvCfg.EnabledPref,
+		CORSAllowOrigin: cfg.Server.CORSAllowOrigin,
+		Cache:           dbCache,
+	})
+	if err != nil {
+		// Close cache on server creation failure
+		if dbCache != nil {
+			if closeErr := dbCache.Close(); closeErr != nil {
+				slog.Warn("failed to close cache after server creation failure", "event", "cache_close", "error", closeErr)
+			}
+		}
+		// Treat Ctrl-C / context cancellation during initialization as a clean shutdown
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
+		return fmt.Errorf("failed to create server: %w", err)
+	}
+	defer func() {
+		if err := server.Close(); err != nil {
+			slog.Warn("failed to close server resources", "event", "server_close", "error", err)
+		}
+	}()
+
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%s", cfg.Server.Port),
+		Handler:           server.Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	return runHTTPServer(ctx, srv)
+}
+
+// runHTTPServer runs an http.Server until ctx is cancelled, then performs
+// a graceful shutdown with a bounded timeout.
+func runHTTPServer(ctx context.Context, srv *http.Server) error {
+	errChan := make(chan error, 1)
+	go func() {
+		slog.Info("server started", "event", "server_start", "addr", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errChan <- err
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		slog.Info("received shutdown signal", "event", "shutdown_signal", "cause", context.Cause(ctx))
+	case err := <-errChan:
+		return fmt.Errorf("server failed to start: %w", err)
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("graceful shutdown failed: %w", err)
+	}
+
+	slog.Info("server stopped", "event", "server_stop")
+	return nil
+}
+
+// loadServerConfig opens the DuckDB cache and loads configuration from it.
+// The returned cache is ready for use and must be closed by the caller.
+// Cache file must be prepared beforehand using 'abrg cache build'.
+func loadServerConfig(ctx context.Context, cachePath string) (*cache.DuckDBCache, *serverConfig, error) {
+	if _, err := cache.FileInfo(cachePath); err != nil {
+		slog.Warn("failed to get cache file info", "event", "cache_file_info", "path", cachePath, "error", err)
+	}
+
+	// Open cache once — this connection will be reused by the server
+	dbCache, err := cache.NewDuckDBCacheFromPath(ctx, cachePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to open cache %s: %w", cachePath, err)
+	}
+
+	// Close cache on any error after successful open
+	success := false
+	defer func() {
+		if !success {
+			_ = dbCache.Close()
+		}
+	}()
+
+	// Read config from the already-open connection (no second open)
+	cacheCfg, err := cache.LoadConfig(ctx, dbCache.DB())
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load config from cache %s: %w", cachePath, err)
+	}
+
+	if cacheCfg.EnabledCategory == "" {
+		return nil, nil, fmt.Errorf("cache file %s has no configuration: rebuild with 'abrg cache build'", cachePath)
+	}
+
+	success = true
+	return dbCache, &serverConfig{
+		DBVersion:       cacheCfg.DBVersion,
+		EnabledCategory: cacheCfg.EnabledCategory,
+		EnabledPref:     cacheCfg.EnabledPref,
+		EnabledPos:      cacheCfg.EnabledPos == "true",
+	}, nil
+}

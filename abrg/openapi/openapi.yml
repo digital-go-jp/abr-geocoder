@@ -1,0 +1,978 @@
+openapi: 3.1.0
+info:
+  title: ジオコーダーAPI
+  version: 3.0.0
+  description: |
+    ジオコーダーAPIは、アドレス・ベース・レジストリを利用し、住所の正規化およびジオコーディングを行うことが可能です。
+servers:
+  - url: http://localhost:3000/
+paths:
+  "/normalize":
+    get:
+      summary: 住所正規化
+      description: 住所を正規化します（表記揺れの統一、DB照合なし）。
+      operationId: normalizeAddress
+      parameters:
+        - $ref: "#/components/parameters/address"
+      responses:
+        "200":
+          description: 正規化結果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  input:
+                    type: string
+                    description: 入力住所
+                    example: "東京都千代田区紀尾井町１番３号"
+                  output:
+                    type: string
+                    description: 正規化後の住所
+                    example: "東京都千代田区紀尾井町1-3"
+                  type:
+                    type: string
+                    description: |
+                      テキストパターンから推測した住所タイプ（DB照合なし）
+
+                      value | description | pattern
+                      --- | --- | ---
+                      rsdtdsp | 住居表示 | N番N号
+                      parcel | 地番 | N番地
+                      undetermined | 判別不能 | N番N（号なし）、N番、N-N、N番地N号
+                      unknown | パターンなし | 上記いずれにもマッチしない
+                    enum: ["rsdtdsp", "parcel", "undetermined", "unknown"]
+                    example: "rsdtdsp"
+                required:
+                  - input
+                  - output
+                  - type
+              examples:
+                type_determined:
+                  summary: 住所タイプが判別できる例
+                  value:
+                    input: "東京都千代田区紀尾井町１番３号東京ガーデンテラス紀尾井町"
+                    output: "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町"
+                    type: "rsdtdsp"
+                type_undetermined:
+                  summary: 住所タイプが判別できない例
+                  value:
+                    input: "東京都千代田区紀尾井町１−３東京ガーデンテラス紀尾井町"
+                    output: "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町"
+                    type: "undetermined"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "500":
+          $ref: "#/components/responses/internalServerError"
+  "/match":
+    get:
+      summary: 住所マッチング
+      description: 住所をABRデータと照合し、マッチしたレコードを返します。
+      operationId: matchAddress
+      parameters:
+        - $ref: "#/components/parameters/address"
+        - $ref: "#/components/parameters/category"
+        - $ref: "#/components/parameters/pref"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/matchOk"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "500":
+          $ref: "#/components/responses/internalServerError"
+  "/geocode":
+    get:
+      summary: ジオコーディング
+      description: 住所をジオコーディングします。
+      operationId: geocodeAddress
+      parameters:
+        - $ref: "#/components/parameters/address"
+        - $ref: "#/components/parameters/category"
+        - $ref: "#/components/parameters/pref"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/geocodeOk"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "500":
+          $ref: "#/components/responses/internalServerError"
+        "503":
+          $ref: "#/components/responses/serviceUnavailable"
+  "/reverse":
+    get:
+      summary: リバースジオコーディング
+      description: |
+        緯度経度から住所情報を取得します。
+        ※本エンドポイントは実験的です。今後仕様が変わる可能性があります。
+      operationId: reverseGeocodeCoordinates
+      parameters:
+        - $ref: "#/components/parameters/longitude"
+        - $ref: "#/components/parameters/latitude"
+        - $ref: "#/components/parameters/category"
+        - $ref: "#/components/parameters/pref"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/reverseGeocodeOk"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "500":
+          $ref: "#/components/responses/internalServerError"
+        "503":
+          $ref: "#/components/responses/serviceUnavailable"
+  "/":
+    get:
+      summary: API情報
+      description: APIの基本情報と利用可能なエンドポイントを返します。
+      operationId: getApiInfo
+      responses:
+        "200":
+          description: API情報
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: サービス名
+                    example: "abrg"
+                  version:
+                    type: string
+                    description: APIバージョン
+                    example: "3.0.0"
+                  db_version:
+                    type: string
+                    description: データベースバージョン
+                    example: "3.0.0"
+                  enabled_category:
+                    type: string
+                    description: 有効なカテゴリ
+                    example: "all"
+                  enabled_pref:
+                    type: string
+                    description: 有効な都道府県
+                    example: "all"
+                  endpoints:
+                    type: array
+                    items:
+                      type: string
+                    description: 利用可能なエンドポイント一覧
+                    example: ["/", "/health", "/normalize", "/match", "/geocode", "/reverse"]
+                required:
+                  - name
+                  - version
+                  - db_version
+                  - enabled_category
+                  - enabled_pref
+                  - endpoints
+  "/health":
+    get:
+      summary: ヘルスチェック
+      description: APIの稼働状態を確認します。
+      operationId: healthCheck
+      responses:
+        "200":
+          description: サービス正常稼働
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: 稼働状態
+                    example: "ok"
+                required:
+                  - status
+components:
+  schemas:
+    MatchLevelEnum:
+      type: string
+      description: |
+        マッチングレベル
+        level | description
+        --- | ---
+        unknown | 不明
+        pref | 都道府県
+        city | 郡 / 市区町村
+        machiaza | 大字・町
+        machiaza_detail | 丁目・小字
+        rsdtdsp_blk | 街区符号
+        rsdtdsp_rsdt | 住居番号
+        parcel | 地番
+      enum:
+        - unknown
+        - pref
+        - city
+        - machiaza
+        - machiaza_detail
+        - rsdtdsp_blk
+        - rsdtdsp_rsdt
+        - parcel
+
+    Ids:
+      type: object
+      description: ID情報
+      properties:
+        lg_code:
+          type: string
+          nullable: true
+          description: 全国地方公共団体コード
+          example: "131016"
+        machiaza_id:
+          type: string
+          nullable: true
+          description: 町字ID
+          example: "0056000"
+        rsdt_addr_flg:
+          type: string
+          nullable: true
+          description: 住居表示フラグ
+          example: "1"
+        blk_id:
+          type: string
+          nullable: true
+          description: 街区ID
+          example: "001"
+        rsdt_id:
+          type: string
+          nullable: true
+          description: 住居ID
+          example: "003"
+        rsdt2_id:
+          type: string
+          nullable: true
+          description: 住居2ID
+          example: null
+        prc_id:
+          type: string
+          nullable: true
+          description: 地番ID
+          example: null
+
+    ResultInfo:
+      type: object
+      description: 結果に関する情報
+      properties:
+        count:
+          type: integer
+          description: 結果の件数
+          example: 2
+        limit:
+          type: integer
+          description: 指定された最大件数
+          example: 2
+        api_version:
+          type: string
+          description: APIバージョン
+          example: "3.0.0"
+        db_version:
+          type: string
+          description: DBバージョン
+          example: "3.0.0"
+        enabled_category:
+          type: string
+          description: 有効なカテゴリ
+          example: "all"
+        enabled_pref:
+          type: string
+          description: 有効な都道府県（単一の都道府県コードまたは"all"）
+          example: "all"
+        duration_ms:
+          type: number
+          format: double
+          description: 処理時間（ミリ秒）
+          example: 12.5
+
+    StructuredAddress:
+      type: object
+      description: 構造化住所情報
+      properties:
+        pref:
+          type: string
+          nullable: true
+          description: 都道府県
+          example: "東京都"
+        county:
+          type: string
+          nullable: true
+          description: 郡
+          example: null
+        city:
+          type: string
+          nullable: true
+          description: 市町村
+          example: "千代田区"
+        ward:
+          type: string
+          nullable: true
+          description: 政令市区
+          example: null
+        kyoto_st:
+          type: string
+          nullable: true
+          description: 京都通り名
+          example: null
+        oaza_cho:
+          type: string
+          nullable: true
+          description: "大字・町"
+          example: "紀尾井町"
+        chome:
+          type: string
+          nullable: true
+          description: 丁目
+          example: null
+        koaza:
+          type: string
+          nullable: true
+          description: 小字
+          example: null
+        machiaza_dist:
+          type: string
+          nullable: true
+          description: 同一町字識別情報
+          example: null
+        blk_num:
+          type: string
+          nullable: true
+          description: 街区符号
+          example: "1"
+        rsdt_num:
+          type: string
+          nullable: true
+          description: 住居番号
+          example: "3"
+        rsdt_num2:
+          type: string
+          nullable: true
+          description: 住居番号2
+          example: null
+        prc_num1:
+          type: string
+          nullable: true
+          description: 地番1
+          example: null
+        prc_num2:
+          type: string
+          nullable: true
+          description: 地番2
+          example: null
+        prc_num3:
+          type: string
+          nullable: true
+          description: 地番3
+          example: null
+  parameters:
+    address:
+      name: address
+      in: query
+      description: |
+        処理する住所。
+        UTF-8のパーセントエンコーディングにも対応。
+        最大100文字。
+      required: true
+      schema:
+        type: string
+        maxLength: 100
+        example: "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階"
+    limit:
+      name: limit
+      in: query
+      description: |
+        結果の最大数を指定します。
+        デフォルトは1件です。
+      required: false
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+        maximum: 5
+        example: 2
+    category:
+      name: category
+      in: query
+      example: "all"
+      description: |
+        検索対象を指定します（省略時はサーバーの enabled_category 設定に従う）。
+        category | description
+        --- | ---
+        all | basic, rsdtdsp, parcel のすべてを対象に検索を行います。
+        basic | 都道府県・市区町村・町字を対象に検索を行います。
+        rsdtdsp | 住居表示（街区符号・住居番号）を対象に検索を行います。
+        parcel | 地番を対象に検索を行います。
+      schema:
+        type: string
+        enum:
+          - all
+          - basic
+          - rsdtdsp
+          - parcel
+    latitude:
+      name: lat
+      in: query
+      description: "緯度"
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -90.0
+        maximum: 90.0
+        example: 35.679107172
+    longitude:
+      name: lon
+      in: query
+      description: "経度"
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -180.0
+        maximum: 180.0
+        example: 139.736394597
+    pref:
+      name: pref
+      in: query
+      description: |
+        検索対象の行政区域を制限します。
+        データベース設定の enabled_pref と一致する値のみ指定可能です。
+        - 例: `all` → すべての都道府県
+        - 例: `13` → 東京都のみ
+      required: false
+      schema:
+        type: string
+        example: "all"
+  responses:
+    geocodeOk:
+      description: ジオコーディング結果
+      content:
+        application/geo+json:
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: ["FeatureCollection"]
+              query:
+                type: object
+                properties:
+                  address:
+                    type: string
+                    description: ジオコーディングする住所
+                    example: "東京都千代田区紀尾井町1-3"
+                  category:
+                    type: string
+                    description: 検索カテゴリ
+                    example: "rsdtdsp"
+                  pref:
+                    type: string
+                    description: 検索対象地域
+                    example: "all"
+                  limit:
+                    type: integer
+                    description: 指定された最大結果数
+                    example: 2
+              result_info:
+                $ref: "#/components/schemas/ResultInfo"
+              features:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: ["Feature"]
+                    geometry:
+                      type: object
+                      description: 座標情報
+                      properties:
+                        type:
+                          type: string
+                          enum: ["Point"]
+                          example: "Point"
+                        coordinates:
+                          type: array
+                          description: 座標（[経度, 緯度]の順）
+                          example: [139.736394597, 35.679107172]
+                          items:
+                            type: number
+                    properties:
+                      type: object
+                      properties:
+                        matched_address:
+                          type: string
+                          description: 正規化後の住所
+                          example: "東京都千代田区紀尾井町1-3"
+                        unmatched_address:
+                          type: array
+                          nullable: true
+                          items:
+                            type: string
+                          description: 正規化できなかった文字列
+                          example: ["東京ガーデンテラス紀尾井町", "19階、20階"]
+                        score:
+                          type: number
+                          format: double
+                          minimum: 0
+                          maximum: 1
+                          description: マッチスコア（参考値）
+                          example: 1
+                        match_level:
+                          allOf:
+                            - $ref: "#/components/schemas/MatchLevelEnum"
+                          example: "rsdtdsp_rsdt"
+                        coordinates_level:
+                          allOf:
+                            - $ref: "#/components/schemas/MatchLevelEnum"
+                          description: 緯度経度のマッチングレベル
+                          example: "rsdtdsp_rsdt"
+                        ids:
+                          $ref: "#/components/schemas/Ids"
+                        structured_address:
+                          $ref: "#/components/schemas/StructuredAddress"
+          examples:
+            geocode_multiple:
+              summary: 曖昧な住所に対する複数の結果 (2件)
+              value:
+                type: "FeatureCollection"
+                query:
+                  address: "東京都千代田区紀尾井町1番3号 東京ガーデンテラス紀尾井町 19階、20階"
+                  category: "rsdtdsp"
+                  pref: "all"
+                  limit: 2
+                result_info:
+                  count: 2
+                  limit: 2
+                  api_version: "3.0.0"
+                  db_version: "3.0.0"
+                  enabled_category: "all"
+                  enabled_pref: "all"
+                  duration_ms: 30.45
+                features:
+                  - type: "Feature"
+                    geometry:
+                      type: "Point"
+                      coordinates: [139.736394597, 35.679107172]
+                    properties:
+                      matched_address: "東京都千代田区紀尾井町1-3"
+                      unmatched_address: ["東京ガーデンテラス紀尾井町", "19階、20階"]
+                      score: 0.8
+                      match_level: "rsdtdsp_rsdt"
+                      coordinates_level: "rsdtdsp_rsdt"
+                      ids:
+                        lg_code: "131016"
+                        machiaza_id: "0056000"
+                        rsdt_addr_flg: "1"
+                        blk_id: "001"
+                        rsdt_id: "003"
+                        rsdt2_id: null
+                        prc_id: null
+                      structured_address:
+                        pref: "東京都"
+                        county: null
+                        city: "千代田区"
+                        ward: null
+                        kyoto_st: null
+                        oaza_cho: "紀尾井町"
+                        chome: null
+                        koaza: null
+                        machiaza_dist: null
+                        blk_num: "1"
+                        rsdt_num: "3"
+                        rsdt_num2: null
+                        prc_num1: null
+                        prc_num2: null
+                        prc_num3: null
+                  - type: "Feature"
+                    geometry:
+                      type: "Point"
+                      coordinates: [139.737562481, 35.678721638]
+                    properties:
+                      matched_address: "東京都千代田区紀尾井町"
+                      unmatched_address: null
+                      score: 0.6
+                      match_level: "machiaza"
+                      coordinates_level: "machiaza"
+                      ids:
+                        lg_code: "131016"
+                        machiaza_id: "0056000"
+                        rsdt_addr_flg: null
+                        blk_id: null
+                        rsdt_id: null
+                        rsdt2_id: null
+                        prc_id: null
+                      structured_address:
+                        pref: "東京都"
+                        county: null
+                        city: "千代田区"
+                        ward: null
+                        kyoto_st: null
+                        oaza_cho: "紀尾井町"
+                        chome: null
+                        koaza: null
+                        machiaza_dist: null
+                        blk_num: null
+                        rsdt_num: null
+                        rsdt_num2: null
+                        prc_num1: null
+                        prc_num2: null
+                        prc_num3: null
+    reverseGeocodeOk:
+      description: リバースジオコーディング結果
+      content:
+        application/geo+json:
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: ["FeatureCollection"]
+              query:
+                type: object
+                properties:
+                  lon:
+                    type: number
+                    format: double
+                    description: 入力経度
+                    example: 139.736394597
+                  lat:
+                    type: number
+                    format: double
+                    description: 入力緯度
+                    example: 35.679107172
+                  category:
+                    type: string
+                    description: 検索カテゴリ
+                    example: "rsdtdsp"
+                  pref:
+                    type: string
+                    description: 検索対象地域
+                    example: "all"
+                  limit:
+                    type: integer
+                    description: 指定された最大結果数
+                    example: 2
+              result_info:
+                $ref: "#/components/schemas/ResultInfo"
+              features:
+                type: array
+                description: 検索結果
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: ["Feature"]
+                    geometry:
+                      type: object
+                      description: 座標情報
+                      properties:
+                        type:
+                          type: string
+                          enum: ["Point"]
+                        coordinates:
+                          type: array
+                          description: 座標（[経度, 緯度]の順）
+                          example: [139.736394597, 35.679107172]
+                          items:
+                            type: number
+                    properties:
+                      type: object
+                      description: 属性情報
+                      properties:
+                        address:
+                          type: string
+                          description: 住所
+                          example: "東京都千代田区紀尾井町1-3"
+                        match_level:
+                          allOf:
+                            - $ref: "#/components/schemas/MatchLevelEnum"
+                          example: "rsdtdsp_rsdt"
+                        distance:
+                          type: number
+                          format: double
+                          description: "入力座標と代表点間の距離（メートル単位）"
+                          example: 5.7
+                        ids:
+                          $ref: "#/components/schemas/Ids"
+                        structured_address:
+                          $ref: "#/components/schemas/StructuredAddress"
+          examples:
+            reverse_multiple:
+              value:
+                type: "FeatureCollection"
+                query:
+                  lon: 139.736394597
+                  lat: 35.679107172
+                  category: "rsdtdsp"
+                  pref: "all"
+                  limit: 2
+                result_info:
+                  count: 2
+                  limit: 2
+                  api_version: "3.0.0"
+                  db_version: "3.0.0"
+                  enabled_category: "all"
+                  enabled_pref: "all"
+                  duration_ms: 683.35
+                features:
+                  - type: "Feature"
+                    geometry:
+                      type: "Point"
+                      coordinates: [139.736394597, 35.679107172]
+                    properties:
+                      address: "東京都千代田区紀尾井町1-3"
+                      match_level: "rsdtdsp_rsdt"
+                      distance: 5.7
+                      ids:
+                        lg_code: "131016"
+                        machiaza_id: "0056000"
+                        rsdt_addr_flg: "1"
+                        blk_id: "001"
+                        rsdt_id: "003"
+                        rsdt2_id: null
+                        prc_id: null
+                      structured_address:
+                        pref: "東京都"
+                        county: null
+                        city: "千代田区"
+                        ward: null
+                        kyoto_st: null
+                        oaza_cho: "紀尾井町"
+                        chome: null
+                        koaza: null
+                        machiaza_dist: null
+                        blk_num: "1"
+                        rsdt_num: "3"
+                        rsdt_num2: null
+                        prc_num1: null
+                        prc_num2: null
+                        prc_num3: null
+                  - type: "Feature"
+                    geometry:
+                      type: "Point"
+                      coordinates: [139.736298426, 35.678954321]
+                    properties:
+                      address: "東京都千代田区紀尾井町1-4"
+                      match_level: "rsdtdsp_rsdt"
+                      distance: 25.3
+                      ids:
+                        lg_code: "131016"
+                        machiaza_id: "0056000"
+                        rsdt_addr_flg: "1"
+                        blk_id: "001"
+                        rsdt_id: "004"
+                        rsdt2_id: null
+                        prc_id: null
+                      structured_address:
+                        pref: "東京都"
+                        county: null
+                        city: "千代田区"
+                        ward: null
+                        kyoto_st: null
+                        oaza_cho: "紀尾井町"
+                        chome: null
+                        koaza: null
+                        machiaza_dist: null
+                        blk_num: "1"
+                        rsdt_num: "4"
+                        rsdt_num2: null
+                        prc_num1: null
+                        prc_num2: null
+                        prc_num3: null
+    matchOk:
+      description: 住所マッチング結果
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: ["MatchResult"]
+              query:
+                type: object
+                properties:
+                  address:
+                    type: string
+                    description: マッチング対象の住所
+                    example: "東京都千代田区紀尾井町1番3号 東京ガーデンテラス紀尾井町 19階、20階"
+                  category:
+                    type: string
+                    description: 検索カテゴリ
+                    example: "all"
+                  pref:
+                    type: string
+                    description: 検索対象地域
+                    example: "all"
+                  limit:
+                    type: integer
+                    description: 指定された最大結果数
+                    example: 2
+              result_info:
+                $ref: "#/components/schemas/ResultInfo"
+              features:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    matched_address:
+                      type: string
+                      description: マッチした住所
+                      example: "東京都千代田区紀尾井町1-3"
+                    unmatched_address:
+                      type: array
+                      nullable: true
+                      items:
+                        type: string
+                      description: マッチしなかった文字列
+                      example: ["東京ガーデンテラス紀尾井町", "19階、20階"]
+                    match_level:
+                      allOf:
+                        - $ref: "#/components/schemas/MatchLevelEnum"
+                      example: "rsdtdsp_rsdt"
+                    score:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 1
+                      description: マッチスコア（参考値）
+                      example: 1
+                    ids:
+                      $ref: "#/components/schemas/Ids"
+                    structured_address:
+                      $ref: "#/components/schemas/StructuredAddress"
+          examples:
+            match_success:
+              summary: マッチング結果例
+              value:
+                type: "MatchResult"
+                query:
+                  address: "東京都千代田区紀尾井町1番3号 東京ガーデンテラス紀尾井町 19階、20階"
+                  category: "rsdtdsp"
+                  pref: "all"
+                  limit: 2
+                result_info:
+                  count: 2
+                  limit: 2
+                  api_version: "3.0.0"
+                  db_version: "3.0.0"
+                  enabled_category: "all"
+                  enabled_pref: "all"
+                  duration_ms: 35.69
+                features:
+                  - matched_address: "東京都千代田区紀尾井町1-3"
+                    unmatched_address:
+                      - "東京ガーデンテラス紀尾井町"
+                      - "19階、20階"
+                    match_level: "rsdtdsp_rsdt"
+                    score: 0.8
+                    ids:
+                      lg_code: "131016"
+                      machiaza_id: "0056000"
+                      rsdt_addr_flg: "1"
+                      blk_id: "001"
+                      rsdt_id: "003"
+                      rsdt2_id: null
+                      prc_id: null
+                    structured_address:
+                      pref: "東京都"
+                      county: null
+                      city: "千代田区"
+                      ward: null
+                      kyoto_st: null
+                      oaza_cho: "紀尾井町"
+                      chome: null
+                      koaza: null
+                      machiaza_dist: null
+                      blk_num: "1"
+                      rsdt_num: "3"
+                      rsdt_num2: null
+                      prc_num1: null
+                      prc_num2: null
+                      prc_num3: null
+                  - matched_address: "東京都千代田区紀尾井町"
+                    unmatched_address: null
+                    match_level: "machiaza"
+                    score: 0.6
+                    ids:
+                      lg_code: "131016"
+                      machiaza_id: "0056000"
+                      rsdt_addr_flg: "1"
+                      blk_id: null
+                      rsdt_id: null
+                      rsdt2_id: null
+                      prc_id: null
+                    structured_address:
+                      pref: "東京都"
+                      county: null
+                      city: "千代田区"
+                      ward: null
+                      kyoto_st: null
+                      oaza_cho: "紀尾井町"
+                      chome: null
+                      koaza: null
+                      machiaza_dist: null
+                      blk_num: null
+                      rsdt_num: null
+                      rsdt_num2: null
+                      prc_num1: null
+                      prc_num2: null
+                      prc_num3: null
+    badRequest:
+      description: "不正なリクエスト"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: エラー状態
+                example: "error"
+              message:
+                type: string
+                description: エラーメッセージ
+                example: "The address parameter is empty"
+            required:
+              - status
+              - message
+    internalServerError:
+      description: サーバーエラー
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: エラー状態
+                example: "error"
+              message:
+                type: string
+                description: エラーメッセージ
+                example: "Internal Server Error"
+            required:
+              - status
+              - message
+    serviceUnavailable:
+      description: 座標データ無効（enable_pos=false に設定されている）
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: エラー状態
+                example: "error"
+              message:
+                type: string
+                description: エラーメッセージ
+                example: "This endpoint requires enable_pos=true in the database."
+            required:
+              - status
+              - message

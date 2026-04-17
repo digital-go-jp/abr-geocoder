@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Development
+.devcontainer
+.env
+.env.*
+
+# Built binaries
+abrg/abrg
+abrdb/abrdb
+
+# Test and coverage
+*.test
+coverage.out
+coverage.html
+
+# Database files
+*.duckdb
+*.duckdb.wal
+
+# Temporary files
+*.tmp
+.tmp
+.gocache
+
+# Development data
+*.csv
+*.zip
+
+# Documentation
+*.md

@@ -1,0 +1,771 @@
+# ABR Data Import Configuration
+# Full column definitions based on ABR CSV specifications
+version: 1
+
+category:
+  # 都道府県マスタ
+  mt_pref:
+    table_name: mt_pref_unified
+    s3_text_path: mt_pref/
+    s3_pos_path: mt_pref_pos/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: pref
+        type: TEXT
+        nullable: false
+      - name: pref_kana
+        type: TEXT
+        nullable: true
+      - name: pref_roma
+        type: TEXT
+        nullable: true
+      - name: efct_date
+        type: DATE
+        nullable: true
+      - name: ablt_date
+        type: DATE
+        nullable: true
+      - name: remarks
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: rep_lon
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_lat
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_srid
+        type: TEXT
+        nullable: true
+      - name: rep_scale
+        type: INTEGER
+        nullable: true
+      - name: plygn_fname
+        type: TEXT
+        nullable: true
+      - name: plygn_kcode
+        type: TEXT
+        nullable: true
+      - name: plygn_fmt
+        type: TEXT
+        nullable: true
+      - name: plygn_srid
+        type: TEXT
+        nullable: true
+      - name: plygn_scale
+        type: INTEGER
+        nullable: true
+    join_columns:
+      - lg_code
+
+  # 市区町村マスタ
+  mt_city:
+    table_name: mt_city_unified
+    s3_text_path: mt_city/pref/
+    s3_pos_path: mt_city_pos/pref/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: pref
+        type: TEXT
+        nullable: true
+      - name: pref_kana
+        type: TEXT
+        nullable: true
+      - name: pref_roma
+        type: TEXT
+        nullable: true
+      - name: county
+        type: TEXT
+        nullable: true
+      - name: county_kana
+        type: TEXT
+        nullable: true
+      - name: county_roma
+        type: TEXT
+        nullable: true
+      - name: city
+        type: TEXT
+        nullable: false
+      - name: city_kana
+        type: TEXT
+        nullable: true
+      - name: city_roma
+        type: TEXT
+        nullable: true
+      - name: ward
+        type: TEXT
+        nullable: true
+      - name: ward_kana
+        type: TEXT
+        nullable: true
+      - name: ward_roma
+        type: TEXT
+        nullable: true
+      - name: efct_date
+        type: DATE
+        nullable: true
+      - name: ablt_date
+        type: DATE
+        nullable: true
+      - name: remarks
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: rep_lon
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_lat
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_srid
+        type: TEXT
+        nullable: true
+      - name: rep_scale
+        type: INTEGER
+        nullable: true
+      - name: plygn_fname
+        type: TEXT
+        nullable: true
+      - name: plygn_kcode
+        type: TEXT
+        nullable: true
+      - name: plygn_fmt
+        type: TEXT
+        nullable: true
+      - name: plygn_srid
+        type: TEXT
+        nullable: true
+      - name: plygn_scale
+        type: INTEGER
+        nullable: true
+    join_columns:
+      - lg_code
+
+  # 町字マスタ
+  mt_town:
+    table_name: mt_town_unified
+    s3_text_path: mt_town_fullset/pref/
+    s3_pos_path: mt_town_pos/pref/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: machiaza_type
+        type: SMALLINT
+        nullable: true
+      - name: pref
+        type: TEXT
+        nullable: true
+      - name: pref_kana
+        type: TEXT
+        nullable: true
+      - name: pref_roma
+        type: TEXT
+        nullable: true
+      - name: county
+        type: TEXT
+        nullable: true
+      - name: county_kana
+        type: TEXT
+        nullable: true
+      - name: county_roma
+        type: TEXT
+        nullable: true
+      - name: city
+        type: TEXT
+        nullable: true
+      - name: city_kana
+        type: TEXT
+        nullable: true
+      - name: city_roma
+        type: TEXT
+        nullable: true
+      - name: ward
+        type: TEXT
+        nullable: true
+      - name: ward_kana
+        type: TEXT
+        nullable: true
+      - name: ward_roma
+        type: TEXT
+        nullable: true
+      - name: oaza_cho
+        type: TEXT
+        nullable: true
+      - name: oaza_cho_kana
+        type: TEXT
+        nullable: true
+      - name: oaza_cho_roma
+        type: TEXT
+        nullable: true
+      - name: chome
+        type: TEXT
+        nullable: true
+      - name: chome_kana
+        type: TEXT
+        nullable: true
+      - name: chome_number
+        type: SMALLINT
+        nullable: true
+      - name: koaza
+        type: TEXT
+        nullable: true
+      - name: koaza_kana
+        type: TEXT
+        nullable: true
+      - name: koaza_roma
+        type: TEXT
+        nullable: true
+      - name: machiaza_dist
+        type: TEXT
+        nullable: true
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: false
+      - name: rsdt_addr_mtd_code
+        type: SMALLINT
+        nullable: true
+      - name: oaza_cho_aka_flg
+        type: SMALLINT
+        nullable: true
+      - name: koaza_aka_code
+        type: SMALLINT
+        nullable: true
+      - name: oaza_cho_gsi_uncmn
+        type: TEXT
+        nullable: true
+      - name: koaza_gsi_uncmn
+        type: TEXT
+        nullable: true
+      - name: status_flg
+        type: SMALLINT
+        nullable: true
+      - name: wake_num_flg
+        type: SMALLINT
+        nullable: true
+      - name: efct_date
+        type: DATE
+        nullable: true
+      - name: ablt_date
+        type: DATE
+        nullable: true
+      - name: src_code
+        type: SMALLINT
+        nullable: true
+      - name: post_code
+        type: TEXT
+        nullable: true
+      - name: oaza_cho_uncmn_reg
+        type: TEXT
+        nullable: true
+      - name: oaza_cho_uncmn_mj
+        type: TEXT
+        nullable: true
+      - name: oaza_cho_uncmn_type
+        type: TEXT
+        nullable: true
+      - name: oaza_cho_uncmn_code
+        type: TEXT
+        nullable: true
+      - name: koaza_uncmn_reg
+        type: TEXT
+        nullable: true
+      - name: koaza_uncmn_mj
+        type: TEXT
+        nullable: true
+      - name: koaza_uncmn_type
+        type: TEXT
+        nullable: true
+      - name: koaza_uncmn_code
+        type: TEXT
+        nullable: true
+      - name: alias_oaza
+        type: TEXT
+        nullable: true
+      - name: alias_oaza_kana
+        type: TEXT
+        nullable: true
+      - name: alias_oaza_roma
+        type: TEXT
+        nullable: true
+      - name: alias_koaza
+        type: TEXT
+        nullable: true
+      - name: alias_koaza_kana
+        type: TEXT
+        nullable: true
+      - name: alias_koaza_roma
+        type: TEXT
+        nullable: true
+      - name: remarks
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: false
+      - name: rep_lon
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_lat
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_srid
+        type: TEXT
+        nullable: true
+      - name: rep_scale
+        type: INTEGER
+        nullable: true
+      - name: rep_src_code
+        type: SMALLINT
+        nullable: true
+      - name: plygn_fname
+        type: TEXT
+        nullable: true
+      - name: plygn_kcode
+        type: TEXT
+        nullable: true
+      - name: plygn_fmt
+        type: TEXT
+        nullable: true
+      - name: plygn_srid
+        type: TEXT
+        nullable: true
+      - name: plygn_scale
+        type: INTEGER
+        nullable: true
+      - name: plygn_src_code
+        type: SMALLINT
+        nullable: true
+      - name: pos_oaza_cho_chome_code
+        type: TEXT
+        nullable: true
+      - name: pos_data_mnt_year
+        type: INTEGER
+        nullable: true
+      - name: cns_bnd_s_area_kcode
+        type: TEXT
+        nullable: true
+      - name: cns_bnd_year
+        type: INTEGER
+        nullable: true
+    join_columns:
+      - lg_code
+      - machiaza_id
+      - rsdt_addr_flg
+    filters:
+      status_flg: ["1", "2"]
+
+  # 住居表示-街区
+  mt_rsdtdsp_blk:
+    table_name: mt_rsdtdsp_blk_unified
+    s3_text_path: mt_rsdtdsp_blk/pref/
+    s3_pos_path: mt_rsdtdsp_blk_pos/pref/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: blk_id
+        type: CHAR(3)
+        nullable: false
+      - name: city
+        type: TEXT
+        nullable: true
+      - name: ward
+        type: TEXT
+        nullable: true
+      - name: oaza_cho
+        type: TEXT
+        nullable: true
+      - name: chome
+        type: TEXT
+        nullable: true
+      - name: koaza
+        type: TEXT
+        nullable: true
+      - name: machiaza_dist
+        type: TEXT
+        nullable: true
+      - name: blk_num
+        type: TEXT
+        nullable: true
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: false
+      - name: rsdt_addr_mtd_code
+        type: SMALLINT
+        nullable: true
+      - name: status_flg
+        type: SMALLINT
+        nullable: true
+      - name: efct_date
+        type: DATE
+        nullable: true
+      - name: ablt_date
+        type: DATE
+        nullable: true
+      - name: src_code
+        type: SMALLINT
+        nullable: true
+      - name: remarks
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: blk_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: false
+      - name: rsdt_addr_mtd_code
+        type: SMALLINT
+        nullable: true
+      - name: rep_lon
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_lat
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_srid
+        type: TEXT
+        nullable: true
+      - name: rep_scale
+        type: INTEGER
+        nullable: true
+      - name: rep_src_code
+        type: SMALLINT
+        nullable: true
+      - name: plygn_fname
+        type: TEXT
+        nullable: true
+      - name: plygn_kcode
+        type: TEXT
+        nullable: true
+      - name: plygn_fmt
+        type: TEXT
+        nullable: true
+      - name: plygn_srid
+        type: TEXT
+        nullable: true
+      - name: plygn_scale
+        type: INTEGER
+        nullable: true
+      - name: plygn_src_code
+        type: SMALLINT
+        nullable: true
+      - name: pos_pref
+        type: TEXT
+        nullable: true
+      - name: pos_city
+        type: TEXT
+        nullable: true
+      - name: pos_oaza_cho_chome
+        type: TEXT
+        nullable: true
+      - name: pos_koaza_aka
+        type: TEXT
+        nullable: true
+      - name: pos_blk_prc_num
+        type: TEXT
+        nullable: true
+      - name: pos_data_mnt_year
+        type: INTEGER
+        nullable: true
+      - name: rsdt_addr_code_rdbl
+        type: TEXT
+        nullable: true
+      - name: rsdt_addr_data_mnt_date
+        type: DATE
+        nullable: true
+    join_columns:
+      - lg_code
+      - machiaza_id
+      - rsdt_addr_flg
+      - blk_id
+
+  # 住居表示-住居
+  mt_rsdtdsp_rsdt:
+    table_name: mt_rsdtdsp_rsdt_unified
+    s3_text_path: mt_rsdtdsp_rsdt/pref/
+    s3_pos_path: mt_rsdtdsp_rsdt_pos/pref/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: blk_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt2_id
+        type: CHAR(5)
+        nullable: true
+      - name: city
+        type: TEXT
+        nullable: true
+      - name: ward
+        type: TEXT
+        nullable: true
+      - name: oaza_cho
+        type: TEXT
+        nullable: true
+      - name: chome
+        type: TEXT
+        nullable: true
+      - name: koaza
+        type: TEXT
+        nullable: true
+      - name: machiaza_dist
+        type: TEXT
+        nullable: true
+      - name: blk_num
+        type: TEXT
+        nullable: true
+      - name: rsdt_num
+        type: TEXT
+        nullable: false
+      - name: rsdt_num2
+        type: TEXT
+        nullable: true
+      - name: basic_rsdt_div
+        type: SMALLINT
+        nullable: true
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: false
+      - name: rsdt_addr_mtd_code
+        type: SMALLINT
+        nullable: true
+      - name: status_flg
+        type: SMALLINT
+        nullable: true
+      - name: efct_date
+        type: DATE
+        nullable: true
+      - name: ablt_date
+        type: DATE
+        nullable: true
+      - name: src_code
+        type: SMALLINT
+        nullable: true
+      - name: remarks
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: blk_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt_id
+        type: CHAR(3)
+        nullable: false
+      - name: rsdt2_id
+        type: CHAR(5)
+        nullable: true
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: false
+      - name: rsdt_addr_mtd_code
+        type: SMALLINT
+        nullable: true
+      - name: rep_lon
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_lat
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_srid
+        type: TEXT
+        nullable: true
+      - name: rep_scale
+        type: INTEGER
+        nullable: true
+      - name: rep_src_code
+        type: SMALLINT
+        nullable: true
+      - name: rsdt_addr_code_rdbl
+        type: TEXT
+        nullable: true
+      - name: rsdt_addr_data_mnt_date
+        type: DATE
+        nullable: true
+      - name: basic_rsdt_div
+        type: SMALLINT
+        nullable: true
+    join_columns:
+      - lg_code
+      - machiaza_id
+      - rsdt_addr_flg
+      - blk_id
+      - rsdt_id
+      - rsdt2_id
+
+  # 地番
+  mt_parcel:
+    table_name: mt_parcel_unified
+    s3_text_path: mt_parcel/city/
+    s3_pos_path: mt_parcel_pos/city/
+    text_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: prc_id
+        type: CHAR(15)
+        nullable: false
+      - name: city
+        type: TEXT
+        nullable: true
+      - name: ward
+        type: TEXT
+        nullable: true
+      - name: oaza_cho
+        type: TEXT
+        nullable: true
+      - name: chome
+        type: TEXT
+        nullable: true
+      - name: koaza
+        type: TEXT
+        nullable: true
+      - name: machiaza_dist
+        type: TEXT
+        nullable: true
+      - name: prc_num1
+        type: TEXT
+        nullable: true
+      - name: prc_num2
+        type: TEXT
+        nullable: true
+      - name: prc_num3
+        type: TEXT
+        nullable: true
+      - name: rsdt_addr_flg
+        type: SMALLINT
+        nullable: true
+      - name: prc_rec_flg
+        type: SMALLINT
+        nullable: true
+      - name: prc_area_code
+        type: TEXT
+        nullable: true
+      - name: efct_date
+        type: DATE
+        nullable: true
+      - name: ablt_date
+        type: DATE
+        nullable: true
+      - name: src_code
+        type: SMALLINT
+        nullable: true
+      - name: remarks
+        type: TEXT
+        nullable: true
+      - name: real_prop_num
+        type: TEXT
+        nullable: true
+    pos_columns:
+      - name: lg_code
+        type: CHAR(6)
+        nullable: false
+      - name: machiaza_id
+        type: CHAR(7)
+        nullable: false
+      - name: prc_id
+        type: CHAR(15)
+        nullable: false
+      - name: rep_lon
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_lat
+        type: DOUBLE PRECISION
+        nullable: true
+      - name: rep_srid
+        type: TEXT
+        nullable: true
+      - name: rep_scale
+        type: INTEGER
+        nullable: true
+      - name: rep_src_code
+        type: SMALLINT
+        nullable: true
+      - name: plygn_fname
+        type: TEXT
+        nullable: true
+      - name: plygn_kcode
+        type: TEXT
+        nullable: true
+      - name: plygn_fmt
+        type: TEXT
+        nullable: true
+      - name: plygn_srid
+        type: TEXT
+        nullable: true
+      - name: plygn_scale
+        type: INTEGER
+        nullable: true
+      - name: plygn_src_code
+        type: SMALLINT
+        nullable: true
+      - name: moj_map_city_code
+        type: TEXT
+        nullable: true
+      - name: moj_map_oaza_code
+        type: TEXT
+        nullable: true
+      - name: moj_map_chome_code
+        type: TEXT
+        nullable: true
+      - name: moj_map_koaza_code
+        type: TEXT
+        nullable: true
+      - name: moj_map_spare_code
+        type: TEXT
+        nullable: true
+      - name: moj_map_brushid
+        type: TEXT
+        nullable: true
+    join_columns:
+      - lg_code
+      - machiaza_id
+      - prc_id

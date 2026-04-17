@@ -1,0 +1,193 @@
+package issues
+
+import (
+	"abrg/internal/model"
+	"testing"
+)
+
+// TestIssue190 tests Kyoto addresses with street names (kyoto_st)
+// Issue #190: 京都通り名を含む地番検索
+func TestIssue190(t *testing.T) {
+	runNormalizeTests(t, []normalizeTestCase{
+		{
+			name: "issue190-1a [京都市中京区寺町通御池上る上本能寺前町488番地]",
+			query: model.MatchQuery{
+				Address:  "京都市中京区寺町通御池上る上本能寺前町488番地",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelParcel,
+			wantMatchedAddress:   "京都府京都市中京区寺町通御池上る上本能寺前町488",
+			wantUnmatchedAddress: nil,
+			// ids: lg_code=261041, machiaza_id=0098104, rsdt_addr_flg=0, prc_id=004880000000000
+			wantStructured: map[string]any{
+				FieldPref:         "京都府",
+				FieldCounty:       nil,
+				FieldCity:         "京都市",
+				FieldWard:         "中京区",
+				FieldMachiazaDist: nil,
+				FieldKyotoSt:      "寺町通御池上る",
+				FieldOazaCho:      "上本能寺前町",
+				FieldChome:        nil,
+				FieldKoaza:        nil,
+				FieldBlkNum:       nil,
+				FieldRsdtNum:      nil,
+				FieldRsdtNum2:     nil,
+				FieldPrcNum1:      "488",
+				FieldPrcNum2:      nil,
+				FieldPrcNum3:      nil,
+			},
+		},
+		{
+			name: "issue190-1b [京都市中京区寺町通御池上る上本能寺前町]",
+			query: model.MatchQuery{
+				Address:  "京都市中京区寺町通御池上る上本能寺前町",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "京都府京都市中京区寺町通御池上る上本能寺前町",
+			wantUnmatchedAddress: nil,
+			// ids: lg_code=261041, machiaza_id=0098104, rsdt_addr_flg=0
+			wantStructured: map[string]any{
+				FieldPref:         "京都府",
+				FieldCounty:       nil,
+				FieldCity:         "京都市",
+				FieldWard:         "中京区",
+				FieldMachiazaDist: nil,
+				FieldKyotoSt:      "寺町通御池上る",
+				FieldOazaCho:      "上本能寺前町",
+				FieldChome:        nil,
+				FieldKoaza:        nil,
+				FieldBlkNum:       nil,
+				FieldRsdtNum:      nil,
+				FieldRsdtNum2:     nil,
+				FieldPrcNum1:      nil,
+				FieldPrcNum2:      nil,
+				FieldPrcNum3:      nil,
+			},
+		},
+		{
+			name: "issue190-1c [京都市中京区上本能寺前町]",
+			query: model.MatchQuery{
+				Address:  "京都市中京区上本能寺前町",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelMachiaza,
+			wantMatchedAddress:   "京都府京都市中京区上本能寺前町",
+			wantUnmatchedAddress: nil,
+			// ids: lg_code=261041, machiaza_id=0098000, rsdt_addr_flg=0
+			wantStructured: map[string]any{
+				FieldPref:         "京都府",
+				FieldCounty:       nil,
+				FieldCity:         "京都市",
+				FieldWard:         "中京区",
+				FieldMachiazaDist: nil,
+				FieldKyotoSt:      nil,
+				FieldOazaCho:      "上本能寺前町",
+				FieldChome:        nil,
+				FieldKoaza:        nil,
+				FieldBlkNum:       nil,
+				FieldRsdtNum:      nil,
+				FieldRsdtNum2:     nil,
+				FieldPrcNum1:      nil,
+				FieldPrcNum2:      nil,
+				FieldPrcNum3:      nil,
+			},
+		},
+		{
+			name: "issue190-2a [京都市上京区烏丸通寺之内上る東入二筋目上る相国寺門前町]",
+			query: model.MatchQuery{
+				Address:  "京都市上京区烏丸通寺之内上る東入二筋目上る相国寺門前町",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "京都府京都市上京区烏丸通寺之内上る東入二筋目上る相国寺門前町",
+			wantUnmatchedAddress: nil,
+			// ids: lg_code=261025, machiaza_id=0281172, rsdt_addr_flg=0
+			wantStructured: map[string]any{
+				FieldPref:         "京都府",
+				FieldCounty:       nil,
+				FieldCity:         "京都市",
+				FieldWard:         "上京区",
+				FieldMachiazaDist: nil,
+				FieldKyotoSt:      "烏丸通寺之内上る東入二筋目上る",
+				FieldOazaCho:      "相国寺門前町",
+				FieldChome:        nil,
+				FieldKoaza:        nil,
+				FieldBlkNum:       nil,
+				FieldRsdtNum:      nil,
+				FieldRsdtNum2:     nil,
+				FieldPrcNum1:      nil,
+				FieldPrcNum2:      nil,
+				FieldPrcNum3:      nil,
+			},
+		},
+		{
+			name: "issue190-3a [京都市下京区烏丸通六条上ル北町181番地第5キョートビル]",
+			query: model.MatchQuery{
+				Address:  "京都市下京区烏丸通六条上ル北町181番地第5キョートビル",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelParcel,
+			wantMatchedAddress:   "京都府京都市下京区烏丸通六条上る北町181",
+			wantUnmatchedAddress: []string{"第5キョートビル"},
+			// ids: lg_code=261068, machiaza_id=0124105, rsdt_addr_flg=0, prc_id=001810000000000
+			wantStructured: map[string]any{
+				FieldPref:         "京都府",
+				FieldCounty:       nil,
+				FieldCity:         "京都市",
+				FieldWard:         "下京区",
+				FieldMachiazaDist: nil,
+				FieldKyotoSt:      "烏丸通六条上る",
+				FieldOazaCho:      "北町",
+				FieldChome:        nil,
+				FieldKoaza:        nil,
+				FieldBlkNum:       nil,
+				FieldRsdtNum:      nil,
+				FieldRsdtNum2:     nil,
+				FieldPrcNum1:      "181",
+				FieldPrcNum2:      nil,
+				FieldPrcNum3:      nil,
+			},
+		},
+		{
+			name: "issue190-3b [京都市下京区四条通烏丸東入ル長刀鉾町8番地京都三井ビルディング5階]",
+			query: model.MatchQuery{
+				Address:  "京都市下京区四条通烏丸東入ル長刀鉾町8番地京都三井ビルディング5階",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelParcel,
+			wantMatchedAddress:   "京都府京都市下京区四条通烏丸東入長刀鉾町8",
+			wantUnmatchedAddress: []string{"京都三井ビルディング5階"},
+			// ids: lg_code=261068, machiaza_id=0328102, rsdt_addr_flg=0, prc_id=000080000000000
+			wantStructured: map[string]any{
+				FieldPref:         "京都府",
+				FieldCounty:       nil,
+				FieldCity:         "京都市",
+				FieldWard:         "下京区",
+				FieldMachiazaDist: nil,
+				FieldKyotoSt:      "四条通烏丸東入",
+				FieldOazaCho:      "長刀鉾町",
+				FieldChome:        nil,
+				FieldKoaza:        nil,
+				FieldBlkNum:       nil,
+				FieldRsdtNum:      nil,
+				FieldRsdtNum2:     nil,
+				FieldPrcNum1:      "8",
+				FieldPrcNum2:      nil,
+				FieldPrcNum3:      nil,
+			},
+		},
+	})
+}

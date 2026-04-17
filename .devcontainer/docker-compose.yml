@@ -1,0 +1,77 @@
+name: geocoder_devcontainer
+
+x-db-user: &db-user abruser
+x-db-password: &db-password postgres
+x-db-name: &db-name abrdb
+x-db-host: &db-host postgres
+x-db-port: &db-port 5432
+
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: geocoder_devcontainer
+    environment:
+      # Database
+      DB_HOST: *db-host
+      DB_PORT: *db-port
+      DB_USER: *db-user
+      DB_PASSWORD: *db-password
+      DB_NAME: *db-name
+      DB_SSLMODE: prefer
+      PGPASSWORD: *db-password
+      # abrdb: ダウンロードデータの保存先 (デフォルトは /tmp/abrdb/data だが、
+      # コンテナ再起動で消えてしまうので、ホスト側の abrdb_data ボリュームに永続化する)
+      ABRDB_DOWNLOAD_DIR: /root/.abrdb/data
+      # abrdb: init設定（デフォルト値）
+      # ABRDB_PREF: all
+      # ABRDB_CATEGORY: basic
+      # ABRDB_POS: false
+      # abrg: DuckDBキャッシュ (デフォルト: ~/.abrg/cache/abrg.duckdb)
+      # CACHE_PATH: /root/.abrg/cache/abrg.duckdb
+      # Server
+      PORT: 3000
+      GIN_MODE: debug
+      # Logging
+      LOG_LEVEL: debug
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      # ソースコード
+      - ..:/workspace:cached
+      # abrg: DuckDBキャッシュ
+      - ./abrg_cache:/root/.abrg/cache
+      # abrdb: ダウンロードデータ
+      - ./abrdb_data:/root/.abrdb/data
+    working_dir: /workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - geocoder-network
+    command: sleep infinity
+
+  postgres:
+    image: postgres:17
+    container_name: geocoder_postgres
+    environment:
+      POSTGRES_USER: *db-user
+      POSTGRES_PASSWORD: *db-password
+      POSTGRES_DB: *db-name
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      # PostgreSQL データ
+      - ./postgres_data:/var/lib/postgresql/data
+    networks:
+      - geocoder-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U abruser -d abrdb -h 127.0.0.1" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+
+networks:
+  geocoder-network:
+    driver: bridge

@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+
+# Build artifacts
+abrg/abrg
+abrdb/abrdb
+
+# Environment
+.env
+.env.local
+
+# Docker compose data
+.devcontainer/postgres_data/
+.devcontainer/abrg_cache/
+.devcontainer/abrdb_data/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
