@@ -9,6 +9,20 @@ abrdb/abrdb
 .env
 .env.local
 
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# Go test coverage
+coverage.out
+*.coverprofile
+
+# DuckDB
+*.duckdb
+*.duckdb.wal
+!quickstart/*.duckdb
+
 # Docker compose data
 .devcontainer/postgres_data/
 .devcontainer/abrg_cache/
@@ -21,3 +35,6 @@ abrdb/abrdb
 *.tfstate.*
 *.tfplan
 tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
