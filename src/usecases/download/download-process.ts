@@ -298,9 +298,10 @@ export class Downloader {
         if (downloadTargetLgCodes.size > 0 && !cityPrefixes.has(prefix)) {
           continue;
         }
-        // city, city_pos に加えて、都道府県レベルのrsdtdsp系ファイルも含める
-        for (const dataset of ['city', 'city_pos', 'rsdtdsp_blk', 'rsdtdsp_blk_pos', 'rsdtdsp_rsdt', 'rsdtdsp_rsdt_pos'] as FileGroupKey[]) {
-          const packageId = lgCodePackages.get(lgCode)?.get(dataset);
+        // city, city_pos, town_pos と都道府県レベルの rsdtdsp 系ファイルを含める。
+        // town は city スコープ版 (mt_town_city**) を別途取得するため、pref レベルでは取得しない。
+        for (const dataset of ['city', 'city_pos', 'town_pos', 'rsdtdsp_blk', 'rsdtdsp_blk_pos', 'rsdtdsp_rsdt', 'rsdtdsp_rsdt_pos'] as FileGroupKey[]) {
+          const packageId = packages.get(dataset);
           if (packageId) {
             results.push({
               kind: 'download',

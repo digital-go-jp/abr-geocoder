@@ -21,6 +21,10 @@ const PackageListResponse = {
       // 東京都データ (13....)
       { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_rsdtdsp_rsdt_pos/pref/mt_rsdtdsp_rsdt_pos_pref13.csv.zip" }] },
       { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_city_pos/pref/mt_city_pos_pref13.csv.zip" }] },
+      // town_pos は pref スコープにしか存在しない (区指定でも pref から取得する必要がある)
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town_pos/pref/mt_town_pos_pref13.csv.zip" }] },
+      // town は city スコープ版で取得するため、pref レベル (mt_town_pref**) はダウンロード対象外
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town/pref/mt_town_pref13.csv.zip" }] },
 
       // 東京都千代田区 (131016)
       { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town/city/mt_town_city131016.csv.zip" }] },
@@ -35,6 +39,9 @@ const PackageListResponse = {
       // 京都府データ (26....)
       { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_city/pref/mt_city_pref26.csv.zip" }] },
       { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_city_pos/pref/mt_city_pos_pref26.csv.zip" }] },
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town_pos/pref/mt_town_pos_pref26.csv.zip" }] },
+      // town は city スコープ版で取得するため、pref レベル (mt_town_pref**) はダウンロード対象外
+      { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town/pref/mt_town_pref26.csv.zip" }] },
 
       // 京都府福知山市 (262013)
       { description: "最終更新日: 2025-09-30T15:41:43.000Z", distribution: [{ accessURL: "https://example.com/mt_town/city/mt_town_city262013.csv.zip" }] },

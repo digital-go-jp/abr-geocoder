@@ -132,6 +132,15 @@ describe('Downloader', () => {
     expect(lgCodeDatasetPairs).toContain('131016:parcel');
     expect(lgCodeDatasetPairs).toContain('262013:town');
     expect(lgCodeDatasetPairs).toContain('000000:pref');
+    // 都道府県レベルの位置参照拡張 (mt_town_pos_pref**.csv) もダウンロード対象に含めること
+    expect(lgCodeDatasetPairs).toContain('26....:town_pos');
+    // town は city スコープ版 (mt_town_city**) で取得するため、pref レベル (mt_town_pref**) は対象外
+    expect(lgCodeDatasetPairs).not.toContain('26....:town');
+
+    // 市区町村LGCode単独指定 (131016) でも、pref-only の town_pos は都道府県(13....)から取得すること。
+    // 一方 pref レベルの town は取得せず、要求した区の city 版だけにとどめること (全都道府県の町字を巻き込まない)。
+    expect(lgCodeDatasetPairs).toContain('13....:town_pos');
+    expect(lgCodeDatasetPairs).not.toContain('13....:town');
   });
 
 
