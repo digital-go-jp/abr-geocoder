@@ -40,7 +40,7 @@ duckdb ~/.abrg/cache/abrg.duckdb "SELECT COUNT(*) FROM cache_machiaza;"
 duckdb ~/.abrg/cache/abrg.duckdb "SELECT * FROM cache_machiaza LIMIT 5;"
 ```
 
-abrg server 稼働中のキャッシュを触る場合は `-readonly` を付ける:
+abrg serve 稼働中のキャッシュを触る場合は `-readonly` を付ける:
 
 ```bash
 duckdb -readonly ~/.abrg/cache/abrg.duckdb "SELECT COUNT(*) FROM cache_machiaza;"

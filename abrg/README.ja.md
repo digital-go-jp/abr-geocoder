@@ -35,12 +35,12 @@ PostgreSQLからDuckDBキャッシュファイルを構築します。
 
 ## APIサーバー
 
-### `abrg server`
+### `abrg serve`
 
 APIサーバーを起動します。事前に `cache build` が必要です。
 
 ```bash
-./abrg server
+./abrg serve
 ```
 
 エンドポイント:
@@ -67,7 +67,7 @@ API仕様: [openapi/openapi.yml](openapi/openapi.yml)
 
 例：
 ```bash
-PORT=8080 CACHE_PATH=/data/cache.duckdb LOG_LEVEL=DEBUG ./abrg server
+PORT=8080 CACHE_PATH=/data/cache.duckdb LOG_LEVEL=DEBUG ./abrg serve
 ```
 
 ## CLIツール

@@ -18,4 +18,4 @@ services:
       # CACHE_PATH: ${CACHE_PATH:-~/.abrg/cache/abrg.duckdb}
     ports:
       - "3000:3000"
-    command: ./abrg server
+    command: ./abrg serve

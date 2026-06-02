@@ -47,7 +47,7 @@ ENV GIN_MODE=release \
     PORT=3000
 
 ENTRYPOINT ["/app/abrg"]
-CMD ["server"]
+CMD ["serve"]
 
 # AWS ECS用（AWS CLI付き）
 FROM base AS aws
