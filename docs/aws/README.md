@@ -173,9 +173,8 @@ cd /path/to/abr-geocoder
 aws ecr get-login-password | \
   docker login --username AWS --password-stdin $ECR_REGISTRY
 
-# abrg (Graviton ARM64)
-# --target aws で AWS CLI 付きイメージをビルド
-docker build --platform linux/arm64 -f abrg/Dockerfile --target aws -t abrg .
+# abrg (Graviton ARM64, AWS CLI 付きイメージ)
+docker build --platform linux/arm64 -f docs/aws/abrg.Dockerfile -t abrg .
 docker tag abrg:latest $ABRG_REPO:latest
 docker push $ABRG_REPO:latest
 
@@ -352,9 +351,3 @@ aws ecs update-service --cluster $ECS_CLUSTER --service abrg-service --force-new
 cd docs/aws/terraform
 terraform destroy
 ```
-
-## 参考
-
-- [abrg Dockerfile](../../abrg/Dockerfile)
-- [abrdb Dockerfile](../../abrdb/Dockerfile)
-- [Terraform Modules](./terraform/modules/)
