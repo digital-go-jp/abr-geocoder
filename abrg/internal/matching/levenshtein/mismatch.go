@@ -122,7 +122,7 @@ func extractTownNameFromSearch(searchAddr string) string {
 // characters (e.g., "8条寺ノ内町:10" or "14号").
 func isPureNumericContent(s string) bool {
 	for _, ch := range s {
-		if !((ch >= '0' && ch <= '9') || ch == '-' || ch == ':') {
+		if (ch < '0' || ch > '9') && ch != '-' && ch != ':' {
 			return false
 		}
 	}
