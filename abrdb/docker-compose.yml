@@ -16,9 +16,10 @@ services:
       - "5432:5432"
 
   abrdb_app:
+    profiles: ["cli"]
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: abrdb/Dockerfile
     container_name: abrdb_cli
     depends_on:
       postgres:
@@ -40,4 +41,3 @@ services:
       # Logging (set to debug for verbose output)
       LOG_LEVEL: ${LOG_LEVEL}
     working_dir: /app
-    command: sleep infinity

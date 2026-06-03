@@ -40,3 +40,12 @@ coverage.html
 
 # Documentation
 *.md
+
+# Repo files not used by Docker builds (only abrg/, abrdb/, common/ are needed)
+.github
+docs
+quickstart
+go.work
+go.work.sum
+LICENSE
+Makefile

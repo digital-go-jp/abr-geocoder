@@ -108,20 +108,25 @@ echo "139.7369,35.6812" | ./abrg reverse -i /dev/stdin -o /dev/stdout -c all -q
 
 ## Docker
 
+abrg は HTTP サーバー (`serve`) として常駐するが、起動には DuckDB キャッシュが必要。先に `cache build` してから `up -d` する。
+
+CLI 系コマンド (`cache build`, `cache info`, `match`, `geocode`, `reverse`) は `docker compose run --rm` で都度実行。`serve` は `docker compose up -d` で常駐起動。キャッシュは named volume (`abrg_cache`) で永続化されるので、`run` で作って `up` で利用できる。
+
 ```bash
 docker compose build
-docker compose up -d
 ```
 
 ### ワークフロー
 
+事前に [abrdb](../abrdb/README.ja.md) で PostgreSQL に ABR データを import 済みにしておくこと。
+
 ```bash
-# 1. キャッシュを構築
-docker compose exec abrg_app /app/abrg cache build
+# 1. キャッシュを構築（named volume に保存）
+docker compose run --rm abrg_app cache build
 
 # 2. キャッシュを検証
-docker compose exec abrg_app /app/abrg cache info
+docker compose run --rm abrg_app cache info
 
-# 3. サーバー起動（コンテナ再起動）
-docker compose restart abrg_app
+# 3. サーバー起動
+docker compose up -d
 ```

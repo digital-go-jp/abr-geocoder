@@ -92,22 +92,24 @@ abrdb show config
 
 ## Docker
 
+abrdb は CLI ツールなので、PostgreSQL のみを常駐させ、abrdb 本体は `docker compose run --rm` で都度実行する構成。
+
 ```bash
 docker compose build
-docker compose up -d
+docker compose up -d        # postgres のみが起動 (abrdb は profile=cli で除外)
 ```
 
 ### ワークフロー
 
 ```bash
 # 1. 初期化
-docker compose exec abrdb_app /app/abrdb init --pref 13 --category basic
+docker compose run --rm abrdb_app init --pref 13 --category basic
 
 # 2. 設定確認
-docker compose exec abrdb_app /app/abrdb show config
+docker compose run --rm abrdb_app show config
 
 # 3. インポート
-docker compose exec abrdb_app /app/abrdb import
+docker compose run --rm abrdb_app import
 ```
 
 ## 都道府県コード

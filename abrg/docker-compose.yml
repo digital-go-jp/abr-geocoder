@@ -2,8 +2,8 @@ name: abr
 services:
   abrg_app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: abrg/Dockerfile
     container_name: abrg_cli
     environment:
       DB_HOST: ${DB_HOST}
@@ -18,4 +18,8 @@ services:
       # CACHE_PATH: ${CACHE_PATH:-~/.abrg/cache/abrg.duckdb}
     ports:
       - "3000:3000"
-    command: ./abrg serve
+    volumes:
+      - abrg_cache:/root/.abrg/cache
+
+volumes:
+  abrg_cache:
