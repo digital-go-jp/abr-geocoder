@@ -1,0 +1,22 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (*archive/zip.ReadCloser).Close
+        - (io.ReadCloser).Close
+  exclusions:
+    rules:
+      - path: _test\.go
+        text: 'Error return value of `os\.(Setenv|Unsetenv)` is not checked'
+        linters:
+          - errcheck

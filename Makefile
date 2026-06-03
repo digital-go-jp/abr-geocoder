@@ -1,4 +1,4 @@
-.PHONY: help build test lint clean abrg-build abrg-test abrg-lint abrdb-build abrdb-test abrdb-lint all
+.PHONY: help build test lint fmt vuln clean abrg-build abrg-test abrg-lint abrg-fmt abrg-vuln abrdb-build abrdb-test abrdb-lint abrdb-fmt abrdb-vuln common-lint common-vuln all
 
 # Default target
 help:
@@ -30,7 +30,11 @@ build: abrg-build abrdb-build
 
 test: abrg-test abrdb-test
 
-lint: abrg-lint abrdb-lint
+lint: abrg-lint abrdb-lint common-lint
+
+fmt: abrg-fmt abrdb-fmt
+
+vuln: abrg-vuln abrdb-vuln common-vuln
 
 clean: abrg-clean abrdb-clean
 
@@ -51,6 +55,12 @@ abrg-run:
 	@echo "Running abrg server..."
 	@cd abrg && make run ARGS="server"
 
+abrg-fmt:
+	@cd abrg && make fmt
+
+abrg-vuln:
+	@cd abrg && make vuln
+
 abrg-clean:
 	@echo "Cleaning abrg..."
 	@cd abrg && make clean
@@ -68,6 +78,20 @@ abrdb-lint:
 	@echo "Linting abrdb..."
 	@cd abrdb && make lint
 
+abrdb-fmt:
+	@cd abrdb && make fmt
+
+abrdb-vuln:
+	@cd abrdb && make vuln
+
 abrdb-clean:
 	@echo "Cleaning abrdb..."
 	@cd abrdb && make clean
+
+# Common module targets
+common-lint:
+	@echo "Linting common..."
+	@cd common && go mod verify && go vet ./... && golangci-lint run
+
+common-vuln:
+	@cd common && go run golang.org/x/vuln/cmd/govulncheck@latest ./...

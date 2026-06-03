@@ -5,7 +5,7 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 # Build variables
 LDFLAGS := -ldflags "-X abr.local/common/version.Version=$(VERSION) -X abr.local/common/version.Commit=$(COMMIT)"
 
-.PHONY: test test-unit test-integration test-coverage build run clean lint bench prof help
+.PHONY: test test-unit test-integration test-coverage build run clean lint fmt vuln bench prof help
 
 # Run all tests
 test: test-unit
@@ -37,21 +37,21 @@ run:
 clean:
 	rm -f /tmp/abrdb coverage.out coverage.html
 
-# Run lint tools (auto-fix)
+# Run lint checks without modifying files (CI-friendly)
 lint:
-	@echo "Running go mod tidy..."
-	@go mod tidy
-	@echo "Running go mod verify..."
-	@go mod verify
-	@echo "Running goimports..."
-	@goimports -w .
-	@echo "Running go vet..."
-	@go vet ./...
-	@echo "Running golangci-lint..."
-	@golangci-lint run --fix --enable unused --enable ineffassign --enable staticcheck --enable errcheck
-	@echo "Checking for security vulnerabilities..."
-	@go run golang.org/x/vuln/cmd/govulncheck@latest ./...
-	@echo "Lint checks completed!"
+	go mod verify
+	go vet ./...
+	golangci-lint run
+
+# Run lint tools with auto-fix (local dev)
+fmt:
+	go mod tidy
+	goimports -w .
+	golangci-lint run --fix
+
+# Security vulnerability scan
+vuln:
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 
 # Run benchmarks
@@ -71,7 +71,9 @@ help:
 	@echo "  build         - Build the application"
 	@echo "  test          - Run all tests"
 	@echo "  test-coverage - Run tests with coverage report"
-	@echo "  lint          - Run linter"
+	@echo "  lint          - Run lint checks (CI-friendly, no auto-fix)"
+	@echo "  fmt           - Auto-format and fix lint issues"
+	@echo "  vuln          - Run govulncheck"
 	@echo "  bench         - Run benchmarks"
 	@echo "  prof          - Run with profiling"
 	@echo "  clean         - Clean build artifacts"

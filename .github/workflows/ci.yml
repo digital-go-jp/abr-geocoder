@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v3-beta]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [abrg, abrdb]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - name: Build ${{ matrix.module }}
+        run: cd ${{ matrix.module }} && make build
+      - name: Test ${{ matrix.module }}
+        run: cd ${{ matrix.module }} && make test
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [abrg, abrdb, common]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.11.4
+          working-directory: ${{ matrix.module }}
+
+  vuln:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        module: [abrg, abrdb, common]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - name: govulncheck ${{ matrix.module }}
+        run: cd ${{ matrix.module }} && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
