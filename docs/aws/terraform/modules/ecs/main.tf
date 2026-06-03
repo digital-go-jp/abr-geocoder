@@ -99,7 +99,7 @@ variable "abrg_memory_target" {
 variable "abrdb_cpu" {
   type        = string
   description = "CPU units for abrdb tasks (1024, 2048, 4096, 8192, 16384)"
-  default     = "16384" # 16 vCPU - testing (#275)
+  default     = "16384" # 16 vCPU
 }
 
 variable "abrdb_memory" {
@@ -111,7 +111,7 @@ variable "abrdb_memory" {
 variable "cache_build_cpu" {
   type        = string
   description = "CPU units for cache build task (1024, 2048, 4096, 8192, 16384)"
-  default     = "8192" # 8 vCPU - best cost/performance (#293)
+  default     = "8192" # 8 vCPU
 }
 
 variable "cache_build_memory" {
