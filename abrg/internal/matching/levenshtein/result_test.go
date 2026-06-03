@@ -173,7 +173,7 @@ func TestSelectBySearchNumbers(t *testing.T) {
 	}{
 		{
 			name:          "empty searchNumbers",
-			results:       []model.MatchedResult{{StructuredAddress: model.StructuredAddress{Koaza: strPtr("4号")}}},
+			results:       []model.MatchedResult{{StructuredAddress: model.StructuredAddress{Koaza: new("4号")}}},
 			searchNumbers: "",
 			wantNil:       true,
 		},
@@ -186,8 +186,8 @@ func TestSelectBySearchNumbers(t *testing.T) {
 		{
 			name: "koaza prefix match",
 			results: []model.MatchedResult{
-				{StructuredAddress: model.StructuredAddress{Koaza: strPtr("1号")}},
-				{StructuredAddress: model.StructuredAddress{Koaza: strPtr("4号")}},
+				{StructuredAddress: model.StructuredAddress{Koaza: new("1号")}},
+				{StructuredAddress: model.StructuredAddress{Koaza: new("4号")}},
 			},
 			searchNumbers: "4",
 			wantNil:       false,
@@ -196,8 +196,8 @@ func TestSelectBySearchNumbers(t *testing.T) {
 		{
 			name: "oaza_cho contains match",
 			results: []model.MatchedResult{
-				{StructuredAddress: model.StructuredAddress{OazaCho: strPtr("北11条西")}},
-				{StructuredAddress: model.StructuredAddress{OazaCho: strPtr("北12条西")}},
+				{StructuredAddress: model.StructuredAddress{OazaCho: new("北11条西")}},
+				{StructuredAddress: model.StructuredAddress{OazaCho: new("北12条西")}},
 			},
 			searchNumbers: "11",
 			wantNil:       false,

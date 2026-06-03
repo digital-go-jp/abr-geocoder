@@ -17,8 +17,8 @@ func Test_derefString(t *testing.T) {
 		expected string
 	}{
 		{"nil returns empty", nil, ""},
-		{"non-nil returns value", ptr("hello"), "hello"},
-		{"empty string returns empty", ptr(""), ""},
+		{"non-nil returns value", new("hello"), "hello"},
+		{"empty string returns empty", new(""), ""},
 	}
 
 	for _, tt := range tests {
@@ -28,10 +28,6 @@ func Test_derefString(t *testing.T) {
 			}
 		})
 	}
-}
-
-func ptr(s string) *string {
-	return &s
 }
 
 func TestMatchLevelToDetail(t *testing.T) {
@@ -70,19 +66,19 @@ func TestAdjustSearchAddrForMatch(t *testing.T) {
 		// nil source
 		{"nil source", "港区虎ノ門:1-23-1", nil, "港区虎ノ門:1-23-1"},
 		// source with no number
-		{"source no number", "港区虎ノ門:1-23-1", ptr("あいう"), "港区虎ノ門:1-23-1"},
+		{"source no number", "港区虎ノ門:1-23-1", new("あいう"), "港区虎ノ門:1-23-1"},
 		// @ pattern matching
-		{"@ pattern match", "入舟3@:4-1", ptr("3丁目"), "入舟:4-1"},
-		{"@ pattern no match", "入舟3@:4-1", ptr("2丁目"), "入舟3@:4-1"},
+		{"@ pattern match", "入舟3@:4-1", new("3丁目"), "入舟:4-1"},
+		{"@ pattern no match", "入舟3@:4-1", new("2丁目"), "入舟3@:4-1"},
 		// colon pattern matching
-		{"colon pattern match", "港区虎ノ門:1-23-1", ptr("1丁目"), "港区虎ノ門:23-1"},
-		{"colon pattern no match", "港区虎ノ門:1-23-1", ptr("2丁目"), "港区虎ノ門:1-23-1"},
+		{"colon pattern match", "港区虎ノ門:1-23-1", new("1丁目"), "港区虎ノ門:23-1"},
+		{"colon pattern no match", "港区虎ノ門:1-23-1", new("2丁目"), "港区虎ノ門:1-23-1"},
 		// no colon
-		{"no colon", "港区虎ノ門", ptr("1丁目"), "港区虎ノ門"},
+		{"no colon", "港区虎ノ門", new("1丁目"), "港区虎ノ門"},
 		// empty after colon (trailing colon is dropped by parsedAddress.String())
-		{"empty after colon", "港区虎ノ門:", ptr("1丁目"), "港区虎ノ門"},
+		{"empty after colon", "港区虎ノ門:", new("1丁目"), "港区虎ノ門"},
 		// match removes all remaining
-		{"match removes all", "港区虎ノ門:1", ptr("1丁目"), "港区虎ノ門"},
+		{"match removes all", "港区虎ノ門:1", new("1丁目"), "港区虎ノ門"},
 	}
 
 	for _, tt := range tests {
@@ -110,7 +106,7 @@ func TestBuildCityBasedSearchAddr(t *testing.T) {
 		{
 			name: "city found in searchAddr",
 			addr: model.StructuredAddress{
-				City: ptr("下田市"),
+				City: new("下田市"),
 			},
 			chomeSearchAddr: "静岡県下田市2@:4-26",
 			expected:        "下田市2@:4-26",
@@ -118,8 +114,8 @@ func TestBuildCityBasedSearchAddr(t *testing.T) {
 		{
 			name: "city with ward",
 			addr: model.StructuredAddress{
-				City: ptr("横浜市"),
-				Ward: ptr("中区"),
+				City: new("横浜市"),
+				Ward: new("中区"),
 			},
 			chomeSearchAddr: "神奈川県横浜市中区本町:1-2",
 			expected:        "横浜市中区本町:1-2",
@@ -127,8 +123,8 @@ func TestBuildCityBasedSearchAddr(t *testing.T) {
 		{
 			name: "county + city",
 			addr: model.StructuredAddress{
-				County: ptr("西多摩郡"),
-				City:   ptr("日の出町"),
+				County: new("西多摩郡"),
+				City:   new("日の出町"),
 			},
 			chomeSearchAddr: "東京都西多摩郡日の出町大字平井:123",
 			expected:        "西多摩郡日の出町大字平井:123",
@@ -136,7 +132,7 @@ func TestBuildCityBasedSearchAddr(t *testing.T) {
 		{
 			name: "city not found",
 			addr: model.StructuredAddress{
-				City: ptr("不明市"),
+				City: new("不明市"),
 			},
 			chomeSearchAddr: "静岡県下田市2@:4-26",
 			expected:        "静岡県下田市2@:4-26",
@@ -231,7 +227,7 @@ func TestBuildParcelSearchAddr(t *testing.T) {
 		{
 			name: "city only",
 			sa: &model.StructuredAddress{
-				City: ptr("下田市"),
+				City: new("下田市"),
 			},
 			afterColon: "123",
 			expected:   "下田市:123",
@@ -239,8 +235,8 @@ func TestBuildParcelSearchAddr(t *testing.T) {
 		{
 			name: "city with ward",
 			sa: &model.StructuredAddress{
-				City: ptr("横浜市"),
-				Ward: ptr("中区"),
+				City: new("横浜市"),
+				Ward: new("中区"),
 			},
 			afterColon: "1-2",
 			expected:   "横浜市中区:1-2",
@@ -248,9 +244,9 @@ func TestBuildParcelSearchAddr(t *testing.T) {
 		{
 			name: "full address",
 			sa: &model.StructuredAddress{
-				City:    ptr("千代田区"),
-				OazaCho: ptr("霞が関"),
-				Chome:   ptr("1丁目"),
+				City:    new("千代田区"),
+				OazaCho: new("霞が関"),
+				Chome:   new("1丁目"),
 			},
 			afterColon: "1-1",
 			expected:   "千代田区霞が関1丁目:1-1",
@@ -258,9 +254,9 @@ func TestBuildParcelSearchAddr(t *testing.T) {
 		{
 			name: "with koaza",
 			sa: &model.StructuredAddress{
-				City:    ptr("新宿区"),
-				OazaCho: ptr("西新宿"),
-				Koaza:   ptr("北町"),
+				City:    new("新宿区"),
+				OazaCho: new("西新宿"),
+				Koaza:   new("北町"),
 			},
 			afterColon: "100",
 			expected:   "新宿区西新宿北町:100",
@@ -268,7 +264,7 @@ func TestBuildParcelSearchAddr(t *testing.T) {
 		{
 			name: "empty afterColon",
 			sa: &model.StructuredAddress{
-				City: ptr("渋谷区"),
+				City: new("渋谷区"),
 			},
 			afterColon: "",
 			expected:   "渋谷区",

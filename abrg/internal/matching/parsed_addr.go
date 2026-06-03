@@ -59,10 +59,10 @@ func parseSearchAddr(searchAddr string) parsedAddress {
 		if strings.HasPrefix(afterAt, ":") {
 			afterColon := afterAt[1:]
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterColon)
-		} else if colonIdx := strings.Index(afterAt, ":"); colonIdx >= 0 {
+		} else if before, after, ok := strings.Cut(afterAt, ":"); ok {
 			// Text between @ and : is part of the oaza name (e.g., "南" in "壱丁目南" → "1@南:15-15")
-			p.AfterChome = afterAt[:colonIdx]
-			afterColon := afterAt[colonIdx+1:]
+			p.AfterChome = before
+			afterColon := after
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterColon)
 		} else if len(afterAt) > 1 && afterAt[0] == '-' && afterAt[1] >= '0' && afterAt[1] <= '9' {
 			// Sapporo pattern: "@-N" where N is address number after chome

@@ -24,7 +24,7 @@ func TestFetchFeedCaching(t *testing.T) {
 	ctx := context.Background()
 
 	// Call FetchFeed multiple times
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		_, err := client.FetchFeed(ctx)
 		if err != nil {
 			t.Fatalf("FetchFeed failed: %v", err)

@@ -5,10 +5,6 @@ import (
 	"testing"
 )
 
-func strPtr(s string) *string {
-	return &s
-}
-
 func TestDetermineMatchLevel(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -28,79 +24,79 @@ func TestDetermineMatchLevel(t *testing.T) {
 		{
 			name: "parcel level with PrcID",
 			ids: &model.IDs{
-				LgCode:     strPtr("131016"),
-				MachiazaID: strPtr("0001001"),
-				PrcID:      strPtr("prc123"),
+				LgCode:     new("131016"),
+				MachiazaID: new("0001001"),
+				PrcID:      new("prc123"),
 			},
 			wantLevel: model.MatchLevelParcel,
 		},
 		{
 			name: "residential detail level with RsdtID",
 			ids: &model.IDs{
-				LgCode:     strPtr("131016"),
-				MachiazaID: strPtr("0001001"),
-				BlkID:      strPtr("blk123"),
-				RsdtID:     strPtr("rsdt123"),
+				LgCode:     new("131016"),
+				MachiazaID: new("0001001"),
+				BlkID:      new("blk123"),
+				RsdtID:     new("rsdt123"),
 			},
 			wantLevel: model.MatchLevelResidentialDetail,
 		},
 		{
 			name: "residential block level with BlkID",
 			ids: &model.IDs{
-				LgCode:     strPtr("131016"),
-				MachiazaID: strPtr("0001001"),
-				BlkID:      strPtr("blk123"),
+				LgCode:     new("131016"),
+				MachiazaID: new("0001001"),
+				BlkID:      new("blk123"),
 			},
 			wantLevel: model.MatchLevelResidentialBlock,
 		},
 		{
 			name: "machiaza detail level - chome suffix",
 			ids: &model.IDs{
-				LgCode:     strPtr("131016"),
-				MachiazaID: strPtr("0001001"), // 001 != 000
+				LgCode:     new("131016"),
+				MachiazaID: new("0001001"), // 001 != 000
 			},
 			wantLevel: model.MatchLevelMachiazaDetail,
 		},
 		{
 			name: "machiaza level - no chome",
 			ids: &model.IDs{
-				LgCode:     strPtr("131016"),
-				MachiazaID: strPtr("0001000"), // 000
+				LgCode:     new("131016"),
+				MachiazaID: new("0001000"), // 000
 			},
 			wantLevel: model.MatchLevelMachiaza,
 		},
 		{
 			name: "city level with LgCode",
 			ids: &model.IDs{
-				LgCode: strPtr("131016"), // 101 != 000
+				LgCode: new("131016"), // 101 != 000
 			},
 			wantLevel: model.MatchLevelCity,
 		},
 		{
 			name: "prefecture level with LgCode ending in 000",
 			ids: &model.IDs{
-				LgCode: strPtr("130001"), // 000 in positions 3-5
+				LgCode: new("130001"), // 000 in positions 3-5
 			},
 			wantLevel: model.MatchLevelPrefecture,
 		},
 		{
 			name: "priority - PrcID over RsdtID",
 			ids: &model.IDs{
-				LgCode:     strPtr("131016"),
-				MachiazaID: strPtr("0001001"),
-				BlkID:      strPtr("blk123"),
-				RsdtID:     strPtr("rsdt123"),
-				PrcID:      strPtr("prc123"),
+				LgCode:     new("131016"),
+				MachiazaID: new("0001001"),
+				BlkID:      new("blk123"),
+				RsdtID:     new("rsdt123"),
+				PrcID:      new("prc123"),
 			},
 			wantLevel: model.MatchLevelParcel,
 		},
 		{
 			name: "priority - RsdtID over BlkID",
 			ids: &model.IDs{
-				LgCode:     strPtr("131016"),
-				MachiazaID: strPtr("0001001"),
-				BlkID:      strPtr("blk123"),
-				RsdtID:     strPtr("rsdt123"),
+				LgCode:     new("131016"),
+				MachiazaID: new("0001001"),
+				BlkID:      new("blk123"),
+				RsdtID:     new("rsdt123"),
 			},
 			wantLevel: model.MatchLevelResidentialDetail,
 		},
@@ -158,8 +154,8 @@ func TestDetermineMatchLevelMachiazaIDPatterns(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ids := &model.IDs{
-				LgCode:     strPtr("131016"),
-				MachiazaID: strPtr(tt.machiazaID),
+				LgCode:     new("131016"),
+				MachiazaID: new(tt.machiazaID),
 			}
 			got := DetermineMatchLevel(ids)
 			if got != tt.wantLevel {
@@ -211,7 +207,7 @@ func TestDetermineMatchLevelLgCodePatterns(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ids := &model.IDs{
-				LgCode: strPtr(tt.lgCode),
+				LgCode: new(tt.lgCode),
 			}
 			got := DetermineMatchLevel(ids)
 			if got != tt.wantLevel {

@@ -203,7 +203,7 @@ func hasASCIIDigit(s string) bool {
 func scanAddressMarkers(s string) (hasMarker, hasFloor bool) {
 	n := len(s)
 	prevDigit := false
-	for i := 0; i < n; i++ {
+	for i := range n {
 		b := s[i]
 		// Check for 'F' preceded by digit (floor pattern like "5F")
 		if b == 'F' && prevDigit {

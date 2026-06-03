@@ -148,14 +148,14 @@ func TestMatchesPlaceName(t *testing.T) {
 		},
 		{
 			name:          "empty searchNumbers",
-			placeName:     strPtr("三丁目"),
+			placeName:     new("三丁目"),
 			searchNumbers: "",
 			stripSuffix:   nil,
 			want:          false,
 		},
 		{
 			name:          "direct match with kanji normalized",
-			placeName:     strPtr("三五十"),
+			placeName:     new("三五十"),
 			searchNumbers: "3510",
 			stripSuffix:   nil,
 			want:          true,
@@ -188,14 +188,14 @@ func TestAdjustSearchAddrForChome(t *testing.T) {
 		},
 		{
 			name:          "chome matches prefix",
-			addr:          &model.StructuredAddress{Chome: strPtr("3丁目")},
+			addr:          &model.StructuredAddress{Chome: new("3丁目")},
 			searchNumbers: "3-1-5",
 			searchAddr:    "3-1-5",
 			want:          "1-5",
 		},
 		{
 			name:          "chome does not match prefix",
-			addr:          &model.StructuredAddress{Chome: strPtr("5丁目")},
+			addr:          &model.StructuredAddress{Chome: new("5丁目")},
 			searchNumbers: "3-1-5",
 			searchAddr:    "3-1-5",
 			want:          "3-1-5",

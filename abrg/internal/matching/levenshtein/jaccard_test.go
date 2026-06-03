@@ -71,9 +71,6 @@ func TestJaccardSimilarity(t *testing.T) {
 
 // TestSelectBestByJaccard tests the SelectBestByJaccard function
 func TestSelectBestByJaccard(t *testing.T) {
-	// Helper to create string pointer
-	strPtr := func(s string) *string { return &s }
-
 	tests := []struct {
 		name         string
 		results      []model.MatchedResult
@@ -86,19 +83,19 @@ func TestSelectBestByJaccard(t *testing.T) {
 				{
 					MatchedAddress: "佐賀県神埼市千代田町渡瀬8の坪",
 					StructuredAddress: model.StructuredAddress{
-						Pref:    strPtr("佐賀県"),
-						City:    strPtr("神埼市"),
-						OazaCho: strPtr("千代田町渡瀬"),
-						Koaza:   strPtr("8の坪"),
+						Pref:    new("佐賀県"),
+						City:    new("神埼市"),
+						OazaCho: new("千代田町渡瀬"),
+						Koaza:   new("8の坪"),
 					},
 				},
 				{
 					MatchedAddress: "佐賀県神埼市千代田町渡瀬八の坪",
 					StructuredAddress: model.StructuredAddress{
-						Pref:    strPtr("佐賀県"),
-						City:    strPtr("神埼市"),
-						OazaCho: strPtr("千代田町渡瀬"),
-						Koaza:   strPtr("八の坪"),
+						Pref:    new("佐賀県"),
+						City:    new("神埼市"),
+						OazaCho: new("千代田町渡瀬"),
+						Koaza:   new("八の坪"),
 					},
 				},
 			},
@@ -111,19 +108,19 @@ func TestSelectBestByJaccard(t *testing.T) {
 				{
 					MatchedAddress: "佐賀県神埼市千代田町渡瀬八の坪",
 					StructuredAddress: model.StructuredAddress{
-						Pref:    strPtr("佐賀県"),
-						City:    strPtr("神埼市"),
-						OazaCho: strPtr("千代田町渡瀬"),
-						Koaza:   strPtr("八の坪"),
+						Pref:    new("佐賀県"),
+						City:    new("神埼市"),
+						OazaCho: new("千代田町渡瀬"),
+						Koaza:   new("八の坪"),
 					},
 				},
 				{
 					MatchedAddress: "佐賀県神埼市千代田町渡瀬8の坪",
 					StructuredAddress: model.StructuredAddress{
-						Pref:    strPtr("佐賀県"),
-						City:    strPtr("神埼市"),
-						OazaCho: strPtr("千代田町渡瀬"),
-						Koaza:   strPtr("8の坪"),
+						Pref:    new("佐賀県"),
+						City:    new("神埼市"),
+						OazaCho: new("千代田町渡瀬"),
+						Koaza:   new("8の坪"),
 					},
 				},
 			},
@@ -136,10 +133,10 @@ func TestSelectBestByJaccard(t *testing.T) {
 				{
 					MatchedAddress: "佐賀県神埼市千代田町渡瀬8の坪",
 					StructuredAddress: model.StructuredAddress{
-						Pref:    strPtr("佐賀県"),
-						City:    strPtr("神埼市"),
-						OazaCho: strPtr("千代田町渡瀬"),
-						Koaza:   strPtr("8の坪"),
+						Pref:    new("佐賀県"),
+						City:    new("神埼市"),
+						OazaCho: new("千代田町渡瀬"),
+						Koaza:   new("8の坪"),
 					},
 				},
 			},
@@ -166,8 +163,6 @@ func TestSelectBestByJaccard(t *testing.T) {
 
 // TestBuildMatchedAddress tests the buildMatchedAddress function
 func TestBuildMatchedAddress(t *testing.T) {
-	strPtr := func(s string) *string { return &s }
-
 	tests := []struct {
 		name   string
 		result model.MatchedResult
@@ -177,10 +172,10 @@ func TestBuildMatchedAddress(t *testing.T) {
 			name: "Full address with all components",
 			result: model.MatchedResult{
 				StructuredAddress: model.StructuredAddress{
-					Pref:    strPtr("佐賀県"),
-					City:    strPtr("神埼市"),
-					OazaCho: strPtr("千代田町渡瀬"),
-					Koaza:   strPtr("八の坪"),
+					Pref:    new("佐賀県"),
+					City:    new("神埼市"),
+					OazaCho: new("千代田町渡瀬"),
+					Koaza:   new("八の坪"),
 				},
 			},
 			want: "佐賀県神埼市千代田町渡瀬八の坪",
@@ -189,9 +184,9 @@ func TestBuildMatchedAddress(t *testing.T) {
 			name: "Address without koaza",
 			result: model.MatchedResult{
 				StructuredAddress: model.StructuredAddress{
-					Pref:    strPtr("東京都"),
-					City:    strPtr("千代田区"),
-					OazaCho: strPtr("永田町"),
+					Pref:    new("東京都"),
+					City:    new("千代田区"),
+					OazaCho: new("永田町"),
 				},
 			},
 			want: "東京都千代田区永田町",
@@ -200,10 +195,10 @@ func TestBuildMatchedAddress(t *testing.T) {
 			name: "Address with ward",
 			result: model.MatchedResult{
 				StructuredAddress: model.StructuredAddress{
-					Pref:    strPtr("大阪府"),
-					City:    strPtr("大阪市"),
-					Ward:    strPtr("中央区"),
-					OazaCho: strPtr("難波"),
+					Pref:    new("大阪府"),
+					City:    new("大阪市"),
+					Ward:    new("中央区"),
+					OazaCho: new("難波"),
 				},
 			},
 			want: "大阪府大阪市中央区難波",
@@ -212,10 +207,10 @@ func TestBuildMatchedAddress(t *testing.T) {
 			name: "Address with chome",
 			result: model.MatchedResult{
 				StructuredAddress: model.StructuredAddress{
-					Pref:    strPtr("東京都"),
-					City:    strPtr("新宿区"),
-					OazaCho: strPtr("西新宿"),
-					Chome:   strPtr("2丁目"),
+					Pref:    new("東京都"),
+					City:    new("新宿区"),
+					OazaCho: new("西新宿"),
+					Chome:   new("2丁目"),
 				},
 			},
 			want: "東京都新宿区西新宿2丁目",
@@ -224,11 +219,11 @@ func TestBuildMatchedAddress(t *testing.T) {
 			name: "Address with KyotoSt",
 			result: model.MatchedResult{
 				StructuredAddress: model.StructuredAddress{
-					Pref:    strPtr("京都府"),
-					City:    strPtr("京都市"),
-					Ward:    strPtr("中京区"),
-					KyotoSt: strPtr("寺町通御池上る"),
-					OazaCho: strPtr("上本能寺前町"),
+					Pref:    new("京都府"),
+					City:    new("京都市"),
+					Ward:    new("中京区"),
+					KyotoSt: new("寺町通御池上る"),
+					OazaCho: new("上本能寺前町"),
 				},
 			},
 			want: "京都府京都市中京区寺町通御池上る上本能寺前町",

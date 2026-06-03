@@ -22,25 +22,25 @@ func TestHasChomeMismatch(t *testing.T) {
 		{
 			name:        "no @ in search",
 			searchAddr:  "港区虎ノ門",
-			resultChome: strPtr("1丁目"),
+			resultChome: new("1丁目"),
 			want:        false,
 		},
 		{
 			name:        "matching chome",
 			searchAddr:  "港区虎ノ門1@:2-3",
-			resultChome: strPtr("1丁目"),
+			resultChome: new("1丁目"),
 			want:        false,
 		},
 		{
 			name:        "mismatched chome",
 			searchAddr:  "港区虎ノ門1@:2-3",
-			resultChome: strPtr("2丁目"),
+			resultChome: new("2丁目"),
 			want:        true,
 		},
 		{
 			name:        "kanji chome in result",
 			searchAddr:  "港区虎ノ門3@:2-3",
-			resultChome: strPtr("三丁目"),
+			resultChome: new("三丁目"),
 			want:        false,
 		},
 	}
@@ -79,7 +79,7 @@ func TestHasTownNameMismatch(t *testing.T) {
 			name:       "matching first char",
 			searchAddr: "天王寺区烏ヶ辻町74",
 			result: &model.MatchedResult{
-				StructuredAddress: model.StructuredAddress{OazaCho: strPtr("烏ヶ辻町")},
+				StructuredAddress: model.StructuredAddress{OazaCho: new("烏ヶ辻町")},
 			},
 			want: false,
 		},
@@ -89,7 +89,7 @@ func TestHasTownNameMismatch(t *testing.T) {
 			name:       "shared prefix but different town",
 			searchAddr: "千代田区神田鍛冶町2@:24",
 			result: &model.MatchedResult{
-				StructuredAddress: model.StructuredAddress{OazaCho: strPtr("神田猿楽町")},
+				StructuredAddress: model.StructuredAddress{OazaCho: new("神田猿楽町")},
 			},
 			want: true,
 		},
@@ -97,7 +97,7 @@ func TestHasTownNameMismatch(t *testing.T) {
 			name:       "mismatched first char",
 			searchAddr: "天王寺区烏ヶ辻町74",
 			result: &model.MatchedResult{
-				StructuredAddress: model.StructuredAddress{OazaCho: strPtr("石ケ辻町")},
+				StructuredAddress: model.StructuredAddress{OazaCho: new("石ケ辻町")},
 			},
 			want: true,
 		},
@@ -109,8 +109,8 @@ func TestHasTownNameMismatch(t *testing.T) {
 			searchAddr: "下京区西中筋通北小路通上る丸屋町",
 			result: &model.MatchedResult{
 				StructuredAddress: model.StructuredAddress{
-					KyotoSt: strPtr("西中筋通北小路上る"),
-					OazaCho: strPtr("丸屋町"),
+					KyotoSt: new("西中筋通北小路上る"),
+					OazaCho: new("丸屋町"),
 				},
 			},
 			want: false,
@@ -122,7 +122,7 @@ func TestHasTownNameMismatch(t *testing.T) {
 			result: &model.MatchedResult{
 				StructuredAddress: model.StructuredAddress{
 					KyotoSt: nil,
-					OazaCho: strPtr("東町"),
+					OazaCho: new("東町"),
 				},
 			},
 			want: true,
@@ -178,9 +178,4 @@ func TestExtractTownNameFromSearch(t *testing.T) {
 			}
 		})
 	}
-}
-
-// strPtr is a helper function to create a pointer to a string.
-func strPtr(s string) *string {
-	return &s
 }

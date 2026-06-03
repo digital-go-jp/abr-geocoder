@@ -214,13 +214,13 @@ func TestBuildBaseAddress(t *testing.T) {
 		{
 			name: "all fields populated",
 			sa: model.StructuredAddress{
-				Pref:    strPtr("東京都"),
-				County:  strPtr(""),
-				City:    strPtr("千代田区"),
-				Ward:    strPtr(""),
-				OazaCho: strPtr("永田町"),
-				Chome:   strPtr("一丁目"),
-				Koaza:   strPtr(""),
+				Pref:    new("東京都"),
+				County:  new(""),
+				City:    new("千代田区"),
+				Ward:    new(""),
+				OazaCho: new("永田町"),
+				Chome:   new("一丁目"),
+				Koaza:   new(""),
 			},
 			wantAddress:    "東京都千代田区永田町一丁目",
 			wantHasPref:    true,
@@ -230,13 +230,13 @@ func TestBuildBaseAddress(t *testing.T) {
 		{
 			name: "minimal fields",
 			sa: model.StructuredAddress{
-				Pref:    strPtr("群馬県"),
-				County:  strPtr(""),
-				City:    strPtr("前橋市"),
-				Ward:    strPtr(""),
-				OazaCho: strPtr(""),
-				Chome:   strPtr(""),
-				Koaza:   strPtr(""),
+				Pref:    new("群馬県"),
+				County:  new(""),
+				City:    new("前橋市"),
+				Ward:    new(""),
+				OazaCho: new(""),
+				Chome:   new(""),
+				Koaza:   new(""),
 			},
 			wantAddress:    "群馬県前橋市",
 			wantHasPref:    true,
@@ -246,13 +246,13 @@ func TestBuildBaseAddress(t *testing.T) {
 		{
 			name: "empty fields",
 			sa: model.StructuredAddress{
-				Pref:    strPtr(""),
-				County:  strPtr(""),
-				City:    strPtr(""),
-				Ward:    strPtr(""),
-				OazaCho: strPtr(""),
-				Chome:   strPtr(""),
-				Koaza:   strPtr(""),
+				Pref:    new(""),
+				County:  new(""),
+				City:    new(""),
+				Ward:    new(""),
+				OazaCho: new(""),
+				Chome:   new(""),
+				Koaza:   new(""),
 			},
 			wantAddress:    "",
 			wantHasPref:    false,
@@ -382,9 +382,4 @@ func TestBuildReverseFeature(t *testing.T) {
 	if feature.Properties.Distance != 100.5 {
 		t.Errorf("buildReverseFeature() Distance = %v, want 100.5", feature.Properties.Distance)
 	}
-}
-
-// Helper function for creating *string in tests
-func strPtr(s string) *string {
-	return &s
 }
