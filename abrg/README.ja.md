@@ -112,11 +112,11 @@ abrg は HTTP サーバー (`serve`) として常駐するが、起動には Duc
 
 CLI 系コマンド (`cache build`, `cache info`, `match`, `geocode`, `reverse`) は `docker compose run --rm` で都度実行。`serve` は `docker compose up -d` で常駐起動。キャッシュは named volume (`abrg_cache`) で永続化されるので、`run` で作って `up` で利用できる。
 
-事前に `.env.example` をコピーして `.env` を作成し、PostgreSQL に接続するための `DB_HOST` / `DB_USER` / `DB_PASSWORD` 等を設定してください。
+`.env.example` をコピーして `.env` を作成し、`DB_PASSWORD` を abrdb と同じ値に設定する。
 
 ```bash
 cp .env.example .env
-# .env を編集
+# .env を編集して DB_PASSWORD を設定
 
 docker compose build
 ```
