@@ -94,7 +94,12 @@ abrdb show config
 
 abrdb は CLI ツールなので、PostgreSQL のみを常駐させ、abrdb 本体は `docker compose run --rm` で都度実行する構成。
 
+事前に `.env.example` をコピーして `.env` を作成し、最低限 `DB_PASSWORD` に任意の値を設定してください（空のままだと PostgreSQL が起動しません）。
+
 ```bash
+cp .env.example .env
+# .env を編集して DB_PASSWORD を設定
+
 docker compose build
 docker compose up -d        # postgres のみが起動 (abrdb は profile=cli で除外)
 ```

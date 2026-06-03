@@ -77,7 +77,7 @@ PORT=8080 CACHE_PATH=/data/cache.duckdb LOG_LEVEL=DEBUG ./abrg serve
 共通オプション:
 - `-i, --input` - 入力パス（必須）
 - `-o, --output` - 出力パス（必須）
-- `-c, --category` - 対象カテゴリ (all, basic, rsdtdsp, parcel) (default: basic)
+- `-c, --category` - 対象カテゴリ (all, basic, rsdtdsp, parcel)。省略時はキャッシュの `enabled_category` 設定に従う
 - `-p, --pref` - 検索対象の都道府県コード（例: 13）または "all"
 - `-l, --limit` - 住所あたりの最大結果数 (1-5) (default: 1)
 - `-q, --quiet` - プログレス表示を抑制
@@ -112,7 +112,12 @@ abrg は HTTP サーバー (`serve`) として常駐するが、起動には Duc
 
 CLI 系コマンド (`cache build`, `cache info`, `match`, `geocode`, `reverse`) は `docker compose run --rm` で都度実行。`serve` は `docker compose up -d` で常駐起動。キャッシュは named volume (`abrg_cache`) で永続化されるので、`run` で作って `up` で利用できる。
 
+事前に `.env.example` をコピーして `.env` を作成し、PostgreSQL に接続するための `DB_HOST` / `DB_USER` / `DB_PASSWORD` 等を設定してください。
+
 ```bash
+cp .env.example .env
+# .env を編集
+
 docker compose build
 ```
 
