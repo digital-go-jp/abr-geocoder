@@ -17,6 +17,11 @@ terraform {
       version = "~> 6.0"
     }
   }
+
+  backend "s3" {
+    key     = "bootstrap.tfstate"
+    encrypt = true
+  }
 }
 
 variable "region" {

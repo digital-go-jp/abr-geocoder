@@ -102,13 +102,35 @@ aws apigateway update-account \
 
 ### Bootstrap（初回のみ）
 
+S3 バケット `abrg-tfstate-${ACCOUNT_ID}` と DynamoDB `abrg-terraform-lock` を作成し、bootstrap 自身の state も同じバケットに同居させます (chicken-and-egg を `terraform init -migrate-state` で解消する標準パターン)。
+
 ```bash
 cd docs/aws/terraform/bootstrap
-terraform init
+
+# 1. backend resources を作成 (まだ S3 backend が存在しないため backend 抜きで init)
+terraform init -backend=false
 terraform apply
+
+# 2. backend resources ができたので、bootstrap 自身の state も S3 へ migrate
+terraform init -migrate-state \
+  -backend-config="bucket=abrg-tfstate-$(aws sts get-caller-identity --query Account --output text)" \
+  -backend-config="dynamodb_table=abrg-terraform-lock" \
+  -backend-config="region=ap-northeast-1"
+# プロンプトに "yes" を入力 → local の terraform.tfstate が S3 にコピーされる
+
+# 3. ローカルの state を削除 (以後は S3 backend から参照)
+rm -f terraform.tfstate terraform.tfstate.backup
 ```
 
-S3 バケット `abrg-tfstate-${ACCOUNT_ID}` と DynamoDB `abrg-terraform-lock` を作成します。
+別マシン / DevContainer 再構築後は以下だけで bootstrap state を再取得できます:
+
+```bash
+cd docs/aws/terraform/bootstrap
+terraform init \
+  -backend-config="bucket=abrg-tfstate-$(aws sts get-caller-identity --query Account --output text)" \
+  -backend-config="dynamodb_table=abrg-terraform-lock" \
+  -backend-config="region=ap-northeast-1"
+```
 
 ### 環境構築
 
