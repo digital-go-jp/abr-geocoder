@@ -74,6 +74,14 @@ func FilesToDownload(ctx context.Context, executor *db.QueryExecutor) ([]*model.
 	return queryFiles(ctx, executor, "WHERE needs_download = true")
 }
 
+// AllPendingImports retrieves all files that still need importing (needs_import=true),
+// regardless of category. Used by the download phase to detect catalog/disk drift:
+// a file may be flagged for import but missing on disk (e.g., on ephemeral storage
+// like ECS Fargate /tmp), and must be re-downloaded.
+func AllPendingImports(ctx context.Context, executor *db.QueryExecutor) ([]*model.File, error) {
+	return queryFiles(ctx, executor, "WHERE needs_import = true")
+}
+
 // PendingImportsByCategory retrieves files pending import for multiple category values in one query.
 // Returns a map of category to files, eliminating N+1 queries when importing multiple category values.
 func PendingImportsByCategory(ctx context.Context, executor *db.QueryExecutor, category []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
