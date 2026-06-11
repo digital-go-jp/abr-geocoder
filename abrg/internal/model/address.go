@@ -134,6 +134,8 @@ func (dst *StructuredAddress) MergeFrom(src *StructuredAddress) {
 }
 
 // FormatAddress constructs formatted address from StructuredAddress components including numbers.
+// MachiazaDist is a disambiguator for same-named machiaza (e.g. kana reading), not part of
+// the address notation, so it is intentionally excluded here.
 func FormatAddress(sa *StructuredAddress) string {
 	var sb strings.Builder
 	sb.Grow(256)
