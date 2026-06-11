@@ -190,6 +190,9 @@ func tryFallbackCitySearchByScore(ctx context.Context, repo levenshteinQuerier, 
 
 	matchedAddr := model.FormatAddress(&sa)
 	unmatchedParts := strings.Fields(unmatchedStdPart)
+	if len(unmatchedParts) == 0 {
+		unmatchedParts = nil // fully matched must be nil (JSON null), not []
+	}
 
 	var coords []float64
 	if cr.Lon != nil && cr.Lat != nil {

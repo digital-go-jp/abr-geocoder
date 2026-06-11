@@ -15,6 +15,7 @@ type MatchedResult struct {
 	// Semantics:
 	//   - nil: fully matched (no unmatched parts) → JSON: null
 	//   - []string{"..."}: has unmatched parts → JSON: ["..."]
+	// Producers must collapse empty slices to nil; clients never see [].
 	UnmatchedAddress  []string          `json:"unmatched_address"`
 	MatchLevel        MatchLevel        `json:"match_level"`
 	Score             float64           `json:"score"`
