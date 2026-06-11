@@ -95,6 +95,12 @@ func TestGeocodeRequest_Validation(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 			wantError:  true,
 		},
+		{
+			name:       "limit out of range (0)",
+			query:      "?address=東京都&limit=0",
+			wantStatus: http.StatusBadRequest,
+			wantError:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -555,32 +561,6 @@ func TestRegisterPositionEndpoint(t *testing.T) {
 				if response["handler"] != tt.wantHandler {
 					t.Errorf("GET /test handler = %v, want %q", response["handler"], tt.wantHandler)
 				}
-			}
-		})
-	}
-}
-
-// TestFixLimit tests the fixLimit helper function.
-func TestFixLimit(t *testing.T) {
-	tests := []struct {
-		name  string
-		limit int
-		want  int
-	}{
-		{"zero becomes 1", 0, 1},
-		{"positive unchanged", 3, 3},
-		{"one unchanged", 1, 1},
-		{"five unchanged", 5, 5},
-		{"large value unchanged", 100, 100},
-		// Edge cases: negative values are passed through unchanged
-		// (validation happens elsewhere via Gin binding with min=1, max=5)
-		{"negative unchanged", -1, -1},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := fixLimit(tt.limit); got != tt.want {
-				t.Errorf("fixLimit(%d) = %d, want %d", tt.limit, got, tt.want)
 			}
 		})
 	}

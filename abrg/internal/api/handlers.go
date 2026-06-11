@@ -59,7 +59,6 @@ func (s *GinServer) ReverseHandler(c *gin.Context) {
 		return
 	}
 
-	req.Limit = fixLimit(req.Limit)
 	category, pref, err := s.validateParams(req.Category, req.Pref)
 	if err != nil {
 		sendBadRequest(c, err.Error())

@@ -17,7 +17,7 @@ import (
 type baseRequest struct {
 	Category string `form:"category" binding:"omitempty,oneof=all basic rsdtdsp parcel"`
 	Pref     string `form:"pref" binding:"omitempty"`
-	Limit    int    `form:"limit,default=1" binding:"omitempty,min=1,max=5"`
+	Limit    int    `form:"limit,default=1" binding:"min=1,max=5"`
 }
 
 // geocodeRequest represents geocoding request parameters.
@@ -42,14 +42,6 @@ type matchRequest struct {
 // normalizeRequest represents address standardization request parameters.
 type normalizeRequest struct {
 	Address string `form:"address" binding:"required"`
-}
-
-// fixLimit ensures limit has a valid default value (API spec: default=1, minimum=1).
-func fixLimit(limit int) int {
-	if limit == 0 {
-		return 1
-	}
-	return limit
 }
 
 const MaxAddressLength = 100
