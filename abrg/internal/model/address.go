@@ -58,12 +58,10 @@ const (
 type Category string
 
 const (
-	CategoryAll          Category = All
-	CategoryBasic        Category = "basic" // Prefecture, City, and Machiaza levels
-	CategoryResidential  Category = "rsdtdsp"
-	CategoryParcel       Category = "parcel"
-	CategoryUndetermined Category = "undetermined" // Address type cannot be determined from pattern
-	CategoryUnknown      Category = "unknown"      // No recognizable address pattern found
+	CategoryAll         Category = All
+	CategoryBasic       Category = "basic" // Prefecture, City, and Machiaza levels
+	CategoryResidential Category = "rsdtdsp"
+	CategoryParcel      Category = "parcel"
 )
 
 type NormalizeCategory string
@@ -193,4 +191,12 @@ type ResultInfo struct {
 	EnabledCategory string  `json:"enabled_category"`
 	EnabledPref     string  `json:"enabled_pref"`
 	DurationMs      float64 `json:"duration_ms,omitempty"` // Duration in milliseconds
+}
+
+// SetMeta fills the server/data metadata fields shared by all endpoints.
+func (r *ResultInfo) SetMeta(apiVersion, dbVersion, enabledCategory, enabledPref string) {
+	r.APIVersion = apiVersion
+	r.DBVersion = dbVersion
+	r.EnabledCategory = enabledCategory
+	r.EnabledPref = enabledPref
 }

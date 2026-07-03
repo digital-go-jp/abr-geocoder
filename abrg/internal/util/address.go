@@ -9,9 +9,7 @@ import (
 // Used to extract chome (丁目) numbers from the portion before "@" in internal address format.
 // Returns an empty string if s does not end with ASCII digits.
 func ExtractChomeDigits(s string) string {
-	return extractTrailingBytes(s, func(b byte) bool {
-		return b >= '0' && b <= '9'
-	})
+	return extractTrailingBytes(s, IsASCIIDigit)
 }
 
 func extractTrailingBytes(s string, match func(byte) bool) string {

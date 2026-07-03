@@ -795,11 +795,9 @@ func TestHandleAddressRequest(t *testing.T) {
 		address      string
 		category     string
 		pref         string
-		limit        int
 		wantOk       bool
 		wantCategory model.Category
 		wantPref     string
-		wantLimit    int
 		wantStatus   int
 	}{
 		{
@@ -807,18 +805,15 @@ func TestHandleAddressRequest(t *testing.T) {
 			address:      "東京都千代田区",
 			category:     "all",
 			pref:         "all",
-			limit:        3,
 			wantOk:       true,
 			wantCategory: model.CategoryAll,
 			wantPref:     "all",
-			wantLimit:    3,
 		},
 		{
 			name:       "empty address",
 			address:    "",
 			category:   "all",
 			pref:       "all",
-			limit:      1,
 			wantOk:     false,
 			wantStatus: http.StatusBadRequest,
 		},
@@ -827,7 +822,6 @@ func TestHandleAddressRequest(t *testing.T) {
 			address:    "   ",
 			category:   "all",
 			pref:       "all",
-			limit:      1,
 			wantOk:     false,
 			wantStatus: http.StatusBadRequest,
 		},
@@ -836,7 +830,6 @@ func TestHandleAddressRequest(t *testing.T) {
 			address:    "東京都",
 			category:   "invalid",
 			pref:       "all",
-			limit:      1,
 			wantOk:     false,
 			wantStatus: http.StatusBadRequest,
 		},
@@ -852,12 +845,11 @@ func TestHandleAddressRequest(t *testing.T) {
 			router := gin.New()
 			var gotCategory model.Category
 			var gotPref string
-			var gotLimit int
 			var gotOk bool
 
 			router.GET("/test", func(c *gin.Context) {
-				gotCategory, gotPref, gotLimit, gotOk = server.handleAddressRequest(
-					c, tt.address, tt.category, tt.pref, tt.limit)
+				gotCategory, gotPref, gotOk = server.handleAddressRequest(
+					c, tt.address, tt.category, tt.pref)
 				if gotOk {
 					c.JSON(http.StatusOK, gin.H{"status": "ok"})
 				}
@@ -876,9 +868,6 @@ func TestHandleAddressRequest(t *testing.T) {
 				}
 				if gotPref != tt.wantPref {
 					t.Errorf("handleAddressRequest() pref = %v, want %v", gotPref, tt.wantPref)
-				}
-				if gotLimit != tt.wantLimit {
-					t.Errorf("handleAddressRequest() limit = %v, want %v", gotLimit, tt.wantLimit)
 				}
 			} else {
 				if w.Code != tt.wantStatus {

@@ -18,8 +18,7 @@ func IsUndefinedTableError(err error) bool {
 }
 
 func hasPgErrorCode(err error, code string) bool {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgErr.Code == code
 	}
 	return false

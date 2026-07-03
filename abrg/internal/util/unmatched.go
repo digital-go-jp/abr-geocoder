@@ -1,6 +1,7 @@
 package util
 
 import (
+	"slices"
 	"strings"
 
 	"abrg/internal/model"
@@ -310,7 +311,7 @@ func isAllDigits(s string) bool {
 		return false
 	}
 	for i := 0; i < len(s); i++ {
-		if s[i] < '0' || s[i] > '9' {
+		if !IsASCIIDigit(s[i]) {
 			return false
 		}
 	}
@@ -322,8 +323,8 @@ func extractOriginalGoNumber(originalAddr string) (string, bool) {
 	runes := []rune(originalAddr)
 	// Find the last 号 in originalAddr
 	goIdx := -1
-	for i := len(runes) - 1; i >= 0; i-- {
-		if runes[i] == '号' {
+	for i, r := range slices.Backward(runes) {
+		if r == '号' {
 			goIdx = i
 			break
 		}
@@ -359,7 +360,7 @@ func extractUnmatchedWithAt(searchAddr string) string {
 
 func ExtractTrailingAddressNumbers(searchAddr string) string {
 	return extractTrailingBytes(searchAddr, func(b byte) bool {
-		return (b >= '0' && b <= '9') || b == '-'
+		return IsASCIIDigit(b) || b == '-'
 	})
 }
 

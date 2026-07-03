@@ -78,8 +78,7 @@ func errorResponse(message string) gin.H {
 
 // formatBindError extracts field-level details from Gin binding errors.
 func formatBindError(err error) string {
-	var ve validator.ValidationErrors
-	if errors.As(err, &ve) {
+	if ve, ok := errors.AsType[validator.ValidationErrors](err); ok {
 		msgs := make([]string, 0, len(ve))
 		for _, fe := range ve {
 			msgs = append(msgs, fmt.Sprintf("%s: %s", fe.Field(), fe.Tag()))
@@ -101,10 +100,7 @@ func sendInternalServerError(c *gin.Context) {
 
 // setResultInfo sets common result fields.
 func (s *GinServer) setResultInfo(info *model.ResultInfo) {
-	info.APIVersion = s.apiVersion
-	info.DBVersion = s.dbVersion
-	info.EnabledCategory = s.enabledCategory
-	info.EnabledPref = s.enabledPref
+	info.SetMeta(s.apiVersion, s.dbVersion, s.enabledCategory, s.enabledPref)
 }
 
 // sendGeoJSON responds with a GeoJSON response (sets Content-Type header).
@@ -114,18 +110,39 @@ func sendGeoJSON(c *gin.Context, data any) {
 }
 
 // handleAddressRequest handles common validation for address-based requests (geocode/match).
-// It returns validated category, pref, and limit, or sends an error response and returns false.
-func (s *GinServer) handleAddressRequest(c *gin.Context, address, categoryStr, prefStr string, limit int) (model.Category, string, int, bool) {
+// It returns the validated category and pref, or sends an error response and returns false.
+func (s *GinServer) handleAddressRequest(c *gin.Context, address, categoryStr, prefStr string) (model.Category, string, bool) {
 	if err := validateAddress(address); err != nil {
 		sendBadRequest(c, err.Error())
-		return "", "", 0, false
+		return "", "", false
 	}
 
 	category, pref, err := s.validateParams(categoryStr, prefStr)
 	if err != nil {
 		sendBadRequest(c, err.Error())
-		return "", "", 0, false
+		return "", "", false
 	}
 
-	return category, pref, limit, true
+	return category, pref, true
+}
+
+// prepareQuery validates the request params, records them for structured
+// logging, and builds the shared MatchQuery. It returns ok=false after writing
+// an error response when validation fails.
+func (s *GinServer) prepareQuery(c *gin.Context, address, categoryStr, prefStr string, limit int) (model.MatchQuery, bool) {
+	category, pref, ok := s.handleAddressRequest(c, address, categoryStr, prefStr)
+	if !ok {
+		return model.MatchQuery{}, false
+	}
+
+	c.Set(ctxKeyAddress, address)
+	c.Set(ctxKeyCategory, string(category))
+	c.Set(ctxKeyPref, pref)
+
+	return model.MatchQuery{
+		Address:  address,
+		Category: category,
+		Limit:    limit,
+		Pref:     pref,
+	}, true
 }

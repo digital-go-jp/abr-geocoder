@@ -17,25 +17,27 @@ var (
 	kanjiSegmentRe = regexp.MustCompile(`[一二三四五六七八九十百千万億零〇]+`)
 )
 
+var kanjiDigitValues = map[rune]int{
+	'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
+	'六': 6, '七': 7, '八': 8, '九': 9,
+	'零': 0, '〇': 0,
+}
+
+var kanjiMultipliers = map[rune]int{
+	'億': 100000000, '万': 10000, '千': 1000, '百': 100, '十': 10,
+}
+
 // kanjiDigitValue returns the numeric value for a kanji digit (一-九, 零, 〇).
 // Returns (value, ok) where value is 0-9.
 func kanjiDigitValue(r rune) (int, bool) {
-	vals := map[rune]int{
-		'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
-		'六': 6, '七': 7, '八': 8, '九': 9,
-		'零': 0, '〇': 0,
-	}
-	v, ok := vals[r]
+	v, ok := kanjiDigitValues[r]
 	return v, ok
 }
 
 // kanjiMultiplier returns the place value for 億, 万, 千, 百, 十.
 // Returns (multiplier, ok) where multiplier is 10, 100, 1000, 10000, or 100000000.
 func kanjiMultiplier(r rune) (int, bool) {
-	vals := map[rune]int{
-		'億': 100000000, '万': 10000, '千': 1000, '百': 100, '十': 10,
-	}
-	v, ok := vals[r]
+	v, ok := kanjiMultipliers[r]
 	return v, ok
 }
 
@@ -178,6 +180,13 @@ func convertKanjiSegment(seg string) string {
 	}
 
 	// No pattern at start; treat entire segment as individual digits/multipliers
+	return kanjiRunesFallback(runes)
+}
+
+// kanjiRunesFallback converts each rune individually: kanji digits and
+// multipliers become their arabic value, other runes pass through unchanged.
+// Used when a rune sequence is not a well-formed positional kanji number.
+func kanjiRunesFallback(runes []rune) string {
 	var sb strings.Builder
 	for _, r := range runes {
 		if d, ok := kanjiDigitValue(r); ok {
@@ -239,17 +248,7 @@ func kanjiPartToArabic(s string) string {
 		return strconv.Itoa(value)
 	}
 	// If not a pure kanji number sequence, fallback to individual character conversion
-	var result strings.Builder
-	for _, r := range runes {
-		if d, ok := kanjiDigitValue(r); ok {
-			result.WriteString(strconv.Itoa(d))
-		} else if m, ok := kanjiMultiplier(r); ok {
-			result.WriteString(strconv.Itoa(m))
-		} else {
-			result.WriteRune(r)
-		}
-	}
-	return result.String()
+	return kanjiRunesFallback(runes)
 }
 
 var (

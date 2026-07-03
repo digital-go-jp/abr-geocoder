@@ -18,10 +18,9 @@ var (
 	})
 
 	// dbSteps is used for database records (oaza_cho, koaza, etc.).
-	// Skips AddColon and AddressNumbersToHyphen since DB records are place names only.
+	// Skips AddColon since DB records are place names only.
 	dbSteps = buildSteps(textOption{
-		addColon:               false,
-		addressNumbersToHyphen: false,
+		addColon: false,
 	})
 )
 
@@ -29,7 +28,6 @@ var (
 type textOption struct {
 	addColon                    bool
 	expandJouAndKanjiNo         bool // ExpandSapporoJou + kanjiNoToHyphen
-	addressNumbersToHyphen      bool // normalize.AddressNumbersToHyphen
 	skipStandardizeSpecialChars bool
 	skipBasicNormalize          bool
 }
@@ -51,10 +49,6 @@ func buildSteps(opts textOption) []normalize.TransformStep {
 	if opts.expandJouAndKanjiNo {
 		steps = append(steps, kanjiNoToHyphen)
 	}
-	if opts.addressNumbersToHyphen {
-		steps = append(steps, normalize.AddressNumbersToHyphen)
-	}
-
 	steps = append(steps, hiraganaToKatakana)
 
 	if opts.addColon {

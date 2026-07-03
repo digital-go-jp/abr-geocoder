@@ -18,24 +18,14 @@ func (s *GinServer) GeocodeHandler(c *gin.Context) {
 		return
 	}
 
-	category, pref, limit, ok := s.handleAddressRequest(c, req.Address, req.Category, req.Pref, req.Limit)
+	query, ok := s.prepareQuery(c, req.Address, req.Category, req.Pref, req.Limit)
 	if !ok {
 		return
 	}
 
-	// Set request params for structured logging
-	c.Set(ctxKeyAddress, req.Address)
-	c.Set(ctxKeyCategory, string(category))
-	c.Set(ctxKeyPref, pref)
-
-	result, err := matching.Geocode(c.Request.Context(), s.matcher, s.repo, model.MatchQuery{
-		Address:  req.Address,
-		Category: category,
-		Limit:    limit,
-		Pref:     pref,
-	})
+	result, err := matching.Geocode(c.Request.Context(), s.matcher, s.repo, query)
 	if err != nil {
-		slog.Error("geocode request failed", "event", "geocode", "address", req.Address, "pref", pref, "category", category, "limit", limit, "error", err)
+		slog.Error("geocode request failed", "event", "geocode", "address", query.Address, "pref", query.Pref, "category", query.Category, "limit", query.Limit, "error", err)
 		sendInternalServerError(c)
 		return
 	}
@@ -101,24 +91,14 @@ func (s *GinServer) MatchHandler(c *gin.Context) {
 		return
 	}
 
-	category, pref, limit, ok := s.handleAddressRequest(c, req.Address, req.Category, req.Pref, req.Limit)
+	query, ok := s.prepareQuery(c, req.Address, req.Category, req.Pref, req.Limit)
 	if !ok {
 		return
 	}
 
-	// Set request params for structured logging
-	c.Set(ctxKeyAddress, req.Address)
-	c.Set(ctxKeyCategory, string(category))
-	c.Set(ctxKeyPref, pref)
-
-	result, err := s.matcher.Match(c.Request.Context(), model.MatchQuery{
-		Address:  req.Address,
-		Category: category,
-		Limit:    limit,
-		Pref:     pref,
-	})
+	result, err := s.matcher.Match(c.Request.Context(), query)
 	if err != nil {
-		slog.Error("match request failed", "event", "match", "address", req.Address, "pref", pref, "category", category, "limit", limit, "error", err)
+		slog.Error("match request failed", "event", "match", "address", query.Address, "pref", query.Pref, "category", query.Category, "limit", query.Limit, "error", err)
 		sendInternalServerError(c)
 		return
 	}

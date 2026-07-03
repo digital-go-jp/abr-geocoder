@@ -20,6 +20,25 @@ func extractFirstNumber(s string) string {
 	}
 
 	// Step 1: Try to find Arabic digits first
+	if run := leadingDigitRun(s); run != "" {
+		return run
+	}
+
+	// Step 2: Try kanji conversion using transform.KanjiToArabic
+	// This handles both regular compound numbers (十二->12, 三十五->35)
+	// and irregular place name patterns (三五十->3510).
+	converted, changed := transform.KanjiToArabic(s)
+	if !changed {
+		return ""
+	}
+
+	// Step 3: Extract leading Arabic digit sequence from converted string
+	return leadingDigitRun(converted)
+}
+
+// leadingDigitRun returns the first run of consecutive ASCII digits in s,
+// or "" if s contains none.
+func leadingDigitRun(s string) string {
 	start := -1
 	for i, r := range s {
 		if r >= '0' && r <= '9' {
@@ -33,29 +52,5 @@ func extractFirstNumber(s string) string {
 	if start != -1 {
 		return s[start:]
 	}
-
-	// Step 2: Try kanji conversion using transform.KanjiToArabic
-	// This handles both regular compound numbers (十二->12, 三十五->35)
-	// and irregular place name patterns (三五十->3510).
-	converted, changed := transform.KanjiToArabic(s)
-	if !changed {
-		return ""
-	}
-
-	// Step 3: Extract leading Arabic digit sequence from converted string
-	start = -1
-	for i, r := range converted {
-		if r >= '0' && r <= '9' {
-			if start == -1 {
-				start = i
-			}
-		} else if start != -1 {
-			return converted[start:i]
-		}
-	}
-	if start != -1 {
-		return converted[start:]
-	}
-
 	return ""
 }

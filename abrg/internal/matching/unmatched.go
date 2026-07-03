@@ -33,7 +33,7 @@ func setUnmatchedAddress(result *model.MatchedResult, originalAddr, normalizedAd
 // Prevents treating block numbers as place names (e.g., "２番地" is a block number, not chome).
 // Note: May false-positive on place names like 一番町, but acceptable for this use case.
 func hasBanchiPattern(s string) bool {
-	return strings.Contains(s, "番地") || strings.Contains(s, "番")
+	return strings.Contains(s, "番")
 }
 
 // setTwoStageUnmatchedAddress appends unmatched parts to results from TwoStageSearch.

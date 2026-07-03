@@ -15,7 +15,7 @@ const scoreEpsilon = 0.002
 
 // normalizeAll tries all levels and returns the best results.
 func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	results := make([]model.MatchedResult, 0, nctx.Input.Limit)
+	var results []model.MatchedResult
 
 	// Try Levenshtein search if no BasicResults from exact match.
 	// IMPORTANT: When Levenshtein fallback is used, we skip residential/parcel search
