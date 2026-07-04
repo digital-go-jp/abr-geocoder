@@ -64,6 +64,85 @@ func TestNewFileRecord(t *testing.T) {
 	}
 }
 
+func TestDecideFileAction(t *testing.T) {
+	modA := time.Date(2025, 5, 28, 9, 0, 0, 0, time.UTC)
+	modB := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC) // different timestamp
+	file := api.FileInfo{URL: "https://host/f.csv.zip", Filename: "f.csv.zip", LastModified: modA}
+
+	// existing catalog record helpers.
+	unchanged := &model.File{LastModified: modA, NeedsImport: false}
+	unchangedPendingImport := &model.File{LastModified: modA, NeedsImport: true}
+	modified := &model.File{LastModified: modB, NeedsImport: false}
+
+	tests := []struct {
+		name       string
+		existing   *model.File
+		localExist bool
+		updateDB   bool
+		want       fileAction
+	}{
+		// --- dry-run (updateDB=false) ---
+		{
+			name:     "dry-run: brand-new file, absent locally",
+			existing: nil, localExist: false, updateDB: false,
+			want: fileAction{needsDownload: true, needsImport: true, isNewOrModified: true},
+		},
+		{
+			name:     "dry-run: new file already present locally",
+			existing: nil, localExist: true, updateDB: false,
+			want: fileAction{needsDownload: false, needsImport: true, isNewOrModified: true},
+		},
+		{
+			name:     "dry-run: modified file is a candidate",
+			existing: modified, localExist: true, updateDB: false,
+			want: fileAction{needsDownload: false, needsImport: true, isNewOrModified: true},
+		},
+		{
+			name:     "dry-run: unchanged file is skipped",
+			existing: unchanged, localExist: true, updateDB: false,
+			want: fileAction{skip: true},
+		},
+		// --- update (updateDB=true) ---
+		{
+			name:     "update: brand-new file needs download and import",
+			existing: nil, localExist: false, updateDB: true,
+			want: fileAction{needsDownload: true, needsImport: true, isNewOrModified: true},
+		},
+		{
+			name:     "update: modified file re-downloads and re-imports",
+			existing: modified, localExist: true, updateDB: true,
+			want: fileAction{needsDownload: true, needsImport: true, isNewOrModified: true},
+		},
+		{
+			name:     "update: unchanged and already imported is skipped",
+			existing: unchanged, localExist: true, updateDB: true,
+			want: fileAction{skip: true},
+		},
+		{
+			// Unchanged on S3 but a prior import never completed: must not skip,
+			// and must re-import without re-downloading (already local, not modified).
+			name:     "update: unchanged but import still pending",
+			existing: unchangedPendingImport, localExist: true, updateDB: true,
+			want: fileAction{needsDownload: false, needsImport: true, isNewOrModified: false},
+		},
+		{
+			// Same pending-import case but the local file went missing: re-download too.
+			name:     "update: pending import with missing local file",
+			existing: unchangedPendingImport, localExist: false, updateDB: true,
+			want: fileAction{needsDownload: true, needsImport: true, isNewOrModified: false},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := decideFileAction(tt.existing, file, tt.localExist, tt.updateDB)
+			if got != tt.want {
+				t.Errorf("decideFileAction() = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestBuildLocalFileSet(t *testing.T) {
 	t.Run("missing directory returns empty set without error", func(t *testing.T) {
 		set, err := buildLocalFileSet(filepath.Join(t.TempDir(), "does-not-exist"))
