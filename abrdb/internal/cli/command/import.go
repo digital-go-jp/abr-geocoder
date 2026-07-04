@@ -158,6 +158,17 @@ type importServices struct {
 }
 
 // initImportServices initializes DuckDB ETL, download, and import services
+// pgCatalogStore adapts the postgres catalog functions to importer.catalogStore.
+type pgCatalogStore struct{ executor *db.QueryExecutor }
+
+func (s pgCatalogStore) PendingImportsByCategory(ctx context.Context, categories []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
+	return postgres.PendingImportsByCategory(ctx, s.executor, categories)
+}
+
+func (s pgCatalogStore) MarkAsImported(ctx context.Context, filenames ...string) error {
+	return postgres.MarkAsImported(ctx, s.executor, filenames...)
+}
+
 func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema.CategoryInfo, quiet bool) (*importServices, error) {
 	cfg := sc.Config
 
@@ -179,7 +190,7 @@ func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema
 
 	importService := importer.New(
 		etl,
-		sc.QueryExecutor,
+		pgCatalogStore{sc.QueryExecutor},
 		progressMonitor,
 		cfg.Process.DownloadDir,
 		categoryInfoMap,
