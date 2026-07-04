@@ -93,25 +93,6 @@ func TestNormalizeDashes(t *testing.T) {
 			expected: "東京都千代田区紀尾井町１-２-３東京ガーデンテラス",
 			changed:  true,
 		},
-		// Issue #44: halfwidth katakana prolonged sound mark (ｰ U+FF70)
-		{
-			name:     "halfwidth katakana prolonged between numbers",
-			input:    "1ｰ2ｰ3",
-			expected: "1-2-3",
-			changed:  true,
-		},
-		{
-			name:     "halfwidth katakana prolonged in word",
-			input:    "ｶﾞｰﾃﾞﾝﾃﾗｽ",
-			expected: "ｶﾞｰﾃﾞﾝﾃﾗｽ",
-			changed:  false,
-		},
-		{
-			name:     "fullwidth digits with halfwidth katakana prolonged",
-			input:    "東京都千代田区紀尾井町１ｰ２ｰ３",
-			expected: "東京都千代田区紀尾井町１-２-３",
-			changed:  true,
-		},
 	}
 
 	for _, tt := range tests {

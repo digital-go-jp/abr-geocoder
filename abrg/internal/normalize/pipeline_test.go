@@ -54,6 +54,17 @@ func TestBasicNormalize(t *testing.T) {
 			want:  "東京都千代田区1-2",
 		},
 		{
+			// ｰ (U+FF70) is normalized to ー by NFKC, then to a hyphen between digits.
+			name:  "normalizes halfwidth katakana prolonged sound mark",
+			input: "1ｰ2ｰ3",
+			want:  "1-2-3",
+		},
+		{
+			name:  "halfwidth katakana dash with full-width digits",
+			input: "東京都千代田区１ｰ２ｰ３",
+			want:  "東京都千代田区1-2-3",
+		},
+		{
 			name:  "combined transformations - quotes",
 			input: `"東京都　１−２"`, // quotes, full-width space, full-width numbers, en-dash
 			want:  "東京都 1-2",
