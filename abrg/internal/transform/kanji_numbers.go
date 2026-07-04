@@ -253,12 +253,13 @@ func kanjiPartToArabic(s string) string {
 
 var (
 	// kanjiNoKanjiPattern matches kanji number + ノ/の + kanji number.
-	// e.g., "二ノ八" matches to convert to "2-8"
-	kanjiNoKanjiPattern = regexp.MustCompile(`([一二三四五六七八九十百]+)[のノ]([一二三四五六七八九十百]+)`)
+	// e.g., "二ノ八" matches to convert to "2-8". The character class matches
+	// kanjiSegmentRe so multipliers like 千/万 are included (e.g., "千五ノ三").
+	kanjiNoKanjiPattern = regexp.MustCompile(`([一二三四五六七八九十百千万億零〇]+)[のノ]([一二三四五六七八九十百千万億零〇]+)`)
 
 	// arabicNoKanjiPattern matches arabic number + ノ/の + kanji number for chained processing.
 	// e.g., "8ノ一" matches to convert to "8-1" (after first pass converted "二ノ八" → "2-8")
-	arabicNoKanjiPattern = regexp.MustCompile(`(\d+)[のノ]([一二三四五六七八九十百]+)`)
+	arabicNoKanjiPattern = regexp.MustCompile(`(\d+)[のノ]([一二三四五六七八九十百千万億零〇]+)`)
 
 	// arabicNoArabicPattern matches arabic number + ノ/の + arabic number.
 	// Handles fully-converted chained patterns like "2ノ8ノ1" and intermediate states
