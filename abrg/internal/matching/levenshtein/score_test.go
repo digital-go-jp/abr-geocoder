@@ -45,6 +45,26 @@ func TestCalculateEditDistanceScore(t *testing.T) {
 			addressLen: 10,
 			want:       0.0,
 		},
+		{
+			// score 0.999 rounds up to 1.0, so it is capped at maxFuzzyMatchScore
+			// to keep fuzzy matches strictly below a perfect (editDist=0) score.
+			name:       "near-perfect fuzzy match capped below 1.0",
+			editDist:   1,
+			addressLen: 1000,
+			want:       0.999,
+		},
+		{
+			name:       "rounds to two decimals",
+			editDist:   1,
+			addressLen: 3,
+			want:       0.67,
+		},
+		{
+			name:       "single edit in long address rounds to 0.99",
+			editDist:   1,
+			addressLen: 100,
+			want:       0.99,
+		},
 	}
 
 	for _, tt := range tests {

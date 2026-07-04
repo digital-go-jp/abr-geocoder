@@ -296,3 +296,51 @@ func TestExtractUnmatchedFromStandardized(t *testing.T) {
 		})
 	}
 }
+
+func TestIsSearchNumbersPartOfPlaceName(t *testing.T) {
+	tests := []struct {
+		name          string
+		addr          model.StructuredAddress
+		searchNumbers string
+		want          bool
+	}{
+		{
+			name:          "koaza with 号 suffix matches the number",
+			addr:          model.StructuredAddress{Koaza: new("4号")},
+			searchNumbers: "4",
+			want:          true,
+		},
+		{
+			name:          "chome with 丁目 suffix matches the number",
+			addr:          model.StructuredAddress{Chome: new("3丁目")},
+			searchNumbers: "3",
+			want:          true,
+		},
+		{
+			name:          "no place-name fields set",
+			addr:          model.StructuredAddress{},
+			searchNumbers: "5",
+			want:          false,
+		},
+		{
+			name:          "empty searchNumbers",
+			addr:          model.StructuredAddress{Koaza: new("4号")},
+			searchNumbers: "",
+			want:          false,
+		},
+		{
+			name:          "number does not match any place name",
+			addr:          model.StructuredAddress{Koaza: new("本町")},
+			searchNumbers: "1",
+			want:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsSearchNumbersPartOfPlaceName(&tt.addr, tt.searchNumbers); got != tt.want {
+				t.Errorf("IsSearchNumbersPartOfPlaceName(%+v, %q) = %v, want %v", tt.addr, tt.searchNumbers, got, tt.want)
+			}
+		})
+	}
+}

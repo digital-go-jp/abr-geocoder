@@ -160,3 +160,52 @@ func TestBuildDeleteCondition(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildWhereClause(t *testing.T) {
+	tests := []struct {
+		name    string
+		filters map[string][]string
+		want    string
+	}{
+		{
+			name:    "nil filters",
+			filters: nil,
+			want:    "",
+		},
+		{
+			name:    "single column single value",
+			filters: map[string][]string{"pref": {"01"}},
+			want:    "pref IN ('01')",
+		},
+		{
+			name:    "single column multiple values keep order",
+			filters: map[string][]string{"pref": {"01", "02", "03"}},
+			want:    "pref IN ('01', '02', '03')",
+		},
+		{
+			name:    "single quotes are escaped",
+			filters: map[string][]string{"name": {"O'Brien"}},
+			want:    "name IN ('O''Brien')",
+		},
+		{
+			name:    "empty value list is skipped",
+			filters: map[string][]string{"pref": {}},
+			want:    "",
+		},
+		{
+			// A column with no values is skipped, leaving a single deterministic clause.
+			// (For multiple populated columns the AND order follows map iteration,
+			// which is unspecified, so those are not asserted here.)
+			name:    "empty column skipped, populated column kept",
+			filters: map[string][]string{"pref": {"13"}, "skip": {}},
+			want:    "pref IN ('13')",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buildWhereClause(tt.filters); got != tt.want {
+				t.Errorf("buildWhereClause(%v) = %q, want %q", tt.filters, got, tt.want)
+			}
+		})
+	}
+}

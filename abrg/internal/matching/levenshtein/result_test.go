@@ -202,6 +202,18 @@ func TestSelectBySearchNumbers(t *testing.T) {
 			searchNumbers: "11",
 			wantNil:       false,
 		},
+		{
+			// koaza contains searchNumbers but does not start with it -> weaker
+			// (contains) score, still selected over a non-matching candidate.
+			name: "koaza contains but not prefix",
+			results: []model.MatchedResult{
+				{StructuredAddress: model.StructuredAddress{Koaza: new("12号")}},
+				{StructuredAddress: model.StructuredAddress{Koaza: new("99号")}},
+			},
+			searchNumbers: "2",
+			wantNil:       false,
+			wantKoaza:     "12号",
+		},
 	}
 
 	for _, tt := range tests {
@@ -263,6 +275,160 @@ func TestSelectBestFromTiedResults(t *testing.T) {
 			got := selectBestFromTiedResults(tt.results, tt.searchNumbers, tt.originalAddr)
 			if len(got) != tt.wantLen {
 				t.Errorf("selectBestFromTiedResults() returned %d results, want %d", len(got), tt.wantLen)
+			}
+		})
+	}
+}
+
+func TestSelectBestFromTiedResults_TieBreaking(t *testing.T) {
+	t.Run("searchNumbers picks matching koaza and preserves lower-scored remainder", func(t *testing.T) {
+		results := []model.MatchedResult{
+			{Score: 0.9, MatchedAddress: "A", StructuredAddress: model.StructuredAddress{Koaza: new("1号")}},
+			{Score: 0.9, MatchedAddress: "B", StructuredAddress: model.StructuredAddress{Koaza: new("4号")}},
+			{Score: 0.8, MatchedAddress: "C"},
+		}
+		got := selectBestFromTiedResults(results, "4", "")
+		if len(got) != 2 {
+			t.Fatalf("len = %d, want 2", len(got))
+		}
+		if got[0].MatchedAddress != "B" {
+			t.Errorf("got[0].MatchedAddress = %q, want \"B\" (koaza 4号)", got[0].MatchedAddress)
+		}
+		if got[1].MatchedAddress != "C" {
+			t.Errorf("got[1].MatchedAddress = %q, want \"C\" (remainder preserved)", got[1].MatchedAddress)
+		}
+	})
+
+	t.Run("jaccard fallback picks closest oaza and preserves remainder", func(t *testing.T) {
+		results := []model.MatchedResult{
+			{Score: 0.9, MatchedAddress: "X", StructuredAddress: model.StructuredAddress{OazaCho: new("大一本松")}},
+			{Score: 0.9, MatchedAddress: "Y", StructuredAddress: model.StructuredAddress{OazaCho: new("大1本松")}},
+			{Score: 0.7, MatchedAddress: "Z"},
+		}
+		got := selectBestFromTiedResults(results, "", "大一本松")
+		if len(got) != 2 {
+			t.Fatalf("len = %d, want 2", len(got))
+		}
+		if got[0].MatchedAddress != "X" {
+			t.Errorf("got[0].MatchedAddress = %q, want \"X\" (jaccard closest)", got[0].MatchedAddress)
+		}
+		if got[1].MatchedAddress != "Z" {
+			t.Errorf("got[1].MatchedAddress = %q, want \"Z\" (remainder preserved)", got[1].MatchedAddress)
+		}
+	})
+}
+
+func TestIsPartialKoazaMatch(t *testing.T) {
+	tests := []struct {
+		name       string
+		searchAddr string
+		stdAddress string
+		want       bool
+	}{
+		{
+			name:       "trailing digits are a house number, koaza adds non-digit suffix",
+			searchAddr: "加賀市大聖寺上木町95",
+			stdAddress: "加賀市大聖寺上木町95ノ",
+			want:       true,
+		},
+		{
+			name:       "exact match is not a partial match",
+			searchAddr: "加賀市大聖寺上木町95ノ",
+			stdAddress: "加賀市大聖寺上木町95ノ",
+			want:       false,
+		},
+		{
+			name:       "extra suffix contains a digit",
+			searchAddr: "加賀市大聖寺上木町95",
+			stdAddress: "加賀市大聖寺上木町95の2",
+			want:       false,
+		},
+		{
+			name:       "searchAddr does not end with a digit",
+			searchAddr: "加賀市大聖寺上木町",
+			stdAddress: "加賀市大聖寺上木町95",
+			want:       false,
+		},
+		{
+			name:       "stdAddress is not a prefix of searchAddr base",
+			searchAddr: "東京",
+			stdAddress: "大阪府東京",
+			want:       false,
+		},
+		{
+			name:       "empty searchAddr",
+			searchAddr: "",
+			stdAddress: "加賀市",
+			want:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isPartialKoazaMatch(tt.searchAddr, tt.stdAddress); got != tt.want {
+				t.Errorf("isPartialKoazaMatch(%q, %q) = %v, want %v", tt.searchAddr, tt.stdAddress, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsFalseChomeMatch(t *testing.T) {
+	tests := []struct {
+		name       string
+		searchAddr string
+		stdAddress string
+		want       bool
+	}{
+		{
+			// 一ノ山 became "1ノ山" via kanji-to-arabic; that "1" is part of a place
+			// name, so matching "久保田1@" (久保田1丁目) would be a false chome match.
+			name:       "digit from place name is not a chome",
+			searchAddr: "久保田1ノ山:1523",
+			stdAddress: "久保田1@",
+			want:       true,
+		},
+		{
+			name:       "digit is a real chome number",
+			searchAddr: "久保田1:23",
+			stdAddress: "久保田1@",
+			want:       false,
+		},
+		{
+			name:       "searchAddr already has a chome marker",
+			searchAddr: "久保田1@:23",
+			stdAddress: "久保田1@",
+			want:       false,
+		},
+		{
+			name:       "stdAddress has no chome marker",
+			searchAddr: "久保田1:23",
+			stdAddress: "久保田1",
+			want:       false,
+		},
+		{
+			name:       "no digit before the chome marker",
+			searchAddr: "久保田:1",
+			stdAddress: "久保田@",
+			want:       false,
+		},
+		{
+			name:       "searchAddr base equals oaza exactly",
+			searchAddr: "久保田:5",
+			stdAddress: "久保田1@",
+			want:       false,
+		},
+		{
+			name:       "searchAddr base does not start with oaza",
+			searchAddr: "別町:1",
+			stdAddress: "久保田1@",
+			want:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isFalseChomeMatch(tt.searchAddr, tt.stdAddress); got != tt.want {
+				t.Errorf("isFalseChomeMatch(%q, %q) = %v, want %v", tt.searchAddr, tt.stdAddress, got, tt.want)
 			}
 		})
 	}

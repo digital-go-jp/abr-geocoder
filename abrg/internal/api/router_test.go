@@ -194,27 +194,44 @@ func TestReverseRequest_Validation(t *testing.T) {
 			wantError:  true,
 		},
 		{
-			name:       "valid edge case lat (-90)",
-			query:      "?lat=-90&lon=0",
-			wantStatus: http.StatusBadRequest, // categoryが空文字列の場合はバリデーションエラー
+			// min=-90 is inclusive, so lat=-90 (with a non-zero lon) must be accepted.
+			name:       "lat lower bound -90 is valid",
+			query:      "?lat=-90&lon=139.6503",
+			wantStatus: http.StatusOK,
+			wantError:  false,
+		},
+		{
+			// max=90 is inclusive, so lat=90 must be accepted.
+			name:       "lat upper bound 90 is valid",
+			query:      "?lat=90&lon=139.6503",
+			wantStatus: http.StatusOK,
+			wantError:  false,
+		},
+		{
+			name:       "lon lower bound -180 is valid",
+			query:      "?lat=35.6762&lon=-180",
+			wantStatus: http.StatusOK,
+			wantError:  false,
+		},
+		{
+			name:       "lon upper bound 180 is valid",
+			query:      "?lat=35.6762&lon=180",
+			wantStatus: http.StatusOK,
+			wantError:  false,
+		},
+		{
+			// `required` treats the float64 zero value as missing, so lat=0 is
+			// rejected. A point at lat=0/lon=0 is far outside Japan, so this is
+			// acceptable for a Japan-only geocoder.
+			name:       "lat=0 rejected as missing (required)",
+			query:      "?lat=0&lon=139.6503",
+			wantStatus: http.StatusBadRequest,
 			wantError:  true,
 		},
 		{
-			name:       "valid edge case lat (90) with category",
-			query:      "?lat=90&lon=0&category=all",
-			wantStatus: http.StatusBadRequest, // Ginのmin/maxは厳密な不等号
-			wantError:  true,
-		},
-		{
-			name:       "valid edge case lon (-180) with category",
-			query:      "?lat=0&lon=-180&category=all",
-			wantStatus: http.StatusBadRequest, // Ginのmin/maxは厳密な不等号
-			wantError:  true,
-		},
-		{
-			name:       "valid edge case lon (180) with category",
-			query:      "?lat=0&lon=180&category=all",
-			wantStatus: http.StatusBadRequest, // Ginのmin/maxは厳密な不等号
+			name:       "lon=0 rejected as missing (required)",
+			query:      "?lat=35.6762&lon=0",
+			wantStatus: http.StatusBadRequest,
 			wantError:  true,
 		},
 	}
