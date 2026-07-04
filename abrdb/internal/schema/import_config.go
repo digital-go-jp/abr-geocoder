@@ -2,6 +2,7 @@
 package schema
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -63,7 +64,7 @@ func (c *ImportConfig) Validate() error {
 		return fmt.Errorf("unsupported config version: %d (expected 1)", c.Version)
 	}
 	if len(c.Category) == 0 {
-		return fmt.Errorf("no category defined")
+		return errors.New("no category defined")
 	}
 
 	for name, cat := range c.Category {

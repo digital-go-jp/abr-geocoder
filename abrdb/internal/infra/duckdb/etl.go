@@ -3,6 +3,7 @@ package duckdb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -24,9 +25,9 @@ type tableNames struct {
 
 func generateTableNames(suffix string) tableNames {
 	return tableNames{
-		Text:        fmt.Sprintf("text_data%s", suffix),
-		Pos:         fmt.Sprintf("pos_data%s", suffix),
-		Transformed: fmt.Sprintf("transformed%s", suffix),
+		Text:        "text_data" + suffix,
+		Pos:         "pos_data" + suffix,
+		Transformed: "transformed" + suffix,
 	}
 }
 
@@ -106,7 +107,7 @@ func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, t
 func (e *ETL) cleanupTempTables(ctx context.Context, suffix string) {
 	tn := generateTableNames(suffix)
 	for _, table := range []string{tn.Text, tn.Pos, tn.Transformed} {
-		_, _ = e.db.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s", table))
+		_, _ = e.db.ExecContext(ctx, "DROP TABLE IF EXISTS "+table)
 	}
 }
 
@@ -154,7 +155,7 @@ func buildWhereClause(filters map[string][]string) string {
 
 func (e *ETL) loadTextDataWithSuffixTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, textPath string, suffix string) error {
 	if textPath == "" {
-		return fmt.Errorf("text file path is required")
+		return errors.New("text file path is required")
 	}
 
 	csvName := csvNameFromZip(textPath)
@@ -169,7 +170,7 @@ func (e *ETL) loadTextDataWithSuffixTx(ctx context.Context, tx *sql.Tx, category
 	// Verify data was loaded (after DISTINCT)
 	// Note: tn.Text is generated internally with a UUID suffix, not user input
 	var rowCount int
-	if err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s", tn.Text)).Scan(&rowCount); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+tn.Text).Scan(&rowCount); err != nil {
 		return fmt.Errorf("verify %s table: %w", tn.Text, err)
 	}
 	if rowCount == 0 {

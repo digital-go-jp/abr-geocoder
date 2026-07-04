@@ -4,6 +4,7 @@ package db
 import (
 	"context"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,7 +27,7 @@ type sqlResult struct {
 
 func (r *sqlResult) LastInsertId() (int64, error) {
 	// pgx doesn't support LastInsertId in the traditional sense
-	return 0, fmt.Errorf("pgx does not support LastInsertId")
+	return 0, errors.New("pgx does not support LastInsertId")
 }
 
 func (r *sqlResult) RowsAffected() (int64, error) {

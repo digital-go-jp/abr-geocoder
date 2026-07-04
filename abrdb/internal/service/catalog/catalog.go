@@ -174,17 +174,7 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 				continue
 			}
 			_, localExists := fc.localFileSet[file.Filename]
-			result.updatedFiles = append(result.updatedFiles, &model.File{
-				FileType:      info.FileType,
-				FileCategory:  info.FileCategory,
-				PrefCode:      info.PrefCode,
-				FileKey:       info.FileKey,
-				Filename:      file.Filename,
-				LastModified:  file.LastModified,
-				SourceURL:     file.URL,
-				NeedsDownload: !localExists,
-				NeedsImport:   true,
-			})
+			result.updatedFiles = append(result.updatedFiles, newFileRecord(info, file, !localExists, true))
 			continue
 		}
 
@@ -194,17 +184,10 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 		}
 
 		_, localExists := fc.localFileSet[file.Filename]
-		record := &model.File{
-			FileType:      info.FileType,
-			FileCategory:  info.FileCategory,
-			PrefCode:      info.PrefCode,
-			FileKey:       info.FileKey,
-			Filename:      file.Filename,
-			LastModified:  file.LastModified,
-			SourceURL:     file.URL,
-			NeedsDownload: !localExists || isNewOrModified,
-			NeedsImport:   isNewOrModified || (existing != nil && existing.NeedsImport),
-		}
+		record := newFileRecord(info, file,
+			!localExists || isNewOrModified,
+			isNewOrModified || (existing != nil && existing.NeedsImport),
+		)
 
 		if err := postgres.UpsertFile(ctx, s.executor, record); err != nil {
 			return nil, fmt.Errorf("upsert file %q: %w", file.URL, err)
@@ -215,6 +198,22 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 		}
 	}
 	return result, nil
+}
+
+// newFileRecord builds a catalog File record from parsed file info, the scanned
+// S3 file, and the computed download/import flags.
+func newFileRecord(info *model.File, file api.FileInfo, needsDownload, needsImport bool) *model.File {
+	return &model.File{
+		FileType:      info.FileType,
+		FileCategory:  info.FileCategory,
+		PrefCode:      info.PrefCode,
+		FileKey:       info.FileKey,
+		Filename:      file.Filename,
+		LastModified:  file.LastModified,
+		SourceURL:     file.URL,
+		NeedsDownload: needsDownload,
+		NeedsImport:   needsImport,
+	}
 }
 
 // buildLocalFileSet reads the download directory once and returns a set of existing filenames

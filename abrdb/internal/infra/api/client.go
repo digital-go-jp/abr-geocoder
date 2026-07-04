@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -174,7 +175,7 @@ func (c *Client) DownloadFile(ctx context.Context, fileURL, destPath string) err
 }
 
 func downloadToFile(r io.Reader, destPath string) error {
-	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 		return fmt.Errorf("create directory: %w", err)
 	}
 
@@ -216,13 +217,13 @@ func extractModifiedFromDescription(description string) (time.Time, error) {
 	// Description format: "最終更新日: 2025-05-28T09:56:52.000Z"
 	_, after, found := strings.Cut(description, "最終更新日: ")
 	if !found {
-		return time.Time{}, fmt.Errorf("timestamp not found in description")
+		return time.Time{}, errors.New("timestamp not found in description")
 	}
 
 	// Extract timestamp string (everything after the prefix until whitespace)
 	fields := strings.Fields(after)
 	if len(fields) == 0 {
-		return time.Time{}, fmt.Errorf("timestamp not found in description")
+		return time.Time{}, errors.New("timestamp not found in description")
 	}
 
 	return parseModifiedDate(fields[0])

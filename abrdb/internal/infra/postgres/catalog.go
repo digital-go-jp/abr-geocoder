@@ -85,33 +85,17 @@ func AllPendingImports(ctx context.Context, executor *db.QueryExecutor) ([]*mode
 // PendingImportsByCategory retrieves files pending import for multiple category values in one query.
 // Returns a map of category to files, eliminating N+1 queries when importing multiple category values.
 func PendingImportsByCategory(ctx context.Context, executor *db.QueryExecutor, category []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
-	if len(category) == 0 {
-		return make(map[model.FileCategory][]*model.File), nil
-	}
-
-	query := `
-		SELECT ` + fileSelectColumns + `
-		FROM abrdb_catalog
-		WHERE needs_import = true AND file_category = ANY($1)
-	`
-
-	rows, err := executor.Query(ctx, query, category)
-	if err != nil {
-		return nil, fmt.Errorf("query pending imports by category: %w", err)
-	}
-	defer rows.Close()
-
 	result := make(map[model.FileCategory][]*model.File)
-	for rows.Next() {
-		var f model.File
-		if err := scanFile(rows, &f); err != nil {
-			return nil, fmt.Errorf("scan file: %w", err)
-		}
-		result[f.FileCategory] = append(result[f.FileCategory], &f)
+	if len(category) == 0 {
+		return result, nil
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate pending imports: %w", err)
+	files, err := queryFiles(ctx, executor, "WHERE needs_import = true AND file_category = ANY($1)", category)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		result[f.FileCategory] = append(result[f.FileCategory], f)
 	}
 	return result, nil
 }

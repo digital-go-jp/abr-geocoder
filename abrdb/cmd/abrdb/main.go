@@ -18,6 +18,10 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	_ = godotenv.Load()
 
 	slog.SetDefault(logging.NewFromEnv())
@@ -45,14 +49,15 @@ Japanese address data from the Address Base Registry (ABR).`,
 		command.NewVersionCmd(),
 	)
 
-	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		// Exit code 2 for dry-run with pending changes (not an error)
-		var exitCode2 command.ExitCode2Error
-		if errors.As(err, &exitCode2) {
-			os.Exit(2)
-		}
-		// Print only the error (usage suppressed) and exit non-zero
-		_, _ = os.Stderr.WriteString(err.Error() + "\n")
-		os.Exit(1)
+	err := rootCmd.ExecuteContext(ctx)
+	if err == nil {
+		return 0
 	}
+	// Exit code 2 for dry-run with pending changes (not an error)
+	if _, ok := errors.AsType[command.ExitCode2Error](err); ok {
+		return 2
+	}
+	// Print only the error (usage suppressed) and exit non-zero
+	_, _ = os.Stderr.WriteString(err.Error() + "\n")
+	return 1
 }
