@@ -1,5 +1,5 @@
 BINARY   := abrg
-# Unit tests via gotestsum (shows skip summary)
+# Unit tests via gotestsum (hides per-test skip detail; skip count still shown)
 TEST_CMD := go tool gotestsum --format-icons text --hide-summary=skipped ./...
 EXTRA_CLEAN := rm -rf tmp
 
@@ -7,13 +7,27 @@ include ../Makefile.common
 
 .PHONY: test-issues test-issue1 test-coverage-pkg prof help
 
-# Run all issue tests with DuckDB cache
-test-issues:
-	CACHE_PATH=/tmp/test_abrg.duckdb go test -count=1 ./internal/matching/issues | grep -v "==="
+REGRESSION_PKG := ./internal/matching/issues
 
-# Run issue1 test with DuckDB cache
+# Regression suite against a real DuckDB cache. CACHE_PATH is required; the
+# target fails if the cache is missing or any test is skipped, so a green run
+# means every regression test actually ran and passed.
+#   make test-issues CACHE_PATH=/abs/path/abrg.duckdb
+test-issues:
+	@test -n "$(CACHE_PATH)" || { echo "ERROR: set CACHE_PATH to a DuckDB cache, e.g. make test-issues CACHE_PATH=/abs/path/abrg.duckdb"; exit 1; }
+	@test -f "$(CACHE_PATH)" || { echo "ERROR: cache file not found: $(CACHE_PATH)"; exit 1; }
+	@json=$$(mktemp); \
+	CACHE_PATH="$(CACHE_PATH)" go tool gotestsum --format testname --jsonfile "$$json" -- -count=1 $(REGRESSION_PKG); \
+	code=$$?; \
+	grep -Eq '"Action":"skip"[^}]*"Test":"' "$$json" && code=1 && echo "ERROR: regression tests were SKIPPED (incomplete cache: $(CACHE_PATH))"; \
+	rm -f "$$json"; \
+	exit $$code
+
+# Run a single issue test (usage: make test-issue1 CACHE_PATH=/abs/path/abrg.duckdb)
 test-issue1:
-	CACHE_PATH=/tmp/test_abrg.duckdb go test -v -count=1 ./internal/matching/issues -run "^TestIssue1$$"
+	@test -n "$(CACHE_PATH)" || { echo "ERROR: set CACHE_PATH to a DuckDB cache, e.g. make test-issue1 CACHE_PATH=/abs/path/abrg.duckdb"; exit 1; }
+	@test -f "$(CACHE_PATH)" || { echo "ERROR: cache file not found: $(CACHE_PATH)"; exit 1; }
+	CACHE_PATH="$(CACHE_PATH)" go test -v -count=1 $(REGRESSION_PKG) -run "^TestIssue1$$"
 
 # Run coverage for a specific package (usage: make test-coverage-pkg PKG=./internal/matching)
 test-coverage-pkg:
@@ -40,8 +54,8 @@ help:
 	@echo "Testing:"
 	@echo "  test          - Run all tests"
 	@echo "  test-unit     - Run unit tests only"
-	@echo "  test-issues   - Run all issue tests with DuckDB cache"
-	@echo "  test-issue1   - Run issue1 test with DuckDB cache"
+	@echo "  test-issues   - Run all issue tests (requires CACHE_PATH=/abs/path.duckdb)"
+	@echo "  test-issue1   - Run issue1 test (requires CACHE_PATH=/abs/path.duckdb)"
 	@echo "  test-integration - Run integration tests"
 	@echo "  test-coverage - Run tests with coverage report"
 	@echo "  test-coverage-pkg PKG=./path - Run coverage for specific package"
