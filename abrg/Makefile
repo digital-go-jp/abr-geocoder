@@ -1,18 +1,11 @@
-# Version from VERSION file
-VERSION := $(shell cat VERSION)
-COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+BINARY   := abrg
+# Unit tests via gotestsum (shows skip summary)
+TEST_CMD := go tool gotestsum --format-icons text --hide-summary=skipped ./...
+EXTRA_CLEAN := rm -rf tmp
 
-# Build variables
-LDFLAGS := -ldflags "-X abr.local/common/version.Version=$(VERSION) -X abr.local/common/version.Commit=$(COMMIT)"
+include ../Makefile.common
 
-.PHONY: test test-unit test-integration test-coverage test-coverage-pkg test-issues test-issue1 build run clean lint fmt vuln bench prof help
-
-# Run all tests
-test: test-unit
-
-# Run unit tests only (shows skip summary via gotestsum)
-test-unit:
-	@go tool gotestsum --format-icons text --hide-summary=skipped ./...
+.PHONY: test-issues test-issue1 test-coverage-pkg prof help
 
 # Run all issue tests with DuckDB cache
 test-issues:
@@ -22,58 +15,12 @@ test-issues:
 test-issue1:
 	CACHE_PATH=/tmp/test_abrg.duckdb go test -v -count=1 ./internal/matching/issues -run "^TestIssue1$$"
 
-# Run integration tests
-test-integration:
-	go test -tags=integration -v ./...
-
-# Run tests with coverage (uses -coverpkg for accurate cross-package measurement)
-test-coverage:
-	go test -coverpkg=./... -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
-	@go tool cover -func=coverage.out | tail -1
-	@echo "Coverage report generated: coverage.html"
-
 # Run coverage for a specific package (usage: make test-coverage-pkg PKG=./internal/matching)
 test-coverage-pkg:
 	go test -coverpkg=$(PKG) -coverprofile=coverage.out $(PKG)/...
 	go tool cover -html=coverage.out -o coverage.html
 	@go tool cover -func=coverage.out | tail -1
 	@echo "Coverage report generated: coverage.html"
-
-# Build the application
-build:
-	go build $(LDFLAGS) -o ./abrg ./cmd/abrg
-
-# Run the application
-run:
-	go run $(LDFLAGS) ./cmd/abrg/... $(ARGS)
-
-# Clean build artifacts
-clean:
-	rm -f /tmp/abrg coverage.out coverage.html
-	rm -rf tmp
-
-# Run lint checks without modifying files (CI-friendly)
-lint:
-	go mod verify
-	go vet ./...
-	golangci-lint run
-
-# Run lint tools with auto-fix (local dev)
-fmt:
-	go mod tidy
-	goimports -w .
-	golangci-lint run --fix
-
-# Security vulnerability scan
-vuln:
-	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
-
-
-# Run benchmarks
-bench:
-	@echo "Running benchmarks..."
-	go test -bench=. -benchmem ./...
 
 # Run with profiling
 prof:
@@ -101,8 +48,9 @@ help:
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  lint          - Run lint checks (CI-friendly, no auto-fix)"
-	@echo "  fmt           - Auto-format and fix lint issues"
+	@echo "  fmt           - Auto-format and fix lint issues (incl. go fix)"
 	@echo "  vuln          - Run govulncheck"
+	@echo "  modernize     - Check go fix modernizations (CI-friendly, no changes)"
 	@echo "  bench         - Run benchmarks"
 	@echo "  prof          - Run with profiling"
 	@echo ""

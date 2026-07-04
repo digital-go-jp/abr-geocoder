@@ -1,0 +1,81 @@
+# Shared Go module targets for abrg and abrdb.
+# Include from a module Makefile after setting BINARY (and optional overrides):
+#   BINARY      - output binary name and default cmd dir       (required)
+#   CMD_PATH    - main package path       (default ./cmd/$(BINARY))
+#   TEST_CMD    - unit test command       (default go test ./...)
+#   COVERPKG    - coverage packages       (default ./...)
+#   EXTRA_CLEAN - extra shell line for `clean`                 (optional)
+
+BINARY   ?= $(notdir $(CURDIR))
+CMD_PATH ?= ./cmd/$(BINARY)
+TEST_CMD ?= go test ./...
+COVERPKG ?= ./...
+
+# Version from VERSION file
+VERSION := $(shell cat VERSION)
+COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+
+# Build variables
+LDFLAGS := -ldflags "-X abr.local/common/version.Version=$(VERSION) -X abr.local/common/version.Commit=$(COMMIT)"
+
+.DEFAULT_GOAL := test
+
+.PHONY: build run clean test test-unit test-integration test-coverage lint fmt vuln modernize bench
+
+# Build the application
+build:
+	go build $(LDFLAGS) -o ./$(BINARY) $(CMD_PATH)
+
+# Run the application
+run:
+	go run $(LDFLAGS) $(CMD_PATH)/... $(ARGS)
+
+# Clean build artifacts
+clean:
+	rm -f /tmp/$(BINARY) coverage.out coverage.html
+	$(EXTRA_CLEAN)
+
+# Run all tests
+test: test-unit
+
+# Run unit tests only
+test-unit:
+	$(TEST_CMD)
+
+# Run integration tests
+test-integration:
+	go test -tags=integration -v ./...
+
+# Run tests with coverage (uses -coverpkg for cross-package measurement)
+test-coverage:
+	go test -coverpkg=$(COVERPKG) -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@go tool cover -func=coverage.out | tail -1
+	@echo "Coverage report generated: coverage.html"
+
+# Run lint checks without modifying files (CI-friendly)
+lint:
+	go mod verify
+	go vet ./...
+	golangci-lint run
+
+# Run lint tools with auto-fix (local dev; incl. go fix modernizations)
+fmt:
+	go mod tidy
+	go fix ./...
+	goimports -w .
+	golangci-lint run --fix
+
+# Security vulnerability scan
+vuln:
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+# Modernize check (CI-friendly): fail if `go fix` would change anything.
+# Go 1.26 `go fix` bundles the modernize analyzer suite; run `make fmt` to apply.
+modernize:
+	go fix -diff ./...
+
+# Run benchmarks
+bench:
+	@echo "Running benchmarks..."
+	go test -bench=. -benchmem ./...

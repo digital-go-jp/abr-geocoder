@@ -40,6 +40,9 @@ jobs:
         with:
           version: v2.11.4
           working-directory: ${{ matrix.module }}
+      # Go 1.26 `go fix` bundles the modernize suite; -diff exits non-zero on any change.
+      - name: modernize ${{ matrix.module }}
+        run: cd ${{ matrix.module }} && go fix -diff ./...
 
   vuln:
     runs-on: ubuntu-latest
