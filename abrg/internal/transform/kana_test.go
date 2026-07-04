@@ -129,6 +129,13 @@ func TestHiraganaToKatakana(t *testing.T) {
 			expected: "ヮ",
 			changed:  true,
 		},
+		{
+			// Iteration marks live in the U+309D-U+309F part of unicode.Hiragana.
+			name:     "hiragana iteration marks",
+			input:    "ゝゞ",
+			expected: "ヽヾ",
+			changed:  true,
+		},
 	}
 
 	for _, tt := range tests {

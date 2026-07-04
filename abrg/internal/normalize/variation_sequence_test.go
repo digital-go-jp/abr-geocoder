@@ -63,6 +63,24 @@ func TestRemoveVS(t *testing.T) {
 			expected:     "愛媛県松山市三番町一丁目13番地",
 			shouldChange: true,
 		},
+		{
+			name:         "IVS upper bound U+E01EF removed",
+			input:        "愛\U000E01EF媛",
+			expected:     "愛媛",
+			shouldChange: true,
+		},
+		{
+			name:         "just past IVS U+E01F0 kept",
+			input:        "愛\U000E01F0媛",
+			expected:     "愛\U000E01F0媛",
+			shouldChange: false,
+		},
+		{
+			name:         "just past SVS U+FE10 kept",
+			input:        "愛︐媛",
+			expected:     "愛︐媛",
+			shouldChange: false,
+		},
 	}
 
 	for _, tt := range tests {
