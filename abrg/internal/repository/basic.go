@@ -28,7 +28,7 @@ func (r *DB) FindBasicByAddress(ctx context.Context, params BasicSearchParams) (
 		args = append(args, params.PrefCode)
 	}
 
-	query += " ORDER BY (parcel_count + rsdtdsp_count) DESC, machiaza_id DESC LIMIT ?"
+	query += " ORDER BY (parcel_count + rsdtdsp_count) DESC, machiaza_id DESC, lg_code, rsdt_addr_flg LIMIT ?"
 	args = append(args, params.Limit)
 
 	results, err := queryRows(ctx, r.db, query, args, params.Limit, scanBasicResultRow)
@@ -120,7 +120,7 @@ func (r *DB) FindBasicByLevenshtein(ctx context.Context, p LevenshteinParams) ([
 	}
 
 	sqlLimit := max(p.Limit*sqlLimitMultiplier, minSQLLimit)
-	query += " ORDER BY editdist3(?, normalized_address) ASC, normalized_address ASC LIMIT ?"
+	query += " ORDER BY editdist3(?, normalized_address) ASC, normalized_address ASC, lg_code, machiaza_id, rsdt_addr_flg LIMIT ?"
 	args = append(args, p.SearchAddr, sqlLimit)
 
 	results, err := queryRows(ctx, r.db, query, args, sqlLimit, scanBasicResultRow)
@@ -162,7 +162,7 @@ func (r *DB) FindBasicByPrefix(ctx context.Context, p PrefixParams) ([]BasicResu
 		args = append(args, p.PrefCode)
 	}
 
-	query += " ORDER BY length(normalized_address) DESC LIMIT ?"
+	query += " ORDER BY length(normalized_address) DESC, lg_code, machiaza_id, rsdt_addr_flg LIMIT ?"
 	args = append(args, p.Limit)
 
 	results, err := queryRows(ctx, r.db, query, args, p.Limit, scanBasicResultRow)
