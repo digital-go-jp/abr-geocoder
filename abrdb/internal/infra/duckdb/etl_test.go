@@ -1,6 +1,7 @@
 package duckdb
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -79,6 +80,13 @@ func TestGenerateTableNames(t *testing.T) {
 			wantPos:    "pos_data_abc_456",
 			wantTransf: "transformed_abc_456",
 		},
+		{
+			name:       "dots in suffix are sanitized to underscores",
+			suffix:     "_a.b",
+			wantText:   "text_data_a_b",
+			wantPos:    "pos_data_a_b",
+			wantTransf: "transformed_a_b",
+		},
 	}
 
 	for _, tt := range tests {
@@ -92,6 +100,30 @@ func TestGenerateTableNames(t *testing.T) {
 			}
 			if got.Transformed != tt.wantTransf {
 				t.Errorf("generateTableNames(%q).Transformed = %q, want %q", tt.suffix, got.Transformed, tt.wantTransf)
+			}
+		})
+	}
+}
+
+func TestGenerateTableNames_SanitizesIdentifier(t *testing.T) {
+	// Table names are interpolated into SQL as identifiers (cannot be parameterized),
+	// so a crafted source filename must not smuggle SQL metacharacters through.
+	identOnly := regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+	hostile := []string{
+		`_'; DROP TABLE users; --`,
+		`_a"b`,
+		"_a`b",
+		"_mt pref-all",
+		"_x;y",
+		"_日本語",
+	}
+	for _, suffix := range hostile {
+		t.Run(suffix, func(t *testing.T) {
+			tn := generateTableNames(suffix)
+			for _, name := range []string{tn.Text, tn.Pos, tn.Transformed} {
+				if !identOnly.MatchString(name) {
+					t.Errorf("table name %q contains non-identifier characters (suffix %q)", name, suffix)
+				}
 			}
 		})
 	}

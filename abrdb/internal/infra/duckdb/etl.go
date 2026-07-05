@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"abr.local/common/db"
@@ -23,7 +24,14 @@ type tableNames struct {
 	Transformed string
 }
 
+// nonIdentChar matches any character not allowed in a table-name suffix.
+var nonIdentChar = regexp.MustCompile(`[^A-Za-z0-9_]`)
+
 func generateTableNames(suffix string) tableNames {
+	// The suffix becomes part of a SQL identifier (table name), which cannot be
+	// parameterized. Restrict it to identifier-safe characters so a crafted source
+	// filename cannot inject SQL.
+	suffix = nonIdentChar.ReplaceAllString(suffix, "_")
 	return tableNames{
 		Text:        "text_data" + suffix,
 		Pos:         "pos_data" + suffix,
@@ -70,7 +78,6 @@ func (e *ETL) Close() error {
 
 func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath string, posPath string) error {
 	suffix := "_" + strings.TrimSuffix(filepath.Base(textPath), ".csv.zip")
-	suffix = strings.ReplaceAll(suffix, ".", "_")
 
 	defer e.cleanupTempTables(context.Background(), suffix)
 
@@ -168,7 +175,8 @@ func (e *ETL) loadTextDataWithSuffixTx(ctx context.Context, tx *sql.Tx, category
 	}
 
 	// Verify data was loaded (after DISTINCT)
-	// Note: tn.Text is generated internally with a UUID suffix, not user input
+	// tn.Text is an internally generated, identifier-sanitized table name
+	// (see generateTableNames), not raw user input.
 	var rowCount int
 	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+tn.Text).Scan(&rowCount); err != nil {
 		return fmt.Errorf("verify %s table: %w", tn.Text, err)
