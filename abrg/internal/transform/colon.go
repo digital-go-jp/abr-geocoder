@@ -136,30 +136,5 @@ func AddColon(s string) (string, bool) {
 	if changed && isSingleKatakanaColon(result) {
 		return s, false // Revert: likely a koaza, not an address number
 	}
-	if changed && isTrailingHyphenColon(result) {
-		return s, false // Revert: trailing hyphen (e.g., "大塚:1-") should be handled as chome indicator
-	}
 	return result, changed
-}
-
-// isTrailingHyphenColon checks if the result ends with ":<digits>-" (trailing hyphen after colon+digits).
-// e.g., "大塚:1-" returns true, "大塚:1-2" returns false.
-func isTrailingHyphenColon(result string) bool {
-	if !strings.HasSuffix(result, "-") {
-		return false
-	}
-	colonIdx := strings.LastIndex(result, ":")
-	if colonIdx < 0 {
-		return false
-	}
-	between := result[colonIdx+1 : len(result)-1]
-	if between == "" {
-		return false
-	}
-	for _, r := range between {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
 }

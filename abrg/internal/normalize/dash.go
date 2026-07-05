@@ -26,26 +26,22 @@ var dashReplacer = strings.NewReplacer(
 )
 
 var katakanaDash = regexp.MustCompile(`([\d０-９])ー([\d０-９])`)
-var halfwidthKatakanaDash = regexp.MustCompile(`([\d０-９])ｰ([\d０-９])`)
 
 // NormalizeDashes converts various dash characters to standard hyphen-minus.
+// The halfwidth katakana prolonged sound mark ｰ (U+FF70) is not handled here; it is
+// normalized to ー (U+30FC) by NFKC earlier in the pipeline.
 func NormalizeDashes(s string) (string, bool) {
 	original := s
 
 	// Fast check: if string is ASCII-only, likely no special dashes
 	isASCII := true
 	hasKatakanaDash := false
-	hasHalfwidthKatakanaDash := false
 	for i := 0; i < len(s); i++ {
 		if s[i] >= 0x80 {
 			isASCII = false
 			// Check for katakana prolonged sound mark (ー is U+30FC, UTF-8: E3 83 BC)
 			if i+2 < len(s) && s[i] == 0xE3 && s[i+1] == 0x83 && s[i+2] == 0xBC {
 				hasKatakanaDash = true
-			}
-			// Check for halfwidth katakana prolonged sound mark (ｰ is U+FF70, UTF-8: EF BD B0)
-			if i+2 < len(s) && s[i] == 0xEF && s[i+1] == 0xBD && s[i+2] == 0xB0 {
-				hasHalfwidthKatakanaDash = true
 			}
 		}
 	}
@@ -61,9 +57,6 @@ func NormalizeDashes(s string) (string, bool) {
 	// Need to apply repeatedly for cases like 1ー2ー3.
 	if hasKatakanaDash && strings.Contains(s, "ー") {
 		s = replaceUntilStable(s, katakanaDash)
-	}
-	if hasHalfwidthKatakanaDash && strings.Contains(s, "ｰ") {
-		s = replaceUntilStable(s, halfwidthKatakanaDash)
 	}
 
 	return s, s != original

@@ -166,55 +166,77 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 		}
 
 		existing := fc.existingFiles[file.URL]
-		isNewOrModified := existing == nil || !existing.LastModified.Equal(file.LastModified)
-
-		// For dry-run (updateDB=false): only collect new/modified files
-		if !updateDB {
-			if !isNewOrModified {
-				continue
-			}
-			_, localExists := fc.localFileSet[file.Filename]
-			result.updatedFiles = append(result.updatedFiles, &model.File{
-				FileType:      info.FileType,
-				FileCategory:  info.FileCategory,
-				PrefCode:      info.PrefCode,
-				FileKey:       info.FileKey,
-				Filename:      file.Filename,
-				LastModified:  file.LastModified,
-				SourceURL:     file.URL,
-				NeedsDownload: !localExists,
-				NeedsImport:   true,
-			})
-			continue
-		}
-
-		// For update mode: skip if unchanged and doesn't need import
-		if !isNewOrModified && (existing == nil || !existing.NeedsImport) {
-			continue
-		}
-
 		_, localExists := fc.localFileSet[file.Filename]
-		record := &model.File{
-			FileType:      info.FileType,
-			FileCategory:  info.FileCategory,
-			PrefCode:      info.PrefCode,
-			FileKey:       info.FileKey,
-			Filename:      file.Filename,
-			LastModified:  file.LastModified,
-			SourceURL:     file.URL,
-			NeedsDownload: !localExists || isNewOrModified,
-			NeedsImport:   isNewOrModified || (existing != nil && existing.NeedsImport),
+		action := decideFileAction(existing, file, localExists, updateDB)
+		if action.skip {
+			continue
+		}
+
+		record := newFileRecord(info, file, action.needsDownload, action.needsImport)
+
+		// Dry-run only collects the candidate records; update mode persists them.
+		if !updateDB {
+			result.updatedFiles = append(result.updatedFiles, record)
+			continue
 		}
 
 		if err := postgres.UpsertFile(ctx, s.executor, record); err != nil {
 			return nil, fmt.Errorf("upsert file %q: %w", file.URL, err)
 		}
-
-		if isNewOrModified {
+		if action.isNewOrModified {
 			result.updatedCount++
 		}
 	}
 	return result, nil
+}
+
+// fileAction is the download/import decision for a single scanned file, computed
+// purely from the existing catalog record, the scanned file, local presence, and
+// whether we are updating the DB (vs a dry-run). skip means the file is ignored.
+type fileAction struct {
+	skip            bool
+	needsDownload   bool
+	needsImport     bool
+	isNewOrModified bool
+}
+
+// decideFileAction derives the catalog action for one file without any I/O.
+func decideFileAction(existing *model.File, file api.FileInfo, localExists, updateDB bool) fileAction {
+	isNewOrModified := existing == nil || !existing.LastModified.Equal(file.LastModified)
+
+	// Dry-run: only new/modified files are candidates; they always need import.
+	if !updateDB {
+		if !isNewOrModified {
+			return fileAction{skip: true}
+		}
+		return fileAction{needsDownload: !localExists, needsImport: true, isNewOrModified: true}
+	}
+
+	// Update: skip unchanged files unless a prior import is still pending.
+	if !isNewOrModified && (existing == nil || !existing.NeedsImport) {
+		return fileAction{skip: true}
+	}
+	return fileAction{
+		needsDownload:   !localExists || isNewOrModified,
+		needsImport:     isNewOrModified || (existing != nil && existing.NeedsImport),
+		isNewOrModified: isNewOrModified,
+	}
+}
+
+// newFileRecord builds a catalog File record from parsed file info, the scanned
+// S3 file, and the computed download/import flags.
+func newFileRecord(info *model.File, file api.FileInfo, needsDownload, needsImport bool) *model.File {
+	return &model.File{
+		FileType:      info.FileType,
+		FileCategory:  info.FileCategory,
+		PrefCode:      info.PrefCode,
+		FileKey:       info.FileKey,
+		Filename:      file.Filename,
+		LastModified:  file.LastModified,
+		SourceURL:     file.URL,
+		NeedsDownload: needsDownload,
+		NeedsImport:   needsImport,
+	}
 }
 
 // buildLocalFileSet reads the download directory once and returns a set of existing filenames

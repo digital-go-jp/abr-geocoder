@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"abrg/internal/infra/duckdb"
 	"abrg/internal/model"
 	"abrg/internal/repository"
 	"abrg/internal/reverse"
@@ -46,8 +47,8 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 
 	repo := repository.NewRepository(setup.DB)
 	reverser := reverse.NewReverseGeocoder(repo,
-		reverse.TableExists(setup.DB, "cache_rsdtdsp"),
-		reverse.TableExists(setup.DB, "cache_parcel"),
+		reverse.TableExists(setup.DB, duckdb.TableRsdtdsp),
+		reverse.TableExists(setup.DB, duckdb.TableParcel),
 	)
 	categoryVal := model.Category(setup.resolveCategory(opts.Category))
 

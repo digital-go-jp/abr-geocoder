@@ -66,13 +66,10 @@ func TestExecuteConcurrently_ContextCancellation(t *testing.T) {
 	items := []int{1, 2, 3, 4, 5}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	var startedCount atomic.Int32
 	worker := func(ctx context.Context, item int) error {
-		startedCount.Add(1)
 		if item == 1 {
-			cancel() // Cancel after first item
+			cancel() // cancel synchronously, then observe cancellation below
 		}
-		// Check if context is cancelled
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -82,9 +79,11 @@ func TestExecuteConcurrently_ContextCancellation(t *testing.T) {
 	}
 
 	err := ExecuteConcurrently(ctx, items, worker, nil, "test")
-	// Error might be context.Canceled or nil depending on timing
-	// The important thing is that it doesn't panic
-	_ = err
+	// The worker for item 1 cancels the context and then returns ctx.Err(), so the
+	// group must surface context.Canceled (never nil).
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("ExecuteConcurrently() error = %v, want context.Canceled", err)
+	}
 }
 
 func TestExecuteConcurrently_StringItems(t *testing.T) {

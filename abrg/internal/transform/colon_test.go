@@ -183,6 +183,28 @@ func TestAddColon(t *testing.T) {
 			expected: "港区3田:2-2-18",
 			changed:  true,
 		},
+		// Suppression branches: these must NOT get a colon.
+		{
+			// 街区 koaza pattern (isGaikuPattern).
+			name:     "gaiku pattern suppresses colon",
+			input:    "米花町13街区5号",
+			expected: "米花町13街区5号",
+			changed:  false,
+		},
+		{
+			// Sapporo abbreviation (北3西1...) is left for ExpandSapporoJou.
+			name:     "sapporo abbreviation suppresses colon",
+			input:    "北3西1-7",
+			expected: "北3西1-7",
+			changed:  false,
+		},
+		{
+			// A trailing single katakana is likely a koaza, so the colon is reverted.
+			name:     "trailing single katakana reverts colon",
+			input:    "米花町イ",
+			expected: "米花町イ",
+			changed:  false,
+		},
 	}
 
 	for _, tt := range tests {

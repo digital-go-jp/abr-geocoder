@@ -1,4 +1,4 @@
-.PHONY: help build test lint fmt vuln clean abrg-build abrg-test abrg-lint abrg-fmt abrg-vuln abrdb-build abrdb-test abrdb-lint abrdb-fmt abrdb-vuln common-lint common-vuln all
+.PHONY: help build test lint fmt vuln modernize clean abrg-build abrg-test abrg-lint abrg-fmt abrg-vuln abrg-modernize abrdb-build abrdb-test abrdb-lint abrdb-fmt abrdb-vuln abrdb-modernize common-lint common-vuln common-modernize all
 
 # Default target
 help:
@@ -9,6 +9,7 @@ help:
 	@echo "  build         - Build all projects"
 	@echo "  test          - Run tests for all projects"
 	@echo "  lint          - Run lint for all projects"
+	@echo "  modernize     - Check go fix modernizations for all projects"
 	@echo "  clean         - Clean all projects"
 	@echo ""
 	@echo "ABRG (Geocoding API):"
@@ -36,6 +37,8 @@ fmt: abrg-fmt abrdb-fmt
 
 vuln: abrg-vuln abrdb-vuln common-vuln
 
+modernize: abrg-modernize abrdb-modernize common-modernize
+
 clean: abrg-clean abrdb-clean
 
 # ABRG targets
@@ -61,6 +64,10 @@ abrg-fmt:
 abrg-vuln:
 	@cd abrg && make vuln
 
+abrg-modernize:
+	@echo "Modernize check abrg..."
+	@cd abrg && make modernize
+
 abrg-clean:
 	@echo "Cleaning abrg..."
 	@cd abrg && make clean
@@ -84,6 +91,10 @@ abrdb-fmt:
 abrdb-vuln:
 	@cd abrdb && make vuln
 
+abrdb-modernize:
+	@echo "Modernize check abrdb..."
+	@cd abrdb && make modernize
+
 abrdb-clean:
 	@echo "Cleaning abrdb..."
 	@cd abrdb && make clean
@@ -95,3 +106,7 @@ common-lint:
 
 common-vuln:
 	@cd common && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+common-modernize:
+	@echo "Modernize check common..."
+	@cd common && go fix -diff ./...

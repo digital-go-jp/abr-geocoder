@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"abrg/internal/cache"
+	"abrg/internal/infra/duckdb"
 	"abrg/internal/matching"
 	"abrg/internal/model"
 	"abrg/internal/repository"
@@ -139,8 +140,8 @@ func NewGinServer(cfg ServerConfig) (*GinServer, error) {
 		repo = repository.NewRepository(cfg.Cache.DB())
 		matcher = matching.NewMatcher(repo, cfg.Cache.Lookups())
 		reverseGeocoder = reverse.NewReverseGeocoder(repo,
-			reverse.TableExists(cfg.Cache.DB(), "cache_rsdtdsp"),
-			reverse.TableExists(cfg.Cache.DB(), "cache_parcel"),
+			reverse.TableExists(cfg.Cache.DB(), duckdb.TableRsdtdsp),
+			reverse.TableExists(cfg.Cache.DB(), duckdb.TableParcel),
 		)
 	}
 

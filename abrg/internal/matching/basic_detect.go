@@ -12,7 +12,7 @@ import (
 // detectBasicResultsWithBasic detects basic-level results using NormalizeAddressTextWithBasic output.
 // The normalizedAddr should be from standardize.NormalizeAddressTextWithBasic().
 func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, pref, originalAddr string) (string, string, []model.MatchedResult, error) {
-	searchAddr := strings.Split(normalizedAddr, " ")[0]
+	searchAddr, _, _ := strings.Cut(normalizedAddr, " ")
 
 	// Apply variant kanji normalization (e.g., "沖繩" -> "沖縄", "ヶ/ケ" -> "ガ")
 	searchAddr, _ = transform.StandardizeSpecialChars(searchAddr)

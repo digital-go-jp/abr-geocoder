@@ -112,7 +112,7 @@ func (t *categoryTransformer) fromClause(hasPos bool, tn tableNames) string {
 	if hasPos && len(t.categoryInfo.JoinColumns) > 0 {
 		return fmt.Sprintf("FROM %s t LEFT JOIN %s p%s", tn.Text, tn.Pos, t.buildJoinCondition())
 	}
-	return fmt.Sprintf("FROM %s", tn.Text)
+	return "FROM " + tn.Text
 }
 
 func (t *categoryTransformer) buildJoinCondition() string {

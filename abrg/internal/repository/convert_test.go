@@ -167,15 +167,32 @@ func TestBasicResultToNormalized(t *testing.T) {
 
 	nr := BasicResultToNormalized(br)
 	if nr.StructuredAddress.Pref == nil || *nr.StructuredAddress.Pref != "東京都" {
-		t.Error("Pref not set")
+		t.Errorf("Pref = %v, want 東京都", nr.StructuredAddress.Pref)
 	}
-	if nr.Coordinates == nil || len(nr.Coordinates) != 2 {
-		t.Error("Coordinates not set")
+	if nr.StructuredAddress.City == nil || *nr.StructuredAddress.City != "千代田区" {
+		t.Errorf("City = %v, want 千代田区", nr.StructuredAddress.City)
+	}
+	if nr.StructuredAddress.OazaCho == nil || *nr.StructuredAddress.OazaCho != "紀尾井町" {
+		t.Errorf("OazaCho = %v, want 紀尾井町", nr.StructuredAddress.OazaCho)
+	}
+	// Coordinates must be [lon, lat] in that order (guards against a lon/lat swap).
+	if len(nr.Coordinates) != 2 {
+		t.Fatalf("Coordinates = %v, want len 2", nr.Coordinates)
+	}
+	if nr.Coordinates[0] != 139.7 || nr.Coordinates[1] != 35.6 {
+		t.Errorf("Coordinates = %v, want [139.7, 35.6] (lon, lat)", nr.Coordinates)
 	}
 	if nr.Score != 1.0 {
-		t.Errorf("Score: got %f, want 1.0", nr.Score)
+		t.Errorf("Score = %f, want 1.0", nr.Score)
 	}
-	if nr.MatchLevel == "" || nr.MatchLevel == model.MatchLevelUnknown {
-		t.Logf("MatchLevel: %s (depends on matchlevel package)", nr.MatchLevel)
+	// lg_code 131016 + machiaza_id 0001001 (detail suffix "001") -> machiaza_detail.
+	if nr.MatchLevel != model.MatchLevelMachiazaDetail {
+		t.Errorf("MatchLevel = %q, want %q", nr.MatchLevel, model.MatchLevelMachiazaDetail)
+	}
+	if nr.IDs.LgCode == nil || *nr.IDs.LgCode != "131016" {
+		t.Errorf("IDs.LgCode = %v, want 131016", nr.IDs.LgCode)
+	}
+	if nr.IDs.MachiazaID == nil || *nr.IDs.MachiazaID != "0001001" {
+		t.Errorf("IDs.MachiazaID = %v, want 0001001", nr.IDs.MachiazaID)
 	}
 }

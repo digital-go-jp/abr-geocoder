@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"abr.local/common/progress"
 
@@ -65,7 +66,7 @@ func (s *service) DownloadPendingFiles(ctx context.Context) error {
 		return fmt.Errorf("find missing pending imports: %w", err)
 	}
 
-	files := append(queued, missing...)
+	files := slices.Concat(queued, missing)
 	if len(files) == 0 {
 		return nil
 	}

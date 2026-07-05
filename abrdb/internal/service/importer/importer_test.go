@@ -26,11 +26,11 @@ func TestNew(t *testing.T) {
 		}
 		svc := New(nil, nil, nil, "/data/downloads", categoryMap)
 
-		if svc.etlService != nil {
-			t.Error("etlService should be nil")
+		if svc.loader != nil {
+			t.Error("loader should be nil")
 		}
-		if svc.executor != nil {
-			t.Error("executor should be nil")
+		if svc.store != nil {
+			t.Error("store should be nil")
 		}
 		if svc.progress != nil {
 			t.Error("progress should be nil")

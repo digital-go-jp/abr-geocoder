@@ -178,14 +178,16 @@ type reverseBaseScan struct {
 	lon, lat, distance             float64
 }
 
-// addrPtrs returns scan destination pointers for the 9 address columns (pref through machiaza_dist).
-func (v *reverseBaseScan) addrPtrs() []any {
-	return []any{&v.pref, &v.county, &v.city, &v.ward, &v.kyotoSt, &v.oazaCho, &v.chome, &v.koaza, &v.machiazaDist}
+// appendAddrPtrs appends scan destination pointers for the 9 address columns
+// (pref through machiaza_dist) to dst.
+func (v *reverseBaseScan) appendAddrPtrs(dst []any) []any {
+	return append(dst, &v.pref, &v.county, &v.city, &v.ward, &v.kyotoSt, &v.oazaCho, &v.chome, &v.koaza, &v.machiazaDist)
 }
 
-// tailPtrs returns scan destination pointers for the 6 trailing columns (rsdt_addr_flg through distance).
-func (v *reverseBaseScan) tailPtrs() []any {
-	return []any{&v.rsdtAddrFlg, &v.lgCode, &v.machiazaID, &v.lon, &v.lat, &v.distance}
+// appendTailPtrs appends scan destination pointers for the 6 trailing columns
+// (rsdt_addr_flg through distance) to dst.
+func (v *reverseBaseScan) appendTailPtrs(dst []any) []any {
+	return append(dst, &v.rsdtAddrFlg, &v.lgCode, &v.machiazaID, &v.lon, &v.lat, &v.distance)
 }
 
 func (v *reverseBaseScan) build() ReverseBaseFields {
@@ -210,7 +212,9 @@ func (v *reverseBaseScan) build() ReverseBaseFields {
 
 func scanBasicResult(rows *sql.Rows) (ReverseBaseFields, error) {
 	var v reverseBaseScan
-	dest := append(v.addrPtrs(), v.tailPtrs()...)
+	dest := make([]any, 0, 15)
+	dest = v.appendAddrPtrs(dest)
+	dest = v.appendTailPtrs(dest)
 	if err := rows.Scan(dest...); err != nil {
 		return ReverseBaseFields{}, err
 	}
@@ -220,8 +224,10 @@ func scanBasicResult(rows *sql.Rows) (ReverseBaseFields, error) {
 func scanResidentialResult(rows *sql.Rows) (ReverseResidentialResult, error) {
 	var v reverseBaseScan
 	var blkID, rsdtID, rsdt2ID, blkNum, rsdtNum, rsdtNum2 sql.NullString
-	dest := append(v.addrPtrs(), &blkID, &rsdtID, &rsdt2ID, &blkNum, &rsdtNum, &rsdtNum2)
-	dest = append(dest, v.tailPtrs()...)
+	dest := make([]any, 0, 21)
+	dest = v.appendAddrPtrs(dest)
+	dest = append(dest, &blkID, &rsdtID, &rsdt2ID, &blkNum, &rsdtNum, &rsdtNum2)
+	dest = v.appendTailPtrs(dest)
 	if err := rows.Scan(dest...); err != nil {
 		return ReverseResidentialResult{}, err
 	}
@@ -239,8 +245,10 @@ func scanResidentialResult(rows *sql.Rows) (ReverseResidentialResult, error) {
 func scanParcelResult(rows *sql.Rows) (ReverseParcelResult, error) {
 	var v reverseBaseScan
 	var prcID, prcNum1, prcNum2, prcNum3 sql.NullString
-	dest := append(v.addrPtrs(), &prcID, &prcNum1, &prcNum2, &prcNum3)
-	dest = append(dest, v.tailPtrs()...)
+	dest := make([]any, 0, 19)
+	dest = v.appendAddrPtrs(dest)
+	dest = append(dest, &prcID, &prcNum1, &prcNum2, &prcNum3)
+	dest = v.appendTailPtrs(dest)
 	if err := rows.Scan(dest...); err != nil {
 		return ReverseParcelResult{}, err
 	}

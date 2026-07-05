@@ -1,6 +1,7 @@
 package duckdb
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -79,6 +80,13 @@ func TestGenerateTableNames(t *testing.T) {
 			wantPos:    "pos_data_abc_456",
 			wantTransf: "transformed_abc_456",
 		},
+		{
+			name:       "dots in suffix are sanitized to underscores",
+			suffix:     "_a.b",
+			wantText:   "text_data_a_b",
+			wantPos:    "pos_data_a_b",
+			wantTransf: "transformed_a_b",
+		},
 	}
 
 	for _, tt := range tests {
@@ -92,6 +100,30 @@ func TestGenerateTableNames(t *testing.T) {
 			}
 			if got.Transformed != tt.wantTransf {
 				t.Errorf("generateTableNames(%q).Transformed = %q, want %q", tt.suffix, got.Transformed, tt.wantTransf)
+			}
+		})
+	}
+}
+
+func TestGenerateTableNames_SanitizesIdentifier(t *testing.T) {
+	// Table names are interpolated into SQL as identifiers (cannot be parameterized),
+	// so a crafted source filename must not smuggle SQL metacharacters through.
+	identOnly := regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+	hostile := []string{
+		`_'; DROP TABLE users; --`,
+		`_a"b`,
+		"_a`b",
+		"_mt pref-all",
+		"_x;y",
+		"_日本語",
+	}
+	for _, suffix := range hostile {
+		t.Run(suffix, func(t *testing.T) {
+			tn := generateTableNames(suffix)
+			for _, name := range []string{tn.Text, tn.Pos, tn.Transformed} {
+				if !identOnly.MatchString(name) {
+					t.Errorf("table name %q contains non-identifier characters (suffix %q)", name, suffix)
+				}
 			}
 		})
 	}
@@ -156,6 +188,55 @@ func TestBuildDeleteCondition(t *testing.T) {
 			got := buildDeleteCondition(tt.filename)
 			if got != tt.want {
 				t.Errorf("buildDeleteCondition(%q) = %q, want %q", tt.filename, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildWhereClause(t *testing.T) {
+	tests := []struct {
+		name    string
+		filters map[string][]string
+		want    string
+	}{
+		{
+			name:    "nil filters",
+			filters: nil,
+			want:    "",
+		},
+		{
+			name:    "single column single value",
+			filters: map[string][]string{"pref": {"01"}},
+			want:    "pref IN ('01')",
+		},
+		{
+			name:    "single column multiple values keep order",
+			filters: map[string][]string{"pref": {"01", "02", "03"}},
+			want:    "pref IN ('01', '02', '03')",
+		},
+		{
+			name:    "single quotes are escaped",
+			filters: map[string][]string{"name": {"O'Brien"}},
+			want:    "name IN ('O''Brien')",
+		},
+		{
+			name:    "empty value list is skipped",
+			filters: map[string][]string{"pref": {}},
+			want:    "",
+		},
+		{
+			// A column with no values is skipped, leaving a single deterministic clause.
+			// (For multiple populated columns the AND order follows map iteration,
+			// which is unspecified, so those are not asserted here.)
+			name:    "empty column skipped, populated column kept",
+			filters: map[string][]string{"pref": {"13"}, "skip": {}},
+			want:    "pref IN ('13')",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buildWhereClause(tt.filters); got != tt.want {
+				t.Errorf("buildWhereClause(%v) = %q, want %q", tt.filters, got, tt.want)
 			}
 		})
 	}

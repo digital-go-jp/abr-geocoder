@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"slices"
 
 	"github.com/spf13/cobra"
 
@@ -49,8 +50,8 @@ type processorSetup struct {
 
 // Cleanup releases all resources in reverse order.
 func (s *processorSetup) Cleanup() {
-	for i := len(s.cleanup) - 1; i >= 0; i-- {
-		s.cleanup[i]()
+	for _, fn := range slices.Backward(s.cleanup) {
+		fn()
 	}
 }
 
@@ -129,10 +130,7 @@ func (s *processorSetup) resolveCategory(category string) string {
 
 // setResultInfo sets common result info fields.
 func (s *processorSetup) setResultInfo(info *model.ResultInfo) {
-	info.APIVersion = version.Version
-	info.DBVersion = s.DBVersion
-	info.EnabledCategory = s.EnabledCategory
-	info.EnabledPref = s.EnabledPref
+	info.SetMeta(version.Version, s.DBVersion, s.EnabledCategory, s.EnabledPref)
 }
 
 // registerCommonFlags registers common flags for processing commands.

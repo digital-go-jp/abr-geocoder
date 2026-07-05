@@ -8,36 +8,43 @@ import (
 	"path/filepath"
 	"time"
 
-	"abrdb/internal/infra/db"
-
 	"abr.local/common/progress"
 
-	"abrdb/internal/infra/duckdb"
-	"abrdb/internal/infra/postgres"
 	"abrdb/internal/model"
 	"abrdb/internal/schema"
 	"abrdb/internal/service/catalog"
 	"abrdb/internal/util"
 )
 
+// loader loads a text/position file pair for a category into the working store.
+type loader interface {
+	LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath, posPath string) error
+}
+
+// catalogStore reads pending imports and records completed ones.
+type catalogStore interface {
+	PendingImportsByCategory(ctx context.Context, categories []model.FileCategory) (map[model.FileCategory][]*model.File, error)
+	MarkAsImported(ctx context.Context, filenames ...string) error
+}
+
 type service struct {
-	etlService      *duckdb.ETL
-	executor        *db.QueryExecutor
+	loader          loader
+	store           catalogStore
 	progress        progress.Monitor
 	downloadDir     string
 	categoryInfoMap map[string]*schema.CategoryInfo
 }
 
 func New(
-	etlService *duckdb.ETL,
-	executor *db.QueryExecutor,
+	loader loader,
+	store catalogStore,
 	progress progress.Monitor,
 	downloadDir string,
 	categoryInfoMap map[string]*schema.CategoryInfo,
 ) *service {
 	return &service{
-		etlService:      etlService,
-		executor:        executor,
+		loader:          loader,
+		store:           store,
 		progress:        progress,
 		downloadDir:     downloadDir,
 		categoryInfoMap: categoryInfoMap,
@@ -54,7 +61,7 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 	}
 
 	// Single query to get all pending imports for all category
-	pendingByCategory, err := postgres.PendingImportsByCategory(ctx, s.executor, category)
+	pendingByCategory, err := s.store.PendingImportsByCategory(ctx, category)
 	if err != nil {
 		return nil, fmt.Errorf("get pending imports: %w", err)
 	}
@@ -96,7 +103,7 @@ func (s *service) importFilePair(ctx context.Context, pair catalog.FilePairing, 
 		posPath = filepath.Join(s.downloadDir, pair.PosFile.Filename)
 	}
 
-	if err := s.etlService.LoadData(ctx, categoryInfo, textPath, posPath); err != nil {
+	if err := s.loader.LoadData(ctx, categoryInfo, textPath, posPath); err != nil {
 		return fmt.Errorf("load data: %w", err)
 	}
 
@@ -104,5 +111,5 @@ func (s *service) importFilePair(ctx context.Context, pair catalog.FilePairing, 
 	if pair.PosFile != nil {
 		filenames = append(filenames, pair.PosFile.Filename)
 	}
-	return postgres.MarkAsImported(ctx, s.executor, filenames...)
+	return s.store.MarkAsImported(ctx, filenames...)
 }

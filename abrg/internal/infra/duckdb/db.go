@@ -17,11 +17,12 @@ const (
 	tableMachiaza = "cache_machiaza"
 	tableCity     = "cache_city"
 	tablePref     = "cache_pref"
-	tableRsdtdsp  = "cache_rsdtdsp"
-	tableParcel   = "cache_parcel"
+
+	TableRsdtdsp = "cache_rsdtdsp"
+	TableParcel  = "cache_parcel"
 )
 
-var AllTables = []string{tablePref, tableCity, tableMachiaza, tableRsdtdsp, tableParcel}
+var AllTables = []string{tablePref, tableCity, tableMachiaza, TableRsdtdsp, TableParcel}
 
 // ResolvePath resolves cache path from flag value or config value.
 // Priority: flagValue > configValue. Returns empty string if neither is set.

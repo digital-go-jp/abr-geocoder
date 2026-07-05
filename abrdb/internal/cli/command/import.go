@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -68,11 +69,11 @@ Use --force to skip change detection and import immediately.`,
 			}
 			switch {
 			case importConfig.ImportConfigYAML == "":
-				return fmt.Errorf("import config not found in database: run 'abrdb init' first")
+				return errors.New("import config not found in database: run 'abrdb init' first")
 			case len(importConfig.EnabledPref) == 0:
-				return fmt.Errorf("enabled_pref not configured: run 'abrdb init' first")
+				return errors.New("enabled_pref not configured: run 'abrdb init' first")
 			case len(importConfig.EnabledCategory) == 0:
-				return fmt.Errorf("enabled_category not configured: run 'abrdb init' first")
+				return errors.New("enabled_category not configured: run 'abrdb init' first")
 			}
 
 			importCfg, err := schema.ParseImportConfig([]byte(importConfig.ImportConfigYAML))
@@ -92,7 +93,7 @@ Use --force to skip change detection and import immediately.`,
 			}
 
 			// Ensure download directory exists
-			if err := os.MkdirAll(cfg.Process.DownloadDir, 0755); err != nil {
+			if err := os.MkdirAll(cfg.Process.DownloadDir, 0o755); err != nil {
 				return fmt.Errorf("create download dir %q: %w", cfg.Process.DownloadDir, err)
 			}
 
@@ -157,6 +158,17 @@ type importServices struct {
 }
 
 // initImportServices initializes DuckDB ETL, download, and import services
+// pgCatalogStore adapts the postgres catalog functions to importer.catalogStore.
+type pgCatalogStore struct{ executor *db.QueryExecutor }
+
+func (s pgCatalogStore) PendingImportsByCategory(ctx context.Context, categories []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
+	return postgres.PendingImportsByCategory(ctx, s.executor, categories)
+}
+
+func (s pgCatalogStore) MarkAsImported(ctx context.Context, filenames ...string) error {
+	return postgres.MarkAsImported(ctx, s.executor, filenames...)
+}
+
 func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema.CategoryInfo, quiet bool) (*importServices, error) {
 	cfg := sc.Config
 
@@ -178,7 +190,7 @@ func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema
 
 	importService := importer.New(
 		etl,
-		sc.QueryExecutor,
+		pgCatalogStore{sc.QueryExecutor},
 		progressMonitor,
 		cfg.Process.DownloadDir,
 		categoryInfoMap,

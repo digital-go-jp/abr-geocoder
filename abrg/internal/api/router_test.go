@@ -194,27 +194,44 @@ func TestReverseRequest_Validation(t *testing.T) {
 			wantError:  true,
 		},
 		{
-			name:       "valid edge case lat (-90)",
-			query:      "?lat=-90&lon=0",
-			wantStatus: http.StatusBadRequest, // categoryが空文字列の場合はバリデーションエラー
+			// min=-90 is inclusive, so lat=-90 (with a non-zero lon) must be accepted.
+			name:       "lat lower bound -90 is valid",
+			query:      "?lat=-90&lon=139.6503",
+			wantStatus: http.StatusOK,
+			wantError:  false,
+		},
+		{
+			// max=90 is inclusive, so lat=90 must be accepted.
+			name:       "lat upper bound 90 is valid",
+			query:      "?lat=90&lon=139.6503",
+			wantStatus: http.StatusOK,
+			wantError:  false,
+		},
+		{
+			name:       "lon lower bound -180 is valid",
+			query:      "?lat=35.6762&lon=-180",
+			wantStatus: http.StatusOK,
+			wantError:  false,
+		},
+		{
+			name:       "lon upper bound 180 is valid",
+			query:      "?lat=35.6762&lon=180",
+			wantStatus: http.StatusOK,
+			wantError:  false,
+		},
+		{
+			// `required` treats the float64 zero value as missing, so lat=0 is
+			// rejected. A point at lat=0/lon=0 is far outside Japan, so this is
+			// acceptable for a Japan-only geocoder.
+			name:       "lat=0 rejected as missing (required)",
+			query:      "?lat=0&lon=139.6503",
+			wantStatus: http.StatusBadRequest,
 			wantError:  true,
 		},
 		{
-			name:       "valid edge case lat (90) with category",
-			query:      "?lat=90&lon=0&category=all",
-			wantStatus: http.StatusBadRequest, // Ginのmin/maxは厳密な不等号
-			wantError:  true,
-		},
-		{
-			name:       "valid edge case lon (-180) with category",
-			query:      "?lat=0&lon=-180&category=all",
-			wantStatus: http.StatusBadRequest, // Ginのmin/maxは厳密な不等号
-			wantError:  true,
-		},
-		{
-			name:       "valid edge case lon (180) with category",
-			query:      "?lat=0&lon=180&category=all",
-			wantStatus: http.StatusBadRequest, // Ginのmin/maxは厳密な不等号
+			name:       "lon=0 rejected as missing (required)",
+			query:      "?lat=35.6762&lon=0",
+			wantStatus: http.StatusBadRequest,
 			wantError:  true,
 		},
 	}
@@ -795,11 +812,9 @@ func TestHandleAddressRequest(t *testing.T) {
 		address      string
 		category     string
 		pref         string
-		limit        int
 		wantOk       bool
 		wantCategory model.Category
 		wantPref     string
-		wantLimit    int
 		wantStatus   int
 	}{
 		{
@@ -807,18 +822,15 @@ func TestHandleAddressRequest(t *testing.T) {
 			address:      "東京都千代田区",
 			category:     "all",
 			pref:         "all",
-			limit:        3,
 			wantOk:       true,
 			wantCategory: model.CategoryAll,
 			wantPref:     "all",
-			wantLimit:    3,
 		},
 		{
 			name:       "empty address",
 			address:    "",
 			category:   "all",
 			pref:       "all",
-			limit:      1,
 			wantOk:     false,
 			wantStatus: http.StatusBadRequest,
 		},
@@ -827,7 +839,6 @@ func TestHandleAddressRequest(t *testing.T) {
 			address:    "   ",
 			category:   "all",
 			pref:       "all",
-			limit:      1,
 			wantOk:     false,
 			wantStatus: http.StatusBadRequest,
 		},
@@ -836,7 +847,6 @@ func TestHandleAddressRequest(t *testing.T) {
 			address:    "東京都",
 			category:   "invalid",
 			pref:       "all",
-			limit:      1,
 			wantOk:     false,
 			wantStatus: http.StatusBadRequest,
 		},
@@ -852,12 +862,11 @@ func TestHandleAddressRequest(t *testing.T) {
 			router := gin.New()
 			var gotCategory model.Category
 			var gotPref string
-			var gotLimit int
 			var gotOk bool
 
 			router.GET("/test", func(c *gin.Context) {
-				gotCategory, gotPref, gotLimit, gotOk = server.handleAddressRequest(
-					c, tt.address, tt.category, tt.pref, tt.limit)
+				gotCategory, gotPref, gotOk = server.handleAddressRequest(
+					c, tt.address, tt.category, tt.pref)
 				if gotOk {
 					c.JSON(http.StatusOK, gin.H{"status": "ok"})
 				}
@@ -876,9 +885,6 @@ func TestHandleAddressRequest(t *testing.T) {
 				}
 				if gotPref != tt.wantPref {
 					t.Errorf("handleAddressRequest() pref = %v, want %v", gotPref, tt.wantPref)
-				}
-				if gotLimit != tt.wantLimit {
-					t.Errorf("handleAddressRequest() limit = %v, want %v", gotLimit, tt.wantLimit)
 				}
 			} else {
 				if w.Code != tt.wantStatus {

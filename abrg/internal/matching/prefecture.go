@@ -45,31 +45,22 @@ func (n *Impl) queryPrefectureRecord(ctx context.Context, prefCode, normalizedAd
 	}, nil
 }
 
-// cityRecord holds scanned fields from a cache_city query row.
-type cityRecord struct {
-	lgCode string
-	pref   string
-	county *string
-	city   string
-	ward   *string
-}
-
-// buildResult constructs a city-level MatchedResult from the scanned record.
-func (r *cityRecord) buildResult(searchAddr, normalizedAddr string, cityEnd int) *model.MatchedResult {
+// buildCityResult constructs a city-level MatchedResult from a cache_city query row.
+func buildCityResult(cr *repository.CityResult, searchAddr, normalizedAddr string, cityEnd int) *model.MatchedResult {
 	// Build matched address (pref + county + city + ward)
-	matchedAddr := r.pref
-	if r.county != nil && *r.county != "" {
-		matchedAddr += *r.county
+	matchedAddr := cr.Pref
+	if cr.County != nil && *cr.County != "" {
+		matchedAddr += *cr.County
 	}
-	matchedAddr += r.city
-	if r.ward != nil && *r.ward != "" {
-		matchedAddr += *r.ward
+	matchedAddr += cr.City
+	if cr.Ward != nil && *cr.Ward != "" {
+		matchedAddr += *cr.Ward
 	}
 
 	// Build structured address
-	sa := model.StructuredAddress{Pref: &r.pref, County: r.county, City: &r.city, Ward: r.ward}
+	sa := model.StructuredAddress{Pref: &cr.Pref, County: cr.County, City: &cr.City, Ward: cr.Ward}
 
-	unmatchedParts := extractCityUnmatched(matchedAddr, r.pref, searchAddr, normalizedAddr, cityEnd)
+	unmatchedParts := extractCityUnmatched(matchedAddr, cr.Pref, searchAddr, normalizedAddr, cityEnd)
 
 	return &model.MatchedResult{
 		MatchedAddress:   matchedAddr,
@@ -77,7 +68,7 @@ func (r *cityRecord) buildResult(searchAddr, normalizedAddr string, cityEnd int)
 		MatchLevel:       model.MatchLevelCity,
 		Score:            0.3,
 		IDs: model.IDs{
-			LgCode: &r.lgCode,
+			LgCode: &cr.LgCode,
 		},
 		StructuredAddress: sa,
 	}
@@ -108,15 +99,16 @@ func extractCityUnmatched(matchedAddr, pref, searchAddr, normalizedAddr string, 
 	return unmatchedParts
 }
 
-// cityResultToRecord converts a repository.CityResult to the local cityRecord type.
-func cityResultToRecord(cr *repository.CityResult) cityRecord {
-	return cityRecord{
-		lgCode: cr.LgCode,
-		pref:   cr.Pref,
-		county: cr.County,
-		city:   cr.City,
-		ward:   cr.Ward,
+// cityResult turns a cache_city lookup outcome into a city-level MatchedResult,
+// short-circuiting on error or no match.
+func cityResult(cr *repository.CityResult, err error, searchAddr, normalizedAddr string, cityEnd int) (*model.MatchedResult, error) {
+	if err != nil {
+		return nil, err
 	}
+	if cr == nil {
+		return nil, nil
+	}
+	return buildCityResult(cr, searchAddr, normalizedAddr, cityEnd), nil
 }
 
 // queryCityRecord queries cache_city for a city-level match.
@@ -126,21 +118,11 @@ func (n *Impl) queryCityRecord(ctx context.Context, searchAddr, prefCode, normal
 		return nil, nil
 	}
 
-	cityPart := searchAddr[:cityEnd]
-
 	cr, err := n.repo.FindCityRecord(ctx, repository.CityRecordParams{
-		CityPart: cityPart,
+		CityPart: searchAddr[:cityEnd],
 		PrefCode: prefCode,
 	})
-	if err != nil {
-		return nil, err
-	}
-	if cr == nil {
-		return nil, nil
-	}
-
-	rec := cityResultToRecord(cr)
-	return rec.buildResult(searchAddr, normalizedAddr, cityEnd), nil
+	return cityResult(cr, err, searchAddr, normalizedAddr, cityEnd)
 }
 
 // queryCityRecordFuzzy searches cache_city using editdist3 for fuzzy matching.
@@ -155,20 +137,10 @@ func (n *Impl) queryCityRecordFuzzy(ctx context.Context, searchAddr, prefCode, n
 	}
 
 	cityPart := searchAddr[:cityEnd]
-	maxEditDist := util.MaxEditDistance(len(cityPart))
-
 	cr, err := n.repo.FindCityRecordFuzzy(ctx, repository.CityFuzzyParams{
 		CityPart:        cityPart,
 		PrefCode:        prefCode,
-		MaxEditDistance: maxEditDist,
+		MaxEditDistance: util.MaxEditDistance(len(cityPart)),
 	})
-	if err != nil {
-		return nil, err
-	}
-	if cr == nil {
-		return nil, nil
-	}
-
-	rec := cityResultToRecord(cr)
-	return rec.buildResult(searchAddr, normalizedAddr, cityEnd), nil
+	return cityResult(cr, err, searchAddr, normalizedAddr, cityEnd)
 }
