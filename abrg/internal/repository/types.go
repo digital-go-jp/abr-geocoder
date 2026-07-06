@@ -51,6 +51,7 @@ type PrefixParams struct {
 type CitySearchParams struct {
 	CityAddr string // City-level address to match by normalized_address
 	LgCode   string // If set, search by lg_code instead of normalized_address
+	PrefCode string // Optional prefecture code filter for normalized_address search
 }
 
 // CityRecordParams holds parameters for city record lookup using starts_with.

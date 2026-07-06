@@ -176,6 +176,7 @@ func tryFallbackCitySearchByScore(ctx context.Context, repo levenshteinQuerier, 
 	cr, err := repo.FindCityByAddress(queryCtx, repository.CitySearchParams{
 		CityAddr: cityLevelAddr,
 		LgCode:   p.LgCode,
+		PrefCode: p.Pref,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("city fallback query: %w", err)
