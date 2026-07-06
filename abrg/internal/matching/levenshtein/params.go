@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"abrg/internal/model"
+	"abrg/internal/util"
 )
 
 // Levenshtein search configuration constants.
@@ -27,4 +28,6 @@ type SearchParams struct {
 	MachiazaID       string         // Machiaza ID for filtering
 	NormalizedAddr   string         // Basic-normalized address (for extracting unmatched parts)
 	Limit            int            // Maximum number of results
+
+	CityBoundary *util.CityBoundary // City-boundary matcher for longest-prefix city resolution
 }

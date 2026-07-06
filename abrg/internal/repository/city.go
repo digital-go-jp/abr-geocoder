@@ -21,8 +21,13 @@ func (r *DB) FindCityByAddress(ctx context.Context, p CitySearchParams) (*CityRe
 	} else {
 		query = `SELECT lg_code, pref, county, city, ward,
 			ST_X(geom) AS lon, ST_Y(geom) AS lat
-			FROM cache_city WHERE normalized_address = ? LIMIT 1`
+			FROM cache_city WHERE normalized_address = ?`
 		args = []any{p.CityAddr}
+		if p.PrefCode != "" && p.PrefCode != model.All {
+			query += " AND pref_code = ?"
+			args = append(args, p.PrefCode)
+		}
+		query += " LIMIT 1"
 	}
 
 	result, err := queryOne(ctx, r.db, query, args, scanCityWithAddr)

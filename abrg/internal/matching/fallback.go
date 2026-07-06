@@ -38,7 +38,7 @@ func (n *Impl) handleFallback(ctx context.Context, nctx *normalizeContext) ([]mo
 	// This handles cases like "神田鍛冶町二丁目" where the specific chome doesn't exist
 	// Skip if already attempted in tryLevenshteinFallback (avoids duplicate search in CategoryAll)
 	if n.repo != nil && !nctx.State.LevenshteinAttempted {
-		levenResults, err := levenshtein.Search(ctx, n.repo, buildLevenshteinParams(nctx, nctx.State.LgCode, nctx.State.MachiazaID))
+		levenResults, err := levenshtein.Search(ctx, n.repo, n.buildLevenshteinParams(nctx, nctx.State.LgCode, nctx.State.MachiazaID))
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()

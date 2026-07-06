@@ -10,6 +10,7 @@ import (
 
 	"abrg/internal/infra/config"
 	"abrg/internal/infra/duckdb"
+	"abrg/internal/util"
 )
 
 // When a user inputs just a ward name (e.g., "中区"), multiple cities may contain that ward.
@@ -25,6 +26,7 @@ type DuckDBCache struct {
 	cityPrefectureCodes map[string]string          // Maps unique city names to prefecture codes (e.g., "京都市" -> "26")
 	cityWardLgCodes     map[string]string          // Maps city+ward names to lg_code (e.g., "京都市中京区" -> "261041")
 	wardCandidates      map[string][]WardCandidate // Maps ward names to all candidate cities (e.g., "中区" -> [{横浜市中区, ...}, ...])
+	cityBoundary        *util.CityBoundary         // Longest-prefix city-boundary matcher over all city names
 }
 
 // The cache file must already exist and be valid (created by `abrg cache build`).
@@ -87,6 +89,11 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 		return nil, fmt.Errorf("failed to build ward candidates: %w", err)
 	}
 
+	// Build city-boundary matcher for longest-prefix city name resolution
+	if err := cache.buildCityBoundary(ctx); err != nil {
+		return nil, fmt.Errorf("failed to build city boundary matcher: %w", err)
+	}
+
 	success = true
 	return cache, nil
 }
@@ -104,6 +111,7 @@ type Lookups struct {
 	CityPrefCodes   map[string]string          // Maps unique city names to prefecture codes
 	CityWardLgCodes map[string]string          // Maps city+ward names to lg_code
 	WardCandidates  map[string][]WardCandidate // Maps ward names to candidate cities
+	CityBoundary    *util.CityBoundary         // Longest-prefix city-boundary matcher
 }
 
 // Lookups returns all in-memory lookup maps as a single struct.
@@ -112,7 +120,42 @@ func (c *DuckDBCache) Lookups() Lookups {
 		CityPrefCodes:   c.cityPrefectureCodes,
 		CityWardLgCodes: c.cityWardLgCodes,
 		WardCandidates:  c.wardCandidates,
+		CityBoundary:    c.cityBoundary,
 	}
+}
+
+// buildCityBoundary loads every city-boundary string (city+ward and
+// county+city+ward forms, including names shared across prefectures) so the
+// boundary can be resolved by longest-prefix match rather than by heuristic.
+func (c *DuckDBCache) buildCityBoundary(ctx context.Context) error {
+	query := `
+		SELECT DISTINCT s FROM (
+			SELECT city || COALESCE(ward, '') AS s FROM cache_city
+			UNION ALL
+			SELECT COALESCE(county, '') || city || COALESCE(ward, '') FROM cache_city
+		) WHERE s IS NOT NULL AND s != ''
+	`
+
+	rows, err := c.db.QueryContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to query city boundary strings: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var cityStrings []string
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return fmt.Errorf("failed to scan city boundary row: %w", err)
+		}
+		cityStrings = append(cityStrings, s)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	c.cityBoundary = util.NewCityBoundary(cityStrings)
+	return nil
 }
 
 func (c *DuckDBCache) buildCityPrefectureCodes(ctx context.Context) error {

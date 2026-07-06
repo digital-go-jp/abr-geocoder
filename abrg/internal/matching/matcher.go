@@ -6,6 +6,7 @@ import (
 	"abrg/internal/cache"
 	"abrg/internal/model"
 	"abrg/internal/repository"
+	"abrg/internal/util"
 )
 
 // implQuerier is a consumer-defined interface for the matcher's data access needs.
@@ -32,6 +33,7 @@ type Impl struct {
 	cityPrefixMap   cityPrefixMap
 	cityWardLgCodes map[string]string
 	wardCandidates  map[string][]cache.WardCandidate
+	cityBoundary    *util.CityBoundary
 	twoStageSearch  *twoStageSearch
 }
 
@@ -42,6 +44,7 @@ func NewMatcher(repo implQuerier, lookups cache.Lookups) *Impl {
 		cityPrefixMap:   buildCityPrefixMap(lookups.CityPrefCodes),
 		cityWardLgCodes: lookups.CityWardLgCodes,
 		wardCandidates:  lookups.WardCandidates,
+		cityBoundary:    lookups.CityBoundary,
 		twoStageSearch:  newTwoStageSearch(repo),
 	}
 }

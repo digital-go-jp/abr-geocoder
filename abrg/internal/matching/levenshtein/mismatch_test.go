@@ -131,7 +131,7 @@ func TestHasTownNameMismatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hasTownNameMismatch(tt.searchAddr, tt.result); got != tt.want {
+			if got := hasTownNameMismatch(nil, tt.searchAddr, tt.result); got != tt.want {
 				t.Errorf("hasTownNameMismatch(%q) = %v, want %v", tt.searchAddr, got, tt.want)
 			}
 		})
@@ -173,7 +173,7 @@ func TestExtractTownNameFromSearch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := extractTownNameFromSearch(tt.searchAddr); got != tt.want {
+			if got := extractTownNameFromSearch(nil, tt.searchAddr); got != tt.want {
 				t.Errorf("extractTownNameFromSearch(%q) = %q, want %q", tt.searchAddr, got, tt.want)
 			}
 		})

@@ -35,7 +35,7 @@ func hasChomeMismatch(searchAddr string, resultChome *string) bool {
 }
 
 // hasTownNameMismatch checks if the input town name doesn't match the result's oaza_cho.
-func hasTownNameMismatch(searchAddr string, result *model.MatchedResult) bool {
+func hasTownNameMismatch(boundary *util.CityBoundary, searchAddr string, result *model.MatchedResult) bool {
 	if result == nil || result.StructuredAddress.OazaCho == nil {
 		return false
 	}
@@ -47,14 +47,14 @@ func hasTownNameMismatch(searchAddr string, result *model.MatchedResult) bool {
 	}
 
 	// Extract town name part from searchAddr (after city/ward boundary)
-	inputTownName := extractTownNameFromSearch(searchAddr)
+	inputTownName := extractTownNameFromSearch(boundary, searchAddr)
 	if inputTownName == "" {
 		// No town name extracted - check if the content after city is purely numeric.
 		// Purely numeric content (e.g., "南関町73") means the digits are being wrongly
 		// matched to a place name (e.g., "大字今"), so flag as mismatch.
 		// Non-numeric content (e.g., "8条寺ノ内町:10" from kanji conversion of "八条...")
 		// may contain a valid place name that just starts with a digit.
-		cityEnd := util.FindCityBoundary(searchAddr)
+		cityEnd := boundary.Find(searchAddr)
 		if cityEnd > 0 && cityEnd < len(searchAddr) {
 			afterCity := searchAddr[cityEnd:]
 			if isPureNumericContent(afterCity) {
@@ -101,8 +101,8 @@ func hasTownNameMismatch(searchAddr string, result *model.MatchedResult) bool {
 //
 //	e.g., "天王寺区烏ヶ辻町74" -> "烏ヶ辻町"
 //	e.g., "千代田区紀尾井町1@:3" -> "紀尾井町"
-func extractTownNameFromSearch(searchAddr string) string {
-	cityEndIdx := util.FindCityBoundary(searchAddr)
+func extractTownNameFromSearch(boundary *util.CityBoundary, searchAddr string) string {
+	cityEndIdx := boundary.Find(searchAddr)
 	if cityEndIdx <= 0 || cityEndIdx >= len(searchAddr) {
 		return ""
 	}

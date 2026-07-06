@@ -7,7 +7,6 @@ import (
 
 	"abrg/internal/matching/levenshtein"
 	"abrg/internal/model"
-	"abrg/internal/util"
 )
 
 // scoreEpsilon is the tolerance for comparing scores (differences <= this are treated as equal).
@@ -88,7 +87,7 @@ func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContex
 	// These should be handled by queryCityRecord in handleFallback, not by fuzzy matching
 	// which may find wrong machiaza-level matches (e.g., "柴田郡大河原町南" with oaza_cho="字南")
 	searchAddrStr := nctx.Input.SearchAddr.String()
-	cityEnd := util.FindCityBoundary(searchAddrStr)
+	cityEnd := n.cityBoundary.Find(searchAddrStr)
 	if cityEnd > 0 && cityEnd == len(searchAddrStr) {
 		return state, false, nil
 	}
@@ -98,7 +97,7 @@ func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContex
 		state.LgCode = n.detectLgCode(searchAddrStr)
 	}
 
-	levenResults, err := levenshtein.Search(ctx, n.repo, buildLevenshteinParams(nctx, state.LgCode, state.MachiazaID))
+	levenResults, err := levenshtein.Search(ctx, n.repo, n.buildLevenshteinParams(nctx, state.LgCode, state.MachiazaID))
 	state.LevenshteinAttempted = true
 	if err != nil {
 		return state, false, err
@@ -142,7 +141,7 @@ func sortAndLimitResults(results []model.MatchedResult, limit int) []model.Match
 }
 
 // buildLevenshteinParams constructs SearchParams from the normalize context.
-func buildLevenshteinParams(nctx *normalizeContext, lgCode, machiazaID string) levenshtein.SearchParams {
+func (n *Impl) buildLevenshteinParams(nctx *normalizeContext, lgCode, machiazaID string) levenshtein.SearchParams {
 	return levenshtein.SearchParams{
 		Category:         model.CategoryBasic,
 		StandardizedAddr: nctx.Input.StandardizedAddr,
@@ -152,5 +151,6 @@ func buildLevenshteinParams(nctx *normalizeContext, lgCode, machiazaID string) l
 		MachiazaID:       machiazaID,
 		NormalizedAddr:   nctx.Input.NormalizedAddr,
 		Limit:            nctx.Input.Limit,
+		CityBoundary:     n.cityBoundary,
 	}
 }
