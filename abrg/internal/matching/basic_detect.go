@@ -6,7 +6,6 @@ import (
 
 	"abrg/internal/model"
 	"abrg/internal/transform"
-	"abrg/internal/util"
 )
 
 // detectBasicResultsWithBasic detects basic-level results using NormalizeAddressTextWithBasic output.
@@ -102,7 +101,7 @@ func (n *Impl) detectLgCode(searchAddr string) string {
 		return ""
 	}
 
-	cityEndIdx := util.FindCityBoundary(searchAddr)
+	cityEndIdx := n.cityBoundary.Find(searchAddr)
 	if cityEndIdx <= 0 {
 		return ""
 	}

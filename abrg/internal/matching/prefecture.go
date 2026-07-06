@@ -113,7 +113,7 @@ func cityResult(cr *repository.CityResult, err error, searchAddr, normalizedAddr
 
 // queryCityRecord queries cache_city for a city-level match.
 func (n *Impl) queryCityRecord(ctx context.Context, searchAddr, prefCode, normalizedAddr string) (*model.MatchedResult, error) {
-	cityEnd := util.FindCityBoundary(searchAddr)
+	cityEnd := n.cityBoundary.Find(searchAddr)
 	if cityEnd <= 0 {
 		return nil, nil
 	}
@@ -131,7 +131,7 @@ func (n *Impl) queryCityRecordFuzzy(ctx context.Context, searchAddr, prefCode, n
 		return nil, nil
 	}
 
-	cityEnd := util.FindCityBoundary(searchAddr)
+	cityEnd := n.cityBoundary.Find(searchAddr)
 	if cityEnd <= 0 {
 		return nil, nil
 	}

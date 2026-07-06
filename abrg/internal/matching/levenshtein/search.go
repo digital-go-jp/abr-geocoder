@@ -32,7 +32,7 @@ func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]mod
 	// This prevents false matches like 烏ケ辻町 -> 石ケ辻町 while allowing valid fuzzy matches.
 	// We check all results regardless of score because high-score matches can still have
 	// town name mismatches (e.g., 札内松町 -> 札内東町 at score 0.75).
-	if len(results) > 0 && hasTownNameMismatch(p.SearchAddr, &results[0]) {
+	if len(results) > 0 && hasTownNameMismatch(p.CityBoundary, p.SearchAddr, &results[0]) {
 		cityResults, cityErr := tryFallbackCitySearchByScore(ctx, repo, p)
 		if cityErr != nil {
 			return nil, cityErr
@@ -155,20 +155,29 @@ func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p Searc
 // tryFallbackCitySearchByScore attempts city-level search when Levenshtein match has a town name mismatch.
 // It queries cache_city directly instead of cache_machiaza, because searching a city-level address
 // (e.g., "福山市") against cache_machiaza entries (e.g., "福山市旭町") produces excessive edit distances.
+// standardizedRemainder returns the portion of the standardized address after the
+// matched city. It strips the matched "pref+county+city+ward" prefix (with or
+// without the leading prefecture, since the standardized form may omit it),
+// falling back to the city-boundary slice when neither prefix matches. This keeps
+// the unmatched remainder intact when the boundary heuristic would over-extend
+// into a non-ward 区 (e.g. 奥州市胆沢区, where 胆沢区 is part of an oaza, not a ward).
+func standardizedRemainder(standardized, matchedAddr, pref string, boundary *util.CityBoundary) string {
+	if rest, ok := strings.CutPrefix(standardized, matchedAddr); ok {
+		return rest
+	}
+	if rest, ok := strings.CutPrefix(standardized, strings.TrimPrefix(matchedAddr, pref)); ok {
+		return rest
+	}
+	return standardized[boundary.Find(standardized):]
+}
+
 func tryFallbackCitySearchByScore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]model.MatchedResult, error) {
-	cityEndIdx := util.FindCityBoundary(p.SearchAddr)
+	cityEndIdx := p.CityBoundary.Find(p.SearchAddr)
 	if cityEndIdx <= 0 {
 		return nil, nil
 	}
 
 	cityLevelAddr := p.SearchAddr[:cityEndIdx]
-
-	stdCityEndIdx := util.FindCityBoundary(p.StandardizedAddr)
-	if stdCityEndIdx <= 0 {
-		stdCityEndIdx = cityEndIdx
-	}
-
-	unmatchedStdPart := p.StandardizedAddr[stdCityEndIdx:]
 
 	queryCtx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
@@ -190,6 +199,7 @@ func tryFallbackCitySearchByScore(ctx context.Context, repo levenshteinQuerier, 
 	}
 
 	matchedAddr := model.FormatAddress(&sa)
+	unmatchedStdPart := standardizedRemainder(p.StandardizedAddr, matchedAddr, cr.Pref, p.CityBoundary)
 	unmatchedParts := strings.Fields(unmatchedStdPart)
 	if len(unmatchedParts) == 0 {
 		unmatchedParts = nil // fully matched must be nil (JSON null), not []
