@@ -75,6 +75,10 @@ var (
 	banchiNoGo = regexp.MustCompile(`(\d+)番地[のノ](\d+)号`)
 	// banchiHyphenGo handles: N番地-M号 -> N-M
 	banchiHyphenGo = regexp.MustCompile(`(\d+)番地-(\d+)号`)
+	// banchiHyphen handles: N番地-M -> N-M (without 号)
+	banchiHyphen = regexp.MustCompile(`(\d+)番地-(\d+)`)
+	// banchiWithHyphenNumeric handles: N番地M-P -> N-M-P
+	banchiWithHyphenNumeric = regexp.MustCompile(`(\d+)番地(\d+)(-\d+)`)
 	// banchiEnd handles: N番地M (at end) -> N-M
 	banchiEnd = regexp.MustCompile(`(\d+)番地(\d+)$`)
 	// banchiBuilding handles: N番地M+building -> N-M building
@@ -314,14 +318,16 @@ func processIllegalBanchi(s string) (string, bool) {
 
 func processBanchi(s string) string {
 	if strings.Contains(s, "番地") {
-		s = banchiNoGo.ReplaceAllString(s, "${1}-${2}")          // N番地の/ノM号 → N-M
-		s = banchiNo.ReplaceAllString(s, "${1}-${2}")            // N番地の/ノM → N-M
-		s = banchiHyphenGo.ReplaceAllString(s, "${1}-${2}")      // N番地-M号 → N-M (remove 号)
-		s = banchiBuilding.ReplaceAllString(s, "${1}-${2} ${3}") // N番地M+建物名 → N-M 建物名
-		s = banchiEnd.ReplaceAllString(s, "${1}-${2}")           // N番地M (末尾) → N-M
-		s = banchiSakiNotEnd.ReplaceAllString(s, "${1} ${2}")    // N番地先+後続文字 → N番地先 後続文字 (add space for building separation)
-		s = banchiSingleEnd.ReplaceAllString(s, "${1}")          // N番地（末尾） → N
-		s = banchiSingleNotEnd.ReplaceAllString(s, "${1} ${2}")  // N番地（末尾ではない） → N 後続文字
+		s = banchiNoGo.ReplaceAllString(s, "${1}-${2}")                  // N番地の/ノM号 → N-M
+		s = banchiNo.ReplaceAllString(s, "${1}-${2}")                    // N番地の/ノM → N-M
+		s = banchiHyphenGo.ReplaceAllString(s, "${1}-${2}")              // N番地-M号 → N-M (remove 号)
+		s = banchiHyphen.ReplaceAllString(s, "${1}-${2}")                // N番地-M → N-M (号なし)
+		s = banchiWithHyphenNumeric.ReplaceAllString(s, "${1}-${2}${3}") // N番地M-P → N-M-P
+		s = banchiBuilding.ReplaceAllString(s, "${1}-${2} ${3}")         // N番地M+建物名 → N-M 建物名
+		s = banchiEnd.ReplaceAllString(s, "${1}-${2}")                   // N番地M (末尾) → N-M
+		s = banchiSakiNotEnd.ReplaceAllString(s, "${1} ${2}")            // N番地先+後続文字 → N番地先 後続文字 (add space for building separation)
+		s = banchiSingleEnd.ReplaceAllString(s, "${1}")                  // N番地（末尾） → N
+		s = banchiSingleNotEnd.ReplaceAllString(s, "${1} ${2}")          // N番地（末尾ではない） → N 後続文字
 	}
 	if strings.Contains(s, "番-") {
 		// Handle N番-N号 pattern (e.g., 11番-1004号 → 11-1004)

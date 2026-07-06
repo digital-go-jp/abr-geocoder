@@ -47,6 +47,18 @@ func TestAddressNumbersToHyphen(t *testing.T) {
 			changed:  true,
 		},
 		{
+			name:     "banchi/N番地M-P号_ハイフン枝番",
+			input:    "玉川4丁目4番地1-999号",
+			expected: "玉川4丁目4-1-999",
+			changed:  true,
+		},
+		{
+			name:     "banchi/N番地-M_ハイフン枝番号なし",
+			input:    "玉川4丁目4番地-11",
+			expected: "玉川4丁目4-11",
+			changed:  true,
+		},
+		{
 			name:     "banchi/N番地N_後続数字",
 			input:    "1番地2",
 			expected: "1-2",
