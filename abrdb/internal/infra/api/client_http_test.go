@@ -11,6 +11,22 @@ import (
 	"time"
 )
 
+func TestNewClientHonorsProxyEnv(t *testing.T) {
+	// The download client must route through HTTP(S)_PROXY when set (corporate
+	// proxy environments). A hand-built http.Transport defaults to Proxy=nil,
+	// which silently ignores the proxy env vars — this guards against that.
+	tr, ok := New("https://example.com/feed.json").httpClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("Transport is %T, want *http.Transport", New("").httpClient.Transport)
+	}
+	// A hand-built http.Transport defaults to Proxy=nil, which silently ignores
+	// HTTP_PROXY/HTTPS_PROXY. The client must set Proxy so corporate proxy
+	// environments work.
+	if tr.Proxy == nil {
+		t.Fatal("Transport.Proxy is nil; HTTP_PROXY/HTTPS_PROXY would be ignored")
+	}
+}
+
 func TestMatchesPrefix(t *testing.T) {
 	tests := []struct {
 		name    string

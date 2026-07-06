@@ -46,14 +46,15 @@ func New(feedURL string) *Client {
 	// Configure transport to match AWS SDK v2 defaults
 	// AWS SDK uses conservative settings that work well with S3/CloudFront
 	transport := &http.Transport{
-		MaxIdleConns:          100,              // AWS SDK default
-		MaxIdleConnsPerHost:   10,               // AWS SDK default - key setting!
-		MaxConnsPerHost:       0,                // Unlimited (AWS SDK default)
-		IdleConnTimeout:       90 * time.Second, // AWS SDK default
-		TLSHandshakeTimeout:   10 * time.Second, // AWS SDK default
-		ExpectContinueTimeout: 1 * time.Second,  // AWS SDK default
-		DisableCompression:    false,            // AWS SDK enables compression
-		ForceAttemptHTTP2:     true,             // Try HTTP/2 like AWS SDK
+		Proxy:                 http.ProxyFromEnvironment, // honor HTTP_PROXY/HTTPS_PROXY/NO_PROXY
+		MaxIdleConns:          100,                       // AWS SDK default
+		MaxIdleConnsPerHost:   10,                        // AWS SDK default - key setting!
+		MaxConnsPerHost:       0,                         // Unlimited (AWS SDK default)
+		IdleConnTimeout:       90 * time.Second,          // AWS SDK default
+		TLSHandshakeTimeout:   10 * time.Second,          // AWS SDK default
+		ExpectContinueTimeout: 1 * time.Second,           // AWS SDK default
+		DisableCompression:    false,                     // AWS SDK enables compression
+		ForceAttemptHTTP2:     true,                      // Try HTTP/2 like AWS SDK
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second, // AWS SDK default
 			KeepAlive: 30 * time.Second, // AWS SDK default
