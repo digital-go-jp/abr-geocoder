@@ -20,13 +20,16 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 	// IMPORTANT: When Levenshtein fallback is used, we skip residential/parcel search
 	// because the remaining address part may be misinterpreted
 	// (e.g., "2-5" in "福室字久保野:2-5" being interpreted as chome + block number).
+	// The exception is a pure same-length substitution in the town name
+	// (e.g. 紀●井町 → 紀尾井町): there the number section is byte-identical to an
+	// exact match, so it is safe to resolve. See fuzzyMatchAllowsTwoStage / #246.
 	newState, usedLevenshteinFallback, err := n.tryLevenshteinFallback(ctx, nctx)
 	if err != nil {
 		return nil, err
 	}
 	nctx.State = newState
 
-	if !usedLevenshteinFallback {
+	if !usedLevenshteinFallback || n.fuzzyMatchAllowsTwoStage(nctx) {
 		switch nctx.Input.AddressType {
 		case model.NormalizeCategoryResidential:
 			results, err = n.tryTwoStageResidential(ctx, nctx)
@@ -57,6 +60,12 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 				}
 				results = append(results, parcelResults...)
 			}
+		}
+
+		// A detail resolved from a fuzzy (sub-1.0) town match must not outrank an
+		// exact match, so inherit the fuzzy town score onto it.
+		if usedLevenshteinFallback && len(nctx.State.BasicResults) > 0 {
+			capScoresToFuzzy(results, nctx.State.BasicResults[0].Score)
 		}
 	}
 
