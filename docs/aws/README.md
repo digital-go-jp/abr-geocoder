@@ -351,6 +351,31 @@ terraform apply
 aws ecs update-service --cluster $ECS_CLUSTER --service abrg-service --force-new-deployment
 ```
 
+### 設定（取り込みフィルタ）変更の反映
+
+`abrdb import` は取り込み設定（`abrdb/internal/schema/config_default.yaml` の `filters` 等）を **イメージ埋め込みではなく `abrdb init` 時に DB（`abrdb_config`）へ保存された設定から読み込みます**。そのため `config_default.yaml` を変更してイメージを更新しただけでは反映されません（保存済みの旧設定が使われ続けます）。反映するには `init` で保存設定を更新し、全件取り込みし直します。
+
+> **⚠️ 重要**: `abrdb init` は**全データテーブルを DROP・再作成してリセットします**（`DROP TABLE ... CASCADE`）。取り込み済みデータ（町字・住居表示・地番）と catalog は消えます。**`init` は必ず `import` とセットで実行**してください。単独実行すると DB が空になります。実行中もサービスは S3 の既存キャッシュを配信し続けるため API はダウンしませんが、**空 DB のまま `cache build` を実行しない**でください（空キャッシュになります）。
+
+```bash
+# 1. 新イメージをビルド・プッシュ（「イメージ更新」参照）
+
+# 2. init でDBをリセット＋新しい取り込み設定を保存
+#    （--force は「既存データを削除します」確認プロンプトをスキップする）
+aws ecs run-task --cluster $ECS_CLUSTER --task-definition abrdb-import --launch-type FARGATE \
+  --overrides '{"containerOverrides":[{"name":"abrdb","command":["init","--force"]}]}' \
+  --network-configuration "{\"awsvpcConfiguration\":{\"subnets\":$SUBNET_JSON,\"securityGroups\":[\"$ECS_SG\"],\"assignPublicIp\":\"DISABLED\"}}"
+
+# 3. 全件取り込み（init 直後は catalog が空なので通常の import で全件ロードされる）
+aws ecs run-task --cluster $ECS_CLUSTER --task-definition abrdb-import --launch-type FARGATE \
+  --overrides '{"containerOverrides":[{"name":"abrdb","command":["import"]}]}' \
+  --network-configuration "{\"awsvpcConfiguration\":{\"subnets\":$SUBNET_JSON,\"securityGroups\":[\"$ECS_SG\"],\"assignPublicIp\":\"DISABLED\"}}"
+
+# 4. import 完了後にキャッシュ再構築 → サービス再起動（「キャッシュビルド」「サービス再起動」参照）
+```
+
+> **Note**: 日次更新（`import --dry-run` → `import`）は DCAT Feed の変更分しか取り込まないため、フィルタ変更だけでは再取り込みされません。上記の `init`（リセット）+ 全件 `import` が必須です。既存データを保持したまま強制的に再取り込みしたい場合は `import --force`（差分検出をスキップし取り込み済みファイルも再 ETL）を使います。
+
 ### ロールバック
 
 ```bash
