@@ -121,7 +121,7 @@ category:
       - machiaza_id
       - rsdt_addr_flg
     filters:
-      status_flg: ["1", "2"]
+      status_flg: ["0", "1", "2"]
 
   # 住居表示-街区
   mt_rsdtdsp_blk:
