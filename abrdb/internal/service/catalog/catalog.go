@@ -60,23 +60,24 @@ type UpdateResult struct {
 
 // ScanAndCompare scans S3 and compares with existing catalog without updating DB.
 func (s *service) ScanAndCompare(ctx context.Context, prefixes []string) (*ScanResult, error) {
-	scanResult, err := s.scan(ctx, prefixes, false)
+	scanResult, err := s.scan(ctx, prefixes, false, false)
 	if err != nil {
 		return nil, err
 	}
 	return &ScanResult{UpdatedFiles: scanResult.updatedFiles}, nil
 }
 
-// ScanAndUpdate scans the API and updates the catalog.
-func (s *service) ScanAndUpdate(ctx context.Context, prefixes []string) (*UpdateResult, error) {
-	scanResult, err := s.scan(ctx, prefixes, true)
+// ScanAndUpdate scans the API and updates the catalog. When force is set, every
+// scanned file is flagged for re-download and re-import (see decideFileAction).
+func (s *service) ScanAndUpdate(ctx context.Context, prefixes []string, force bool) (*UpdateResult, error) {
+	scanResult, err := s.scan(ctx, prefixes, true, force)
 	if err != nil {
 		return nil, err
 	}
 
 	result := &UpdateResult{UpdatedCount: scanResult.updatedCount}
 
-	// Skip pair sync if no updates
+	// Skip pair sync if no updates (force flags both text/pos of every pair directly)
 	if result.UpdatedCount == 0 {
 		return result, nil
 	}
@@ -95,7 +96,7 @@ type scanFilesResult struct {
 }
 
 // scan is the unified scanning function used by both ScanAndCompare and ScanAndUpdate
-func (s *service) scan(ctx context.Context, prefixes []string, updateDB bool) (*scanFilesResult, error) {
+func (s *service) scan(ctx context.Context, prefixes []string, updateDB, force bool) (*scanFilesResult, error) {
 	// Build shared scan context once
 	sc, err := s.newScanContext()
 	if err != nil {
@@ -112,7 +113,7 @@ func (s *service) scan(ctx context.Context, prefixes []string, updateDB bool) (*
 		category := s.extractCategoryFromPrefix(prefix)
 		slog.Debug("scanning catalog files", "event", "catalog_scan", "category", category, "prefix", prefix, "file_count", len(files))
 
-		scanResult, err := s.scanFiles(ctx, files, category, sc, updateDB)
+		scanResult, err := s.scanFiles(ctx, files, category, sc, updateDB, force)
 		if err != nil {
 			return nil, fmt.Errorf("scan files: %w", err)
 		}
@@ -152,7 +153,7 @@ func (s *service) prepareFileContext(ctx context.Context, category model.FileCat
 // scanFiles processes S3 files against existing catalog.
 // If updateDB is true, upserts changed files to DB and returns count.
 // If updateDB is false, only returns the list of changed files (dry-run mode).
-func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category model.FileCategory, sc *scanContext, updateDB bool) (*scanFilesResult, error) {
+func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category model.FileCategory, sc *scanContext, updateDB, force bool) (*scanFilesResult, error) {
 	fc, err := s.prepareFileContext(ctx, category, sc)
 	if err != nil {
 		return nil, err
@@ -167,7 +168,7 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 
 		existing := fc.existingFiles[file.URL]
 		_, localExists := fc.localFileSet[file.Filename]
-		action := decideFileAction(existing, file, localExists, updateDB)
+		action := decideFileAction(existing, file, localExists, updateDB, force)
 		if action.skip {
 			continue
 		}
@@ -201,10 +202,14 @@ type fileAction struct {
 }
 
 // decideFileAction derives the catalog action for one file without any I/O.
-func decideFileAction(existing *model.File, file api.FileInfo, localExists, updateDB bool) fileAction {
+// In the update path, force re-downloads and re-imports every scanned file (even
+// unchanged ones already imported), so a config/filter change is re-applied without
+// waiting for the DCAT feed to change. New/modified files are still handled via the
+// existing==nil path, so force never causes added files to be missed.
+func decideFileAction(existing *model.File, file api.FileInfo, localExists, updateDB, force bool) fileAction {
 	isNewOrModified := existing == nil || !existing.LastModified.Equal(file.LastModified)
 
-	// Dry-run: only new/modified files are candidates; they always need import.
+	// Dry-run compares only (force applies to the update path below).
 	if !updateDB {
 		if !isNewOrModified {
 			return fileAction{skip: true}
@@ -212,13 +217,13 @@ func decideFileAction(existing *model.File, file api.FileInfo, localExists, upda
 		return fileAction{needsDownload: !localExists, needsImport: true, isNewOrModified: true}
 	}
 
-	// Update: skip unchanged files unless a prior import is still pending.
-	if !isNewOrModified && (existing == nil || !existing.NeedsImport) {
+	// Update: skip unchanged files unless a prior import is still pending or force is set.
+	if !force && !isNewOrModified && (existing == nil || !existing.NeedsImport) {
 		return fileAction{skip: true}
 	}
 	return fileAction{
-		needsDownload:   !localExists || isNewOrModified,
-		needsImport:     isNewOrModified || (existing != nil && existing.NeedsImport),
+		needsDownload:   force || !localExists || isNewOrModified,
+		needsImport:     force || isNewOrModified || (existing != nil && existing.NeedsImport),
 		isNewOrModified: isNewOrModified,
 	}
 }
