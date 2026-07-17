@@ -155,13 +155,14 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 	}
 	koaza := &results[0]
 
-	// Consume the first number into the base so unmatched calculation sees the rest only.
-	consumed := nctx.Input.SearchAddr
-	consumed.Base = sa.Base + sa.Numbers[0]
-	consumed.Numbers = sa.Numbers[1:]
+	// Consume the first number into the base; the building name is deliberately
+	// excluded from the search string because setTwoStageUnmatchedAddress recovers
+	// it from the normalized address (including it here would duplicate the entry).
+	base := sa.Base + sa.Numbers[0]
+	rest := sa.Numbers[1:]
 
-	if len(consumed.Numbers) > 0 && n.twoStageSearch != nil {
-		parcelAddr := consumed.Base + ":" + strings.Join(consumed.Numbers, "-")
+	if len(rest) > 0 && n.twoStageSearch != nil {
+		parcelAddr := base + ":" + strings.Join(rest, "-")
 		parcelResults, err := n.twoStageSearch.normalizeWithBasic(ctx, model.CategoryParcel, results, parcelAddr)
 		if err != nil {
 			return nil, err
@@ -172,7 +173,7 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 		}
 	}
 
-	setUnmatchedAddress(koaza, nctx.Input.NormalizedAddr, nctx.Input.StandardizedAddr, koaza.MatchedAddress, consumed.String())
+	setTwoStageUnmatchedAddress(koaza, nctx.Input.StandardizedAddr, base)
 	return results, nil
 }
 

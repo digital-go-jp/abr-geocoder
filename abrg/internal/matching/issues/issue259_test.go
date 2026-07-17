@@ -77,6 +77,44 @@ func TestIssue259(t *testing.T) {
 				FieldKoaza:   "1",
 			},
 		},
+		// 数字小字 + 建物名（小字のみで止まる経路でもビル名が unmatched に残ること）
+		{
+			name: "issue259-6 [七尾市大田町111 大田ビル202]",
+			query: model.MatchQuery{
+				Address:  "七尾市大田町111 大田ビル202",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "石川県七尾市大田町111",
+			wantUnmatchedAddress: []string{"大田ビル202"},
+			wantStructured: map[string]any{
+				FieldPref:    "石川県",
+				FieldCity:    "七尾市",
+				FieldOazaCho: "大田町",
+				FieldKoaza:   "111",
+			},
+		},
+		// 数字小字 + 地番 + 建物名（地番まで進む経路）
+		{
+			name: "issue259-7 [七尾市大田町111-11 大田ビル202]",
+			query: model.MatchQuery{
+				Address:  "七尾市大田町111-11 大田ビル202",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelParcel,
+			wantUnmatchedAddress: []string{"大田ビル202"},
+			wantStructured: map[string]any{
+				FieldPref:    "石川県",
+				FieldCity:    "七尾市",
+				FieldOazaCho: "大田町",
+				FieldKoaza:   "111",
+				FieldPrcNum1: "11",
+			},
+		},
 		// 回帰確認: 丁目解釈が優先されること（紀尾井町1-3 は従来どおり住居表示）
 		{
 			name: "issue259-4 [東京都千代田区紀尾井町1-3] 回帰",
