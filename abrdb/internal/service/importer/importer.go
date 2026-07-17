@@ -21,9 +21,13 @@ type loader interface {
 	LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath, posPath string) error
 }
 
-// catalogStore reads pending imports and records completed ones.
+// catalogStore reads pending imports, clears previously imported rows, and
+// records completed imports.
 type catalogStore interface {
 	PendingImportsByCategory(ctx context.Context, categories []model.FileCategory) (map[model.FileCategory][]*model.File, error)
+	TableIsEmpty(ctx context.Context, tableName string) (bool, error)
+	DeleteFileScope(ctx context.Context, tableName, filename string) error
+	EnsureLgCodeIndex(ctx context.Context, tableName string) error
 	MarkAsImported(ctx context.Context, filenames ...string) error
 }
 
@@ -83,12 +87,24 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 		pairs := catalog.GroupFilesByPairKey(pendingFiles)
 		slog.Debug("importing file pairs", "event", "import_pairs", "category", cat, "pair_count", len(pairs))
 
+		// Initial build into an empty table has nothing to delete. Skipping the
+		// deletes also lets the lg_code index be created after the bulk insert
+		// (below) instead of being maintained row by row during it.
+		tableEmpty, err := s.store.TableIsEmpty(ctx, categoryInfo.TableName)
+		if err != nil {
+			return nil, fmt.Errorf("check %q is empty: %w", categoryInfo.TableName, err)
+		}
+
 		categoryStart := time.Now()
 		taskName := fmt.Sprintf("Importing %s", cat)
 		if err := util.ExecuteConcurrently(ctx, pairs, func(ctx context.Context, pair catalog.FilePairing) error {
-			return s.importFilePair(ctx, pair, categoryInfo)
+			return s.importFilePair(ctx, pair, categoryInfo, !tableEmpty)
 		}, s.progress, taskName); err != nil {
 			return nil, fmt.Errorf("import files for %q: %w", cat, err)
+		}
+
+		if err := s.store.EnsureLgCodeIndex(ctx, categoryInfo.TableName); err != nil {
+			return nil, fmt.Errorf("ensure lg_code index on %q: %w", categoryInfo.TableName, err)
 		}
 		phaseTimes[string(cat)] = time.Since(categoryStart).Seconds()
 	}
@@ -96,11 +112,21 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 	return phaseTimes, nil
 }
 
-func (s *service) importFilePair(ctx context.Context, pair catalog.FilePairing, categoryInfo *schema.CategoryInfo) error {
+func (s *service) importFilePair(ctx context.Context, pair catalog.FilePairing, categoryInfo *schema.CategoryInfo, deleteFirst bool) error {
 	textPath := filepath.Join(s.downloadDir, pair.TextFile.Filename)
 	var posPath string
 	if pair.PosFile != nil {
 		posPath = filepath.Join(s.downloadDir, pair.PosFile.Filename)
+	}
+
+	// Delete directly on PostgreSQL: the same DELETE through the DuckDB
+	// postgres extension scans the remote table per statement. Idempotent, and
+	// needs_import stays set until MarkAsImported, so a failure between delete
+	// and load is repaired by re-running the import.
+	if deleteFirst {
+		if err := s.store.DeleteFileScope(ctx, categoryInfo.TableName, pair.TextFile.Filename); err != nil {
+			return fmt.Errorf("delete previous rows: %w", err)
+		}
 	}
 
 	if err := s.loader.LoadData(ctx, categoryInfo, textPath, posPath); err != nil {

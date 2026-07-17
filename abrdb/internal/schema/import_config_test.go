@@ -150,7 +150,9 @@ func TestCategoryConfig_GenerateDDL(t *testing.T) {
 	if strings.Contains(ddl, "REAL NOT NULL") {
 		t.Errorf("GenerateDDL() nullable rep_lon must not be NOT NULL\nDDL:\n%s", ddl)
 	}
-	// lg_code is deduped, so it appears exactly once in the DDL.
+	// lg_code is deduped, so it appears exactly once in the DDL. The lg_code
+	// index is not part of the DDL: it is created after the initial import
+	// (see postgres.EnsureLgCodeIndex).
 	if n := strings.Count(ddl, "lg_code"); n != 1 {
 		t.Errorf("GenerateDDL() lg_code appears %d times, want 1 (deduped)\nDDL:\n%s", n, ddl)
 	}

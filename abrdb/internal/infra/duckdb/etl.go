@@ -5,15 +5,16 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"abr.local/common/db"
 	"abr.local/common/duck"
 
 	"abrdb/internal/schema"
-	"abrdb/internal/util"
 )
 
 const pgSecretName = "abrdb_pg_secret"
@@ -91,23 +92,33 @@ func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, t
 		}
 	}()
 
+	start := time.Now()
 	err = e.loadTextDataWithSuffixTx(ctx, tx, categoryInfo, textPath, suffix)
 	if err != nil {
 		return fmt.Errorf("load text data from %q: %w", filepath.Base(textPath), err)
 	}
+	textSec := time.Since(start).Seconds()
 
+	start = time.Now()
 	hasPosData, err := e.loadPositionDataWithSuffixTx(ctx, tx, categoryInfo, posPath, suffix)
 	if err != nil {
 		return fmt.Errorf("load position data from %q: %w", filepath.Base(posPath), err)
 	}
+	posSec := time.Since(start).Seconds()
 
 	filename := filepath.Base(textPath)
+	start = time.Now()
 	err = e.transformAndLoadWithSuffixTx(ctx, tx, categoryInfo, hasPosData, suffix, filename)
 	if err != nil {
 		return fmt.Errorf("transform and load %q: %w", filename, err)
 	}
+	transformSec := time.Since(start).Seconds()
 
+	start = time.Now()
 	err = tx.Commit()
+	slog.DebugContext(ctx, "etl step timing", "event", "etl_timing",
+		"file", filename, "text_sec", textSec, "pos_sec", posSec,
+		"transform_load_sec", transformSec, "commit_sec", time.Since(start).Seconds())
 	return err
 }
 
@@ -206,46 +217,29 @@ func (e *ETL) loadPositionDataWithSuffixTx(ctx context.Context, tx *sql.Tx, cate
 	return true, nil
 }
 
-// DELETE → INSERT pattern: differential updates per file scope.
+// Rows for this file's scope are deleted beforehand via a direct PostgreSQL
+// connection (see postgres.DeleteFileScope); here we only transform and insert.
 func (e *ETL) transformAndLoadWithSuffixTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, hasPosData bool, suffix string, filename string) error {
 	transformer := newTransformer(categoryInfo)
 	tn := generateTableNames(suffix)
 
-	deleteCondition := buildDeleteCondition(filename)
-
-	// DELETE → INSERT for differential updates
-	query := fmt.Sprintf(`
-		%s;
-		DELETE FROM pg.%s WHERE %s;
-		INSERT INTO pg.%s
-		SELECT * EXCLUDE (join_seq) FROM %s WHERE join_seq = 1
-	`, transformer.buildTransformSQL(hasPosData, tn),
-		categoryInfo.TableName, deleteCondition,
-		categoryInfo.TableName, tn.Transformed)
-
-	_, err := tx.ExecContext(ctx, query)
-	if err != nil {
-		return fmt.Errorf("load %s data: %w", categoryInfo.TableName, err)
+	steps := []struct {
+		name string
+		sql  string
+	}{
+		{"transform", transformer.buildTransformSQL(hasPosData, tn)},
+		{"insert", fmt.Sprintf("INSERT INTO pg.%s SELECT * EXCLUDE (join_seq) FROM %s WHERE join_seq = 1", categoryInfo.TableName, tn.Transformed)},
 	}
+	stepSec := make([]any, 0, len(steps)*2)
+	for _, step := range steps {
+		start := time.Now()
+		if _, err := tx.ExecContext(ctx, step.sql); err != nil {
+			return fmt.Errorf("load %s data (%s): %w", categoryInfo.TableName, step.name, err)
+		}
+		stepSec = append(stepSec, step.name+"_sec", time.Since(start).Seconds())
+	}
+	slog.DebugContext(ctx, "transform step timing", append([]any{"event", "transform_timing", "file", filename}, stepSec...)...)
 	return nil
-}
-
-func buildDeleteCondition(filename string) string {
-	p := util.ParseFilePattern(filename)
-
-	switch p.Type {
-	case util.PatternPref:
-		// Always use lg_code prefix with zero-padding.
-		// pref_code column is not present in any current category config.
-		return fmt.Sprintf("SUBSTR(lg_code, 1, 2) = '%02d'", p.PrefNum)
-	case util.PatternCity:
-		return fmt.Sprintf("lg_code = '%s'", p.Code)
-	case util.PatternAll:
-		return "1=1"
-	default:
-		// Unknown pattern → delete nothing (safe default)
-		return "1=0"
-	}
 }
 
 func (e *ETL) initializeDuckDB() error {

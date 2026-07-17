@@ -50,6 +50,27 @@ type fakeStore struct {
 	pending map[model.FileCategory][]*model.File
 	pendErr error
 	marked  [][]string
+	deleted []string
+	empty   bool
+	indexed []string
+}
+
+func (f *fakeStore) DeleteFileScope(_ context.Context, tableName, filename string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.deleted = append(f.deleted, tableName+":"+filename)
+	return nil
+}
+
+func (f *fakeStore) TableIsEmpty(_ context.Context, _ string) (bool, error) {
+	return f.empty, nil
+}
+
+func (f *fakeStore) EnsureLgCodeIndex(_ context.Context, tableName string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.indexed = append(f.indexed, tableName)
+	return nil
 }
 
 func (f *fakeStore) PendingImportsByCategory(_ context.Context, _ []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
@@ -155,6 +176,20 @@ func TestImportCategoryBatch_LoadsPairsAndMarksImported(t *testing.T) {
 		t.Errorf("city pos path = %q, want empty (text-only)", cityPos)
 	}
 
+	// Each pair's prior rows are deleted, keyed by the text filename.
+	store.mu.Lock()
+	deleted := slices.Clone(store.deleted)
+	store.mu.Unlock()
+	sort.Strings(deleted)
+	if want := []string{":city_text.zip", ":pref_text.zip"}; !slices.Equal(deleted, want) {
+		t.Errorf("deleted scopes = %v, want %v", deleted, want)
+	}
+
+	// The lg_code index is ensured once per imported category.
+	if len(store.indexed) != 2 {
+		t.Errorf("EnsureLgCodeIndex calls = %v, want one per category", store.indexed)
+	}
+
 	// MarkAsImported records both filenames for the pair, only text for text-only.
 	if !store.markedContains("pref_text.zip", "pref_pos.zip") {
 		t.Errorf("pref pair not marked with both files: %v", store.marked)
@@ -229,4 +264,31 @@ func TestImportCategoryBatch_LoadErrorPropagatesAndSkipsMark(t *testing.T) {
 
 func errContains(err error, sub string) bool {
 	return err != nil && strings.Contains(err.Error(), sub)
+}
+
+func TestImportCategoryBatch_SkipsDeleteWhenTableEmpty(t *testing.T) {
+	loader := &fakeLoader{}
+	store := &fakeStore{
+		empty: true,
+		pending: map[model.FileCategory][]*model.File{
+			model.CategoryPref: {textFile(model.CategoryPref, "pref/13", "pref_text.zip")},
+		},
+	}
+
+	svc := newService(loader, store, model.CategoryPref)
+	if _, err := svc.ImportCategoryBatch(context.Background(), []model.FileCategory{model.CategoryPref}); err != nil {
+		t.Fatalf("ImportCategoryBatch: %v", err)
+	}
+
+	// Initial build into an empty table: nothing to delete, but data still
+	// loads and the index is created afterwards.
+	if len(store.deleted) != 0 {
+		t.Errorf("deleted scopes = %v, want none for empty table", store.deleted)
+	}
+	if len(loader.calls) != 1 {
+		t.Errorf("LoadData calls = %d, want 1", len(loader.calls))
+	}
+	if len(store.indexed) != 1 {
+		t.Errorf("EnsureLgCodeIndex calls = %v, want 1", store.indexed)
+	}
 }
