@@ -66,6 +66,7 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 			SearchAddr:       parseSearchAddr(searchAddr),
 			Pref:             pref,
 			Limit:            query.Limit,
+			Category:         query.Category,
 			AddressType:      addressType,
 		},
 		State: normalizeState{
