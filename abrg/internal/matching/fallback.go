@@ -161,7 +161,12 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 	base := sa.Base + sa.Numbers[0]
 	rest := sa.Numbers[1:]
 
-	if len(rest) > 0 && n.twoStageSearch != nil {
+	// Parcel resolution of the remaining numbers only when the requested category
+	// includes parcel data (empty means CategoryAll, see normalizeByCategory).
+	parcelAllowed := nctx.Input.Category == model.CategoryParcel ||
+		nctx.Input.Category == model.CategoryAll || nctx.Input.Category == ""
+
+	if parcelAllowed && len(rest) > 0 && n.twoStageSearch != nil {
 		parcelAddr := base + ":" + strings.Join(rest, "-")
 		parcelResults, err := n.twoStageSearch.normalizeWithBasic(ctx, model.CategoryParcel, results, parcelAddr)
 		if err != nil {
@@ -173,6 +178,10 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 		}
 	}
 
+	// Numbers not resolved as a parcel stay unmatched (e.g. rsdtdsp category: "-11").
+	if len(rest) > 0 {
+		koaza.UnmatchedAddress = append(koaza.UnmatchedAddress, "-"+strings.Join(rest, "-"))
+	}
 	setTwoStageUnmatchedAddress(koaza, nctx.Input.StandardizedAddr, base)
 	return results, nil
 }

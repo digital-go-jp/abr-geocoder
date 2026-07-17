@@ -10,6 +10,7 @@ type normalizeInput struct {
 	SearchAddr       parsedAddress           // Parsed search address (eliminates redundant parseSearchAddr calls)
 	Pref             string                  // Prefecture code filter
 	Limit            int                     // Max results
+	Category         model.Category          // Requested category filter (all/basic/rsdtdsp/parcel)
 	AddressType      model.NormalizeCategory // Category type (residential/parcel/undetermined/unknown)
 }
 
