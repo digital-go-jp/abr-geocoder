@@ -38,6 +38,10 @@ locals {
   abrg_memory        = "8192" # 8 GB
   log_level          = "info"
   log_retention_days = 30
+
+  # Public read-only API, so "'*'" is the default. Restrict to specific
+  # origins (e.g. "'https://example.com'") for authenticated or internal use.
+  cors_allow_origin = "'*'"
 }
 
 module "network" {
@@ -97,6 +101,7 @@ module "api_gateway" {
 
   stage_name         = local.api_stage_name
   log_retention_days = local.log_retention_days
+  cors_allow_origin  = local.cors_allow_origin
 }
 
 module "workflow" {
