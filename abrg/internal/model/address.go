@@ -134,49 +134,62 @@ func (dst *StructuredAddress) MergeFrom(src *StructuredAddress) {
 // FormatAddress constructs formatted address from StructuredAddress components including numbers.
 // MachiazaDist is a disambiguator for same-named machiaza (e.g. kana reading), not part of
 // the address notation, so it is intentionally excluded here.
+// A "-" is inserted wherever a digit-ending part would otherwise touch a digit-starting
+// part (e.g. numeric koaza "111" + parcel "11" → "111-11", not "11111").
 func FormatAddress(sa *StructuredAddress) string {
-	var sb strings.Builder
-	sb.Grow(256)
+	w := addressWriter{}
+	w.sb.Grow(256)
 
 	// Build base address parts
-	writeStringPtr(&sb, sa.Pref)
-	writeStringPtr(&sb, sa.County)
-	writeStringPtr(&sb, sa.City)
-	writeStringPtr(&sb, sa.Ward)
-	writeStringPtr(&sb, sa.KyotoSt)
-	writeStringPtr(&sb, sa.OazaCho)
-	writeStringPtr(&sb, sa.Chome)
-	writeStringPtr(&sb, sa.Koaza)
+	w.write(sa.Pref, "")
+	w.write(sa.County, "")
+	w.write(sa.City, "")
+	w.write(sa.Ward, "")
+	w.write(sa.KyotoSt, "")
+	w.write(sa.OazaCho, "")
+	w.write(sa.Chome, "")
+	w.write(sa.Koaza, "")
 
 	// Residential addresses (BlkNum, RsdtNum, RsdtNum2)
-	writeStringPtr(&sb, sa.BlkNum)
-	if hasValue(sa.RsdtNum) {
-		if hasValue(sa.BlkNum) {
-			sb.WriteString("-")
-		}
-		sb.WriteString(*sa.RsdtNum)
+	w.write(sa.BlkNum, "")
+	if hasValue(sa.BlkNum) {
+		w.write(sa.RsdtNum, "-")
+	} else {
+		w.write(sa.RsdtNum, "")
 	}
-	writeWithPrefix(&sb, sa.RsdtNum2, "-")
+	w.write(sa.RsdtNum2, "-")
 
 	// Parcel addresses (PrcNum1, PrcNum2, PrcNum3)
-	writeStringPtr(&sb, sa.PrcNum1)
-	writeWithPrefix(&sb, sa.PrcNum2, "-")
-	writeWithPrefix(&sb, sa.PrcNum3, "-")
+	w.write(sa.PrcNum1, "")
+	w.write(sa.PrcNum2, "-")
+	w.write(sa.PrcNum3, "-")
 
-	return sb.String()
+	return w.sb.String()
 }
 
-func writeStringPtr(sb *strings.Builder, ptr *string) {
-	if ptr != nil && *ptr != "" {
-		sb.WriteString(*ptr)
-	}
+// addressWriter concatenates address parts, separating adjacent digits across parts.
+type addressWriter struct {
+	sb   strings.Builder
+	last byte
 }
 
-func writeWithPrefix(sb *strings.Builder, ptr *string, prefix string) {
-	if ptr != nil && *ptr != "" {
-		sb.WriteString(prefix)
-		sb.WriteString(*ptr)
+func (w *addressWriter) write(ptr *string, prefix string) {
+	if ptr == nil || *ptr == "" {
+		return
 	}
+	s := *ptr
+	switch {
+	case prefix != "":
+		w.sb.WriteString(prefix)
+	case isASCIIDigit(w.last) && isASCIIDigit(s[0]):
+		w.sb.WriteString("-")
+	}
+	w.sb.WriteString(s)
+	w.last = s[len(s)-1]
+}
+
+func isASCIIDigit(b byte) bool {
+	return b >= '0' && b <= '9'
 }
 
 func hasValue(ptr *string) bool {
