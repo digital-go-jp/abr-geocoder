@@ -99,13 +99,13 @@ variable "abrg_memory_target" {
 variable "abrdb_cpu" {
   type        = string
   description = "CPU units for abrdb tasks (1024, 2048, 4096, 8192, 16384)"
-  default     = "16384" # 16 vCPU
+  default     = "8192" # 8 vCPU: import throughput is bound by Aurora writes, not CPU
 }
 
 variable "abrdb_memory" {
   type        = string
   description = "Memory (MB) for abrdb tasks"
-  default     = "32768" # 32 GB
+  default     = "16384" # 16 GB
 }
 
 variable "cache_build_cpu" {
