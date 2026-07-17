@@ -417,7 +417,7 @@ resource "aws_ecs_task_definition" "abrg_cache_build" {
 
       entryPoint = ["/bin/sh", "-c"]
       command = [
-        "/app/abrg cache build --cache /tmp/abrg.duckdb && gzip /tmp/abrg.duckdb && aws s3 cp --only-show-errors /tmp/abrg.duckdb.gz s3://${var.cache_bucket_name}/abrg/abrg.duckdb.gz"
+        "/app/abrg cache build --cache /tmp/abrg.duckdb && pigz /tmp/abrg.duckdb && aws s3 cp --only-show-errors /tmp/abrg.duckdb.gz s3://${var.cache_bucket_name}/abrg/abrg.duckdb.gz"
       ]
 
       environment = [
