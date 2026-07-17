@@ -242,7 +242,7 @@ resource "aws_api_gateway_stage" "main" {
       resourcePath   = "$context.resourcePath"
       status         = "$context.status"
       responseLength = "$context.responseLength"
-      apiKey         = "$context.identity.apiKey"
+      apiKeyId       = "$context.identity.apiKeyId"
     })
   }
 
