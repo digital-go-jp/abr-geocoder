@@ -1123,8 +1123,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 		},
 		{
 			// 字名「ノ」のあとにハイフンで地番が続く
-			// 入力「軽海町ノ－１４－１」→「軽海町」にマッチ（ハイフン後がノと分離）
-			// TODO: 字名「ノ－」として認識できるように改善検討
+			// 入力「軽海町ノ－１４－１」→ 小字「ノ」+ 地番14-1 にマッチ（issue #259 の
+			// 小字フォールバックにより字名として解決できるようになった）
 			name: "jat035 [石川県小松市軽海町ノ－１４－１]",
 			query: model.MatchQuery{
 				Address:  "石川県小松市軽海町ノ－１４－１",
@@ -1132,9 +1132,9 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelMachiaza,
-			wantMatchedAddress:   "石川県小松市軽海町",
-			wantUnmatchedAddress: []string{"ノ-14-1"},
+			wantMatchLevel:       model.MatchLevelParcel,
+			wantMatchedAddress:   "石川県小松市軽海町ノ14-1",
+			wantUnmatchedAddress: nil,
 			wantStructured: map[string]any{
 				"pref":          "石川県",
 				"county":        nil,
@@ -1144,12 +1144,12 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				"kyoto_st":      nil,
 				"oaza_cho":      "軽海町",
 				"chome":         nil,
-				"koaza":         nil,
+				"koaza":         "ノ",
 				"blk_num":       nil,
 				"rsdt_num":      nil,
 				"rsdt_num2":     nil,
-				"prc_num1":      nil,
-				"prc_num2":      nil,
+				"prc_num1":      "14",
+				"prc_num2":      "1",
 				"prc_num3":      nil,
 			},
 		},
@@ -3159,7 +3159,7 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 		},
 		{
 			// 数字の字（勝林寺）
-			// 「三木町34」→34は字として未対応、町字止まり
+			// 「三木町34」→ 小字「参四」(正規化形34) + 地番25 にマッチ（issue #259）
 			name: "jat076 [石川県加賀市三木町34-25]",
 			query: model.MatchQuery{
 				Address:  "石川県加賀市三木町34-25",
@@ -3167,9 +3167,9 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelMachiaza,
-			wantMatchedAddress:   "石川県加賀市三木町",
-			wantUnmatchedAddress: []string{"34-25"},
+			wantMatchLevel:       model.MatchLevelParcel,
+			wantMatchedAddress:   "石川県加賀市三木町参四25",
+			wantUnmatchedAddress: nil,
 			wantStructured: map[string]any{
 				"pref":          "石川県",
 				"county":        nil,
@@ -3179,11 +3179,11 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				"kyoto_st":      nil,
 				"oaza_cho":      "三木町",
 				"chome":         nil,
-				"koaza":         nil,
+				"koaza":         "参四",
 				"blk_num":       nil,
 				"rsdt_num":      nil,
 				"rsdt_num2":     nil,
-				"prc_num1":      nil,
+				"prc_num1":      "25",
 				"prc_num2":      nil,
 				"prc_num3":      nil,
 			},
@@ -3219,7 +3219,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 			},
 		},
 		{
-			// jat076の補足：「34の25」とすると「34の」が小字として認識されずmachiaza止まり
+			// jat076の補足：「34の25」は「の」がハイフン化され jat076 と同じ解釈になる
+			// （小字「参四」+ 地番25。issue #259）
 			name: "jat076-2 [石川県加賀市三木町34の25]",
 			query: model.MatchQuery{
 				Address:  "石川県加賀市三木町34の25",
@@ -3227,9 +3228,9 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelMachiaza,
-			wantMatchedAddress:   "石川県加賀市三木町",
-			wantUnmatchedAddress: []string{"34-25"},
+			wantMatchLevel:       model.MatchLevelParcel,
+			wantMatchedAddress:   "石川県加賀市三木町参四25",
+			wantUnmatchedAddress: nil,
 			wantStructured: map[string]any{
 				"pref":          "石川県",
 				"county":        nil,
@@ -3239,11 +3240,11 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				"kyoto_st":      nil,
 				"oaza_cho":      "三木町",
 				"chome":         nil,
-				"koaza":         nil,
+				"koaza":         "参四",
 				"blk_num":       nil,
 				"rsdt_num":      nil,
 				"rsdt_num2":     nil,
-				"prc_num1":      nil,
+				"prc_num1":      "25",
 				"prc_num2":      nil,
 				"prc_num3":      nil,
 			},

@@ -15,9 +15,9 @@ import (
 func TestIssue201(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
-			// 石川県加賀市大聖寺上木町 - 九十五は存在しない小字
-			// Node.js版では「九十五五」になっていた
-			// Go版では町字までマッチし、九十五はunmatchedに残る（元の形式を保持）
+			// 石川県加賀市大聖寺上木町 - 小字「九十五」(正規化形95) にマッチ（issue #259）
+			// Node.js版では「九十五五」と末尾の漢数字が重複していた。
+			// 重複せず「九十五」のまま小字としてマッチすることを確認する。
 			name: "issue201-1 [石川県加賀市大聖寺上木町九十五]",
 			query: model.MatchQuery{
 				Address:  "石川県加賀市大聖寺上木町九十五",
@@ -25,9 +25,9 @@ func TestIssue201(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelMachiaza,
-			wantMatchedAddress:   "石川県加賀市大聖寺上木町",
-			wantUnmatchedAddress: []string{"九十五"}, // 九十五は元の形式を保持してunmatchedに残る
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "石川県加賀市大聖寺上木町九十五",
+			wantUnmatchedAddress: nil,
 			wantStructured: map[string]any{
 				FieldPref:         "石川県",
 				FieldCounty:       nil,
@@ -37,7 +37,7 @@ func TestIssue201(t *testing.T) {
 				FieldKyotoSt:      nil,
 				FieldOazaCho:      "大聖寺上木町",
 				FieldChome:        nil,
-				FieldKoaza:        nil,
+				FieldKoaza:        "九十五",
 				FieldBlkNum:       nil,
 				FieldRsdtNum:      nil,
 				FieldRsdtNum2:     nil,
