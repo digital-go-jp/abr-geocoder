@@ -165,6 +165,18 @@ func (s pgCatalogStore) PendingImportsByCategory(ctx context.Context, categories
 	return postgres.PendingImportsByCategory(ctx, s.executor, categories)
 }
 
+func (s pgCatalogStore) TableIsEmpty(ctx context.Context, tableName string) (bool, error) {
+	return postgres.TableIsEmpty(ctx, s.executor, tableName)
+}
+
+func (s pgCatalogStore) DeleteFileScope(ctx context.Context, tableName, filename string) error {
+	return postgres.DeleteFileScope(ctx, s.executor, tableName, filename)
+}
+
+func (s pgCatalogStore) EnsureLgCodeIndex(ctx context.Context, tableName string) error {
+	return postgres.EnsureLgCodeIndex(ctx, s.executor, tableName)
+}
+
 func (s pgCatalogStore) MarkAsImported(ctx context.Context, filenames ...string) error {
 	return postgres.MarkAsImported(ctx, s.executor, filenames...)
 }
