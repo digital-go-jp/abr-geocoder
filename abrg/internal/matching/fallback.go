@@ -3,6 +3,7 @@ package matching
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"abrg/internal/matching/levenshtein"
 	"abrg/internal/model"
@@ -92,6 +93,19 @@ func (n *Impl) handleBasicFallback(ctx context.Context, nctx *normalizeContext) 
 		}
 	}
 
+	// Numeric-only koaza (e.g., 七尾市大田町111): the number was split off as a
+	// chome/parcel candidate, but those interpretations have all failed by this
+	// point, so try it as part of the machiaza name. (issue #259)
+	if basic.StructuredAddress.Chome == nil && basic.StructuredAddress.Koaza == nil {
+		results, err := n.tryNumericKoazaSearch(ctx, nctx)
+		if err != nil {
+			return nil, err
+		}
+		if results != nil {
+			return results, nil
+		}
+	}
+
 	// Set unmatched address if not already computed
 	// Skip if Levenshtein fallback was used (UnmatchedAddress already computed correctly)
 	// Pass original searchAddr so extractUnmatchedWithColonNoAt can detect chome patterns
@@ -118,6 +132,47 @@ func (n *Impl) tryChomeSearch(ctx context.Context, nctx *normalizeContext) ([]mo
 	}
 
 	setUnmatchedAddress(&results[0], nctx.Input.NormalizedAddr, nctx.Input.StandardizedAddr, results[0].MatchedAddress, nctx.Input.SearchAddr.String())
+	return results, nil
+}
+
+// tryNumericKoazaSearch interprets the first number part as a numeric-only koaza
+// (e.g., "7尾市大田町:111" → normalized_address "7尾市大田町111"). Numeric koaza
+// records are stored without the chome marker "@", so neither the base search nor
+// the chome fallback can reach them. Remaining numbers are resolved as a parcel
+// under the koaza's machiaza (e.g., 大田町111-11 → 地番11).
+func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
+	sa := nctx.Input.SearchAddr
+	if sa.HasChome || sa.LeadingHyphen || sa.Base == "" || len(sa.Numbers) == 0 {
+		return nil, nil
+	}
+
+	results, err := queryAddressResults(ctx, n.repo, sa.Base+sa.Numbers[0], nctx.Input.Pref, nctx.Input.NormalizedAddr)
+	if err != nil {
+		return nil, fmt.Errorf("numeric koaza search: %w", err)
+	}
+	if len(results) == 0 || results[0].StructuredAddress.Koaza == nil {
+		return nil, nil
+	}
+	koaza := &results[0]
+
+	// Consume the first number into the base so unmatched calculation sees the rest only.
+	consumed := nctx.Input.SearchAddr
+	consumed.Base = sa.Base + sa.Numbers[0]
+	consumed.Numbers = sa.Numbers[1:]
+
+	if len(consumed.Numbers) > 0 && n.twoStageSearch != nil {
+		parcelAddr := consumed.Base + ":" + strings.Join(consumed.Numbers, "-")
+		parcelResults, err := n.twoStageSearch.normalizeWithBasic(ctx, model.CategoryParcel, results, parcelAddr)
+		if err != nil {
+			return nil, err
+		}
+		if len(parcelResults) > 0 {
+			setTwoStageUnmatchedAddress(&parcelResults[0], nctx.Input.StandardizedAddr, parcelAddr)
+			return parcelResults, nil
+		}
+	}
+
+	setUnmatchedAddress(koaza, nctx.Input.NormalizedAddr, nctx.Input.StandardizedAddr, koaza.MatchedAddress, consumed.String())
 	return results, nil
 }
 
