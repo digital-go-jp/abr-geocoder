@@ -34,8 +34,14 @@ variable "master_username" {
 
 variable "min_capacity" {
   type        = number
-  default     = 0.5
+  default     = 0 # allow auto-pause: DB is only used by the nightly batch
   description = "Minimum ACU capacity"
+}
+
+variable "seconds_until_auto_pause" {
+  type        = number
+  default     = 300
+  description = "Idle seconds before the cluster auto-pauses (requires min_capacity = 0)"
 }
 
 variable "max_capacity" {
@@ -81,8 +87,9 @@ resource "aws_rds_cluster" "main" {
   vpc_security_group_ids = [var.security_group_id]
 
   serverlessv2_scaling_configuration {
-    min_capacity = var.min_capacity
-    max_capacity = var.max_capacity
+    min_capacity             = var.min_capacity
+    max_capacity             = var.max_capacity
+    seconds_until_auto_pause = var.min_capacity == 0 ? var.seconds_until_auto_pause : null
   }
 
   skip_final_snapshot = var.skip_final_snapshot
