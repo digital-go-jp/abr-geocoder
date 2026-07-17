@@ -112,7 +112,7 @@ Use --force to skip change detection and import immediately.`,
 				return runImportDryRun(ctx, sc.QueryExecutor, catalogService, s3Prefixes, opts)
 			}
 
-			// Force mode: skip change detection, import immediately
+			// Force mode: skip change detection and re-import every in-scope file
 			if opts.Force {
 				services, err := initImportServices(sc, categoryInfoMap, opts.Quiet)
 				if err != nil {
@@ -120,7 +120,7 @@ Use --force to skip change detection and import immediately.`,
 				}
 				defer func() { _ = services.etl.Close() }()
 
-				return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, importConfig.EnabledCategory, false)
+				return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, importConfig.EnabledCategory, false, true)
 			}
 
 			// Default: check for changes first, import only if updates exist
@@ -139,7 +139,7 @@ Use --force to skip change detection and import immediately.`,
 
 type catalogAPI interface {
 	ScanAndCompare(ctx context.Context, prefixes []string) (*catalog.ScanResult, error)
-	ScanAndUpdate(ctx context.Context, prefixes []string) (*catalog.UpdateResult, error)
+	ScanAndUpdate(ctx context.Context, prefixes []string, force bool) (*catalog.UpdateResult, error)
 }
 
 type downloadAPI interface {
@@ -273,12 +273,13 @@ func runImportWithChangeDetection(
 	}
 	defer func() { _ = services.etl.Close() }()
 
-	return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork)
+	return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork, false)
 }
 
 // executeImportPipeline runs the full import pipeline: scan → download → import.
 // hasPendingWork indicates whether there are existing pending imports in the database,
 // which affects the early-return behavior when no new S3 changes are detected.
+// force re-imports every in-scope file regardless of change detection.
 func executeImportPipeline(
 	ctx context.Context,
 	catalogService catalogAPI,
@@ -287,19 +288,20 @@ func executeImportPipeline(
 	s3Prefixes []string,
 	enabledCategory []model.FileCategory,
 	hasPendingWork bool,
+	force bool,
 ) error {
 	totalStart := time.Now()
 	slog.Info("starting import", "event", "import")
 
 	// 1. Scan and update catalog
-	updateResult, err := catalogService.ScanAndUpdate(ctx, s3Prefixes)
+	updateResult, err := catalogService.ScanAndUpdate(ctx, s3Prefixes, force)
 	if err != nil {
 		return fmt.Errorf("scan and update catalog: %w", err)
 	}
 
-	// Early return if no changes and no pending work
-	if updateResult.UpdatedCount == 0 && !hasPendingWork {
-		fmt.Println("No changes.")
+	// Early return if no changes and no pending work (force always re-imports)
+	if !force && updateResult.UpdatedCount == 0 && !hasPendingWork {
+		fmt.Println("No changes detected.")
 		return nil
 	}
 

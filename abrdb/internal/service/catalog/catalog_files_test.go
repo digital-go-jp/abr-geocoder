@@ -79,6 +79,7 @@ func TestDecideFileAction(t *testing.T) {
 		existing   *model.File
 		localExist bool
 		updateDB   bool
+		force      bool
 		want       fileAction
 	}{
 		// --- dry-run (updateDB=false) ---
@@ -131,11 +132,26 @@ func TestDecideFileAction(t *testing.T) {
 			existing: unchangedPendingImport, localExist: false, updateDB: true,
 			want: fileAction{needsDownload: true, needsImport: true, isNewOrModified: false},
 		},
+		// --- force (updateDB=true, force=true): re-import everything in scope ---
+		{
+			// Unchanged and already imported would normally be skipped; force
+			// re-downloads and re-imports it so a config/filter change is re-applied.
+			name:     "force: unchanged already-imported re-downloads and re-imports",
+			existing: unchanged, localExist: true, updateDB: true, force: true,
+			want: fileAction{needsDownload: true, needsImport: true, isNewOrModified: false},
+		},
+		{
+			// A brand-new file is still upserted under force (existing==nil path),
+			// so files added since the last import are not missed.
+			name:     "force: brand-new file still downloaded and imported",
+			existing: nil, localExist: false, updateDB: true, force: true,
+			want: fileAction{needsDownload: true, needsImport: true, isNewOrModified: true},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := decideFileAction(tt.existing, file, tt.localExist, tt.updateDB)
+			got := decideFileAction(tt.existing, file, tt.localExist, tt.updateDB, tt.force)
 			if got != tt.want {
 				t.Errorf("decideFileAction() = %+v, want %+v", got, tt.want)
 			}
