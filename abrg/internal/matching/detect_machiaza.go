@@ -234,6 +234,7 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address string, 
 	for i := range basicResults {
 		results = append(results, repository.BasicResultToNormalized(&basicResults[i]))
 	}
+	ambiguousFlg := hasAmbiguousRsdtAddrFlg(results)
 
 	// Select best match when multiple candidates exist
 	if len(results) > 1 {
@@ -248,5 +249,34 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address string, 
 		}
 	}
 
+	// A machiaza where 住居表示実施/非実施 coexist has one row per flag in ABR, so
+	// which side the address belongs to is unknown at machiaza level (issue #262).
+	// v2 represented this as AMBIGUOUS_RSDT_ADDR_FLG (-1); v3 uses null.
+	for i := range results {
+		if results[i].IDs.LgCode != nil && results[i].IDs.MachiazaID != nil &&
+			ambiguousFlg[*results[i].IDs.LgCode+*results[i].IDs.MachiazaID] {
+			results[i].IDs.RsdtAddrFlg = nil
+		}
+	}
+
 	return results, nil
+}
+
+// hasAmbiguousRsdtAddrFlg reports, per lg_code+machiaza_id, whether the candidates
+// contain rows with differing rsdt_addr_flg.
+func hasAmbiguousRsdtAddrFlg(results []model.MatchedResult) map[string]bool {
+	seen := make(map[string]string, len(results))
+	ambiguous := make(map[string]bool)
+	for i := range results {
+		ids := &results[i].IDs
+		if ids.LgCode == nil || ids.MachiazaID == nil || ids.RsdtAddrFlg == nil {
+			continue
+		}
+		key := *ids.LgCode + *ids.MachiazaID
+		if prev, ok := seen[key]; ok && prev != *ids.RsdtAddrFlg {
+			ambiguous[key] = true
+		}
+		seen[key] = *ids.RsdtAddrFlg
+	}
+	return ambiguous
 }
