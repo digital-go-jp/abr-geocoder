@@ -205,9 +205,17 @@ func (s *twoStageSearch) normalizeWithBasic(
 		return nil, nil
 	}
 
-	// Merge IDs from basicResults (rsdt_addr_flg is not in cache_parcel or cache_rsdtdsp)
-	if result.IDs.RsdtAddrFlg == nil && basic.IDs.RsdtAddrFlg != nil {
-		result.IDs.RsdtAddrFlg = basic.IDs.RsdtAddrFlg
+	// rsdt_addr_flg is not in cache_parcel or cache_rsdtdsp. A residential match is
+	// by definition in the 住居表示実施 part of the machiaza, so the flag is always 1;
+	// inheriting it from basicResults would report the base machiaza's flag, which in
+	// mixed rsdtdsp/parcel areas is 0 or ambiguous (one row per flag) (issue #262).
+	if result.IDs.RsdtAddrFlg == nil {
+		if category == model.CategoryResidential {
+			flg := model.RsdtAddrFlgResidential
+			result.IDs.RsdtAddrFlg = &flg
+		} else if basic.IDs.RsdtAddrFlg != nil {
+			result.IDs.RsdtAddrFlg = basic.IDs.RsdtAddrFlg
+		}
 	}
 
 	// Merge basic address info from basicResults (avoids redundant DB queries)

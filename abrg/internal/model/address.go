@@ -19,6 +19,9 @@ const (
 // All is a common constant representing "all" for various filters.
 const All = "all"
 
+// RsdtAddrFlgResidential is the rsdt_addr_flg value for 住居表示実施 (1).
+const RsdtAddrFlgResidential = "1"
+
 // MachiazaID constants
 const (
 	// UnknownMachiazaID represents an unknown machiaza (町字不明).
