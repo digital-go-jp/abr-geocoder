@@ -29,7 +29,6 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    pigz \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build/abrg/abrg /app/abrg
