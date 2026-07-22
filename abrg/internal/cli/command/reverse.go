@@ -11,7 +11,6 @@ import (
 
 	"abrg/internal/infra/duckdb"
 	"abrg/internal/model"
-	"abrg/internal/repository"
 	"abrg/internal/reverse"
 	"abrg/internal/util"
 )
@@ -45,8 +44,7 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 	}
 	defer setup.Cleanup()
 
-	repo := repository.NewRepository(setup.DB)
-	reverser := reverse.NewReverseGeocoder(repo,
+	reverser := reverse.NewReverseGeocoder(setup.Repo,
 		reverse.TableExists(setup.DB, duckdb.TableRsdtdsp),
 		reverse.TableExists(setup.DB, duckdb.TableParcel),
 	)

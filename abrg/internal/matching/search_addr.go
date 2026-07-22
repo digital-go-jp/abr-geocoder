@@ -2,6 +2,7 @@ package matching
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"abrg/internal/model"
 )
@@ -95,6 +96,6 @@ func startsWithAlphaOrKatakana(s string) bool {
 	if s == "" {
 		return false
 	}
-	r := []rune(s)[0]
+	r, _ := utf8.DecodeRuneInString(s)
 	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= 'ア' && r <= 'ン')
 }

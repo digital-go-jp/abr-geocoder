@@ -73,7 +73,7 @@ func TestTwoStageSearchResidential(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := search.searchResidential(context.Background(), tt.lgCode, tt.machiazaID, tt.searchAddr)
+			result, err := search.searchResidential(context.Background(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr))
 			if err != nil {
 				t.Fatalf("searchResidential() error = %v", err)
 			}
@@ -127,7 +127,7 @@ func TestTwoStageSearchParcel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := search.searchParcel(context.Background(), tt.lgCode, tt.machiazaID, tt.searchAddr, 1)
+			result, err := search.searchParcel(context.Background(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr), 1)
 			if err != nil {
 				t.Fatalf("searchParcel() error = %v", err)
 			}

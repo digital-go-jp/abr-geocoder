@@ -149,7 +149,7 @@ func buildDTypesParam(columnTypes map[string]string) string {
 	if len(columnTypes) == 0 {
 		return ""
 	}
-	var parts []string
+	parts := make([]string, 0, len(columnTypes))
 	for col, typ := range columnTypes {
 		parts = append(parts, fmt.Sprintf("'%s': '%s'", col, typ))
 	}
@@ -157,7 +157,7 @@ func buildDTypesParam(columnTypes map[string]string) string {
 }
 
 func buildWhereClause(filters map[string][]string) string {
-	var clauses []string
+	clauses := make([]string, 0, len(filters))
 	for column, values := range filters {
 		if len(values) == 0 {
 			continue

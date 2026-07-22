@@ -8,7 +8,6 @@ import (
 
 	"abrg/internal/matching"
 	"abrg/internal/model"
-	"abrg/internal/repository"
 	"abrg/internal/util"
 )
 
@@ -36,12 +35,11 @@ func runGeocode(ctx context.Context, opts processorOptions) error {
 	}
 	defer setup.Cleanup()
 
-	repo := repository.NewRepository(setup.DB)
 	categoryVal := model.Category(setup.resolveCategory(opts.Category))
 
 	p := newDefaultProcessor(setup, func(ctx context.Context, address string) (*model.GeocodeResponse, error) {
 		start := time.Now()
-		result, err := matching.Geocode(ctx, setup.Matcher, repo, model.MatchQuery{
+		result, err := matching.Geocode(ctx, setup.Matcher, setup.Repo, model.MatchQuery{
 			Address:  address,
 			Category: categoryVal,
 			Limit:    opts.Limit,

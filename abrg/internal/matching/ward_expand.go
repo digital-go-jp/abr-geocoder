@@ -10,19 +10,19 @@ import (
 // tryWardExpansion attempts to resolve a ward-only address by prepending candidate city names.
 // For example, "中区本町" is expanded to "横浜市中区本町", "名古屋市中区本町", etc.
 // Returns all matching results from all candidate cities, allowing downstream limit to control output.
-func (n *Impl) tryWardExpansion(ctx context.Context, searchAddrBase, searchAddrWithColon, originalAddr string) ([]model.MatchedResult, string, string) {
+func (n *Impl) tryWardExpansion(ctx context.Context, searchAddrBase, searchAddrWithColon, originalAddr string) ([]model.MatchedResult, string, string, error) {
 	if n.wardCandidates == nil {
-		return nil, "", ""
+		return nil, "", "", nil
 	}
 
 	ward := extractWardPrefix(searchAddrBase)
 	if ward == "" {
-		return nil, "", ""
+		return nil, "", "", nil
 	}
 
 	candidates := n.wardCandidates[ward]
 	if len(candidates) == 0 {
-		return nil, "", ""
+		return nil, "", "", nil
 	}
 
 	remainder := searchAddrBase[len(ward):]
@@ -34,7 +34,10 @@ func (n *Impl) tryWardExpansion(ctx context.Context, searchAddrBase, searchAddrW
 	for _, c := range candidates {
 		expanded := c.CityWard + remainder
 		results, modAddr, err := detectMachiaza(ctx, n.repo, expanded, model.All, originalAddr)
-		if err != nil || len(results) == 0 {
+		if err != nil {
+			return nil, "", "", err
+		}
+		if len(results) == 0 {
 			continue
 		}
 		allResults = append(allResults, results...)
@@ -54,9 +57,9 @@ func (n *Impl) tryWardExpansion(ctx context.Context, searchAddrBase, searchAddrW
 		}
 	}
 	if len(allResults) == 0 {
-		return nil, "", ""
+		return nil, "", "", nil
 	}
-	return allResults, firstAddr, firstPref
+	return allResults, firstAddr, firstPref, nil
 }
 
 func extractWardPrefix(addr string) string {

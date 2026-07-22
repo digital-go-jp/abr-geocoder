@@ -2,6 +2,7 @@ package levenshtein
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"abrg/internal/model"
@@ -25,6 +26,33 @@ func (s *stubCityQuerier) FindBasicByPrefix(_ context.Context, _ repository.Pref
 func (s *stubCityQuerier) FindCityByAddress(_ context.Context, params repository.CitySearchParams) (*repository.CityResult, error) {
 	s.gotParams = params
 	return s.city, nil
+}
+
+// failingPrefixQuerier finds nothing via Levenshtein and fails the prefix query.
+type failingPrefixQuerier struct{}
+
+func (failingPrefixQuerier) FindBasicByLevenshtein(context.Context, repository.LevenshteinParams) ([]repository.BasicResult, error) {
+	return nil, nil
+}
+
+func (failingPrefixQuerier) FindBasicByPrefix(context.Context, repository.PrefixParams) ([]repository.BasicResult, error) {
+	return nil, errors.New("prefix query failed")
+}
+
+func (failingPrefixQuerier) FindCityByAddress(context.Context, repository.CitySearchParams) (*repository.CityResult, error) {
+	return nil, nil
+}
+
+// A prefix-fallback query failure must surface as an error, not as "no match".
+func TestSearch_PrefixFallbackErrorPropagates(t *testing.T) {
+	_, err := Search(context.Background(), failingPrefixQuerier{}, SearchParams{
+		Category:   model.CategoryBasic,
+		SearchAddr: "宇佐市安心院町古川長坂",
+		Limit:      1,
+	})
+	if err == nil {
+		t.Fatal("Search() error = nil, want prefix query error")
+	}
 }
 
 // A detected prefecture code must be forwarded to the city fallback query so that
