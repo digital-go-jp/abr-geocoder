@@ -134,7 +134,7 @@ resource "aws_sfn_state_machine" "data_update" {
     States = {
       # Step 1: Check for changes (dry-run)
       # - exit 0: no changes -> end workflow
-      # - exit 2: changes pending -> continue to import (caught as task failure)
+      # - exit 1: changes pending -> continue to import (caught as task failure)
       CheckChanges = {
         Type     = "Task"
         Resource = "arn:aws:states:::ecs:runTask.sync"
@@ -165,14 +165,52 @@ resource "aws_sfn_state_machine" "data_update" {
         }
         # exit 0 (no changes) -> success -> end
         Next = "NoChanges"
-        # exit 2 (changes pending) -> task fails -> catch and continue
+        # exit 1 (changes pending) and genuine errors both surface as
+        # States.TaskFailed, so the exit code decides which one it was
         Catch = [
           {
             ErrorEquals = ["States.TaskFailed"]
             ResultPath  = "$.error"
-            Next        = "UpdateData"
+            Next        = "ParseCheckFailure"
           }
         ]
+      }
+      # The task result arrives as a JSON string, so it has to be parsed before
+      # the exit code can be read.
+      ParseCheckFailure = {
+        Type = "Pass"
+        Parameters = {
+          "cause.$" = "States.StringToJson($.error.Cause)"
+        }
+        ResultPath = "$.parsed"
+        Next       = "ClassifyCheckFailure"
+      }
+      # Only exit 1 means changes are pending. Anything else (a crashed
+      # container, an ECS API rejection) must fail loudly instead of being
+      # mistaken for new data and triggering a full import and cache rebuild.
+      ClassifyCheckFailure = {
+        Type = "Choice"
+        Choices = [
+          {
+            And = [
+              {
+                Variable  = "$.parsed.cause.Containers[0].ExitCode"
+                IsPresent = true
+              },
+              {
+                Variable      = "$.parsed.cause.Containers[0].ExitCode"
+                NumericEquals = 1
+              }
+            ]
+            Next = "UpdateData"
+          }
+        ]
+        Default = "CheckChangesFailed"
+      }
+      CheckChangesFailed = {
+        Type  = "Fail"
+        Error = "CheckChangesFailed"
+        Cause = "abrdb import --dry-run did not report a change-detection result"
       }
       NoChanges = {
         Type    = "Succeed"

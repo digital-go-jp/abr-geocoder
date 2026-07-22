@@ -46,8 +46,9 @@ func NewQueryExecutor(ctx context.Context, connStr string) (*QueryExecutor, erro
 		return nil, fmt.Errorf("create pool: %w", err)
 	}
 
-	// Health check
-	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	// Health check. The first connection may have to wait for a database that
+	// is paused or still starting up.
+	pingCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	if err := pool.Ping(pingCtx); err != nil {

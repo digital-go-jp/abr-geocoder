@@ -196,7 +196,7 @@ aws ecr get-login-password | \
   docker login --username AWS --password-stdin $ECR_REGISTRY
 
 # abrg (Graviton ARM64, AWS CLI 付きイメージ)
-docker build --platform linux/arm64 -f docs/aws/abrg.Dockerfile -t abrg .
+docker build --platform linux/arm64 -f abrg/Dockerfile -t abrg .
 docker tag abrg:latest $ABRG_REPO:latest
 docker push $ABRG_REPO:latest
 
@@ -310,7 +310,7 @@ flowchart TD
     EB["EventBridge Scheduler<br/>毎日 02:00 JST"] --> SFN["Step Functions"]
     SFN --> CHECK["CheckChanges<br/>(import --dry-run)"]
     CHECK -->|exit 0<br/>変更なし| END1["完了"]
-    CHECK -->|exit 2<br/>変更あり| IMPORT["UpdateData<br/>(import --quiet)"]
+    CHECK -->|exit 1<br/>変更あり| IMPORT["UpdateData<br/>(import --quiet)"]
     IMPORT --> CACHE["BuildCache"]
     CACHE --> RESTART["RestartService"]
     RESTART --> END2["完了"]

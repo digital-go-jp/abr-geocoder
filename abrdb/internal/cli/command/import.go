@@ -26,10 +26,14 @@ import (
 	"abrdb/internal/util"
 )
 
-// ExitCode2Error signals that the command should exit with code 2 (changes pending).
-type ExitCode2Error struct{ Message string }
+// ChangesPendingError reports that a dry-run found changes to import. It is a
+// result rather than a failure, so it exits 1 the way diff(1) reports
+// differences, leaving 2 to mean the check itself could not be completed.
+type ChangesPendingError struct{ Message string }
 
-func (e ExitCode2Error) Error() string { return e.Message }
+func (e ChangesPendingError) Error() string { return e.Message }
+
+func (ChangesPendingError) ExitCode() int { return 1 }
 
 // ImportOptions holds the import command options.
 type ImportOptions struct {
@@ -390,7 +394,7 @@ func printDryRunSummary(ctx context.Context, executor *db.QueryExecutor, scanRes
 
 	fmt.Printf("Total: %d files to download, %d pairs to import\n", totalDownload, totalImport)
 	if totalDownload > 0 || totalImport > 0 {
-		return ExitCode2Error{Message: "changes pending"}
+		return ChangesPendingError{Message: "changes pending"}
 	}
 	return nil
 }
