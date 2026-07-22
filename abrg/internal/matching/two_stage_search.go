@@ -55,8 +55,7 @@ func adjustMachiazaIDForChome(machiazaID, chomeNum string) string {
 }
 
 // searchResidential searches for residential address using 2-stage approach.
-func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiazaID, searchAddr string) (*model.MatchedResult, error) {
-	parsed := parseSearchAddr(searchAddr)
+func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress) (*model.MatchedResult, error) {
 	numbers := parsed.numberParts()
 	if len(numbers) == 0 {
 		return nil, nil
@@ -113,8 +112,7 @@ func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiaza
 }
 
 // searchParcel searches for parcel address using exact prc_num matching.
-func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID, searchAddr string, parcelCount int) (*model.MatchedResult, error) {
-	parsed := parseSearchAddr(searchAddr)
+func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress, parcelCount int) (*model.MatchedResult, error) {
 	numbers := parsed.numericParts()
 	if len(numbers) == 0 {
 		return nil, nil
@@ -187,13 +185,14 @@ func (s *twoStageSearch) normalizeWithBasic(
 		return nil, nil
 	}
 
+	parsed := parseSearchAddr(searchAddr)
 	var result *model.MatchedResult
 	var err error
 	switch category {
 	case model.CategoryResidential:
-		result, err = s.searchResidential(ctx, lgCode, machiazaID, searchAddr)
+		result, err = s.searchResidential(ctx, lgCode, machiazaID, parsed)
 	case model.CategoryParcel:
-		result, err = s.searchParcel(ctx, lgCode, machiazaID, searchAddr, basic.IDs.ParcelCount)
+		result, err = s.searchParcel(ctx, lgCode, machiazaID, parsed, basic.IDs.ParcelCount)
 	default:
 		return nil, nil
 	}
@@ -223,7 +222,6 @@ func (s *twoStageSearch) normalizeWithBasic(
 
 	// For residential search, extract chome from searchAddr if present (e.g., "舞浜2@:11" -> "2丁目")
 	if category == model.CategoryResidential && result.StructuredAddress.Chome == nil {
-		parsed := parseSearchAddr(searchAddr)
 		if parsed.HasChome && parsed.Chome != "" {
 			chome := parsed.Chome + "丁目"
 			result.StructuredAddress.Chome = &chome
