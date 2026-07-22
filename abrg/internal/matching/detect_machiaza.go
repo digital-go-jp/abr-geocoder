@@ -265,6 +265,11 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address string, 
 // hasAmbiguousRsdtAddrFlg reports, per lg_code+machiaza_id, whether the candidates
 // contain rows with differing rsdt_addr_flg.
 func hasAmbiguousRsdtAddrFlg(results []model.MatchedResult) map[string]bool {
+	// Ambiguity needs at least two rows; skip the map allocations for the
+	// common single-candidate case (nil map reads are safe for callers).
+	if len(results) < 2 {
+		return nil
+	}
 	seen := make(map[string]string, len(results))
 	ambiguous := make(map[string]bool)
 	for i := range results {
