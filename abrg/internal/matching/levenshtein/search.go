@@ -52,7 +52,10 @@ func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]mod
 	// and the extra "長坂" (koaza not in DB) exceeds the Levenshtein threshold
 	if len(results) == 0 {
 		prefixResults, prefixErr := searchWithPrefixMatch(ctx, repo, p)
-		if prefixErr == nil && len(prefixResults) > 0 {
+		if prefixErr != nil {
+			return nil, prefixErr
+		}
+		if len(prefixResults) > 0 {
 			return prefixResults, nil
 		}
 	}
