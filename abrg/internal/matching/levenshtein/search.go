@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"abrg/internal/matchlevel"
 	"abrg/internal/model"
@@ -110,7 +111,8 @@ func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p Searc
 	}
 
 	// Skip if base address is too short (need at least city + some characters)
-	if len([]rune(baseAddr)) < minPrefixMatchLength {
+	baseLen := utf8.RuneCountInString(baseAddr)
+	if baseLen < minPrefixMatchLength {
 		return nil, nil
 	}
 
@@ -126,7 +128,6 @@ func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p Searc
 		return nil, fmt.Errorf("prefix match query failed: %w", err)
 	}
 
-	totalLen := len([]rune(baseAddr))
 	results := make([]model.MatchedResult, 0, p.Limit)
 	for i := range candidates {
 		brd := &candidates[i]
@@ -139,12 +140,12 @@ func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p Searc
 		unmatchedParts := extractUnmatchedFromStandardized(p.NormalizedAddr, matchedAddr)
 
 		// Calculate score based on how much of the input matched
-		matchedLen := len([]rune(brd.NormalizedAddress))
+		matchedLen := utf8.RuneCountInString(brd.NormalizedAddress)
 
 		result.MatchedAddress = matchedAddr
 		result.UnmatchedAddress = unmatchedParts
 		result.MatchLevel = ml
-		result.Score = float64(matchedLen) / float64(totalLen)
+		result.Score = float64(matchedLen) / float64(baseLen)
 
 		results = append(results, result)
 	}

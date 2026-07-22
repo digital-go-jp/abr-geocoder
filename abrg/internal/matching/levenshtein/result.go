@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"abrg/internal/matchlevel"
 	"abrg/internal/model"
@@ -45,7 +46,7 @@ func ExtractSearchNumbers(searchAddr string) string {
 // processResults processes query results and returns normalized results.
 func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr, originalAddr string, category model.Category, limit int) []model.MatchedResult {
 	results := make([]model.MatchedResult, 0, limit)
-	addressLen := len([]rune(searchAddr))
+	addressLen := utf8.RuneCountInString(searchAddr)
 
 	for i := range candidates {
 		brd := &candidates[i]
