@@ -122,7 +122,7 @@ terraform init -migrate-state \
 rm -f terraform.tfstate terraform.tfstate.backup
 ```
 
-別マシン / DevContainer 再構築後は以下だけで bootstrap state を再取得できます:
+別のマシンで作業する場合、bootstrap をやり直す必要はありません。以下の init で state を再取得できます:
 
 ```bash
 cd docs/aws/terraform/bootstrap
@@ -311,12 +311,13 @@ flowchart TD
     SFN --> CHECK["CheckChanges<br/>(import --dry-run)"]
     CHECK -->|exit 0<br/>変更なし| END1["完了"]
     CHECK -->|exit 1<br/>変更あり| IMPORT["UpdateData<br/>(import --quiet)"]
+    CHECK -->|その他<br/>判定不能| FAIL["実行失敗"]
     IMPORT --> CACHE["BuildCache"]
     CACHE --> RESTART["RestartService"]
     RESTART --> END2["完了"]
 ```
 
-1. **CheckChanges** (`import --dry-run`) — DCAT Feed と差分検出
+1. **CheckChanges** (`import --dry-run`) — DCAT Feed と差分検出。変更がなければ完了し、以降の処理は実行されません。判定に失敗した場合は実行が失敗になります。
 2. **UpdateData** (`import --quiet`) — 差分インポート
 3. **BuildCache** — DuckDB キャッシュ再構築
 4. **RestartService** — ECS サービス再起動
