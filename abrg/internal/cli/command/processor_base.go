@@ -38,6 +38,7 @@ type processorOptions struct {
 // processorSetup holds initialized components for processing commands.
 type processorSetup struct {
 	DB              *sql.DB
+	Repo            *repository.DB
 	Matcher         matching.Matcher
 	InFile          *os.File
 	OutFile         *os.File
@@ -66,6 +67,7 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	}
 	setup.cleanup = append(setup.cleanup, func() { _ = dbCache.Close() })
 	setup.DB = dbCache.DB()
+	setup.Repo = repository.NewRepository(setup.DB)
 
 	cacheCfg, err := cache.LoadConfig(ctx, dbCache.DB())
 	if err != nil {
@@ -87,7 +89,7 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	}
 
 	if initMatcher {
-		setup.Matcher = matching.NewMatcher(repository.NewRepository(dbCache.DB()), dbCache.Lookups())
+		setup.Matcher = matching.NewMatcher(setup.Repo, dbCache.Lookups())
 	}
 
 	inFile, err := os.Open(opts.InputFile)
