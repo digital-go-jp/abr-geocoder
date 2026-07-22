@@ -1,6 +1,70 @@
 package matching
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"abrg/internal/cache"
+	"abrg/internal/repository"
+)
+
+// failingQuerier fails every repository query.
+type failingQuerier struct{}
+
+var errQueryFailed = errors.New("query failed")
+
+func (failingQuerier) FindCityRecord(context.Context, repository.CityRecordParams) (*repository.CityResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindCityRecordFuzzy(context.Context, repository.CityFuzzyParams) (*repository.CityResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindPrefecture(context.Context, string) (*repository.PrefectureResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindBasicByAddress(context.Context, repository.BasicSearchParams) ([]repository.BasicResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindBasicByLevenshtein(context.Context, repository.LevenshteinParams) ([]repository.BasicResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindBasicByPrefix(context.Context, repository.PrefixParams) ([]repository.BasicResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindCityByAddress(context.Context, repository.CitySearchParams) (*repository.CityResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindResidentialBestMatch(context.Context, string, string, repository.ResidentialFilter) (*repository.ResidentialBestResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindParcelExact(context.Context, string, string, repository.ParcelFilter) (*repository.ParcelResult, error) {
+	return nil, errQueryFailed
+}
+
+// A repository failure during ward expansion must surface as an error,
+// not as "no match".
+func TestTryWardExpansion_PropagatesQueryError(t *testing.T) {
+	n := &Impl{
+		repo: failingQuerier{},
+		wardCandidates: map[string][]cache.WardCandidate{
+			"中区": {{CityWard: "横浜市中区", PrefCode: "14"}},
+		},
+	}
+
+	_, _, _, err := n.tryWardExpansion(context.Background(), "中区本町", "中区本町", "中区本町")
+	if !errors.Is(err, errQueryFailed) {
+		t.Fatalf("tryWardExpansion() error = %v, want %v", err, errQueryFailed)
+	}
+}
 
 func TestExtractWardPrefix(t *testing.T) {
 	t.Parallel()
