@@ -39,8 +39,8 @@ func TestLoad(t *testing.T) {
 		{
 			name:            "uses defaults",
 			envVars:         map[string]string{},
-			wantFeedURL:     DefaultFeedURL,
-			wantDownloadDir: DefaultDownloadDir,
+			wantFeedURL:     "https://dataset.address-br.digital.go.jp/api/feed/dcat-us/1.1.json",
+			wantDownloadDir: "/tmp/abrdb/data",
 		},
 		{
 			name: "uses env vars",
@@ -56,7 +56,7 @@ func TestLoad(t *testing.T) {
 			envVars: map[string]string{
 				"ABRDB_DOWNLOAD_DIR": "/my/data",
 			},
-			wantFeedURL:     DefaultFeedURL,
+			wantFeedURL:     "https://dataset.address-br.digital.go.jp/api/feed/dcat-us/1.1.json",
 			wantDownloadDir: "/my/data",
 		},
 	}
