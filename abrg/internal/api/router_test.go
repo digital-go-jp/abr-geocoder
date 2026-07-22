@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -14,6 +15,11 @@ import (
 
 	"abrg/internal/model"
 )
+
+func TestMain(m *testing.M) {
+	gin.SetMode(gin.TestMode)
+	os.Exit(m.Run())
+}
 
 // makeAddressString creates a test address string with exactly n Unicode characters.
 func makeAddressString(n int) string {
@@ -57,8 +63,6 @@ func (m *mockReverseGeocoder) Reverse(_ context.Context, _ model.ReverseQuery) (
 }
 
 func TestGeocodeRequest_Validation(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name       string
 		query      string
@@ -137,8 +141,6 @@ func TestGeocodeRequest_Validation(t *testing.T) {
 }
 
 func TestReverseRequest_Validation(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name       string
 		query      string
@@ -270,8 +272,6 @@ func TestReverseRequest_Validation(t *testing.T) {
 }
 
 func TestMatchRequest_Validation(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name       string
 		query      string
@@ -344,8 +344,6 @@ func TestMatchRequest_Validation(t *testing.T) {
 }
 
 func TestCategoryValues(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	validCategory := []string{"all", "basic", "rsdtdsp", "parcel"}
 
 	for _, category := range validCategory {
@@ -386,7 +384,6 @@ func TestCategoryValues(t *testing.T) {
 
 // TestHealthHandler tests the health endpoint
 func TestHealthHandler(t *testing.T) {
-	gin.SetMode(gin.TestMode)
 	server := &GinServer{}
 
 	router := gin.New()
@@ -412,7 +409,6 @@ func TestHealthHandler(t *testing.T) {
 
 // TestRootHandler tests the root endpoint
 func TestRootHandler(t *testing.T) {
-	gin.SetMode(gin.TestMode)
 	server := &GinServer{apiVersion: "1.0.0"}
 
 	router := gin.New()
@@ -464,7 +460,6 @@ func TestRootHandler(t *testing.T) {
 
 // TestPositionDataDisabledHandler tests the position data disabled response
 func TestPositionDataDisabledHandler(t *testing.T) {
-	gin.SetMode(gin.TestMode)
 	server := &GinServer{}
 
 	router := gin.New()
@@ -502,8 +497,6 @@ func TestErrorResponse(t *testing.T) {
 
 // TestRegisterPositionEndpoint tests the registerPositionEndpoint helper
 func TestRegisterPositionEndpoint(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	handler := func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"handler": "enabled"})
 	}
@@ -624,8 +617,6 @@ func TestValidateAddress(t *testing.T) {
 
 // TestSendBadRequest tests the sendBadRequest helper function.
 func TestSendBadRequest(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	router := gin.New()
 	router.GET("/test", func(c *gin.Context) {
 		sendBadRequest(c, "test error message")
@@ -653,8 +644,6 @@ func TestSendBadRequest(t *testing.T) {
 
 // TestSendInternalServerError tests the sendInternalServerError helper function.
 func TestSendInternalServerError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	router := gin.New()
 	router.GET("/test", func(c *gin.Context) {
 		sendInternalServerError(c)
@@ -805,8 +794,6 @@ func TestSetResultInfo(t *testing.T) {
 
 // TestHandleAddressRequest tests the GinServer.handleAddressRequest method.
 func TestHandleAddressRequest(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name         string
 		address      string
@@ -898,8 +885,6 @@ func TestHandleAddressRequest(t *testing.T) {
 // TestConfigureCORS tests the configureCORS function.
 // This test verifies that configureCORS does not panic and properly configures the router.
 func TestConfigureCORS(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	t.Run("empty origin uses default CORS", func(t *testing.T) {
 		router := gin.New()
 		// Should not panic
@@ -941,8 +926,6 @@ func TestConfigureCORS(t *testing.T) {
 
 // TestNormalizeHandler_Integration tests the NormalizeHandler (text normalization).
 func TestNormalizeHandler_Integration(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name           string
 		query          string
@@ -1014,8 +997,6 @@ func TestNormalizeHandler_Integration(t *testing.T) {
 
 // TestRootHandler_FullInfo tests RootHandler with all fields populated.
 func TestRootHandler_FullInfo(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name               string
 		apiVersion         string
@@ -1121,8 +1102,6 @@ func TestRootHandler_FullInfo(t *testing.T) {
 
 // TestGeocodeHandler_Integration tests the GeocodeHandler with a mock normalizer.
 func TestGeocodeHandler_Integration(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name           string
 		query          string
@@ -1197,8 +1176,6 @@ func TestGeocodeHandler_Integration(t *testing.T) {
 
 // TestMatchHandler_Integration tests the MatchHandler with a mock normalizer.
 func TestMatchHandler_Integration(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name           string
 		query          string
@@ -1274,8 +1251,6 @@ func TestMatchHandler_Integration(t *testing.T) {
 
 // TestReverseHandler_Integration tests the ReverseHandler with a mock reverse geocoder.
 func TestReverseHandler_Integration(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
 	tests := []struct {
 		name           string
 		query          string
