@@ -5,6 +5,7 @@ services:
     build:
       context: ..
       dockerfile: abrg/Dockerfile
+      target: dev
     container_name: abrg-quickstart
     ports:
       - "3001:3000"

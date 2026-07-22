@@ -196,7 +196,7 @@ aws ecr get-login-password | \
   docker login --username AWS --password-stdin $ECR_REGISTRY
 
 # abrg (Graviton ARM64, AWS CLI 付きイメージ)
-docker build --platform linux/arm64 -f docs/aws/abrg.Dockerfile -t abrg .
+docker build --platform linux/arm64 -f abrg/Dockerfile -t abrg .
 docker tag abrg:latest $ABRG_REPO:latest
 docker push $ABRG_REPO:latest
 

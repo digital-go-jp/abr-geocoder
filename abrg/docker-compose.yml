@@ -4,6 +4,7 @@ services:
     build:
       context: ..
       dockerfile: abrg/Dockerfile
+      target: dev
     container_name: abrg_cli
     environment:
       DB_HOST: ${DB_HOST}
