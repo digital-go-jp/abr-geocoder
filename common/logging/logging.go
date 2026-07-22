@@ -32,12 +32,12 @@ func NewFromEnv() *slog.Logger {
 }
 
 func parseLevel(s string) slog.Level {
-	switch strings.ToUpper(s) {
-	case "DEBUG":
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "debug":
 		return slog.LevelDebug
-	case "WARN":
+	case "warn":
 		return slog.LevelWarn
-	case "ERROR":
+	case "error":
 		return slog.LevelError
 	default:
 		return slog.LevelInfo
