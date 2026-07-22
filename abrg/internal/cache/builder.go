@@ -78,11 +78,11 @@ func registerUDF(ctx context.Context, conn *sql.DB) error {
 }
 
 func initSchema(conn *sql.DB) error {
-	sql, err := schema.InitSchemaSQL()
+	sqlText, err := schema.InitSchemaSQL()
 	if err != nil {
 		return fmt.Errorf("failed to get init schema SQL: %w", err)
 	}
-	if _, err := conn.Exec(sql); err != nil {
+	if _, err := conn.Exec(sqlText); err != nil {
 		return fmt.Errorf("failed to execute init schema: %w", err)
 	}
 	return nil
@@ -249,22 +249,22 @@ func execTimed(ctx context.Context, conn *sql.DB, action, name, stmt string) (fl
 }
 
 func createIndexes(ctx context.Context, conn *sql.DB) error {
-	sql, err := schema.GetCreateIndexesSQL()
+	sqlText, err := schema.GetCreateIndexesSQL()
 	if err != nil {
 		return fmt.Errorf("failed to get indexes SQL: %w", err)
 	}
-	if _, err := conn.ExecContext(ctx, sql); err != nil {
+	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
 	return nil
 }
 
 func createSpatialIndexes(ctx context.Context, conn *sql.DB) error {
-	sql, err := schema.GetCreateSpatialIndexesSQL()
+	sqlText, err := schema.GetCreateSpatialIndexesSQL()
 	if err != nil {
 		return fmt.Errorf("failed to get spatial indexes SQL: %w", err)
 	}
-	if _, err := conn.ExecContext(ctx, sql); err != nil {
+	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
 		return fmt.Errorf("failed to create spatial indexes: %w", err)
 	}
 	return nil
