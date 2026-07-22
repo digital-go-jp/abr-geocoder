@@ -53,11 +53,13 @@ Japanese address data from the Address Base Registry (ABR).`,
 	if err == nil {
 		return 0
 	}
-	// Exit code 2 for dry-run with pending changes (not an error)
-	if _, ok := errors.AsType[command.ExitCode2Error](err); ok {
-		return 2
+	// A dry-run reporting pending changes is a result, not an error
+	if _, ok := errors.AsType[command.ChangesPendingError](err); ok {
+		return 1
 	}
-	// Print only the error (usage suppressed) and exit non-zero
+	// Print only the error (usage suppressed) and exit non-zero. 2 rather than
+	// 1, so that an unhandled failure - including a panic, which the runtime
+	// also exits 2 on - can never be read as a dry-run result.
 	_, _ = os.Stderr.WriteString(err.Error() + "\n")
-	return 1
+	return 2
 }
