@@ -239,24 +239,22 @@ func execTimed(ctx context.Context, conn *sql.DB, action, name, stmt string) (fl
 	return time.Since(start).Seconds(), nil
 }
 
-func createIndexes(ctx context.Context, conn *sql.DB) error {
-	sqlText, err := schema.GetCreateIndexesSQL()
+// execSchemaSQL executes schema SQL obtained from a getter function.
+func execSchemaSQL(ctx context.Context, conn *sql.DB, name string, getSQL func() (string, error)) error {
+	sqlText, err := getSQL()
 	if err != nil {
-		return fmt.Errorf("failed to get indexes SQL: %w", err)
+		return fmt.Errorf("failed to get %s SQL: %w", name, err)
 	}
 	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
-		return fmt.Errorf("failed to create indexes: %w", err)
+		return fmt.Errorf("failed to create %s: %w", name, err)
 	}
 	return nil
 }
 
+func createIndexes(ctx context.Context, conn *sql.DB) error {
+	return execSchemaSQL(ctx, conn, "indexes", schema.GetCreateIndexesSQL)
+}
+
 func createSpatialIndexes(ctx context.Context, conn *sql.DB) error {
-	sqlText, err := schema.GetCreateSpatialIndexesSQL()
-	if err != nil {
-		return fmt.Errorf("failed to get spatial indexes SQL: %w", err)
-	}
-	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
-		return fmt.Errorf("failed to create spatial indexes: %w", err)
-	}
-	return nil
+	return execSchemaSQL(ctx, conn, "spatial indexes", schema.GetCreateSpatialIndexesSQL)
 }
