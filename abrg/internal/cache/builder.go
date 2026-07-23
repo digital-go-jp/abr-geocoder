@@ -31,7 +31,7 @@ func Build(ctx context.Context, cachePath string) error {
 	phaseSec["open"] = time.Since(openStart).Seconds()
 
 	extStart := time.Now()
-	if err := duck.LoadExtension(conn, "spatial"); err != nil {
+	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
 		return fmt.Errorf("failed to load spatial extension: %w", err)
 	}
 	phaseSec["extension"] = time.Since(extStart).Seconds()
@@ -43,7 +43,7 @@ func Build(ctx context.Context, cachePath string) error {
 	phaseSec["udf"] = time.Since(udfStart).Seconds()
 
 	schemaStart := time.Now()
-	if err := initSchema(conn); err != nil {
+	if err := initSchema(ctx, conn); err != nil {
 		return fmt.Errorf("failed to initialize schema: %w", err)
 	}
 	phaseSec["schema"] = time.Since(schemaStart).Seconds()
@@ -77,12 +77,12 @@ func registerUDF(ctx context.Context, conn *sql.DB) error {
 	return nil
 }
 
-func initSchema(conn *sql.DB) error {
+func initSchema(ctx context.Context, conn *sql.DB) error {
 	sqlText, err := schema.InitSchemaSQL()
 	if err != nil {
 		return fmt.Errorf("failed to get init schema SQL: %w", err)
 	}
-	if _, err := conn.Exec(sqlText); err != nil {
+	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
 		return fmt.Errorf("failed to execute init schema: %w", err)
 	}
 	return nil
@@ -101,7 +101,7 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	}
 
 	pgExtStart := time.Now()
-	if err := duck.LoadExtension(conn, "postgres"); err != nil {
+	if err := duck.LoadExtension(ctx, conn, "postgres"); err != nil {
 		return nil, fmt.Errorf("failed to load postgres extension: %w", err)
 	}
 	phaseSec["pg_extension"] = time.Since(pgExtStart).Seconds()

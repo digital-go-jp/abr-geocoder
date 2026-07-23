@@ -43,10 +43,10 @@ func NewReverseGeocoder(repo spatialQuerier, hasResidential, hasParcel bool) *Re
 }
 
 // TableExists checks if a table exists in the database using DuckDB's information schema.
-func TableExists(db *sql.DB, tableName string) bool {
+func TableExists(ctx context.Context, db *sql.DB, tableName string) bool {
 	var exists bool
 	// Use parameterized query to avoid SQL injection
-	err := db.QueryRow(
+	err := db.QueryRowContext(ctx,
 		"SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = ?)",
 		tableName,
 	).Scan(&exists)

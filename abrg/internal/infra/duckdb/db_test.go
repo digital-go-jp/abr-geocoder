@@ -51,7 +51,7 @@ func TestOpenReadOnly_ExistingFileIsReadOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open (write): %v", err)
 	}
-	if _, err := writeDB.Exec(`CREATE TABLE t (id INTEGER); INSERT INTO t VALUES (1)`); err != nil {
+	if _, err := writeDB.ExecContext(t.Context(), `CREATE TABLE t (id INTEGER); INSERT INTO t VALUES (1)`); err != nil {
 		t.Fatalf("seed data: %v", err)
 	}
 	if err := writeDB.Close(); err != nil {
@@ -66,7 +66,7 @@ func TestOpenReadOnly_ExistingFileIsReadOnly(t *testing.T) {
 
 	// The connection must be genuinely usable for reads.
 	var n int
-	if err := db.QueryRow(`SELECT id FROM t`).Scan(&n); err != nil {
+	if err := db.QueryRowContext(t.Context(), `SELECT id FROM t`).Scan(&n); err != nil {
 		t.Fatalf("read query: %v", err)
 	}
 	if n != 1 {
@@ -75,7 +75,7 @@ func TestOpenReadOnly_ExistingFileIsReadOnly(t *testing.T) {
 
 	// read_only must actually be applied: a write has to be rejected. This fails
 	// if the "?access_mode=read_only" suffix is ever dropped from OpenReadOnly.
-	if _, err := db.Exec(`INSERT INTO t VALUES (2)`); err == nil {
+	if _, err := db.ExecContext(t.Context(), `INSERT INTO t VALUES (2)`); err == nil {
 		t.Error("write succeeded on a read-only connection, want it rejected")
 	}
 }
