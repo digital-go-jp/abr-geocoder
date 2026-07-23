@@ -2,6 +2,7 @@
 package duck
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -17,7 +18,7 @@ func Open(path string) (*sql.DB, error) {
 }
 
 // LoadExtension installs and loads a DuckDB extension.
-func LoadExtension(db *sql.DB, name string) error {
-	_, err := db.Exec(fmt.Sprintf("INSTALL %s; LOAD %s", name, name))
+func LoadExtension(ctx context.Context, db *sql.DB, name string) error {
+	_, err := db.ExecContext(ctx, fmt.Sprintf("INSTALL %s; LOAD %s", name, name))
 	return err
 }

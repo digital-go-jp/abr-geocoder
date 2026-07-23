@@ -1,6 +1,7 @@
 package reverse
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -14,8 +15,8 @@ var initTestReverseGeocoder = testutil.NewCacheOnce(func(c *cache.DuckDBCache) (
 	db := c.DB()
 	return NewReverseGeocoder(
 		repository.NewRepository(db),
-		TableExists(db, "cache_rsdtdsp"),
-		TableExists(db, "cache_parcel"),
+		TableExists(context.Background(), db, "cache_rsdtdsp"),
+		TableExists(context.Background(), db, "cache_parcel"),
 	), nil
 })
 

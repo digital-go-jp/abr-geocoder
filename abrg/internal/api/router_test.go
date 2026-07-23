@@ -120,7 +120,7 @@ func TestGeocodeRequest_Validation(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", "/test"+tt.query, nil)
+			req, _ := http.NewRequestWithContext(t.Context(), "GET", "/test"+tt.query, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {
@@ -251,7 +251,7 @@ func TestReverseRequest_Validation(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", "/test"+tt.query, nil)
+			req, _ := http.NewRequestWithContext(t.Context(), "GET", "/test"+tt.query, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {
@@ -323,7 +323,7 @@ func TestMatchRequest_Validation(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", "/test"+tt.query, nil)
+			req, _ := http.NewRequestWithContext(t.Context(), "GET", "/test"+tt.query, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {
@@ -359,7 +359,7 @@ func TestCategoryValues(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", "/test?address=test&category="+category, nil)
+			req, _ := http.NewRequestWithContext(t.Context(), "GET", "/test?address=test&category="+category, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != http.StatusOK {
@@ -389,7 +389,7 @@ func TestHealthHandler(t *testing.T) {
 	router := gin.New()
 	router.GET("/health", server.HealthHandler)
 
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -414,7 +414,7 @@ func TestRootHandler(t *testing.T) {
 	router := gin.New()
 	router.GET("/", server.RootHandler)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -465,7 +465,7 @@ func TestPositionDataDisabledHandler(t *testing.T) {
 	router := gin.New()
 	router.GET("/geocode", server.PositionDataDisabledHandler)
 
-	req := httptest.NewRequest(http.MethodGet, "/geocode", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/geocode", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -557,7 +557,7 @@ func TestRegisterPositionEndpoint(t *testing.T) {
 			if tt.wantRegistered {
 				// Test the handler response
 				w := httptest.NewRecorder()
-				req, _ := http.NewRequest("GET", "/test", nil)
+				req, _ := http.NewRequestWithContext(t.Context(), "GET", "/test", nil)
 				router.ServeHTTP(w, req)
 
 				if w.Code != tt.wantStatus {
@@ -623,7 +623,7 @@ func TestSendBadRequest(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
 	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -650,7 +650,7 @@ func TestSendInternalServerError(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
 	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusInternalServerError {
@@ -860,7 +860,7 @@ func TestHandleAddressRequest(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
 			router.ServeHTTP(w, req)
 
 			if gotOk != tt.wantOk {
@@ -895,7 +895,7 @@ func TestConfigureCORS(t *testing.T) {
 
 		// Verify router works after configuring CORS
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
 		router.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
@@ -913,7 +913,7 @@ func TestConfigureCORS(t *testing.T) {
 
 		// Verify router works after configuring CORS
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
 		router.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
@@ -967,7 +967,7 @@ func TestNormalizeHandler_Integration(t *testing.T) {
 			router.GET("/normalize", server.NormalizeHandler)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/normalize"+tt.query, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/normalize"+tt.query, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {
@@ -1062,7 +1062,7 @@ func TestRootHandler_FullInfo(t *testing.T) {
 			router.GET("/", server.RootHandler)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != http.StatusOK {
@@ -1154,7 +1154,7 @@ func TestGeocodeHandler_Integration(t *testing.T) {
 			router.GET("/geocode", server.GeocodeHandler)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/geocode"+tt.query, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/geocode"+tt.query, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {
@@ -1229,7 +1229,7 @@ func TestMatchHandler_Integration(t *testing.T) {
 			router.GET("/match", server.MatchHandler)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/match"+tt.query, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/match"+tt.query, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {
@@ -1310,7 +1310,7 @@ func TestReverseHandler_Integration(t *testing.T) {
 			router.GET("/reverse", server.ReverseHandler)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/reverse"+tt.query, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/reverse"+tt.query, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {

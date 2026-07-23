@@ -11,7 +11,7 @@ import (
 func TestRunHTTPServer_GracefulShutdownOnContextCancel(t *testing.T) {
 	t.Parallel()
 
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestRunHTTPServer_GracefulShutdownOnContextCancel(t *testing.T) {
 	// Wait until the server is accepting connections before triggering shutdown.
 	deadline := time.Now().Add(2 * time.Second)
 	for {
-		conn, dialErr := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		conn, dialErr := (&net.Dialer{Timeout: 100 * time.Millisecond}).DialContext(t.Context(), "tcp", addr)
 		if dialErr == nil {
 			_ = conn.Close()
 			break
@@ -59,7 +59,7 @@ func TestRunHTTPServer_GracefulShutdownOnContextCancel(t *testing.T) {
 func TestRunHTTPServer_ListenFailure(t *testing.T) {
 	t.Parallel()
 
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}

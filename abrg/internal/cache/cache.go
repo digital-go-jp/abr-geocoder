@@ -65,7 +65,7 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 	}
 
 	// Load spatial extension (works in read-only mode)
-	if err := duck.LoadExtension(conn, "spatial"); err != nil {
+	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
 		return nil, fmt.Errorf("failed to initialize spatial extension: %w", err)
 	}
 

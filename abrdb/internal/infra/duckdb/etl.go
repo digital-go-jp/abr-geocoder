@@ -243,7 +243,7 @@ func (e *ETL) transformAndLoadWithSuffixTx(ctx context.Context, tx *sql.Tx, cate
 }
 
 func (e *ETL) initializeDuckDB() error {
-	_, err := e.db.Exec(`
+	_, err := e.db.ExecContext(context.Background(), `
 		INSTALL postgres; LOAD postgres;
 		INSTALL zipfs FROM community; LOAD zipfs;
 		INSTALL spatial; LOAD spatial;
@@ -253,11 +253,11 @@ func (e *ETL) initializeDuckDB() error {
 
 func (e *ETL) attachPostgres() error {
 	secretSQL := db.BuildPostgresSecretSQL(e.pgConf, pgSecretName)
-	if _, err := e.db.Exec(secretSQL); err != nil {
+	if _, err := e.db.ExecContext(context.Background(), secretSQL); err != nil {
 		return fmt.Errorf("create postgres secret: %w", err)
 	}
 	attachSQL := buildPostgresAttachSQL(e.pgConf.SSLMode, pgSecretName)
-	if _, err := e.db.Exec(attachSQL); err != nil {
+	if _, err := e.db.ExecContext(context.Background(), attachSQL); err != nil {
 		return fmt.Errorf("attach postgres: %w", err)
 	}
 	return nil

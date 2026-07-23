@@ -140,8 +140,8 @@ func NewGinServer(cfg ServerConfig) (*GinServer, error) {
 		repo = repository.NewRepository(cfg.Cache.DB())
 		matcher = matching.NewMatcher(repo, cfg.Cache.Lookups())
 		reverseGeocoder = reverse.NewReverseGeocoder(repo,
-			reverse.TableExists(cfg.Cache.DB(), duckdb.TableRsdtdsp),
-			reverse.TableExists(cfg.Cache.DB(), duckdb.TableParcel),
+			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableRsdtdsp),
+			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableParcel),
 		)
 	}
 

@@ -7,6 +7,11 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+    - noctx
+    - errorlint
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck
   settings:
     errcheck:
       exclude-functions:

@@ -45,8 +45,8 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 	defer setup.Cleanup()
 
 	reverser := reverse.NewReverseGeocoder(setup.Repo,
-		reverse.TableExists(setup.DB, duckdb.TableRsdtdsp),
-		reverse.TableExists(setup.DB, duckdb.TableParcel),
+		reverse.TableExists(ctx, setup.DB, duckdb.TableRsdtdsp),
+		reverse.TableExists(ctx, setup.DB, duckdb.TableParcel),
 	)
 	categoryVal := model.Category(setup.resolveCategory(opts.Category))
 
