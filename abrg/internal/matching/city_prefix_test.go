@@ -83,8 +83,7 @@ func BenchmarkCityPrefixMapLookup(b *testing.B) {
 		"千葉市": "12", "さいたま市": "11", "北九州市": "40",
 	}
 	m := buildCityPrefixMap(cities)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		m.lookup("大阪市北区梅田")
 	}
 }
