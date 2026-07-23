@@ -29,7 +29,7 @@ func TestParallelProcessor_Run_Basic(t *testing.T) {
 		BufferSize: 10,
 	}
 
-	err := p.Run(context.Background(), r, &buf)
+	err := p.Run(t.Context(), r, &buf)
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -66,7 +66,7 @@ func TestParallelProcessor_Run_EmptyInput(t *testing.T) {
 		BufferSize: 10,
 	}
 
-	err := p.Run(context.Background(), r, &buf)
+	err := p.Run(t.Context(), r, &buf)
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -89,7 +89,7 @@ func TestParallelProcessor_Run_SkipEmptyLines(t *testing.T) {
 		BufferSize: 10,
 	}
 
-	err := p.Run(context.Background(), r, &buf)
+	err := p.Run(t.Context(), r, &buf)
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -116,7 +116,7 @@ func TestParallelProcessor_Run_WithError(t *testing.T) {
 		BufferSize: 10,
 	}
 
-	err := p.Run(context.Background(), r, &buf)
+	err := p.Run(t.Context(), r, &buf)
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -144,7 +144,7 @@ func TestParallelProcessor_Run_ContextCancellation(t *testing.T) {
 	r := strings.NewReader(input)
 	var buf bytes.Buffer
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel() // Cancel immediately
 
 	p := &parallelProcessor[TestResult]{
@@ -186,7 +186,7 @@ func TestParallelProcessor_Run_OrderPreservation(t *testing.T) {
 		BufferSize: 20,
 	}
 
-	err := p.Run(context.Background(), r, &buf)
+	err := p.Run(t.Context(), r, &buf)
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -245,7 +245,7 @@ func TestParallelProcessor_Run_WithMonitor(t *testing.T) {
 		Monitor:    monitor,
 	}
 
-	err := p.Run(context.Background(), r, &buf)
+	err := p.Run(t.Context(), r, &buf)
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}

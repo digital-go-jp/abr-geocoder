@@ -60,7 +60,7 @@ func runReverseTests(t *testing.T, tests []reverseTestCase) {
 				Limit:    tt.limit,
 			}
 
-			response, err := geocoder.Reverse(context.Background(), query)
+			response, err := geocoder.Reverse(t.Context(), query)
 			if err != nil {
 				t.Fatalf("Reverse(lat=%v, lon=%v) unexpected error: %v", tt.lat, tt.lon, err)
 			}

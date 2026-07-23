@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -21,7 +20,7 @@ func TestFetchFeedCaching(t *testing.T) {
 	defer server.Close()
 
 	client := New(server.URL)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Call FetchFeed multiple times
 	for range 5 {

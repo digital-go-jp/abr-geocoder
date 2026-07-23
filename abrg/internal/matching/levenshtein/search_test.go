@@ -45,7 +45,7 @@ func (failingPrefixQuerier) FindCityByAddress(context.Context, repository.CitySe
 
 // A prefix-fallback query failure must surface as an error, not as "no match".
 func TestSearch_PrefixFallbackErrorPropagates(t *testing.T) {
-	_, err := Search(context.Background(), failingPrefixQuerier{}, SearchParams{
+	_, err := Search(t.Context(), failingPrefixQuerier{}, SearchParams{
 		Category:   model.CategoryBasic,
 		SearchAddr: "宇佐市安心院町古川長坂",
 		Limit:      1,
@@ -65,7 +65,7 @@ func TestTryFallbackCitySearchByScore_ForwardsPrefCode(t *testing.T) {
 		City:   "府中市",
 	}}
 
-	_, err := tryFallbackCitySearchByScore(context.Background(), repo, SearchParams{
+	_, err := tryFallbackCitySearchByScore(t.Context(), repo, SearchParams{
 		Category:         model.CategoryAll,
 		StandardizedAddr: "府中市上下町甲148番地",
 		SearchAddr:       "府中市上下町甲148番地",
@@ -89,7 +89,7 @@ func TestTryFallbackCitySearchByScore_FullMatchYieldsNilUnmatched(t *testing.T) 
 		City:   "福山市",
 	}}
 
-	results, err := tryFallbackCitySearchByScore(context.Background(), repo, SearchParams{
+	results, err := tryFallbackCitySearchByScore(t.Context(), repo, SearchParams{
 		Category:         model.CategoryAll,
 		StandardizedAddr: "福山市",
 		SearchAddr:       "福山市",

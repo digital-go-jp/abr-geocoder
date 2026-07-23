@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -121,7 +120,7 @@ func TestListFilesByPrefix(t *testing.T) {
 	}))
 	defer server.Close()
 
-	files, err := New(server.URL).ListFilesByPrefix(context.Background(), "mt_pref")
+	files, err := New(server.URL).ListFilesByPrefix(t.Context(), "mt_pref")
 	if err != nil {
 		t.Fatalf("ListFilesByPrefix: %v", err)
 	}
@@ -154,7 +153,7 @@ func TestDownloadFile_Success(t *testing.T) {
 
 	// destPath is in a not-yet-existing subdirectory to also cover MkdirAll.
 	destPath := filepath.Join(t.TempDir(), "sub", "mt_pref_all.csv.zip")
-	if err := New(server.URL).DownloadFile(context.Background(), server.URL+"/f.csv.zip", destPath); err != nil {
+	if err := New(server.URL).DownloadFile(t.Context(), server.URL+"/f.csv.zip", destPath); err != nil {
 		t.Fatalf("DownloadFile: %v", err)
 	}
 
@@ -178,7 +177,7 @@ func TestDownloadFile_Non200LeavesNoFiles(t *testing.T) {
 	defer server.Close()
 
 	destPath := filepath.Join(t.TempDir(), "mt_pref_all.csv.zip")
-	err := New(server.URL).DownloadFile(context.Background(), server.URL+"/f.csv.zip", destPath)
+	err := New(server.URL).DownloadFile(t.Context(), server.URL+"/f.csv.zip", destPath)
 	if err == nil {
 		t.Fatal("DownloadFile: want error on 500, got nil")
 	}
@@ -204,7 +203,7 @@ func TestFetchFeed_RefetchesAfterError(t *testing.T) {
 	defer server.Close()
 
 	client := New(server.URL)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// A failed fetch must not be cached...
 	if _, err := client.FetchFeed(ctx); err == nil {
@@ -226,7 +225,7 @@ func TestFetchFeed_InvalidJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if _, err := New(server.URL).FetchFeed(context.Background()); err == nil {
+	if _, err := New(server.URL).FetchFeed(t.Context()); err == nil {
 		t.Error("FetchFeed: want decode error for invalid JSON, got nil")
 	}
 }

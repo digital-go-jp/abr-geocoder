@@ -1,7 +1,6 @@
 package issues
 
 import (
-	"context"
 	"testing"
 
 	"abrg/internal/model"
@@ -96,7 +95,7 @@ func TestIssue262(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			resp, err := normalizer.Match(context.Background(), tt.query)
+			resp, err := normalizer.Match(t.Context(), tt.query)
 			if err != nil {
 				t.Fatalf("Match(%q) unexpected error: %v", tt.query.Address, err)
 			}

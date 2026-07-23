@@ -95,9 +95,9 @@ func (r *DB) FindPrefecture(ctx context.Context, prefCode string) (*PrefectureRe
 // scanCityWithAddr scans a cache_city row with coordinates into CityResult.
 func scanCityWithAddr(row *sql.Row) (CityResult, error) {
 	var (
-		lgCode, prefName   sql.NullString
-		county, city, ward sql.NullString
-		lon, lat           sql.NullFloat64
+		lgCode, prefName   sql.Null[string]
+		county, city, ward sql.Null[string]
+		lon, lat           sql.Null[float64]
 	)
 	if err := row.Scan(
 		&lgCode, &prefName, &county, &city, &ward,
@@ -111,16 +111,16 @@ func scanCityWithAddr(row *sql.Row) (CityResult, error) {
 		County: scanOpt(county),
 		City:   scanStr(city),
 		Ward:   scanOpt(ward),
-		Lon:    scanOptFloat(lon),
-		Lat:    scanOptFloat(lat),
+		Lon:    scanOpt(lon),
+		Lat:    scanOpt(lat),
 	}, nil
 }
 
 // scanCityBasic scans a cache_city row without coordinates into CityResult.
 func scanCityBasic(row *sql.Row) (CityResult, error) {
 	var (
-		lgCode, prefName   sql.NullString
-		county, city, ward sql.NullString
+		lgCode, prefName   sql.Null[string]
+		county, city, ward sql.Null[string]
 	)
 	if err := row.Scan(
 		&lgCode, &prefName, &county, &city, &ward,

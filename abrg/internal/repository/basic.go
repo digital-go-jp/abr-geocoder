@@ -41,14 +41,14 @@ func (r *DB) FindBasicByAddress(ctx context.Context, params BasicSearchParams) (
 // scanBasicResultRow scans a row matching basicColumns into a BasicResult.
 func scanBasicResultRow(rows *sql.Rows) (BasicResult, error) {
 	var (
-		stdAddr, lgCode, machiazaID sql.NullString
-		rsdtAddrFlg, pref, county   sql.NullString
-		city, ward, kyotoSt         sql.NullString
-		oazaCho, chome, koaza       sql.NullString
-		machiazaDist                sql.NullString
+		stdAddr, lgCode, machiazaID sql.Null[string]
+		rsdtAddrFlg, pref, county   sql.Null[string]
+		city, ward, kyotoSt         sql.Null[string]
+		oazaCho, chome, koaza       sql.Null[string]
+		machiazaDist                sql.Null[string]
 		hasChome                    sql.NullBool
 		parcelCount, rsdtdspCount   sql.NullInt64
-		lon, lat                    sql.NullFloat64
+		lon, lat                    sql.Null[float64]
 	)
 	if err := rows.Scan(
 		&stdAddr, &lgCode, &machiazaID, &rsdtAddrFlg,
@@ -75,8 +75,8 @@ func scanBasicResultRow(rows *sql.Rows) (BasicResult, error) {
 		HasChome:          hasChome.Valid && hasChome.Bool,
 		ParcelCount:       int(parcelCount.Int64),
 		RsdtdspCount:      int(rsdtdspCount.Int64),
-		Lon:               scanOptFloat(lon),
-		Lat:               scanOptFloat(lat),
+		Lon:               scanOpt(lon),
+		Lat:               scanOpt(lat),
 	}, nil
 }
 

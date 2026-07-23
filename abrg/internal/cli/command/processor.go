@@ -50,11 +50,8 @@ func (p *parallelProcessor[R]) Run(ctx context.Context, r io.Reader, w io.Writer
 	// workers: process jobs and send results
 	var wg sync.WaitGroup
 	for range p.Workers {
-		wg.Add(1)
-		eg.Go(func() error {
-			defer wg.Done()
+		wg.Go(func() {
 			p.worker(ctx, jobs, results)
-			return nil
 		})
 	}
 

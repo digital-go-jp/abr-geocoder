@@ -128,7 +128,7 @@ func runNormalizeTests(t *testing.T, tests []normalizeTestCase) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			response, err := normalizer.Match(context.Background(), tt.query)
+			response, err := normalizer.Match(t.Context(), tt.query)
 			if err != nil {
 				t.Fatalf("Normalize(%q) unexpected error: %v", tt.query.Address, err)
 			}
