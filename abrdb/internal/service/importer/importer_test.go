@@ -1,7 +1,6 @@
 package importer
 
 import (
-	"context"
 	"testing"
 
 	"abrdb/internal/model"
@@ -46,7 +45,7 @@ func TestNew(t *testing.T) {
 
 func TestImportCategoryBatch_EmptySlice(t *testing.T) {
 	svc := New(nil, nil, nil, "/tmp", nil)
-	phaseSec, err := svc.ImportCategoryBatch(context.Background(), []model.FileCategory{})
+	phaseSec, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{})
 	if err != nil {
 		t.Errorf("expected nil error for empty category, got %v", err)
 	}

@@ -60,7 +60,7 @@ func TestTryWardExpansion_PropagatesQueryError(t *testing.T) {
 		},
 	}
 
-	_, _, _, err := n.tryWardExpansion(context.Background(), "中区本町", "中区本町", "中区本町")
+	_, _, _, err := n.tryWardExpansion(t.Context(), "中区本町", "中区本町", "中区本町")
 	if !errors.Is(err, errQueryFailed) {
 		t.Fatalf("tryWardExpansion() error = %v, want %v", err, errQueryFailed)
 	}

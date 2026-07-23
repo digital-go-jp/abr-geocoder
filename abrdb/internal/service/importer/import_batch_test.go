@@ -138,7 +138,7 @@ func TestImportCategoryBatch_LoadsPairsAndMarksImported(t *testing.T) {
 	}}
 
 	svc := newService(loader, store, model.CategoryPref, model.CategoryCity)
-	times, err := svc.ImportCategoryBatch(context.Background(), []model.FileCategory{model.CategoryPref, model.CategoryCity})
+	times, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref, model.CategoryCity})
 	if err != nil {
 		t.Fatalf("ImportCategoryBatch: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestImportCategoryBatch_SkipsCategoryWithNoPending(t *testing.T) {
 	}}
 
 	svc := newService(loader, store, model.CategoryPref, model.CategoryCity)
-	times, err := svc.ImportCategoryBatch(context.Background(), []model.FileCategory{model.CategoryPref, model.CategoryCity})
+	times, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref, model.CategoryCity})
 	if err != nil {
 		t.Fatalf("ImportCategoryBatch: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestImportCategoryBatch_MissingCategoryInfoErrors(t *testing.T) {
 
 	// Service built WITHOUT registering CategoryPref's info.
 	svc := New(loader, store, noopMonitor{}, downloadDir, map[string]*schema.CategoryInfo{})
-	_, err := svc.ImportCategoryBatch(context.Background(), []model.FileCategory{model.CategoryPref})
+	_, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref})
 	if err == nil || !errContains(err, "no category info") {
 		t.Fatalf("err = %v, want 'no category info'", err)
 	}
@@ -239,7 +239,7 @@ func TestImportCategoryBatch_MissingCategoryInfoErrors(t *testing.T) {
 func TestImportCategoryBatch_PendingQueryErrorPropagates(t *testing.T) {
 	store := &fakeStore{pendErr: errors.New("db down")}
 	svc := newService(&fakeLoader{}, store, model.CategoryPref)
-	_, err := svc.ImportCategoryBatch(context.Background(), []model.FileCategory{model.CategoryPref})
+	_, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref})
 	if err == nil || !errContains(err, "get pending imports") {
 		t.Fatalf("err = %v, want 'get pending imports'", err)
 	}
@@ -253,7 +253,7 @@ func TestImportCategoryBatch_LoadErrorPropagatesAndSkipsMark(t *testing.T) {
 	}}
 
 	svc := newService(loader, store, model.CategoryPref)
-	_, err := svc.ImportCategoryBatch(context.Background(), []model.FileCategory{model.CategoryPref})
+	_, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref})
 	if err == nil || !errContains(err, "import files for") {
 		t.Fatalf("err = %v, want 'import files for'", err)
 	}
@@ -276,7 +276,7 @@ func TestImportCategoryBatch_SkipsDeleteWhenTableEmpty(t *testing.T) {
 	}
 
 	svc := newService(loader, store, model.CategoryPref)
-	if _, err := svc.ImportCategoryBatch(context.Background(), []model.FileCategory{model.CategoryPref}); err != nil {
+	if _, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref}); err != nil {
 		t.Fatalf("ImportCategoryBatch: %v", err)
 	}
 

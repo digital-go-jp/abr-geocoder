@@ -1,7 +1,6 @@
 package matching
 
 import (
-	"context"
 	"testing"
 
 	"abrg/internal/model"
@@ -73,7 +72,7 @@ func TestTwoStageSearchResidential(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := search.searchResidential(context.Background(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr))
+			result, err := search.searchResidential(t.Context(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr))
 			if err != nil {
 				t.Fatalf("searchResidential() error = %v", err)
 			}
@@ -127,7 +126,7 @@ func TestTwoStageSearchParcel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := search.searchParcel(context.Background(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr), 1)
+			result, err := search.searchParcel(t.Context(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr), 1)
 			if err != nil {
 				t.Fatalf("searchParcel() error = %v", err)
 			}
@@ -182,7 +181,7 @@ func Test_normalizeWithBasic(t *testing.T) {
 
 	t.Run("residential search with basic", func(t *testing.T) {
 		results, err := search.normalizeWithBasic(
-			context.Background(),
+			t.Context(),
 			model.CategoryResidential,
 			basicResults,
 			"港区虎ノ門1@:6",
@@ -207,7 +206,7 @@ func Test_normalizeWithBasic(t *testing.T) {
 
 	t.Run("returns nil when not found", func(t *testing.T) {
 		results, err := search.normalizeWithBasic(
-			context.Background(),
+			t.Context(),
 			model.CategoryResidential,
 			basicResults,
 			"港区虎ノ門1@:999",

@@ -1,7 +1,6 @@
 package matching_test
 
 import (
-	"context"
 	"testing"
 
 	"abrg/internal/matching"
@@ -59,7 +58,7 @@ func runGeocodeTests(t *testing.T, tests []geocodeTestCase) {
 				query.Limit = 1
 			}
 
-			response, err := matching.Geocode(context.Background(), deps.normalizer, deps.repo, query)
+			response, err := matching.Geocode(t.Context(), deps.normalizer, deps.repo, query)
 			if err != nil {
 				t.Fatalf("Geocode(%q) unexpected error: %v", tt.address, err)
 			}
@@ -248,7 +247,7 @@ func TestGeocodeNoCoordinates(t *testing.T) {
 		Limit:    1,
 	}
 
-	response, err := matching.Geocode(context.Background(), deps.normalizer, deps.repo, query)
+	response, err := matching.Geocode(t.Context(), deps.normalizer, deps.repo, query)
 	if err != nil {
 		t.Fatalf("Geocode(%q) unexpected error: %v", query.Address, err)
 	}
@@ -318,7 +317,7 @@ func TestGeocodeCoordinatesLevel(t *testing.T) {
 				Limit:    1,
 			}
 
-			response, err := matching.Geocode(context.Background(), deps.normalizer, deps.repo, query)
+			response, err := matching.Geocode(t.Context(), deps.normalizer, deps.repo, query)
 			if err != nil {
 				t.Fatalf("Geocode(%q) unexpected error: %v", tc.address, err)
 			}
@@ -357,7 +356,7 @@ func TestGeocodeUnmatchedAddress(t *testing.T) {
 				Limit:    1,
 			}
 
-			response, err := matching.Geocode(context.Background(), deps.normalizer, deps.repo, query)
+			response, err := matching.Geocode(t.Context(), deps.normalizer, deps.repo, query)
 			if err != nil {
 				t.Fatalf("Geocode(%q) unexpected error: %v", tt.address, err)
 			}

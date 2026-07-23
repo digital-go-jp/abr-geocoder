@@ -24,7 +24,7 @@ func TestRunHTTPServer_GracefulShutdownOnContextCancel(t *testing.T) {
 		ReadHeaderTimeout: time.Second,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- runHTTPServer(ctx, srv) }()
 
@@ -71,7 +71,7 @@ func TestRunHTTPServer_ListenFailure(t *testing.T) {
 		ReadHeaderTimeout: time.Second,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 	defer cancel()
 
 	err = runHTTPServer(ctx, srv)

@@ -1,7 +1,6 @@
 package reverse
 
 import (
-	"context"
 	"testing"
 
 	"abrg/internal/model"
@@ -43,7 +42,7 @@ func BenchmarkReverse(b *testing.B) {
 			}
 			b.ReportAllocs()
 			for b.Loop() {
-				_, _ = geocoder.Reverse(context.Background(), query)
+				_, _ = geocoder.Reverse(b.Context(), query)
 			}
 		})
 	}
@@ -81,7 +80,7 @@ func BenchmarkReverseLocations(b *testing.B) {
 			}
 			b.ReportAllocs()
 			for b.Loop() {
-				_, _ = geocoder.Reverse(context.Background(), query)
+				_, _ = geocoder.Reverse(b.Context(), query)
 			}
 		})
 	}

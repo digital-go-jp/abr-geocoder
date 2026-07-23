@@ -1,7 +1,6 @@
 package matching
 
 import (
-	"context"
 	"testing"
 
 	"abrg/internal/cache"
@@ -315,7 +314,7 @@ func BenchmarkNormalize(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	ctx := context.Background()
+	ctx := b.Context()
 	for range b.N {
 		for _, query := range queries {
 			_, _ = normalizer.Match(ctx, query)
