@@ -1,0 +1,44 @@
+name: bench
+
+on:
+  pull_request:
+    paths:
+      - 'abrg/**'
+      - 'common/**'
+      - 'quickstart/tokyo_basic.duckdb'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  match-throughput:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          path: pr
+      - name: Checkout base
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: true
+          cache-dependency-path: |
+            pr/abrg/go.sum
+            base/abrg/go.sum
+      - name: Build PR binary
+        run: cd pr/abrg && make build && cp abrg "$RUNNER_TEMP/abrg_pr"
+      - name: Build base binary
+        run: cd base/abrg && make build && cp abrg "$RUNNER_TEMP/abrg_base"
+      # Same runner, same input and cache, only the binary differs: hardware
+      # speed cancels out, so a >15% rise in per-record duration_ms is code.
+      - name: Compare per-record cost (base vs PR)
+        run: bash pr/abrg/testdata/bench/ci-compare.sh "$RUNNER_TEMP/abrg_base" "$RUNNER_TEMP/abrg_pr"

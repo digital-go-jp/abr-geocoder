@@ -5,7 +5,7 @@ EXTRA_CLEAN := rm -rf tmp
 
 include ../Makefile.common
 
-.PHONY: test-issues test-issue1 test-coverage-pkg prof help
+.PHONY: test-issues test-issue1 test-coverage-pkg bench-match prof help
 
 REGRESSION_PKG := ./internal/matching/issues
 
@@ -35,6 +35,12 @@ test-coverage-pkg:
 	go tool cover -html=coverage.out -o coverage.html
 	@go tool cover -func=coverage.out | tail -1
 	@echo "Coverage report generated: coverage.html"
+
+# Per-record match cost against the bundled Tokyo cache (no PostgreSQL needed).
+# Reports the parallelism-independent duration_ms signal; CI compares this
+# between base and PR on the same runner. Usage: make bench-match [REPS=3]
+bench-match: build
+	@bash testdata/bench/run.sh ./$(BINARY) $(or $(REPS),3)
 
 # Run with profiling
 prof:
@@ -66,6 +72,7 @@ help:
 	@echo "  vuln          - Run govulncheck"
 	@echo "  modernize     - Check go fix modernizations (CI-friendly, no changes)"
 	@echo "  bench         - Run benchmarks"
+	@echo "  bench-match   - Compare per-record match cost (bundled Tokyo cache)"
 	@echo "  prof          - Run with profiling"
 	@echo ""
 	@echo "Other:"
