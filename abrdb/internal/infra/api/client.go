@@ -55,6 +55,7 @@ func New(feedURL string) *Client {
 		ExpectContinueTimeout: 1 * time.Second,           // AWS SDK default
 		DisableCompression:    false,                     // AWS SDK enables compression
 		ForceAttemptHTTP2:     true,                      // Try HTTP/2 like AWS SDK
+		ResponseHeaderTimeout: 30 * time.Second,          // Limits header recv only; body transfer is unbounded
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second, // AWS SDK default
 			KeepAlive: 30 * time.Second, // AWS SDK default
@@ -64,7 +65,6 @@ func New(feedURL string) *Client {
 	return &Client{
 		httpClient: &http.Client{
 			Transport: transport,
-			Timeout:   30 * time.Second,
 		},
 		feedURL: feedURL,
 	}
@@ -73,6 +73,7 @@ func New(feedURL string) *Client {
 // FetchFeed fetches and parses the DCAT feed with caching.
 // The feed is cached on success; on error, it retries on the next call.
 // Thread-safe: concurrent callers are serialized by feedMu.
+// Feed fetches are limited to 30 seconds to avoid hanging on slow network.
 func (c *Client) FetchFeed(ctx context.Context) (*DCATFeed, error) {
 	c.feedMu.Lock()
 	defer c.feedMu.Unlock()
@@ -82,7 +83,11 @@ func (c *Client) FetchFeed(ctx context.Context) (*DCATFeed, error) {
 		return c.feedCache, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.feedURL, nil)
+	// Enforce a 30-second limit for feed fetches (small JSON, should be fast)
+	fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(fetchCtx, http.MethodGet, c.feedURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
