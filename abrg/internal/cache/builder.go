@@ -119,7 +119,7 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	}
 	phaseSec["attach"] = time.Since(attachStart).Seconds()
 
-	cfg, err := loadConfigFromPostgres(ctx, conn)
+	cfg, err := loadConfigFromTable(ctx, conn, "pg.abrdb_config")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config from PostgreSQL: %w", err)
 	}
@@ -209,15 +209,6 @@ func insertBasicTables(ctx context.Context, conn *sql.DB) (map[string]float64, e
 	phaseSec["pref"] = sec
 
 	return phaseSec, nil
-}
-
-func loadConfigFromPostgres(ctx context.Context, conn *sql.DB) (*Config, error) {
-	rows, err := conn.QueryContext(ctx, `SELECT config_key, config_value FROM pg.abrdb_config`)
-	if err != nil {
-		return nil, fmt.Errorf("query config: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-	return loadConfigFromRows(rows)
 }
 
 func saveConfigToCache(ctx context.Context, conn *sql.DB, cfg *Config) error {
