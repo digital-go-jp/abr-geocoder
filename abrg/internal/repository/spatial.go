@@ -171,10 +171,10 @@ func (r *DB) FindNearestParcel(ctx context.Context, params SpatialParams) ([]Rev
 
 // reverseBaseScan holds scan variables for the common address fields in spatial queries.
 type reverseBaseScan struct {
-	pref, county, city, ward       sql.NullString
-	kyotoSt, oazaCho, chome, koaza sql.NullString
-	machiazaDist, rsdtAddrFlg      sql.NullString
-	lgCode, machiazaID             sql.NullString
+	pref, county, city, ward       sql.Null[string]
+	kyotoSt, oazaCho, chome, koaza sql.Null[string]
+	machiazaDist, rsdtAddrFlg      sql.Null[string]
+	lgCode, machiazaID             sql.Null[string]
 	lon, lat, distance             float64
 }
 
@@ -223,7 +223,7 @@ func scanBasicResult(rows *sql.Rows) (ReverseBaseFields, error) {
 
 func scanResidentialResult(rows *sql.Rows) (ReverseResidentialResult, error) {
 	var v reverseBaseScan
-	var blkID, rsdtID, rsdt2ID, blkNum, rsdtNum, rsdtNum2 sql.NullString
+	var blkID, rsdtID, rsdt2ID, blkNum, rsdtNum, rsdtNum2 sql.Null[string]
 	dest := make([]any, 0, 21)
 	dest = v.appendAddrPtrs(dest)
 	dest = append(dest, &blkID, &rsdtID, &rsdt2ID, &blkNum, &rsdtNum, &rsdtNum2)
@@ -244,7 +244,7 @@ func scanResidentialResult(rows *sql.Rows) (ReverseResidentialResult, error) {
 
 func scanParcelResult(rows *sql.Rows) (ReverseParcelResult, error) {
 	var v reverseBaseScan
-	var prcID, prcNum1, prcNum2, prcNum3 sql.NullString
+	var prcID, prcNum1, prcNum2, prcNum3 sql.Null[string]
 	dest := make([]any, 0, 19)
 	dest = v.appendAddrPtrs(dest)
 	dest = append(dest, &prcID, &prcNum1, &prcNum2, &prcNum3)

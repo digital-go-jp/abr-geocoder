@@ -2,25 +2,17 @@ package repository
 
 import "database/sql"
 
-func scanStr(ns sql.NullString) string {
+func scanStr(ns sql.Null[string]) string {
 	if ns.Valid {
-		return ns.String
+		return ns.V
 	}
 	return ""
 }
 
-func scanOpt(ns sql.NullString) *string {
-	if ns.Valid {
-		s := ns.String
-		return &s
-	}
-	return nil
-}
-
-func scanOptFloat(nf sql.NullFloat64) *float64 {
-	if nf.Valid {
-		f := nf.Float64
-		return &f
+func scanOpt[T any](n sql.Null[T]) *T {
+	if n.Valid {
+		v := n.V
+		return &v
 	}
 	return nil
 }

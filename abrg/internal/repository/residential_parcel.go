@@ -63,11 +63,11 @@ func (r *DB) FindResidentialBestMatch(ctx context.Context, lgCode, machiazaID st
 // and scans the result into a ResidentialBestResult.
 func (r *DB) scanResidentialBestMatch(ctx context.Context, query string, args []any) (*ResidentialBestResult, error) {
 	var (
-		lgCode, machiazaID     sql.NullString
-		blkID, rsdtID, rsdt2ID sql.NullString
-		blkNum, rsdtNum        sql.NullString
-		rsdtNum2               sql.NullString
-		lon, lat               sql.NullFloat64
+		lgCode, machiazaID     sql.Null[string]
+		blkID, rsdtID, rsdt2ID sql.Null[string]
+		blkNum, rsdtNum        sql.Null[string]
+		rsdtNum2               sql.Null[string]
+		lon, lat               sql.Null[float64]
 		matchLevel             int
 	)
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(
@@ -93,8 +93,8 @@ func (r *DB) scanResidentialBestMatch(ctx context.Context, query string, args []
 			BlkNum:     scanOpt(blkNum),
 			RsdtNum:    scanOpt(rsdtNum),
 			RsdtNum2:   scanOpt(rsdtNum2),
-			Lon:        scanOptFloat(lon),
-			Lat:        scanOptFloat(lat),
+			Lon:        scanOpt(lon),
+			Lat:        scanOpt(lat),
 		},
 		MatchLevel: ResidentialMatchLevel(matchLevel),
 	}, nil
@@ -145,10 +145,10 @@ func (r *DB) FindParcelExact(ctx context.Context, lgCode, machiazaID string, fil
 // scanParcelRow scans a cache_parcel row into ParcelResult.
 func scanParcelRow(row *sql.Row) (ParcelResult, error) {
 	var (
-		lgCode, machiazaID sql.NullString
-		prcID, prcNum1     sql.NullString
-		prcNum2, prcNum3   sql.NullString
-		lon, lat           sql.NullFloat64
+		lgCode, machiazaID sql.Null[string]
+		prcID, prcNum1     sql.Null[string]
+		prcNum2, prcNum3   sql.Null[string]
+		lon, lat           sql.Null[float64]
 	)
 	if err := row.Scan(
 		&lgCode, &machiazaID,
@@ -164,7 +164,7 @@ func scanParcelRow(row *sql.Row) (ParcelResult, error) {
 		PrcNum1:    scanOpt(prcNum1),
 		PrcNum2:    scanOpt(prcNum2),
 		PrcNum3:    scanOpt(prcNum3),
-		Lon:        scanOptFloat(lon),
-		Lat:        scanOptFloat(lat),
+		Lon:        scanOpt(lon),
+		Lat:        scanOpt(lat),
 	}, nil
 }

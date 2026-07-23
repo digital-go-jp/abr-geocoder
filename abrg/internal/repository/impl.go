@@ -147,7 +147,7 @@ func (r *DB) queryPrefectureCoordinates(ctx context.Context, prefCode string) ([
 
 // scanCoordinates scans lon/lat from a query row and returns coordinates if valid.
 func scanCoordinates(row *sql.Row) ([]float64, bool) {
-	var lon, lat sql.NullFloat64
+	var lon, lat sql.Null[float64]
 	if err := row.Scan(&lon, &lat); err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			slog.Warn("failed to scan coordinates", "error", err)
@@ -157,5 +157,5 @@ func scanCoordinates(row *sql.Row) ([]float64, bool) {
 	if !lon.Valid || !lat.Valid {
 		return nil, false
 	}
-	return []float64{lon.Float64, lat.Float64}, true
+	return []float64{lon.V, lat.V}, true
 }
