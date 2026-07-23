@@ -63,6 +63,8 @@ terraform/
 
 - Terraform >= 1.0
 - AWS CLI 設定済み
+- Docker
+- jq
 - 適切な IAM 権限
 
 以降のコマンドは以下を前提とします:
@@ -143,6 +145,8 @@ terraform init \
 terraform apply
 ```
 
+Aurora と VPC Link の作成を含むため、20分程度かかります。
+
 ## 初回構築
 
 ### データフロー
@@ -212,7 +216,7 @@ docker push $ABRDB_REPO:latest
 # PRIVATE_SUBNETS をJSON配列形式に変換
 SUBNET_JSON=$(echo $PRIVATE_SUBNETS | jq -R 'split(",")' -c)
 
-aws ecs run-task \
+TASK_ARN=$(aws ecs run-task \
   --cluster $ECS_CLUSTER \
   --task-definition abrdb-import \
   --launch-type FARGATE \
@@ -228,15 +232,20 @@ aws ecs run-task \
       \"securityGroups\": [\"$ECS_SG\"],
       \"assignPublicIp\": \"DISABLED\"
     }
-  }"
+  }" \
+  --query 'tasks[0].taskArn' --output text)
+
+aws ecs wait tasks-stopped --cluster $ECS_CLUSTER --tasks $TASK_ARN
+aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks $TASK_ARN \
+  --query 'tasks[0].containers[0].exitCode'
 ```
 
 ### 初回インポート（フルインポート）
 
-初回インポートはタスク定義のデフォルトスペック（16 vCPU / 32 GB）で実行します。
+初回インポートはタスク定義のデフォルトスペック（8 vCPU / 16 GB）で実行します。
 
 ```bash
-aws ecs run-task \
+TASK_ARN=$(aws ecs run-task \
   --cluster $ECS_CLUSTER \
   --task-definition abrdb-import \
   --launch-type FARGATE \
@@ -246,13 +255,20 @@ aws ecs run-task \
       \"securityGroups\": [\"$ECS_SG\"],
       \"assignPublicIp\": \"DISABLED\"
     }
-  }"
+  }" \
+  --query 'tasks[0].taskArn' --output text)
+
+aws ecs wait tasks-stopped --cluster $ECS_CLUSTER --tasks $TASK_ARN
+aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks $TASK_ARN \
+  --query 'tasks[0].containers[0].exitCode'
 ```
+
+`aws ecs wait tasks-stopped` は10分でタイムアウトするため、タイムアウトした場合は同じコマンドを再実行してください。
 
 ### キャッシュビルド
 
 ```bash
-aws ecs run-task \
+TASK_ARN=$(aws ecs run-task \
   --cluster $ECS_CLUSTER \
   --task-definition abrg-cache-build \
   --launch-type FARGATE \
@@ -262,7 +278,12 @@ aws ecs run-task \
       \"securityGroups\": [\"$ECS_SG\"],
       \"assignPublicIp\": \"DISABLED\"
     }
-  }"
+  }" \
+  --query 'tasks[0].taskArn' --output text)
+
+aws ecs wait tasks-stopped --cluster $ECS_CLUSTER --tasks $TASK_ARN
+aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks $TASK_ARN \
+  --query 'tasks[0].containers[0].exitCode'
 ```
 
 ### サービス再起動
@@ -326,7 +347,7 @@ flowchart TD
 
 ```bash
 aws stepfunctions start-execution \
-  --state-machine-arn arn:aws:states:ap-northeast-1:ACCOUNT_ID:stateMachine:abrg-data-update
+  --state-machine-arn arn:aws:states:ap-northeast-1:$(aws sts get-caller-identity --query Account --output text):stateMachine:abrg-data-update
 ```
 
 ### ログ確認
@@ -375,6 +396,8 @@ aws ecs run-task --cluster $ECS_CLUSTER --task-definition abrdb-import --launch-
 # 4. import 完了後にキャッシュ再構築 → サービス再起動（「キャッシュビルド」「サービス再起動」参照）
 ```
 
+タスクごとに完了を確認してから次へ進んでください。確認手順は「データベース初期化」を参照してください。
+
 > **Note**: 日次更新（`import --dry-run` → `import`）は DCAT Feed の変更分しか取り込まないため、フィルタ変更だけでは再取り込みされません。上記の `init`（リセット）+ 全件 `import` が必須です。既存データを保持したまま強制的に再取り込みしたい場合は `import --force`（差分検出をスキップし取り込み済みファイルも再 ETL）を使います。
 
 ### ロールバック
@@ -395,7 +418,19 @@ aws ecs update-service --cluster $ECS_CLUSTER --service abrg-service --force-new
 
 ### リソース削除
 
+Aurora は削除保護が有効なため、先に `main.tf` の locals を次のように変更して削除を許可します。
+
+```hcl
+deletion_protection = false
+skip_final_snapshot = true
+```
+
 ```bash
 cd docs/aws/terraform
+terraform apply
 terraform destroy
 ```
+
+destroy の完了まで10分以上かかります。
+
+> destroy が途中で失敗した場合は、エラーに表示されたリソースを AWS CLI で削除してから destroy を再実行してください。
