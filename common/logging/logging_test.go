@@ -1,7 +1,6 @@
 package logging
 
 import (
-	"context"
 	"log/slog"
 	"os"
 	"testing"
@@ -142,7 +141,7 @@ func TestNewHandler_Level(t *testing.T) {
 				t.Fatal("newHandler() returned nil")
 			}
 			// Handler should be enabled for its level and above
-			if !handler.Enabled(context.Background(), level) {
+			if !handler.Enabled(t.Context(), level) {
 				t.Errorf("handler should be enabled for level %v", level)
 			}
 		})
