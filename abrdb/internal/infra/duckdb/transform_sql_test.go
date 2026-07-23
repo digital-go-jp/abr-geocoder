@@ -31,11 +31,11 @@ func TestBuildTransformSQL(t *testing.T) {
 		{
 			// Position data + join columns: base columns alias to t.*, a shared column
 			// (chiban) is not re-emitted from pos, fullwidth chiban is translated, and the
-			// dedup ROW_NUMBER plus the NULL-safe LEFT JOIN appear.
+			// dedup ROW_NUMBER with deterministic tiebreaker plus the NULL-safe LEFT JOIN appear.
 			name: "position data with join and fullwidth column",
 			info: &schema.CategoryInfo{
 				TextColumns:      []string{"lg_code", "chiban"},
-				PosColumns:       []string{"chiban", "rep_lat"},
+				PosColumns:       []string{"chiban", "rep_lon", "rep_lat"},
 				JoinColumns:      []string{"lg_code"},
 				FullwidthColumns: map[string]bool{"chiban": true},
 			},
@@ -43,8 +43,8 @@ func TestBuildTransformSQL(t *testing.T) {
 			want: "CREATE OR REPLACE TEMP TABLE out AS\n" +
 				"SELECT t.lg_code as lg_code, " +
 				fmt.Sprintf("%s as chiban, ", convertFullWidthNumbers("t.chiban")) +
-				"p.rep_lat as rep_lat, " +
-				"ROW_NUMBER() OVER (PARTITION BY t.lg_code ORDER BY 1) as join_seq\n" +
+				"p.rep_lon as rep_lon, p.rep_lat as rep_lat, " +
+				"ROW_NUMBER() OVER (PARTITION BY t.lg_code ORDER BY p.rep_lon, p.rep_lat) as join_seq\n" +
 				"FROM txt t LEFT JOIN pos p ON t.lg_code IS NOT DISTINCT FROM p.lg_code\n",
 		},
 		{

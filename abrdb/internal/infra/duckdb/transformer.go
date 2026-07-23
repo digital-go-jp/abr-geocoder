@@ -91,9 +91,10 @@ func (t *categoryTransformer) selectPositionColumns(hasPos bool) []columnSpec {
 	return specs
 }
 
-// joinSeqExpr returns ROW_NUMBER expression when joining, otherwise constant 1
-// Performance optimization: Use direct column references (no COALESCE) for PARTITION BY,
-// and simplified ORDER BY (constant 1) since we only need to deduplicate, not order.
+// joinSeqExpr returns ROW_NUMBER expression when joining, otherwise constant 1.
+// ORDER BY rep_lon/rep_lat: within a partition only the pos-side columns can
+// differ, so ordering by them keeps the surviving row deterministic across
+// imports (issue #250).
 func (t *categoryTransformer) joinSeqExpr(hasPos bool) string {
 	if hasPos && len(t.categoryInfo.JoinColumns) > 0 {
 		// Direct column references for PARTITION BY (NULL values group together naturally)
@@ -101,7 +102,7 @@ func (t *categoryTransformer) joinSeqExpr(hasPos bool) string {
 		for i, col := range t.categoryInfo.JoinColumns {
 			partitionCols[i] = "t." + col
 		}
-		return fmt.Sprintf("ROW_NUMBER() OVER (PARTITION BY %s ORDER BY 1)", strings.Join(partitionCols, ", "))
+		return fmt.Sprintf("ROW_NUMBER() OVER (PARTITION BY %s ORDER BY p.rep_lon, p.rep_lat)", strings.Join(partitionCols, ", "))
 	}
 	return "1"
 }
