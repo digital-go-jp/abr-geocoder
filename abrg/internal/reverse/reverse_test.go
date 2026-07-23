@@ -1,21 +1,16 @@
 package reverse
 
 import (
-	"context"
 	"strings"
-	"sync"
 	"testing"
 
 	"abrg/internal/cache"
 	"abrg/internal/model"
 	"abrg/internal/repository"
+	"abrg/internal/testutil"
 )
 
-var initTestReverseGeocoder = sync.OnceValues(func() (*ReverseGeocoder, error) {
-	c, err := cache.NewDuckDBCache(context.Background())
-	if err != nil {
-		return nil, err
-	}
+var initTestReverseGeocoder = testutil.NewCacheOnce(func(c *cache.DuckDBCache) (*ReverseGeocoder, error) {
 	db := c.DB()
 	return NewReverseGeocoder(
 		repository.NewRepository(db),
@@ -26,12 +21,7 @@ var initTestReverseGeocoder = sync.OnceValues(func() (*ReverseGeocoder, error) {
 
 func setupTestReverseGeocoder(t *testing.T) *ReverseGeocoder {
 	t.Helper()
-
-	geocoder, err := initTestReverseGeocoder()
-	if err != nil {
-		t.Skipf("Failed to create ReverseGeocoder: %v", err)
-	}
-	return geocoder
+	return testutil.Setup(t, initTestReverseGeocoder)
 }
 
 type reverseTestCase struct {

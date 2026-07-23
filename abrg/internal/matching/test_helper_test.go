@@ -1,16 +1,15 @@
 package matching
 
 import (
-	"context"
 	"database/sql"
-	"sync"
 	"testing"
 
 	"abrg/internal/cache"
+	"abrg/internal/testutil"
 )
 
-var initTestCache = sync.OnceValues(func() (*cache.DuckDBCache, error) {
-	return cache.NewDuckDBCache(context.Background())
+var initTestCache = testutil.NewCacheOnce(func(c *cache.DuckDBCache) (*cache.DuckDBCache, error) {
+	return c, nil
 })
 
 // setupTestDB creates a DuckDB connection for testing.
@@ -18,10 +17,5 @@ var initTestCache = sync.OnceValues(func() (*cache.DuckDBCache, error) {
 // Skips the test if cache file is not available (e.g., in CI environment).
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-
-	c, err := initTestCache()
-	if err != nil {
-		t.Skipf("Skipping test: DuckDB cache not available: %v", err)
-	}
-	return c.DB()
+	return testutil.Setup(t, initTestCache).DB()
 }

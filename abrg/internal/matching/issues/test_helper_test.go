@@ -1,21 +1,16 @@
 package issues
 
 import (
-	"context"
-	"sync"
 	"testing"
 
 	"abrg/internal/cache"
 	"abrg/internal/matching"
 	"abrg/internal/model"
 	"abrg/internal/repository"
+	"abrg/internal/testutil"
 )
 
-var initTestNormalizer = sync.OnceValues(func() (matching.Matcher, error) {
-	c, err := cache.NewDuckDBCache(context.Background())
-	if err != nil {
-		return nil, err
-	}
+var initTestNormalizer = testutil.NewCacheOnce(func(c *cache.DuckDBCache) (matching.Matcher, error) {
 	return matching.NewMatcher(repository.NewRepository(c.DB()), c.Lookups()), nil
 })
 
@@ -57,12 +52,7 @@ const (
 
 func setupTestNormalizer(t *testing.T) matching.Matcher {
 	t.Helper()
-
-	normalizer, err := initTestNormalizer()
-	if err != nil {
-		t.Skipf("Skipping test: DuckDB cache not available: %v", err)
-	}
-	return normalizer
+	return testutil.Setup(t, initTestNormalizer)
 }
 
 // checkStructuredAddress validates structured address fields against expected values.
