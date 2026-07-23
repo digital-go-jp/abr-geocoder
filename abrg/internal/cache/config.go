@@ -40,11 +40,16 @@ func loadConfigFromRows(rows *sql.Rows) (*Config, error) {
 	return cfg, nil
 }
 
-func LoadConfig(ctx context.Context, conn *sql.DB) (*Config, error) {
-	rows, err := conn.QueryContext(ctx, "SELECT config_key, config_value FROM cache_config")
+// loadConfigFromTable loads config from the specified config table.
+func loadConfigFromTable(ctx context.Context, conn *sql.DB, table string) (*Config, error) {
+	rows, err := conn.QueryContext(ctx, "SELECT config_key, config_value FROM "+table)
 	if err != nil {
-		return nil, fmt.Errorf("query cache_config: %w", err)
+		return nil, fmt.Errorf("query %s: %w", table, err)
 	}
 	defer func() { _ = rows.Close() }()
 	return loadConfigFromRows(rows)
+}
+
+func LoadConfig(ctx context.Context, conn *sql.DB) (*Config, error) {
+	return loadConfigFromTable(ctx, conn, "cache_config")
 }

@@ -119,7 +119,7 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	}
 	phaseSec["attach"] = time.Since(attachStart).Seconds()
 
-	cfg, err := loadConfigFromPostgres(ctx, conn)
+	cfg, err := loadConfigFromTable(ctx, conn, "pg.abrdb_config")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config from PostgreSQL: %w", err)
 	}
@@ -211,15 +211,6 @@ func insertBasicTables(ctx context.Context, conn *sql.DB) (map[string]float64, e
 	return phaseSec, nil
 }
 
-func loadConfigFromPostgres(ctx context.Context, conn *sql.DB) (*Config, error) {
-	rows, err := conn.QueryContext(ctx, `SELECT config_key, config_value FROM pg.abrdb_config`)
-	if err != nil {
-		return nil, fmt.Errorf("query config: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-	return loadConfigFromRows(rows)
-}
-
 func saveConfigToCache(ctx context.Context, conn *sql.DB, cfg *Config) error {
 	const insertSQL = `INSERT INTO cache_config (config_key, config_value) VALUES (?, ?)`
 	configs := []struct{ key, value string }{
@@ -248,24 +239,22 @@ func execTimed(ctx context.Context, conn *sql.DB, action, name, stmt string) (fl
 	return time.Since(start).Seconds(), nil
 }
 
-func createIndexes(ctx context.Context, conn *sql.DB) error {
-	sqlText, err := schema.GetCreateIndexesSQL()
+// execSchemaSQL executes schema SQL obtained from a getter function.
+func execSchemaSQL(ctx context.Context, conn *sql.DB, name string, getSQL func() (string, error)) error {
+	sqlText, err := getSQL()
 	if err != nil {
-		return fmt.Errorf("failed to get indexes SQL: %w", err)
+		return fmt.Errorf("failed to get %s SQL: %w", name, err)
 	}
 	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
-		return fmt.Errorf("failed to create indexes: %w", err)
+		return fmt.Errorf("failed to create %s: %w", name, err)
 	}
 	return nil
 }
 
+func createIndexes(ctx context.Context, conn *sql.DB) error {
+	return execSchemaSQL(ctx, conn, "indexes", schema.GetCreateIndexesSQL)
+}
+
 func createSpatialIndexes(ctx context.Context, conn *sql.DB) error {
-	sqlText, err := schema.GetCreateSpatialIndexesSQL()
-	if err != nil {
-		return fmt.Errorf("failed to get spatial indexes SQL: %w", err)
-	}
-	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
-		return fmt.Errorf("failed to create spatial indexes: %w", err)
-	}
-	return nil
+	return execSchemaSQL(ctx, conn, "spatial indexes", schema.GetCreateSpatialIndexesSQL)
 }
