@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"abr.local/common/duck"
 
@@ -64,6 +65,10 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 		db: conn,
 	}
 
+	if err := applyThreadLimit(ctx, conn); err != nil {
+		return nil, err
+	}
+
 	// Load spatial extension (works in read-only mode)
 	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
 		return nil, fmt.Errorf("failed to initialize spatial extension: %w", err)
@@ -96,6 +101,25 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 
 	success = true
 	return cache, nil
+}
+
+// applyThreadLimit caps DuckDB's intra-query parallelism. The workload is
+// dominated by small point lookups where per-query fan-out to every core only
+// contends with request- and worker-level parallelism. A value of 0 keeps the
+// DuckDB default of one thread per core.
+func applyThreadLimit(ctx context.Context, conn *sql.DB) error {
+	v := config.Load().Cache.DuckDBThreads
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 {
+		return fmt.Errorf("invalid ABRG_DUCKDB_THREADS %q: must be a non-negative integer", v)
+	}
+	if n == 0 {
+		return nil
+	}
+	if _, err := conn.ExecContext(ctx, fmt.Sprintf("SET threads TO %d", n)); err != nil {
+		return fmt.Errorf("failed to set duckdb threads: %w", err)
+	}
+	return nil
 }
 
 func (c *DuckDBCache) Close() error {

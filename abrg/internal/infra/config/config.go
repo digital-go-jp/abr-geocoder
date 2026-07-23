@@ -27,6 +27,9 @@ type ServerConfig struct {
 
 type cacheConfig struct {
 	Path string
+	// DuckDBThreads caps DuckDB's intra-query parallelism ("0" keeps the
+	// DuckDB default of one thread per core).
+	DuckDBThreads string
 }
 
 func Load() *Config {
@@ -36,7 +39,8 @@ func Load() *Config {
 			CORSAllowOrigin: env.GetEnv("CORS_ALLOW_ORIGIN", ""),
 		},
 		Cache: cacheConfig{
-			Path: env.GetEnv("CACHE_PATH", defaultCachePath()),
+			Path:          env.GetEnv("CACHE_PATH", defaultCachePath()),
+			DuckDBThreads: env.GetEnv("ABRG_DUCKDB_THREADS", "2"),
 		},
 	}
 }
