@@ -230,7 +230,12 @@ components:
         rsdt_addr_flg:
           type: string
           nullable: true
-          description: 住居表示フラグ
+          enum: ["1", "0", null]
+          description: |
+            住居表示フラグ。
+            - `1`: 住居表示実施
+            - `0`: 住居表示非実施
+            - `null`: match_level が machiaza または machiaza_detail で、実施・非実施のいずれか判定できない場合
           example: "1"
         blk_id:
           type: string
