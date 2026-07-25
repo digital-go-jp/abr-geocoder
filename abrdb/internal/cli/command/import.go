@@ -350,7 +350,12 @@ func printDryRunSummary(ctx context.Context, executor *db.QueryExecutor, scanRes
 	if err != nil {
 		return fmt.Errorf("get pending summary: %w", err)
 	}
+	return reportDryRunSummary(pendingSummary, scanResult, verbose)
+}
 
+// reportDryRunSummary prints the dry-run summary and returns
+// ChangesPendingError (exit 1) when there is anything to download or import.
+func reportDryRunSummary(pendingSummary []postgres.PendingSummary, scanResult *catalog.ScanResult, verbose bool) error {
 	pendingImports := make(map[model.FileCategory]int)
 	for _, s := range pendingSummary {
 		pendingImports[s.Category] = s.ImportCount

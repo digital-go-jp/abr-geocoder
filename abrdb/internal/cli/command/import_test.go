@@ -3,10 +3,14 @@ package command
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
+	"abrdb/internal/infra/postgres"
 	"abrdb/internal/model"
+	"abrdb/internal/schema"
 	"abrdb/internal/service/catalog"
+	"abrdb/internal/util"
 )
 
 // fakeCatalog is a catalogAPI stub whose scan results are fixed per test case.
@@ -84,5 +88,95 @@ func TestExecuteImportPipeline_ScanError(t *testing.T) {
 	}
 	if _, ok := errors.AsType[ChangesPendingError](err); ok {
 		t.Errorf("executeImportPipeline() = %v, must not be ChangesPendingError", err)
+	}
+}
+
+func TestReportDryRunSummary(t *testing.T) {
+	tests := []struct {
+		name      string
+		pending   []postgres.PendingSummary
+		updated   []*model.File
+		wantExit1 bool
+	}{
+		{
+			name: "no changes returns nil (exit 0)",
+		},
+		{
+			name:      "updated files return ChangesPendingError (exit 1)",
+			updated:   []*model.File{{Filename: "a.csv.zip", FileCategory: model.FileCategory("town")}},
+			wantExit1: true,
+		},
+		{
+			name:      "pending imports alone return ChangesPendingError (exit 1)",
+			pending:   []postgres.PendingSummary{{Category: model.FileCategory("town"), ImportCount: 2}},
+			wantExit1: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := reportDryRunSummary(tt.pending, &catalog.ScanResult{UpdatedFiles: tt.updated}, false)
+			var pendingErr ChangesPendingError
+			gotExit1 := errors.As(err, &pendingErr)
+			if gotExit1 != tt.wantExit1 {
+				t.Errorf("reportDryRunSummary() = %v, want ChangesPendingError=%v", err, tt.wantExit1)
+			}
+			if err != nil && !gotExit1 {
+				t.Errorf("reportDryRunSummary() unexpected error type: %v", err)
+			}
+		})
+	}
+}
+
+func TestCollectCategory_SortedUnion(t *testing.T) {
+	pending := map[model.FileCategory]int{"town": 1, "parcel": 2}
+	updated := map[model.FileCategory][]*model.File{"city": nil, "town": nil}
+
+	got := collectCategory(pending, updated)
+	want := []model.FileCategory{"city", "parcel", "town"}
+	if !slices.Equal(got, want) {
+		t.Errorf("collectCategory() = %v, want %v", got, want)
+	}
+}
+
+func TestBuildS3Prefixes(t *testing.T) {
+	categoryInfoMap := map[string]*schema.CategoryInfo{
+		"town":   {S3TextPath: "mt_town/", S3PosPath: "mt_town_pos/"},
+		"parcel": {S3TextPath: "mt_parcel/", S3PosPath: "mt_parcel_pos/"},
+	}
+
+	tests := []struct {
+		name    string
+		cfg     util.ImportConfig
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "text only",
+			cfg:  util.ImportConfig{EnabledCategory: []model.FileCategory{"town"}},
+			want: []string{"mt_town/"},
+		},
+		{
+			name: "pos enabled adds pos path per category",
+			cfg:  util.ImportConfig{EnabledCategory: []model.FileCategory{"town", "parcel"}, EnabledPos: true},
+			want: []string{"mt_town/", "mt_town_pos/", "mt_parcel/", "mt_parcel_pos/"},
+		},
+		{
+			name:    "unknown category errors",
+			cfg:     util.ImportConfig{EnabledCategory: []model.FileCategory{"bogus"}},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := buildS3Prefixes(&tt.cfg, categoryInfoMap)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("buildS3Prefixes() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && !slices.Equal(got, tt.want) {
+				t.Errorf("buildS3Prefixes() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
