@@ -202,12 +202,25 @@ func hasASCIIDigit(s string) bool {
 	return false
 }
 
+// addressMarkers lists the Japanese address markers that make hyphen
+// conversion worthwhile. 丁目 is matched as a whole so that a bare 丁 does
+// not count as a marker.
+var addressMarkers = [...]string{"番", "号", "の", "ノ", "室", "階", "棟", "町", "丁目"}
+
+// markersByLeadByte indexes addressMarkers by their first UTF-8 byte so the
+// scan can reject most positions with a single table lookup.
+var markersByLeadByte = func() (idx [256][]string) {
+	for _, m := range addressMarkers {
+		idx[m[0]] = append(idx[m[0]], m)
+	}
+	return idx
+}()
+
 // scanAddressMarkers scans the string once and returns whether any Japanese
 // address marker is found and whether a floor pattern (digit followed by 'F') is found.
 func scanAddressMarkers(s string) (hasMarker, hasFloor bool) {
-	n := len(s)
 	prevDigit := false
-	for i := range n {
+	for i := 0; i < len(s); i++ {
 		b := s[i]
 		// Check for 'F' preceded by digit (floor pattern like "5F")
 		if b == 'F' && prevDigit {
@@ -218,73 +231,15 @@ func scanAddressMarkers(s string) (hasMarker, hasFloor bool) {
 		}
 		prevDigit = char.IsASCIIDigit(b)
 
-		// Check for Japanese characters (3-byte UTF-8)
-		if i+2 >= n {
-			continue
-		}
-		// Japanese address markers (UTF-8 encoded):
-		// 番: E7 95 AA, 号: E5 8F B7, の: E3 81 AE, ノ: E3 83 8E
-		// 室: E5 AE A4, 階: E9 9A 8E, 棟: E6 A3 9F, 町: E7 94 BA
-		// 丁目: E4 B8 81 E7 9B AE (check as 6-byte sequence)
-		switch b {
-		case 0xE4:
-			// 丁目 (E4 B8 81 E7 9B AE)
-			if i+5 < n && s[i+1] == 0xB8 && s[i+2] == 0x81 &&
-				s[i+3] == 0xE7 && s[i+4] == 0x9B && s[i+5] == 0xAE {
-				hasMarker = true
-				if hasFloor {
-					return
+		if !hasMarker {
+			for _, m := range markersByLeadByte[b] {
+				if strings.HasPrefix(s[i:], m) {
+					hasMarker = true
+					break
 				}
 			}
-		case 0xE7:
-			if s[i+1] == 0x95 && s[i+2] == 0xAA { // 番
-				hasMarker = true
-				if hasFloor {
-					return
-				}
-			} else if s[i+1] == 0x94 && s[i+2] == 0xBA { // 町
-				hasMarker = true
-				if hasFloor {
-					return
-				}
-			}
-		case 0xE5:
-			if s[i+1] == 0x8F && s[i+2] == 0xB7 { // 号
-				hasMarker = true
-				if hasFloor {
-					return
-				}
-			} else if s[i+1] == 0xAE && s[i+2] == 0xA4 { // 室
-				hasMarker = true
-				if hasFloor {
-					return
-				}
-			}
-		case 0xE3:
-			if s[i+1] == 0x81 && s[i+2] == 0xAE { // の
-				hasMarker = true
-				if hasFloor {
-					return
-				}
-			} else if s[i+1] == 0x83 && s[i+2] == 0x8E { // ノ
-				hasMarker = true
-				if hasFloor {
-					return
-				}
-			}
-		case 0xE9:
-			if s[i+1] == 0x9A && s[i+2] == 0x8E { // 階
-				hasMarker = true
-				if hasFloor {
-					return
-				}
-			}
-		case 0xE6:
-			if s[i+1] == 0xA3 && s[i+2] == 0x9F { // 棟
-				hasMarker = true
-				if hasFloor {
-					return
-				}
+			if hasMarker && hasFloor {
+				return
 			}
 		}
 	}
