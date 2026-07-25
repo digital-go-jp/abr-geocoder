@@ -42,6 +42,8 @@ func validConfig() *ImportConfig {
 		Category: map[string]*CategoryConfig{
 			string(model.CategoryPref): {
 				TableName:   "mt_pref_unified",
+				S3TextPath:  "mt_pref/",
+				S3PosPath:   "mt_pref_pos/",
 				TextColumns: []ColumnDef{{Name: "lg_code", Type: "CHAR(6)"}},
 				PosColumns:  []ColumnDef{{Name: "lg_code", Type: "CHAR(6)"}},
 				JoinColumns: []string{"lg_code"},
@@ -74,6 +76,12 @@ func TestImportConfig_Validate(t *testing.T) {
 		{"missing table_name", func(c *ImportConfig) {
 			c.Category[string(model.CategoryPref)].TableName = ""
 		}, "table_name is required"},
+		{"missing s3_text_path", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].S3TextPath = ""
+		}, "s3_text_path is required"},
+		{"missing s3_pos_path with pos_columns", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].S3PosPath = ""
+		}, "s3_pos_path is required"},
 		{"join column not in text_columns", func(c *ImportConfig) {
 			c.Category[string(model.CategoryPref)].JoinColumns = []string{"machiaza_id"}
 		}, `join column "machiaza_id" not in text_columns`},

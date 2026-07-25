@@ -74,6 +74,14 @@ func (c *ImportConfig) Validate() error {
 		if cat.TableName == "" {
 			return fmt.Errorf("category %s: table_name is required", name)
 		}
+		// Empty paths would become empty scan prefixes, silently matching no
+		// files and reporting "no changes".
+		if cat.S3TextPath == "" {
+			return fmt.Errorf("category %s: s3_text_path is required", name)
+		}
+		if len(cat.PosColumns) > 0 && cat.S3PosPath == "" {
+			return fmt.Errorf("category %s: s3_pos_path is required when pos_columns are defined", name)
+		}
 		if len(cat.TextColumns) == 0 {
 			return fmt.Errorf("category %s: text_columns is required", name)
 		}
