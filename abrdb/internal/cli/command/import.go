@@ -12,8 +12,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrdb/internal/infra/db"
-
 	"abr.local/common/progress"
 
 	"abrdb/internal/infra/duckdb"
@@ -101,9 +99,10 @@ Use --force to skip change detection and import immediately.`,
 				return fmt.Errorf("create download dir %q: %w", cfg.Process.DownloadDir, err)
 			}
 
+			store := postgres.NewCatalog(sc.QueryExecutor)
 			catalogService := catalog.New(catalog.ServiceConfig{
 				APIClient:       sc.APIClient,
-				Executor:        sc.QueryExecutor,
+				Store:           store,
 				DownloadDir:     cfg.Process.DownloadDir,
 				EnabledPref:     importConfig.EnabledPref,
 				EnabledCategory: categoryMap,
@@ -113,12 +112,12 @@ Use --force to skip change detection and import immediately.`,
 
 			// Dry-run: only catalog comparison, skip DuckDB/importer initialization
 			if opts.DryRun {
-				return runImportDryRun(ctx, sc.QueryExecutor, catalogService, s3Prefixes, opts)
+				return runImportDryRun(ctx, store, catalogService, s3Prefixes, opts)
 			}
 
 			// Force mode: skip change detection and re-import every in-scope file
 			if opts.Force {
-				services, err := initImportServices(sc, categoryInfoMap, opts.Quiet)
+				services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
 				if err != nil {
 					return err
 				}
@@ -128,7 +127,7 @@ Use --force to skip change detection and import immediately.`,
 			}
 
 			// Default: check for changes first, import only if updates exist
-			return runImportWithChangeDetection(ctx, sc, catalogService, s3Prefixes, importConfig.EnabledCategory, categoryInfoMap, opts)
+			return runImportWithChangeDetection(ctx, sc, store, catalogService, s3Prefixes, importConfig.EnabledCategory, categoryInfoMap, opts)
 		}),
 	}
 
@@ -161,31 +160,13 @@ type importServices struct {
 	importer importerAPI
 }
 
-// initImportServices initializes DuckDB ETL, download, and import services
-// pgCatalogStore adapts the postgres catalog functions to importer.catalogStore.
-type pgCatalogStore struct{ executor *db.QueryExecutor }
-
-func (s pgCatalogStore) PendingImportsByCategory(ctx context.Context, categories []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
-	return postgres.PendingImportsByCategory(ctx, s.executor, categories)
+// pendingSummaryStore reports pending download/import counts per category.
+type pendingSummaryStore interface {
+	GetPendingSummary(ctx context.Context) ([]postgres.PendingSummary, error)
 }
 
-func (s pgCatalogStore) TableIsEmpty(ctx context.Context, tableName string) (bool, error) {
-	return postgres.TableIsEmpty(ctx, s.executor, tableName)
-}
-
-func (s pgCatalogStore) DeleteFileScope(ctx context.Context, tableName, filename string) error {
-	return postgres.DeleteFileScope(ctx, s.executor, tableName, filename)
-}
-
-func (s pgCatalogStore) EnsureLgCodeIndex(ctx context.Context, tableName string) error {
-	return postgres.EnsureLgCodeIndex(ctx, s.executor, tableName)
-}
-
-func (s pgCatalogStore) MarkAsImported(ctx context.Context, filenames ...string) error {
-	return postgres.MarkAsImported(ctx, s.executor, filenames...)
-}
-
-func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema.CategoryInfo, quiet bool) (*importServices, error) {
+// initImportServices initializes DuckDB ETL, download, and import services.
+func initImportServices(sc *ServiceContainer, store *postgres.Catalog, categoryInfoMap map[string]*schema.CategoryInfo, quiet bool) (*importServices, error) {
 	cfg := sc.Config
 
 	etl, err := duckdb.New(duckdb.ETLConfig{
@@ -199,14 +180,14 @@ func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema
 
 	downloadService := download.New(
 		sc.APIClient,
-		sc.QueryExecutor,
+		store,
 		progressMonitor,
 		cfg.Process.DownloadDir,
 	)
 
 	importService := importer.New(
 		etl,
-		pgCatalogStore{sc.QueryExecutor},
+		store,
 		progressMonitor,
 		cfg.Process.DownloadDir,
 		categoryInfoMap,
@@ -222,7 +203,7 @@ func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema
 // runImportDryRun handles the dry-run mode: compare catalog only, no downloads or imports
 func runImportDryRun(
 	ctx context.Context,
-	executor *db.QueryExecutor,
+	store pendingSummaryStore,
 	catalogService catalogAPI,
 	s3Prefixes []string,
 	opts *ImportOptions,
@@ -233,7 +214,7 @@ func runImportDryRun(
 	if err != nil {
 		return fmt.Errorf("scan and compare catalog: %w", err)
 	}
-	return printDryRunSummary(ctx, executor, result, opts.Verbose)
+	return printDryRunSummary(ctx, store, result, opts.Verbose)
 }
 
 // runImportWithChangeDetection handles the default mode: check for changes first, import only if updates exist.
@@ -242,6 +223,7 @@ func runImportDryRun(
 func runImportWithChangeDetection(
 	ctx context.Context,
 	sc *ServiceContainer,
+	store *postgres.Catalog,
 	catalogService catalogAPI,
 	s3Prefixes []string,
 	enabledCategory []model.FileCategory,
@@ -255,7 +237,7 @@ func runImportWithChangeDetection(
 		return fmt.Errorf("scan and compare catalog: %w", err)
 	}
 
-	pendingSummary, err := postgres.GetPendingSummary(ctx, sc.QueryExecutor)
+	pendingSummary, err := store.GetPendingSummary(ctx)
 	if err != nil {
 		return fmt.Errorf("get pending summary: %w", err)
 	}
@@ -283,7 +265,7 @@ func runImportWithChangeDetection(
 		)
 	}
 
-	services, err := initImportServices(sc, categoryInfoMap, opts.Quiet)
+	services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
 	if err != nil {
 		return err
 	}
@@ -345,8 +327,8 @@ func executeImportPipeline(
 	return nil
 }
 
-func printDryRunSummary(ctx context.Context, executor *db.QueryExecutor, scanResult *catalog.ScanResult, verbose bool) error {
-	pendingSummary, err := postgres.GetPendingSummary(ctx, executor)
+func printDryRunSummary(ctx context.Context, store pendingSummaryStore, scanResult *catalog.ScanResult, verbose bool) error {
+	pendingSummary, err := store.GetPendingSummary(ctx)
 	if err != nil {
 		return fmt.Errorf("get pending summary: %w", err)
 	}

@@ -37,6 +37,80 @@ func (f *fakeCatalog) ScanAndUpdate(_ context.Context, _ []string, _ bool) (*cat
 	return f.updateResult, nil
 }
 
+// fakeSummaryStore is a pendingSummaryStore stub.
+type fakeSummaryStore struct {
+	summary []postgres.PendingSummary
+	err     error
+}
+
+func (f *fakeSummaryStore) GetPendingSummary(context.Context) ([]postgres.PendingSummary, error) {
+	return f.summary, f.err
+}
+
+// TestRunImportDryRun_ExitCodes pins the dry-run exit code contract through
+// runImportDryRun itself: nil (exit 0) when nothing is pending,
+// ChangesPendingError (exit 1) when the scan or the catalog reports pending
+// work, and a plain error (exit 2) when the summary query fails.
+func TestRunImportDryRun_ExitCodes(t *testing.T) {
+	summaryErr := errors.New("connection refused")
+
+	tests := []struct {
+		name      string
+		store     *fakeSummaryStore
+		scan      *catalog.ScanResult
+		wantExit1 bool
+		wantErr   error
+	}{
+		{
+			name:  "no changes exits 0",
+			store: &fakeSummaryStore{},
+			scan:  &catalog.ScanResult{},
+		},
+		{
+			name:      "scan updates exit 1",
+			store:     &fakeSummaryStore{},
+			scan:      &catalog.ScanResult{UpdatedFiles: []*model.File{{Filename: "a.csv.zip", FileCategory: model.FileCategory("town")}}},
+			wantExit1: true,
+		},
+		{
+			name:      "pending imports alone exit 1",
+			store:     &fakeSummaryStore{summary: []postgres.PendingSummary{{Category: model.FileCategory("town"), ImportCount: 2}}},
+			scan:      &catalog.ScanResult{},
+			wantExit1: true,
+		},
+		{
+			name:    "summary failure exits 2",
+			store:   &fakeSummaryStore{err: summaryErr},
+			scan:    &catalog.ScanResult{},
+			wantErr: summaryErr,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeCatalog{scanResult: tt.scan}
+
+			err := runImportDryRun(context.Background(), tt.store, fake, []string{"town/"}, &ImportOptions{DryRun: true})
+
+			_, gotExit1 := errors.AsType[ChangesPendingError](err)
+			if gotExit1 != tt.wantExit1 {
+				t.Errorf("runImportDryRun() = %v, want ChangesPendingError=%v", err, tt.wantExit1)
+			}
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("runImportDryRun() = %v, want wrapped %v", err, tt.wantErr)
+				}
+				if gotExit1 {
+					t.Errorf("runImportDryRun() = %v, must not be ChangesPendingError", err)
+				}
+			}
+			if tt.wantErr == nil && !tt.wantExit1 && err != nil {
+				t.Errorf("runImportDryRun() = %v, want nil", err)
+			}
+		})
+	}
+}
+
 // TestChangesPendingError pins the properties main relies on for the exit
 // code contract: it is an error whose dedicated exit code is 1.
 func TestChangesPendingError(t *testing.T) {

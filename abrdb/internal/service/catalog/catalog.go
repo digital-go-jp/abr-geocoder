@@ -12,11 +12,8 @@ import (
 	"strings"
 
 	"abrdb/internal/infra/api"
-	"abrdb/internal/infra/postgres"
 	"abrdb/internal/model"
 	"abrdb/internal/schema"
-
-	"abrdb/internal/infra/db"
 )
 
 // apiLister lists catalog files from the DCAT feed.
@@ -31,24 +28,9 @@ type catalogStore interface {
 	SyncPairImportStatus(ctx context.Context) error
 }
 
-// pgStore adapts the postgres catalog functions to catalogStore.
-type pgStore struct{ executor *db.QueryExecutor }
-
-func (s pgStore) FilesByCategory(ctx context.Context, category model.FileCategory) (map[string]*model.File, error) {
-	return postgres.FilesByCategory(ctx, s.executor, category)
-}
-
-func (s pgStore) UpsertFile(ctx context.Context, record *model.File) error {
-	return postgres.UpsertFile(ctx, s.executor, record)
-}
-
-func (s pgStore) SyncPairImportStatus(ctx context.Context) error {
-	return postgres.SyncPairImportStatus(ctx, s.executor)
-}
-
 type ServiceConfig struct {
 	APIClient       apiLister
-	Executor        *db.QueryExecutor
+	Store           catalogStore
 	DownloadDir     string
 	EnabledPref     []int
 	EnabledCategory map[model.FileCategory]bool
@@ -69,7 +51,7 @@ type service struct {
 func New(cfg ServiceConfig) *service {
 	return &service{
 		apiClient:       cfg.APIClient,
-		store:           pgStore{cfg.Executor},
+		store:           cfg.Store,
 		downloadDir:     cfg.DownloadDir,
 		enabledPref:     cfg.EnabledPref,
 		enabledCategory: cfg.EnabledCategory,

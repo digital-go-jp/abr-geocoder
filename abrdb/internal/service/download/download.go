@@ -13,28 +13,33 @@ import (
 	"abr.local/common/progress"
 
 	"abrdb/internal/infra/api"
-	"abrdb/internal/infra/db"
-	"abrdb/internal/infra/postgres"
 	"abrdb/internal/model"
 	"abrdb/internal/util"
 )
 
+// catalogStore tracks the download and pending-import state of catalog files.
+type catalogStore interface {
+	FilesToDownload(ctx context.Context) ([]*model.File, error)
+	AllPendingImports(ctx context.Context) ([]*model.File, error)
+	MarkAsDownloaded(ctx context.Context, filename string) error
+}
+
 type service struct {
 	apiClient   *api.Client
-	executor    *db.QueryExecutor
+	store       catalogStore
 	progress    progress.Monitor
 	downloadDir string
 }
 
 func New(
 	apiClient *api.Client,
-	executor *db.QueryExecutor,
+	store catalogStore,
 	progress progress.Monitor,
 	downloadDir string,
 ) *service {
 	return &service{
 		apiClient:   apiClient,
-		executor:    executor,
+		store:       store,
 		progress:    progress,
 		downloadDir: downloadDir,
 	}
@@ -56,7 +61,7 @@ func New(
 // per task while the catalog persists, so a needs_download=false flag set in a
 // previous session does not guarantee the file is still on disk.
 func (s *service) DownloadPendingFiles(ctx context.Context) error {
-	queued, err := postgres.FilesToDownload(ctx, s.executor)
+	queued, err := s.store.FilesToDownload(ctx)
 	if err != nil {
 		return fmt.Errorf("get files to download: %w", err)
 	}
@@ -84,7 +89,7 @@ func (s *service) DownloadPendingFiles(ctx context.Context) error {
 			return fmt.Errorf("download file %q: %w", file.SourceURL, err)
 		}
 
-		if err := postgres.MarkAsDownloaded(ctx, s.executor, file.Filename); err != nil {
+		if err := s.store.MarkAsDownloaded(ctx, file.Filename); err != nil {
 			return fmt.Errorf("mark %q as downloaded: %w", file.Filename, err)
 		}
 
@@ -95,7 +100,7 @@ func (s *service) DownloadPendingFiles(ctx context.Context) error {
 // findMissingPendingImports returns files flagged needs_import=true that are
 // not already in the queued set and are missing from downloadDir.
 func (s *service) findMissingPendingImports(ctx context.Context, queued []*model.File) ([]*model.File, error) {
-	pending, err := postgres.AllPendingImports(ctx, s.executor)
+	pending, err := s.store.AllPendingImports(ctx)
 	if err != nil {
 		return nil, err
 	}

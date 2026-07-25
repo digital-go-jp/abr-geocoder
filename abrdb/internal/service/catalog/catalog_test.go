@@ -288,7 +288,7 @@ func TestService_IsProcessable(t *testing.T) {
 func TestNew(t *testing.T) {
 	cfg := ServiceConfig{
 		APIClient:   api.New("https://example.com/feed.json"),
-		Executor:    nil,
+		Store:       nil,
 		DownloadDir: "/tmp/downloads",
 		EnabledPref: []int{1},
 		EnabledCategory: map[model.FileCategory]bool{

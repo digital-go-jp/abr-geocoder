@@ -42,9 +42,9 @@ func NewQueryExecutor(ctx context.Context, connStr string) (*QueryExecutor, erro
 	return &QueryExecutor{pool: pool}, nil
 }
 
-// Pool returns the underlying pgxpool.Pool for direct access.
-func (q *QueryExecutor) Pool() *pgxpool.Pool {
-	return q.pool
+// Begin starts a transaction on the pool.
+func (q *QueryExecutor) Begin(ctx context.Context) (pgx.Tx, error) {
+	return q.pool.Begin(ctx)
 }
 
 // Query executes a query that returns rows.

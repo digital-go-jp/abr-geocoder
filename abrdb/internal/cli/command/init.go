@@ -77,7 +77,7 @@ func NewInitCmd() *cobra.Command {
 			}
 			ddl := importCfg.GenerateDDL()
 
-			migrator := postgres.NewMigrator(sc.QueryExecutor.Pool(), ddl)
+			migrator := postgres.NewMigrator(sc.QueryExecutor, ddl)
 			return runInit(ctx, sc.QueryExecutor, migrator, opts, string(configYAML))
 		}),
 	}

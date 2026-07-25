@@ -29,10 +29,21 @@ func scanFile(s scanner, f *model.File) error {
 	)
 }
 
+// Catalog persists the abrdb_catalog file inventory and the import state of
+// the imported data tables.
+type Catalog struct {
+	executor *db.QueryExecutor
+}
+
+// NewCatalog creates a Catalog backed by the given executor.
+func NewCatalog(executor *db.QueryExecutor) *Catalog {
+	return &Catalog{executor: executor}
+}
+
 // UpsertFile inserts or updates a file record.
 // updated_at is only changed when actual data changes occur.
-func UpsertFile(ctx context.Context, executor *db.QueryExecutor, record *model.File) error {
-	err := executor.Exec(ctx, `
+func (c *Catalog) UpsertFile(ctx context.Context, record *model.File) error {
+	err := c.executor.Exec(ctx, `
 		INSERT INTO abrdb_catalog (
 			file_type, file_category, pref_code, file_key,
 			filename,
@@ -70,27 +81,27 @@ func UpsertFile(ctx context.Context, executor *db.QueryExecutor, record *model.F
 }
 
 // FilesToDownload retrieves files that need downloading.
-func FilesToDownload(ctx context.Context, executor *db.QueryExecutor) ([]*model.File, error) {
-	return queryFiles(ctx, executor, "WHERE needs_download = true")
+func (c *Catalog) FilesToDownload(ctx context.Context) ([]*model.File, error) {
+	return c.queryFiles(ctx, "WHERE needs_download = true")
 }
 
 // AllPendingImports retrieves all files that still need importing (needs_import=true),
 // regardless of category. Used by the download phase to detect catalog/disk drift:
 // a file may be flagged for import but missing on disk (e.g., on ephemeral storage
 // like ECS Fargate /tmp), and must be re-downloaded.
-func AllPendingImports(ctx context.Context, executor *db.QueryExecutor) ([]*model.File, error) {
-	return queryFiles(ctx, executor, "WHERE needs_import = true")
+func (c *Catalog) AllPendingImports(ctx context.Context) ([]*model.File, error) {
+	return c.queryFiles(ctx, "WHERE needs_import = true")
 }
 
 // PendingImportsByCategory retrieves files pending import for multiple category values in one query.
 // Returns a map of category to files, eliminating N+1 queries when importing multiple category values.
-func PendingImportsByCategory(ctx context.Context, executor *db.QueryExecutor, category []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
+func (c *Catalog) PendingImportsByCategory(ctx context.Context, category []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
 	result := make(map[model.FileCategory][]*model.File)
 	if len(category) == 0 {
 		return result, nil
 	}
 
-	files, err := queryFiles(ctx, executor, "WHERE needs_import = true AND file_category = ANY($1)", category)
+	files, err := c.queryFiles(ctx, "WHERE needs_import = true AND file_category = ANY($1)", category)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +112,8 @@ func PendingImportsByCategory(ctx context.Context, executor *db.QueryExecutor, c
 }
 
 // FilesByCategory retrieves all files for a category as a map keyed by source URL.
-func FilesByCategory(ctx context.Context, executor *db.QueryExecutor, category model.FileCategory) (map[string]*model.File, error) {
-	files, err := queryFiles(ctx, executor, "WHERE file_category = $1", category)
+func (c *Catalog) FilesByCategory(ctx context.Context, category model.FileCategory) (map[string]*model.File, error) {
+	files, err := c.queryFiles(ctx, "WHERE file_category = $1", category)
 	if err != nil {
 		return nil, err
 	}
@@ -114,13 +125,13 @@ func FilesByCategory(ctx context.Context, executor *db.QueryExecutor, category m
 }
 
 // queryFiles is a helper to query files with conditions
-func queryFiles(ctx context.Context, executor *db.QueryExecutor, whereClause string, args ...any) ([]*model.File, error) {
+func (c *Catalog) queryFiles(ctx context.Context, whereClause string, args ...any) ([]*model.File, error) {
 	query := `
         SELECT ` + fileSelectColumns + `
         FROM abrdb_catalog
         ` + whereClause
 
-	rows, err := executor.Query(ctx, query, args...)
+	rows, err := c.executor.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query files: %w", err)
 	}
@@ -142,18 +153,18 @@ func queryFiles(ctx context.Context, executor *db.QueryExecutor, whereClause str
 }
 
 // MarkAsDownloaded marks a file as downloaded and ready for import.
-func MarkAsDownloaded(ctx context.Context, executor *db.QueryExecutor, filename string) error {
-	return updateFileStatus(ctx, executor, false, true, filename)
+func (c *Catalog) MarkAsDownloaded(ctx context.Context, filename string) error {
+	return c.updateFileStatus(ctx, false, true, filename)
 }
 
 // MarkAsImported marks one or two files as fully imported.
 // Accepts 1-2 filenames for convenience when handling text/pos pairs.
-func MarkAsImported(ctx context.Context, executor *db.QueryExecutor, filenames ...string) error {
-	return updateFileStatus(ctx, executor, false, false, filenames...)
+func (c *Catalog) MarkAsImported(ctx context.Context, filenames ...string) error {
+	return c.updateFileStatus(ctx, false, false, filenames...)
 }
 
 // updateFileStatus updates the download/import status for one or more files.
-func updateFileStatus(ctx context.Context, executor *db.QueryExecutor, needsDownload, needsImport bool, filenames ...string) error {
+func (c *Catalog) updateFileStatus(ctx context.Context, needsDownload, needsImport bool, filenames ...string) error {
 	if len(filenames) == 0 {
 		return nil
 	}
@@ -171,7 +182,7 @@ func updateFileStatus(ctx context.Context, executor *db.QueryExecutor, needsDown
 		WHERE filename IN (%s)
 	`, strings.Join(placeholders, ", "))
 
-	err := executor.Exec(ctx, query, args...)
+	err := c.executor.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update file status: %w", err)
 	}
@@ -185,8 +196,8 @@ type PendingSummary struct {
 	ImportCount   int
 }
 
-func GetPendingSummary(ctx context.Context, executor *db.QueryExecutor) ([]PendingSummary, error) {
-	rows, err := executor.Query(ctx, `
+func (c *Catalog) GetPendingSummary(ctx context.Context) ([]PendingSummary, error) {
+	rows, err := c.executor.Query(ctx, `
 		SELECT
 			file_category,
 			COUNT(*) FILTER (WHERE needs_download) AS download_count,
@@ -219,8 +230,8 @@ func GetPendingSummary(ctx context.Context, executor *db.QueryExecutor) ([]Pendi
 // SyncPairImportStatus synchronizes needs_import flag between text/pos pairs.
 // If either file in a pair has needs_import=true, both are set to true.
 // This ensures that text and pos files are always imported together.
-func SyncPairImportStatus(ctx context.Context, executor *db.QueryExecutor) error {
-	err := executor.Exec(ctx, `
+func (c *Catalog) SyncPairImportStatus(ctx context.Context) error {
+	err := c.executor.Exec(ctx, `
 		UPDATE abrdb_catalog AS target
 		SET needs_import = true, updated_at = CURRENT_TIMESTAMP
 		WHERE needs_import = false
