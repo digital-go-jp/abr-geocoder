@@ -35,11 +35,15 @@ type DuckDBCache struct {
 func NewDuckDBCache(ctx context.Context) (*DuckDBCache, error) {
 	cfg := config.Load()
 	cachePath := duckdb.ResolvePath("", cfg.Cache.Path)
-	return NewDuckDBCacheFromPath(ctx, cachePath)
+	return newDuckDBCache(ctx, cachePath, cfg.Cache.DuckDBThreads)
 }
 
 // The cache file must already exist and be valid (created by `abrg cache build`).
 func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache, error) {
+	return newDuckDBCache(ctx, cachePath, config.Load().Cache.DuckDBThreads)
+}
+
+func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*DuckDBCache, error) {
 	// Cache file path is required
 	if cachePath == "" {
 		return nil, fmt.Errorf("cache file required: use 'abrg cache build' to create one")
@@ -65,7 +69,7 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 		db: conn,
 	}
 
-	if err := applyThreadLimit(ctx, conn); err != nil {
+	if err := applyThreadLimit(ctx, conn, duckdbThreads); err != nil {
 		return nil, err
 	}
 
@@ -107,8 +111,7 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 // dominated by small point lookups where per-query fan-out to every core only
 // contends with request- and worker-level parallelism. A value of 0 keeps the
 // DuckDB default of one thread per core.
-func applyThreadLimit(ctx context.Context, conn *sql.DB) error {
-	v := config.Load().Cache.DuckDBThreads
+func applyThreadLimit(ctx context.Context, conn *sql.DB, v string) error {
 	n, err := strconv.Atoi(v)
 	if err != nil || n < 0 {
 		return fmt.Errorf("invalid ABRG_DUCKDB_THREADS %q: must be a non-negative integer", v)

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 
 	"abr.local/common/env"
+
+	"abrg/internal/infra/duckdb"
 )
 
 func defaultCachePath() string {
@@ -39,7 +41,7 @@ func Load() *Config {
 			CORSAllowOrigin: env.GetEnv("CORS_ALLOW_ORIGIN", ""),
 		},
 		Cache: cacheConfig{
-			Path:          env.GetEnv("CACHE_PATH", defaultCachePath()),
+			Path:          env.GetEnv(duckdb.EnvCachePath, defaultCachePath()),
 			DuckDBThreads: env.GetEnv("ABRG_DUCKDB_THREADS", "2"),
 		},
 	}
