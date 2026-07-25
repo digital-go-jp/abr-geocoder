@@ -4,15 +4,11 @@ import (
 	"testing"
 
 	"abrg/internal/cache"
+	"abrg/internal/testutil"
 )
 
-// Skips the test if cache is not available.
+// SetupTestCache returns the shared test cache, skipping when it is unavailable.
 func SetupTestCache(t *testing.T) *cache.DuckDBCache {
 	t.Helper()
-
-	c, err := initTestCache()
-	if err != nil {
-		t.Skipf("Skipping test: DuckDB cache not available: %v", err)
-	}
-	return c
+	return testutil.Setup(t, initTestCache)
 }
