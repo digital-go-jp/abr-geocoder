@@ -18,8 +18,35 @@ import (
 	"abrdb/internal/infra/db"
 )
 
+// apiLister lists catalog files from the DCAT feed.
+type apiLister interface {
+	ListFilesByPrefix(ctx context.Context, prefix string) ([]api.FileInfo, error)
+}
+
+// catalogStore persists catalog rows.
+type catalogStore interface {
+	FilesByCategory(ctx context.Context, category model.FileCategory) (map[string]*model.File, error)
+	UpsertFile(ctx context.Context, record *model.File) error
+	SyncPairImportStatus(ctx context.Context) error
+}
+
+// pgStore adapts the postgres catalog functions to catalogStore.
+type pgStore struct{ executor *db.QueryExecutor }
+
+func (s pgStore) FilesByCategory(ctx context.Context, category model.FileCategory) (map[string]*model.File, error) {
+	return postgres.FilesByCategory(ctx, s.executor, category)
+}
+
+func (s pgStore) UpsertFile(ctx context.Context, record *model.File) error {
+	return postgres.UpsertFile(ctx, s.executor, record)
+}
+
+func (s pgStore) SyncPairImportStatus(ctx context.Context) error {
+	return postgres.SyncPairImportStatus(ctx, s.executor)
+}
+
 type ServiceConfig struct {
-	APIClient       *api.Client
+	APIClient       apiLister
 	Executor        *db.QueryExecutor
 	DownloadDir     string
 	EnabledPref     []int
@@ -29,8 +56,8 @@ type ServiceConfig struct {
 }
 
 type service struct {
-	apiClient       *api.Client
-	executor        *db.QueryExecutor
+	apiClient       apiLister
+	store           catalogStore
 	downloadDir     string
 	enabledPref     []int
 	enabledCategory map[model.FileCategory]bool
@@ -41,7 +68,7 @@ type service struct {
 func New(cfg ServiceConfig) *service {
 	return &service{
 		apiClient:       cfg.APIClient,
-		executor:        cfg.Executor,
+		store:           pgStore{cfg.Executor},
 		downloadDir:     cfg.DownloadDir,
 		enabledPref:     cfg.EnabledPref,
 		enabledCategory: cfg.EnabledCategory,
@@ -83,7 +110,7 @@ func (s *service) ScanAndUpdate(ctx context.Context, prefixes []string, force bo
 	}
 
 	// Sync text/pos pairs: if either needs import, both should be imported together
-	if err := postgres.SyncPairImportStatus(ctx, s.executor); err != nil {
+	if err := s.store.SyncPairImportStatus(ctx); err != nil {
 		return nil, fmt.Errorf("sync pair import status: %w", err)
 	}
 
@@ -143,7 +170,7 @@ type fileContext struct {
 }
 
 func (s *service) prepareFileContext(ctx context.Context, category model.FileCategory, sc *scanContext) (*fileContext, error) {
-	existingFiles, err := postgres.FilesByCategory(ctx, s.executor, category)
+	existingFiles, err := s.store.FilesByCategory(ctx, category)
 	if err != nil {
 		return nil, fmt.Errorf("get existing files: %w", err)
 	}
@@ -181,7 +208,7 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 			continue
 		}
 
-		if err := postgres.UpsertFile(ctx, s.executor, record); err != nil {
+		if err := s.store.UpsertFile(ctx, record); err != nil {
 			return nil, fmt.Errorf("upsert file %q: %w", file.URL, err)
 		}
 		if action.isNewOrModified {
