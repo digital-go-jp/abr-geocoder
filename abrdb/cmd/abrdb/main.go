@@ -49,10 +49,14 @@ Japanese address data from the Address Base Registry (ABR).`,
 		command.NewVersionCmd(),
 	)
 
-	err := rootCmd.ExecuteContext(ctx)
+	return finish(rootCmd.ExecuteContext(ctx))
+}
+
+// finish maps the command result to the process exit code, printing the
+// error to stderr only for failures (usage output is suppressed).
+func finish(err error) int {
 	code := exitCode(err)
 	if code == exitFailure {
-		// Print only the error (usage suppressed)
 		_, _ = os.Stderr.WriteString(err.Error() + "\n")
 	}
 	return code
