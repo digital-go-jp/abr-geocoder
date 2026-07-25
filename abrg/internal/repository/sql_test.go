@@ -8,7 +8,6 @@ import (
 
 	"abrg/internal/cache"
 	"abrg/internal/model"
-	"abrg/internal/testutil"
 )
 
 // The tests in this file run the repository SQL against the committed
@@ -37,9 +36,16 @@ var initTestRepo = sync.OnceValues(func() (*DB, error) {
 	return NewRepository(c.DB()), nil
 })
 
+// setupRepo opens the quickstart cache. The file is tracked in Git, so a
+// failure to open it is a real regression and fails the test instead of
+// skipping.
 func setupRepo(t *testing.T) *DB {
 	t.Helper()
-	return testutil.Setup(t, initTestRepo)
+	repo, err := initTestRepo()
+	if err != nil {
+		t.Fatalf("open quickstart cache %s: %v", quickstartCachePath, err)
+	}
+	return repo
 }
 
 func almostEqual(got, want float64) bool {

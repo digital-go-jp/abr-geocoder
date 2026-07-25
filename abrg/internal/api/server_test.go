@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"abrg/internal/cache"
-	"abrg/internal/testutil"
 )
 
 // The tests in this file pin the route wiring of NewGinServer for the
@@ -20,6 +19,18 @@ import (
 var initQuickstartCache = sync.OnceValues(func() (*cache.DuckDBCache, error) {
 	return cache.NewDuckDBCacheFromPath(context.Background(), "../../../quickstart/tokyo_basic.duckdb")
 })
+
+// setupQuickstartCache opens the quickstart cache. The file is tracked in
+// Git, so a failure to open it is a real regression and fails the test
+// instead of skipping.
+func setupQuickstartCache(t *testing.T) *cache.DuckDBCache {
+	t.Helper()
+	c, err := initQuickstartCache()
+	if err != nil {
+		t.Fatalf("open quickstart cache: %v", err)
+	}
+	return c
+}
 
 func registeredPaths(s *GinServer) []string {
 	var paths []string
@@ -68,7 +79,7 @@ func TestNewGinServer_WithoutCache(t *testing.T) {
 }
 
 func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
-	c := testutil.Setup(t, initQuickstartCache)
+	c := setupQuickstartCache(t)
 
 	server, err := NewGinServer(ServerConfig{
 		EnabledPos: true, EnabledCategory: "basic", EnabledPref: "13", Cache: c,
@@ -94,7 +105,7 @@ func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 }
 
 func TestNewGinServer_WithCachePosDisabled(t *testing.T) {
-	c := testutil.Setup(t, initQuickstartCache)
+	c := setupQuickstartCache(t)
 
 	server, err := NewGinServer(ServerConfig{
 		EnabledPos: false, EnabledCategory: "basic", EnabledPref: "13", Cache: c,
