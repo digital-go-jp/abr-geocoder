@@ -41,6 +41,12 @@ const (
 	MaxChomeNumber = 100
 )
 
+// IsBaseMachiazaID reports whether id is a base-level machiaza ID, i.e. its
+// chome suffix is "000". IDs with an unexpected length count as base.
+func IsBaseMachiazaID(id string) bool {
+	return len(id) != MachiazaIDLength || id[MachiazaBaseLength:] == BaseMachiazaSuffix
+}
+
 // LgCode constants
 // LgCode format: PPCCCX (6 digits, JIS X 0401 + JIS X 0402 + check digit)
 //

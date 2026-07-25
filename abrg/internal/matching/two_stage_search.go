@@ -147,7 +147,7 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 	// is stored under the base machiaza_id instead of the detailed one
 	// e.g., 0098104 (寺町通御池上る上本能寺前町) -> try 0098000 (上本能寺前町)
 	// e.g., 0231136 (大字南長野県町) -> try 0231000 (大字南長野)
-	if parcelCount == 0 && len(machiazaID) == model.MachiazaIDLength && machiazaID[model.MachiazaBaseLength:] != model.BaseMachiazaSuffix {
+	if parcelCount == 0 && !model.IsBaseMachiazaID(machiazaID) {
 		baseMachiazaID := machiazaID[:model.MachiazaBaseLength] + model.BaseMachiazaSuffix
 		pr, err := s.repo.FindParcelExact(ctx, lgCode, baseMachiazaID, filter)
 		if err != nil {

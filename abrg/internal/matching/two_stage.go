@@ -78,7 +78,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	// (no base record to fallback to)
 	parcelCount := basic.IDs.ParcelCount
 	machiazaID := *basic.IDs.MachiazaID
-	if parcelCount == 0 && (len(machiazaID) != model.MachiazaIDLength || machiazaID[model.MachiazaBaseLength:] == model.BaseMachiazaSuffix) {
+	if parcelCount == 0 && model.IsBaseMachiazaID(machiazaID) {
 		// For has_chome=true, parcel data may exist under the chome-specific machiaza_id
 		// so we continue to search with chome adjustment
 		if !basic.IDs.HasChome {

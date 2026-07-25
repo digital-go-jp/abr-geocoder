@@ -22,8 +22,7 @@ func DetermineMatchLevel(ids *model.IDs) model.MatchLevel {
 
 	// Machiaza: suffix "000" = base level, otherwise detail level.
 	if ids.MachiazaID != nil {
-		suffix := (*ids.MachiazaID)[model.MachiazaBaseLength:model.MachiazaIDLength]
-		if suffix != model.BaseMachiazaSuffix {
+		if !model.IsBaseMachiazaID(*ids.MachiazaID) {
 			return model.MatchLevelMachiazaDetail
 		}
 		return model.MatchLevelMachiaza
