@@ -16,9 +16,11 @@ COPY common/ ./common/
 COPY abrdb/ ./abrdb/
 WORKDIR /build/abrdb
 
-# Build the binary (CGO required for DuckDB)
+# Build the binary (CGO required for DuckDB).
+# .dockerignore excludes .git, so the commit hash must come from a build arg:
+#   docker build --build-arg COMMIT=$(git rev-parse --short HEAD) ...
+ARG COMMIT=none
 RUN VERSION=$(cat VERSION) && \
-    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none") && \
     CGO_ENABLED=1 \
     go build -ldflags="-w -s -X abr.local/common/version.Version=${VERSION} -X abr.local/common/version.Commit=${COMMIT}" -o abrdb ./cmd/abrdb
 
