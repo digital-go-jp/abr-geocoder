@@ -278,3 +278,31 @@ func TestListFilesByPrefix_NoMatchesIsNotAnError(t *testing.T) {
 		t.Errorf("got %d files, want 0", len(files))
 	}
 }
+
+// TestDownloadFile_LeavesOnlyFinalFile pins the atomic-write contract: after a
+// successful download the destination directory contains only the final file,
+// with no temp leftovers.
+func TestDownloadFile_LeavesOnlyFinalFile(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("payload"))
+	}))
+	defer server.Close()
+
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "data.csv.zip")
+	if err := New(server.URL).DownloadFile(t.Context(), server.URL, dest); err != nil {
+		t.Fatalf("DownloadFile() error = %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "data.csv.zip" {
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Errorf("directory contents = %v, want only data.csv.zip", names)
+	}
+}

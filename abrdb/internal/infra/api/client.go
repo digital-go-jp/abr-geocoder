@@ -176,9 +176,20 @@ func (c *Client) DownloadFile(ctx context.Context, fileURL, destPath string) err
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	// Atomic write: download to temp file, rename on success
-	tmpPath := destPath + ".tmp"
-	if err := downloadToFile(resp.Body, tmpPath); err != nil {
+	// Atomic write: download to a uniquely named temp file, rename on success.
+	// The unique name keeps concurrent processes from clobbering each other's
+	// partial downloads.
+	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		return fmt.Errorf("create directory: %w", err)
+	}
+
+	tmp, err := os.CreateTemp(filepath.Dir(destPath), filepath.Base(destPath)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+
+	if err := writeAndClose(tmp, resp.Body); err != nil {
 		_ = os.Remove(tmpPath) // Clean up partial file
 		return err
 	}
@@ -191,14 +202,12 @@ func (c *Client) DownloadFile(ctx context.Context, fileURL, destPath string) err
 	return nil
 }
 
-func downloadToFile(r io.Reader, destPath string) error {
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
-		return fmt.Errorf("create directory: %w", err)
-	}
-
-	out, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("create file: %w", err)
+// writeAndClose copies r into out and closes it, restoring the regular file
+// permissions that os.Create would have used.
+func writeAndClose(out *os.File, r io.Reader) error {
+	if err := out.Chmod(0o644); err != nil {
+		_ = out.Close()
+		return fmt.Errorf("chmod file: %w", err)
 	}
 
 	if _, err := io.Copy(out, r); err != nil {
