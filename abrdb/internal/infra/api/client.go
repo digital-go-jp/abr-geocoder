@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -119,6 +120,7 @@ func (c *Client) ListFilesByPrefix(ctx context.Context, prefix string) ([]FileIn
 	}
 
 	var files []FileInfo
+	var parseFailures int
 	for _, dataset := range feed.Dataset {
 		for _, dist := range dataset.Distribution {
 			// Only process ZIP files
@@ -132,7 +134,12 @@ func (c *Client) ListFilesByPrefix(ctx context.Context, prefix string) ([]FileIn
 
 			modified, err := extractModifiedFromDescription(dataset.Description)
 			if err != nil {
-				// Skip files without valid timestamp in description
+				// A single bad description is skipped with a warning; if every
+				// matching file fails, the feed format has likely changed and
+				// silently reporting "no changes" would freeze data updates.
+				slog.Warn("skipping file with unparsable last-modified",
+					"event", "dcat_parse", "url", dist.AccessURL, "error", err)
+				parseFailures++
 				continue
 			}
 
@@ -142,6 +149,10 @@ func (c *Client) ListFilesByPrefix(ctx context.Context, prefix string) ([]FileIn
 				LastModified: modified,
 			})
 		}
+	}
+
+	if len(files) == 0 && parseFailures > 0 {
+		return nil, fmt.Errorf("no parsable last-modified date in %d matching files for prefix %q: DCAT feed format may have changed", parseFailures, prefix)
 	}
 
 	return files, nil

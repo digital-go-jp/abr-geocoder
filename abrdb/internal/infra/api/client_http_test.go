@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -227,5 +228,53 @@ func TestFetchFeed_InvalidJSON(t *testing.T) {
 
 	if _, err := New(server.URL).FetchFeed(t.Context()); err == nil {
 		t.Error("FetchFeed: want decode error for invalid JSON, got nil")
+	}
+}
+
+// TestListFilesByPrefix_AllTimestampsUnparsable pins that a feed whose every
+// matching entry lacks a parseable timestamp is reported as an error rather
+// than an empty "no changes" result.
+func TestListFilesByPrefix_AllTimestampsUnparsable(t *testing.T) {
+	const feed = `{
+  "dataset": [
+    {
+      "description": "no timestamp here",
+      "distribution": [
+        {"accessURL": "https://host/mt_pref/mt_pref_all.csv.zip"},
+        {"accessURL": "https://host/mt_pref/mt_pref_02.csv.zip"}
+      ]
+    }
+  ]
+}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(feed))
+	}))
+	defer server.Close()
+
+	_, err := New(server.URL).ListFilesByPrefix(t.Context(), "mt_pref")
+	if err == nil {
+		t.Fatal("ListFilesByPrefix() = nil, want error when all timestamps are unparsable")
+	}
+	if !strings.Contains(err.Error(), "DCAT feed format may have changed") {
+		t.Errorf("error = %v, want mention of feed format change", err)
+	}
+}
+
+// TestListFilesByPrefix_NoMatchesIsNotAnError pins that a prefix with no
+// matching files at all still returns an empty list without error.
+func TestListFilesByPrefix_NoMatchesIsNotAnError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(dcatFeed))
+	}))
+	defer server.Close()
+
+	files, err := New(server.URL).ListFilesByPrefix(t.Context(), "mt_nonexistent")
+	if err != nil {
+		t.Fatalf("ListFilesByPrefix() error = %v, want nil", err)
+	}
+	if len(files) != 0 {
+		t.Errorf("got %d files, want 0", len(files))
 	}
 }
