@@ -71,6 +71,9 @@ func (c *ImportConfig) Validate() error {
 		if _, ok := validCategory[name]; !ok {
 			return fmt.Errorf("unknown category: %s", name)
 		}
+		if cat.TableName == "" {
+			return fmt.Errorf("category %s: table_name is required", name)
+		}
 		if len(cat.TextColumns) == 0 {
 			return fmt.Errorf("category %s: text_columns is required", name)
 		}
@@ -80,8 +83,47 @@ func (c *ImportConfig) Validate() error {
 		if len(cat.JoinColumns) == 0 {
 			return fmt.Errorf("category %s: join_columns is required", name)
 		}
+
+		// Join columns drive the text/pos merge, so they must exist on both sides.
+		textCols := columnNameSet(cat.TextColumns)
+		posCols := columnNameSet(cat.PosColumns)
+		for _, jc := range cat.JoinColumns {
+			if _, ok := textCols[jc]; !ok {
+				return fmt.Errorf("category %s: join column %q not in text_columns", name, jc)
+			}
+			if _, ok := posCols[jc]; !ok {
+				return fmt.Errorf("category %s: join column %q not in pos_columns", name, jc)
+			}
+		}
+
+		// Unknown PG types would silently degrade to VARCHAR in the DuckDB ETL.
+		for _, col := range slices.Concat(cat.TextColumns, cat.PosColumns) {
+			if col.Name == "" {
+				return fmt.Errorf("category %s: column with empty name", name)
+			}
+			if !isKnownPGType(col.Type) {
+				return fmt.Errorf("category %s: column %s has unsupported type %q", name, col.Name, col.Type)
+			}
+		}
 	}
 	return nil
+}
+
+func columnNameSet(columns []ColumnDef) map[string]struct{} {
+	set := make(map[string]struct{}, len(columns))
+	for _, col := range columns {
+		set[col.Name] = struct{}{}
+	}
+	return set
+}
+
+// isKnownPGType mirrors the type coverage of pgTypeToDuckDB.
+func isKnownPGType(pgType string) bool {
+	if strings.HasPrefix(pgType, "CHAR") {
+		return true
+	}
+	_, ok := pgTypeToDuckDBMap[pgType]
+	return ok
 }
 
 func (c *ImportConfig) ToCategoryInfoMap() map[string]*CategoryInfo {

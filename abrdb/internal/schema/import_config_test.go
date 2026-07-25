@@ -71,6 +71,28 @@ func TestImportConfig_Validate(t *testing.T) {
 		{"missing join_columns", func(c *ImportConfig) {
 			c.Category[string(model.CategoryPref)].JoinColumns = nil
 		}, "join_columns is required"},
+		{"missing table_name", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].TableName = ""
+		}, "table_name is required"},
+		{"join column not in text_columns", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].JoinColumns = []string{"machiaza_id"}
+		}, `join column "machiaza_id" not in text_columns`},
+		{"join column not in pos_columns", func(c *ImportConfig) {
+			cat := c.Category[string(model.CategoryPref)]
+			cat.TextColumns = append(cat.TextColumns, ColumnDef{Name: "machiaza_id", Type: "CHAR(7)"})
+			cat.JoinColumns = []string{"machiaza_id"}
+		}, `join column "machiaza_id" not in pos_columns`},
+		{"unknown pg type", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].TextColumns[0].Type = "JSONB"
+		}, `unsupported type "JSONB"`},
+		{"empty column type", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].PosColumns = append(
+				c.Category[string(model.CategoryPref)].PosColumns, ColumnDef{Name: "rep_lon"})
+		}, `unsupported type ""`},
+		{"empty column name", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].PosColumns = append(
+				c.Category[string(model.CategoryPref)].PosColumns, ColumnDef{Type: "REAL"})
+		}, "column with empty name"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
