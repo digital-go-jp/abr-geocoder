@@ -159,15 +159,11 @@ func (s *GinServer) HealthHandler(c *gin.Context) {
 }
 
 func (s *GinServer) RootHandler(c *gin.Context) {
-	endpoints := []string{"/", "/health", "/normalize"}
-	if s.matcher != nil {
-		endpoints = append(endpoints, "/match")
-	}
-	if s.matcher != nil && s.enabledPos {
-		endpoints = append(endpoints, "/geocode")
-	}
-	if s.reverseGeocoder != nil && s.enabledPos {
-		endpoints = append(endpoints, "/reverse")
+	endpoints := make([]string, 0, len(endpointSpecs()))
+	for _, spec := range endpointSpecs() {
+		if spec.available(s) {
+			endpoints = append(endpoints, spec.path)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

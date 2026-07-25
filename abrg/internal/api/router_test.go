@@ -495,81 +495,72 @@ func TestErrorResponse(t *testing.T) {
 	}
 }
 
-// TestRegisterPositionEndpoint tests the registerPositionEndpoint helper
-func TestRegisterPositionEndpoint(t *testing.T) {
-	handler := func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"handler": "enabled"})
-	}
-	disabledHandler := func(c *gin.Context) {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"handler": "disabled"})
-	}
-
+// TestRegisterEndpoints pins how the endpoint spec table drives both route
+// registration and the RootHandler endpoint listing.
+func TestRegisterEndpoints(t *testing.T) {
 	tests := []struct {
-		name               string
-		component          any
-		enablePositionData bool
-		wantRegistered     bool
-		wantStatus         int
-		wantHandler        string
+		name       string
+		server     *GinServer
+		wantPaths  []string // sorted registered GET paths
+		wantListed []string // exact RootHandler endpoints order
 	}{
 		{
-			name:               "component nil - no registration",
-			component:          nil,
-			enablePositionData: true,
-			wantRegistered:     false,
+			name:       "no components - core routes only",
+			server:     &GinServer{},
+			wantPaths:  []string{"/", "/health", "/normalize"},
+			wantListed: []string{"/", "/health", "/normalize"},
 		},
 		{
-			name:               "component exists, position enabled - enabled handler",
-			component:          "not-nil",
-			enablePositionData: true,
-			wantRegistered:     true,
-			wantStatus:         http.StatusOK,
-			wantHandler:        "enabled",
+			name:       "all components, position enabled",
+			server:     &GinServer{matcher: &mockMatcher{}, reverseGeocoder: &mockReverseGeocoder{}, enabledPos: true},
+			wantPaths:  []string{"/", "/geocode", "/health", "/match", "/normalize", "/reverse"},
+			wantListed: []string{"/", "/health", "/normalize", "/match", "/geocode", "/reverse"},
 		},
 		{
-			name:               "component exists, position disabled - disabled handler",
-			component:          "not-nil",
-			enablePositionData: false,
-			wantRegistered:     true,
-			wantStatus:         http.StatusServiceUnavailable,
-			wantHandler:        "disabled",
+			name:       "all components, position disabled",
+			server:     &GinServer{matcher: &mockMatcher{}, reverseGeocoder: &mockReverseGeocoder{}},
+			wantPaths:  []string{"/", "/geocode", "/health", "/match", "/normalize", "/reverse"},
+			wantListed: []string{"/", "/health", "/normalize", "/match"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			registerPositionEndpoint(router, "/test", tt.component, tt.enablePositionData, handler, disabledHandler)
+			registerEndpoints(router, tt.server)
 
-			// Check if route was registered
-			routes := router.Routes()
-			registered := false
-			for _, r := range routes {
-				if r.Path == "/test" {
-					registered = true
-					break
+			var paths []string
+			for _, r := range router.Routes() {
+				if r.Method == http.MethodGet {
+					paths = append(paths, r.Path)
 				}
 			}
-			if registered != tt.wantRegistered {
-				t.Errorf("registerPositionEndpoint() registered = %v, want %v", registered, tt.wantRegistered)
+			slices.Sort(paths)
+			if !slices.Equal(paths, tt.wantPaths) {
+				t.Errorf("registered paths = %v, want %v", paths, tt.wantPaths)
 			}
 
-			if tt.wantRegistered {
-				// Test the handler response
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequestWithContext(t.Context(), "GET", "/", nil)
+			router.ServeHTTP(w, req)
+			var root struct {
+				Endpoints []string `json:"endpoints"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &root); err != nil {
+				t.Fatalf("GET / failed to unmarshal response: %v", err)
+			}
+			if !slices.Equal(root.Endpoints, tt.wantListed) {
+				t.Errorf("GET / endpoints = %v, want %v", root.Endpoints, tt.wantListed)
+			}
+
+			// Position endpoints answer with the disabled response when
+			// registered but not listed.
+			if tt.server.matcher != nil && !tt.server.enabledPos {
 				w := httptest.NewRecorder()
-				req, _ := http.NewRequestWithContext(t.Context(), "GET", "/test", nil)
+				req, _ := http.NewRequestWithContext(t.Context(), "GET", "/geocode", nil)
 				router.ServeHTTP(w, req)
-
-				if w.Code != tt.wantStatus {
-					t.Errorf("GET /test status = %d, want %d", w.Code, tt.wantStatus)
-				}
-
-				var response map[string]string
-				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-					t.Fatalf("GET /test failed to unmarshal response: %v", err)
-				}
-				if response["handler"] != tt.wantHandler {
-					t.Errorf("GET /test handler = %v, want %q", response["handler"], tt.wantHandler)
+				if w.Code != http.StatusServiceUnavailable {
+					t.Errorf("GET /geocode status = %d, want %d", w.Code, http.StatusServiceUnavailable)
 				}
 			}
 		})

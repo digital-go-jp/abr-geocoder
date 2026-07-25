@@ -108,14 +108,57 @@ func accessLogFormatter(param gin.LogFormatterParams) string {
 	return buf.String()
 }
 
-func registerPositionEndpoint(r *gin.Engine, path string, component any, enablePositionData bool, handler, disabledHandler gin.HandlerFunc) {
-	if component == nil {
-		return
+// endpointSpec declares one GET route. The same table drives route
+// registration and the endpoint listing served by RootHandler, so the two
+// can never drift apart.
+type endpointSpec struct {
+	path    string
+	handler func(*GinServer, *gin.Context)
+	// hasComponent reports whether the backing component is wired; nil means
+	// the endpoint needs no component. Routes without their component are not
+	// registered.
+	hasComponent func(*GinServer) bool
+	// needsPos marks endpoints that require position data. Without it the
+	// route answers with PositionDataDisabledHandler and is not listed.
+	needsPos bool
+}
+
+// endpointSpecs is ordered as the endpoints appear in the RootHandler output.
+// It is a function rather than a package variable because RootHandler is both
+// listed in and derived from the table.
+func endpointSpecs() []endpointSpec {
+	return []endpointSpec{
+		{path: "/", handler: (*GinServer).RootHandler},
+		{path: "/health", handler: (*GinServer).HealthHandler},
+		{path: "/normalize", handler: (*GinServer).NormalizeHandler},
+		{path: "/match", handler: (*GinServer).MatchHandler,
+			hasComponent: func(s *GinServer) bool { return s.matcher != nil }},
+		{path: "/geocode", handler: (*GinServer).GeocodeHandler, needsPos: true,
+			hasComponent: func(s *GinServer) bool { return s.matcher != nil }},
+		{path: "/reverse", handler: (*GinServer).ReverseHandler, needsPos: true,
+			hasComponent: func(s *GinServer) bool { return s.reverseGeocoder != nil }},
 	}
-	if enablePositionData {
-		r.GET(path, handler)
-	} else {
-		r.GET(path, disabledHandler)
+}
+
+// available reports whether the endpoint serves its real handler on s.
+func (e endpointSpec) available(s *GinServer) bool {
+	if e.hasComponent != nil && !e.hasComponent(s) {
+		return false
+	}
+	return !e.needsPos || s.enabledPos
+}
+
+// registerEndpoints wires every endpointSpec onto the router.
+func registerEndpoints(router *gin.Engine, server *GinServer) {
+	for _, spec := range endpointSpecs() {
+		if spec.hasComponent != nil && !spec.hasComponent(server) {
+			continue
+		}
+		handler := spec.handler
+		if spec.needsPos && !server.enabledPos {
+			handler = (*GinServer).PositionDataDisabledHandler
+		}
+		router.GET(spec.path, func(c *gin.Context) { handler(server, c) })
 	}
 }
 
@@ -171,18 +214,7 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 		server.reverseGeocoder = reverseGeocoder
 	}
 
-	registerPositionEndpoint(router, "/geocode", server.matcher, server.enabledPos,
-		server.GeocodeHandler, server.PositionDataDisabledHandler)
-	registerPositionEndpoint(router, "/reverse", server.reverseGeocoder, server.enabledPos,
-		server.ReverseHandler, server.PositionDataDisabledHandler)
-
-	if matcher != nil {
-		router.GET("/match", server.MatchHandler)
-	}
-
-	router.GET("/normalize", server.NormalizeHandler)
-	router.GET("/health", server.HealthHandler)
-	router.GET("/", server.RootHandler)
+	registerEndpoints(router, server)
 
 	return server
 }
