@@ -11,8 +11,8 @@ CMD_PATH ?= ./cmd/$(BINARY)
 TEST_CMD ?= go test ./...
 COVERPKG ?= ./...
 
-# Version from VERSION file
-VERSION := $(shell cat VERSION)
+# Version from VERSION file (library modules without one build as "dev")
+VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 
 # Build variables
@@ -22,9 +22,10 @@ LDFLAGS := -ldflags "-X abr.local/common/version.Version=$(VERSION) -X abr.local
 
 .PHONY: build run clean test test-unit test-integration test-coverage lint fmt vuln modernize bench
 
-# Build the application
+# Build the application (library modules override BUILD_CMD with `go build ./...`)
+BUILD_CMD ?= go build $(LDFLAGS) -o ./$(BINARY) $(CMD_PATH)
 build:
-	go build $(LDFLAGS) -o ./$(BINARY) $(CMD_PATH)
+	$(BUILD_CMD)
 
 # Run the application
 run:
