@@ -380,7 +380,8 @@ func init() {
 		"丒", "丑", // 丒(U+4E12): 6, 丑(U+4E11): 298 in DB
 		"脵", "又", // 脵(U+8135): 0, 又(U+53C8): 2940 in DB
 		"圡", "土", // 圡(U+5721): 33, 土(U+571F): 11542 in DB
-		// "秦", "奏" removed: distinct characters, not itaiji		"冝", "宜", // 冝(U+519D): 7, 宜(U+5B9C): 255 in DB
+		// "秦", "奏" removed: distinct characters, not itaiji
+		"冝", "宜", // 冝(U+519D): 7, 宜(U+5B9C): 255 in DB
 		"㞍", "尻", // 㞍(U+378D): 0, 尻(U+5C3B): 6813 in DB
 		"坫", "岾", // 坫(U+576B): 0, 岾(U+5CBE): 4 in DB
 		"崕", "崖", // 崕(U+5D15): 6, 崖(U+5D16): 29 in DB
@@ -407,11 +408,13 @@ func init() {
 		"疇", "畴", // 疇(U+7587): 4, 畴(U+7574): 1 in DB
 		"䟽", "疏", // 䟽(U+47FD): 1, 疏(U+758F): 2 in DB
 		"溲", "疏", // 溲(U+6EB2): 1, 疏(U+758F): 2 in DB
-		// "磐", "盤" removed: distinct characters, not itaiji		"炮", "砲", // 炮(U+70AE): 18, 砲(U+7832): 95 in DB
+		// "磐", "盤" removed: distinct characters, not itaiji
+		"炮", "砲", // 炮(U+70AE): 18, 砲(U+7832): 95 in DB
 		"漥", "窪", // 漥(U+6F25): 0, 窪(U+7AAA): 3763 in DB
 		"莓", "苺", // 莓(U+8393): 1, 苺(U+82FA): 7 in DB
 		"芧", "茅", // 芧(U+82A7): 1, 茅(U+8305): 668 in DB
-		// "萩", "荻" removed: distinct plants (hagi vs ogi), not itaiji		"蘒", "荻", // 蘒(U+8612): 1, 荻(U+837B): 757 in DB
+		// "萩", "荻" removed: distinct plants (hagi vs ogi), not itaiji
+		"蘒", "荻", // 蘒(U+8612): 1, 荻(U+837B): 757 in DB
 		"荕", "莇", // 荕(U+8355): 1, 莇(U+8387): 390 in DB
 		"莄", "萸", // 莄(U+8384): 0, 萸(U+8438): 30 in DB
 		"茰", "萸", // 茰(U+8330): 15, 萸(U+8438): 30 in DB
