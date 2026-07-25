@@ -1,5 +1,7 @@
 package util
 
+import "abrg/internal/char"
+
 // isKanjiNumeral reports whether r is a kanji numeral (一二三四五六七八九十〇百千).
 // The set deliberately differs from transform's kanji-number set: 零/万/億
 // never appear in address numbers, so they are excluded here.
@@ -14,7 +16,7 @@ func isKanjiNumeral(r rune) bool {
 // IsAddressNumberRune reports whether r is a digit used in Japanese address numbers.
 // Includes ASCII digits, full-width digits, and kanji numerals.
 func IsAddressNumberRune(r rune) bool {
-	if r >= '0' && r <= '9' || r >= '０' && r <= '９' {
+	if char.IsASCIIDigit(r) || r >= '０' && r <= '９' {
 		return true
 	}
 	return isKanjiNumeral(r)

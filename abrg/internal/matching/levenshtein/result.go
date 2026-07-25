@@ -131,7 +131,7 @@ func isPartialKoazaMatch(searchAddr, stdAddress string) bool {
 		return false
 	}
 	// searchAddr must end with a digit
-	if len(searchAddr) == 0 || searchAddr[len(searchAddr)-1] < '0' || searchAddr[len(searchAddr)-1] > '9' {
+	if len(searchAddr) == 0 || !char.IsASCIIDigit(searchAddr[len(searchAddr)-1]) {
 		return false
 	}
 	// The extra suffix in stdAddress must be non-digit
@@ -262,7 +262,7 @@ func isFalseChomeMatch(searchAddr, stdAddress string) bool {
 
 	// If extra contains only digits, it could be a real chome number
 	for i := range len(extra) {
-		if extra[i] < '0' || extra[i] > '9' {
+		if !char.IsASCIIDigit(extra[i]) {
 			return true // Non-digit in extra → place name, not chome
 		}
 	}

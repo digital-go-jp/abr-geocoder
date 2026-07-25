@@ -553,7 +553,7 @@ func hasBanGoPattern(s string) bool {
 
 	// Check for digit before 番
 	lastRune, _ := utf8.DecodeLastRuneInString(s[:banIdx])
-	if lastRune < '0' || lastRune > '9' {
+	if !char.IsASCIIDigit(lastRune) {
 		return false
 	}
 
@@ -577,7 +577,7 @@ func hasBanTouPattern(s string) bool {
 
 	// Check for digit before 棟
 	lastRune, _ := utf8.DecodeLastRuneInString(s[:idx])
-	if lastRune < '0' || lastRune > '9' {
+	if !char.IsASCIIDigit(lastRune) {
 		return false
 	}
 

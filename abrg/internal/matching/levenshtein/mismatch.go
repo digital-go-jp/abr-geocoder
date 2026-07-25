@@ -5,6 +5,7 @@ package levenshtein
 import (
 	"strings"
 
+	"abrg/internal/char"
 	"abrg/internal/model"
 	"abrg/internal/transform"
 	"abrg/internal/util"
@@ -122,7 +123,7 @@ func extractTownNameFromSearch(boundary *util.CityBoundary, searchAddr string) s
 // characters (e.g., "8条寺ノ内町:10" or "14号").
 func isPureNumericContent(s string) bool {
 	for _, ch := range s {
-		if (ch < '0' || ch > '9') && ch != '-' && ch != ':' {
+		if !char.IsASCIIDigit(ch) && ch != '-' && ch != ':' {
 			return false
 		}
 	}
