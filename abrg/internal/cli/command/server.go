@@ -36,14 +36,6 @@ func NewServerCmd() *cobra.Command {
 	return cmd
 }
 
-// serverConfig holds the configuration needed to start the server
-type serverConfig struct {
-	DBVersion       string
-	EnabledCategory string
-	EnabledPref     string
-	EnabledPos      bool
-}
-
 func runServer(ctx context.Context, cacheFlag string) error {
 	cfg := config.Load()
 	cachePath, err := resolveCachePath(cacheFlag)
@@ -52,7 +44,7 @@ func runServer(ctx context.Context, cacheFlag string) error {
 	}
 
 	// Open cache once and read config from the same connection
-	dbCache, srvCfg, err := loadServerConfig(ctx, cachePath)
+	dbCache, cacheCfg, err := loadServerConfig(ctx, cachePath)
 	if err != nil {
 		return err
 	}
@@ -60,19 +52,16 @@ func runServer(ctx context.Context, cacheFlag string) error {
 	slog.Info("server configuration",
 		"event", "server_config",
 		"api_version", version.Version,
-		"db_version", srvCfg.DBVersion,
-		"category", srvCfg.EnabledCategory,
-		"pref", srvCfg.EnabledPref,
-		"pos", srvCfg.EnabledPos)
+		"db_version", cacheCfg.DBVersion,
+		"category", cacheCfg.EnabledCategory,
+		"pref", cacheCfg.EnabledPref,
+		"pos", cacheCfg.PosEnabled())
 
 	server := api.NewGinServer(api.ServerConfig{
 		APIVersion:      version.Version,
-		DBVersion:       srvCfg.DBVersion,
-		EnabledPos:      srvCfg.EnabledPos,
-		EnabledCategory: srvCfg.EnabledCategory,
-		EnabledPref:     srvCfg.EnabledPref,
 		CORSAllowOrigin: cfg.Server.CORSAllowOrigin,
 		Cache:           dbCache,
+		CacheConfig:     *cacheCfg,
 	})
 	defer func() {
 		if err := server.Close(); err != nil {
@@ -124,7 +113,7 @@ func runHTTPServer(ctx context.Context, srv *http.Server) error {
 // loadServerConfig opens the DuckDB cache and loads configuration from it.
 // The returned cache is ready for use and must be closed by the caller.
 // Cache file must be prepared beforehand using 'abrg cache build'.
-func loadServerConfig(ctx context.Context, cachePath string) (*cache.DuckDBCache, *serverConfig, error) {
+func loadServerConfig(ctx context.Context, cachePath string) (*cache.DuckDBCache, *cache.Config, error) {
 	if _, err := cache.FileInfo(cachePath); err != nil {
 		slog.Warn("failed to get cache file info", "event", "cache_file_info", "path", cachePath, "error", err)
 	}
@@ -154,10 +143,5 @@ func loadServerConfig(ctx context.Context, cachePath string) (*cache.DuckDBCache
 	}
 
 	success = true
-	return dbCache, &serverConfig{
-		DBVersion:       cacheCfg.DBVersion,
-		EnabledCategory: cacheCfg.EnabledCategory,
-		EnabledPref:     cacheCfg.EnabledPref,
-		EnabledPos:      cacheCfg.EnabledPos == "true",
-	}, nil
+	return dbCache, cacheCfg, nil
 }

@@ -34,12 +34,9 @@ var _ io.Closer = (*GinServer)(nil)
 
 type ServerConfig struct {
 	APIVersion      string
-	DBVersion       string
-	EnabledPos      bool
-	EnabledCategory string
-	EnabledPref     string
 	CORSAllowOrigin string
 	Cache           *cache.DuckDBCache // Pre-created cache for dependency injection
+	CacheConfig     cache.Config       // Configuration loaded from the cache
 }
 
 type reverser interface {
@@ -149,10 +146,10 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 		repo:            repo,
 		router:          router,
 		apiVersion:      cfg.APIVersion,
-		dbVersion:       cfg.DBVersion,
-		enabledCategory: cfg.EnabledCategory,
-		enabledPref:     cfg.EnabledPref,
-		enabledPos:      cfg.EnabledPos,
+		dbVersion:       cfg.CacheConfig.DBVersion,
+		enabledCategory: cfg.CacheConfig.EnabledCategory,
+		enabledPref:     cfg.CacheConfig.EnabledPref,
+		enabledPos:      cfg.CacheConfig.PosEnabled(),
 		cache:           cfg.Cache,
 	}
 
@@ -163,9 +160,9 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 		server.reverseGeocoder = reverseGeocoder
 	}
 
-	registerPositionEndpoint(router, "/geocode", server.matcher, cfg.EnabledPos,
+	registerPositionEndpoint(router, "/geocode", server.matcher, server.enabledPos,
 		server.GeocodeHandler, server.PositionDataDisabledHandler)
-	registerPositionEndpoint(router, "/reverse", server.reverseGeocoder, cfg.EnabledPos,
+	registerPositionEndpoint(router, "/reverse", server.reverseGeocoder, server.enabledPos,
 		server.ReverseHandler, server.PositionDataDisabledHandler)
 
 	if matcher != nil {

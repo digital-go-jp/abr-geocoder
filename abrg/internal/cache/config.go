@@ -15,6 +15,11 @@ type Config struct {
 	EnabledPos      string
 }
 
+// PosEnabled reports whether the cache was built with position data enabled.
+func (c *Config) PosEnabled() bool {
+	return c.EnabledPos == "true"
+}
+
 // loadConfigFromRows scans config key-value rows into a Config struct.
 func loadConfigFromRows(rows *sql.Rows) (*Config, error) {
 	cfg := &Config{}
