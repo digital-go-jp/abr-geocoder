@@ -56,7 +56,7 @@ abrg-lint:
 
 abrg-run:
 	@echo "Running abrg server..."
-	@cd abrg && make run ARGS="server"
+	@cd abrg && make run ARGS="serve"
 
 abrg-fmt:
 	@cd abrg && make fmt
