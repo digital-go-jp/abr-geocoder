@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"abrg/internal/model"
+	"abrg/internal/reverse"
 )
 
 func TestMain(m *testing.M) {
@@ -1248,6 +1250,7 @@ func TestReverseHandler_Integration(t *testing.T) {
 		mockErr        error
 		wantStatus     int
 		wantErrorField bool
+		wantMessage    string
 	}{
 		{
 			name:  "valid coordinates",
@@ -1282,6 +1285,26 @@ func TestReverseHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusInternalServerError,
 			wantErrorField: true,
 		},
+		{
+			// Requested category data missing from the cache is a service
+			// configuration issue, not a server fault: 503.
+			name:           "data unavailable maps to 503",
+			query:          "?lat=35.6762&lon=139.6503&category=parcel",
+			mockErr:        fmt.Errorf("parcel %w", reverse.ErrDataUnavailable),
+			wantStatus:     http.StatusServiceUnavailable,
+			wantErrorField: true,
+			wantMessage:    "parcel data not available in current cache",
+		},
+		{
+			// A category the reverse geocoder does not recognize is a client
+			// error: 400.
+			name:           "unknown category maps to 400",
+			query:          "?lat=35.6762&lon=139.6503&category=all",
+			mockErr:        fmt.Errorf("%w: bogus", reverse.ErrUnknownCategory),
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+			wantMessage:    "unknown category: bogus",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1314,6 +1337,9 @@ func TestReverseHandler_Integration(t *testing.T) {
 				}
 				if response["status"] != "error" {
 					t.Errorf("ReverseHandler() status field = %v, want %q", response["status"], "error")
+				}
+				if tt.wantMessage != "" && response["message"] != tt.wantMessage {
+					t.Errorf("ReverseHandler() message = %v, want %q", response["message"], tt.wantMessage)
 				}
 			}
 		})

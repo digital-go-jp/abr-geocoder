@@ -27,6 +27,14 @@ type spatialQuerier interface {
 // searchRadius is the search radius in degrees (~1km at latitude 35).
 const searchRadius = 0.009
 
+// ErrDataUnavailable marks reverse queries whose backing data is not loaded
+// in the current cache. The HTTP layer maps it to 503.
+var ErrDataUnavailable = errors.New("data not available in current cache")
+
+// ErrUnknownCategory marks an unrecognized reverse category. The HTTP layer
+// maps it to 400.
+var ErrUnknownCategory = errors.New("unknown category")
+
 // ReverseGeocoder provides reverse geocoding using DuckDB spatial queries.
 type ReverseGeocoder struct {
 	repo           spatialQuerier
@@ -104,16 +112,16 @@ func (g *ReverseGeocoder) findNearestAddresses(ctx context.Context, query model.
 		return findAndBuild(ctx, g.repo.FindNearestBasic, params, buildBasicFeature)
 	case model.CategoryResidential:
 		if !g.hasResidential {
-			return nil, fmt.Errorf("residential data not available in current cache")
+			return nil, fmt.Errorf("residential %w", ErrDataUnavailable)
 		}
 		return findAndBuild(ctx, g.repo.FindNearestResidential, params, buildResidentialFeature)
 	case model.CategoryParcel:
 		if !g.hasParcel {
-			return nil, fmt.Errorf("parcel data not available in current cache")
+			return nil, fmt.Errorf("parcel %w", ErrDataUnavailable)
 		}
 		return findAndBuild(ctx, g.repo.FindNearestParcel, params, buildParcelFeature)
 	default:
-		return nil, fmt.Errorf("unknown category: %s", query.Category)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownCategory, query.Category)
 	}
 }
 

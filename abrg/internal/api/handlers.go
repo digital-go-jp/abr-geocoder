@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -9,6 +10,7 @@ import (
 	"abrg/internal/matching"
 	"abrg/internal/model"
 	"abrg/internal/normalize"
+	"abrg/internal/reverse"
 )
 
 // logHandlerError logs a failed handler request with its parameters.
@@ -88,9 +90,16 @@ func (s *GinServer) ReverseHandler(c *gin.Context) {
 		Pref:     pref,
 	})
 	if err != nil {
-		logHandlerError("reverse geocode request failed", "reverse", err,
-			"lon", req.Lon, "lat", req.Lat, "pref", pref, "category", category, "limit", req.Limit)
-		sendInternalServerError(c)
+		switch {
+		case errors.Is(err, reverse.ErrUnknownCategory):
+			sendBadRequest(c, err.Error())
+		case errors.Is(err, reverse.ErrDataUnavailable):
+			c.JSON(http.StatusServiceUnavailable, errorResponse(err.Error()))
+		default:
+			logHandlerError("reverse geocode request failed", "reverse", err,
+				"lon", req.Lon, "lat", req.Lat, "pref", pref, "category", category, "limit", req.Limit)
+			sendInternalServerError(c)
+		}
 		return
 	}
 
