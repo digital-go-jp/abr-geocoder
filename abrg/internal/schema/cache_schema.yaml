@@ -153,12 +153,3 @@ tables:
         constraints: "PRIMARY KEY"
       - name: config_value
         type: VARCHAR
-
-# PostgreSQL source table names
-source_tables:
-  pref: mt_pref_unified
-  city: mt_city_unified
-  town: mt_town_unified
-  rsdtdsp_blk: mt_rsdtdsp_blk_unified
-  rsdtdsp_rsdt: mt_rsdtdsp_rsdt_unified
-  parcel: mt_parcel_unified
