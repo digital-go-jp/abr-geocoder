@@ -1,3 +1,6 @@
+// Package matching implements the address matching pipeline: normalization,
+// prefecture and machiaza detection, two-stage residential/parcel search,
+// Levenshtein fallback, and result assembly.
 package matching
 
 import (
