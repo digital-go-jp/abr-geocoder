@@ -9,8 +9,8 @@ import (
 	"abrg/internal/transform"
 )
 
-// detectBasicResultsWithBasic detects basic-level results using NormalizeAddressTextWithBasic output.
-// The normalizedAddr should be from standardize.NormalizeAddressTextWithBasic().
+// detectBasicResultsWithBasic detects basic-level results using NormalizeBasicNormalized output.
+// The normalizedAddr should be from normalize.NormalizeBasicNormalized().
 func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, pref, originalAddr string) (string, string, []model.MatchedResult, error) {
 	searchAddr, _, _ := strings.Cut(normalizedAddr, " ")
 

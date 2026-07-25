@@ -10,20 +10,13 @@ import (
 // and detects the address type.
 // This function is for user-facing output (API responses).
 func NormalizeAddressText(s string) (string, model.NormalizeCategory) {
-	return NormalizeAddressTextWithBasic(s, nil)
+	return NormalizeBasicNormalized(BasicNormalize(s))
 }
 
-// NormalizeAddressTextWithBasic standardizes the address using pre-computed BasicNormalize result.
-// If basicNormalized is nil, BasicNormalize will be called on s internally.
-// If basicNormalized is provided, its value is used and s is ignored.
-// This allows reusing BasicNormalize result across standardize and transform pipelines.
-func NormalizeAddressTextWithBasic(s string, basicNormalized *string) (string, model.NormalizeCategory) {
-	if basicNormalized != nil {
-		s = *basicNormalized
-	} else {
-		s = BasicNormalize(s)
-	}
-
+// NormalizeBasicNormalized standardizes an address that has already been
+// processed by BasicNormalize. This allows reusing the BasicNormalize result
+// across standardize and transform pipelines.
+func NormalizeBasicNormalized(s string) (string, model.NormalizeCategory) {
 	addressPart, parenthesesPart, hasParentheses := strings.Cut(s, "(")
 	if hasParentheses {
 		s = addressPart

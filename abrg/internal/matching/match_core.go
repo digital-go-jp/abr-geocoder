@@ -49,7 +49,7 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 	}
 
 	normalizedAddr := normalize.BasicNormalize(query.Address)
-	normalizedAddr, addressType := normalize.NormalizeAddressTextWithBasic("", &normalizedAddr)
+	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
 	pref, searchAddr, basicResults, err := n.detectBasicResultsWithBasic(ctx, normalizedAddr, query.Pref, normalizedAddr)
 	if err != nil {
 		return nil, fmt.Errorf("detect basic results: %w", err)
