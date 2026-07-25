@@ -103,29 +103,18 @@ func sendGeoJSON(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, data)
 }
 
-// handleAddressRequest handles common validation for address-based requests (geocode/match).
-// It returns the validated category and pref, or sends an error response and returns false.
-func (s *GinServer) handleAddressRequest(c *gin.Context, address, categoryStr, prefStr string) (model.Category, string, bool) {
+// prepareQuery validates the request params, records them for structured
+// logging, and builds the shared MatchQuery. It returns ok=false after writing
+// an error response when validation fails.
+func (s *GinServer) prepareQuery(c *gin.Context, address, categoryStr, prefStr string, limit int) (model.MatchQuery, bool) {
 	if err := validateAddress(address); err != nil {
 		sendBadRequest(c, err.Error())
-		return "", "", false
+		return model.MatchQuery{}, false
 	}
 
 	category, pref, err := s.validateParams(categoryStr, prefStr)
 	if err != nil {
 		sendBadRequest(c, err.Error())
-		return "", "", false
-	}
-
-	return category, pref, true
-}
-
-// prepareQuery validates the request params, records them for structured
-// logging, and builds the shared MatchQuery. It returns ok=false after writing
-// an error response when validation fails.
-func (s *GinServer) prepareQuery(c *gin.Context, address, categoryStr, prefStr string, limit int) (model.MatchQuery, bool) {
-	category, pref, ok := s.handleAddressRequest(c, address, categoryStr, prefStr)
-	if !ok {
 		return model.MatchQuery{}, false
 	}
 

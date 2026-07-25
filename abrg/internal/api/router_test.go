@@ -792,8 +792,8 @@ func TestSetResultInfo(t *testing.T) {
 	}
 }
 
-// TestHandleAddressRequest tests the GinServer.handleAddressRequest method.
-func TestHandleAddressRequest(t *testing.T) {
+// TestPrepareQuery tests the GinServer.prepareQuery method.
+func TestPrepareQuery(t *testing.T) {
 	tests := []struct {
 		name         string
 		address      string
@@ -847,13 +847,12 @@ func TestHandleAddressRequest(t *testing.T) {
 			}
 
 			router := gin.New()
-			var gotCategory model.Category
-			var gotPref string
+			var gotQuery model.MatchQuery
 			var gotOk bool
 
 			router.GET("/test", func(c *gin.Context) {
-				gotCategory, gotPref, gotOk = server.handleAddressRequest(
-					c, tt.address, tt.category, tt.pref)
+				gotQuery, gotOk = server.prepareQuery(
+					c, tt.address, tt.category, tt.pref, 1)
 				if gotOk {
 					c.JSON(http.StatusOK, gin.H{"status": "ok"})
 				}
@@ -864,18 +863,18 @@ func TestHandleAddressRequest(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			if gotOk != tt.wantOk {
-				t.Errorf("handleAddressRequest() ok = %v, want %v", gotOk, tt.wantOk)
+				t.Errorf("prepareQuery() ok = %v, want %v", gotOk, tt.wantOk)
 			}
 			if tt.wantOk {
-				if gotCategory != tt.wantCategory {
-					t.Errorf("handleAddressRequest() category = %v, want %v", gotCategory, tt.wantCategory)
+				if gotQuery.Category != tt.wantCategory {
+					t.Errorf("prepareQuery() category = %v, want %v", gotQuery.Category, tt.wantCategory)
 				}
-				if gotPref != tt.wantPref {
-					t.Errorf("handleAddressRequest() pref = %v, want %v", gotPref, tt.wantPref)
+				if gotQuery.Pref != tt.wantPref {
+					t.Errorf("prepareQuery() pref = %v, want %v", gotQuery.Pref, tt.wantPref)
 				}
 			} else {
 				if w.Code != tt.wantStatus {
-					t.Errorf("handleAddressRequest() status = %v, want %v", w.Code, tt.wantStatus)
+					t.Errorf("prepareQuery() status = %v, want %v", w.Code, tt.wantStatus)
 				}
 			}
 		})
