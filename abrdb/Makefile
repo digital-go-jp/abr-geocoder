@@ -7,7 +7,7 @@ include ../Makefile.common
 # Run with profiling
 prof:
 	@echo "Running with CPU profiling..."
-	CPU_PROFILE=cpu.prof go run $(LDFLAGS) ./cmd/abrdb/... sync --check
+	CPU_PROFILE=cpu.prof go run $(LDFLAGS) ./cmd/abrdb/... import --dry-run
 	@echo "View profile with: go tool pprof cpu.prof"
 
 # Show help
