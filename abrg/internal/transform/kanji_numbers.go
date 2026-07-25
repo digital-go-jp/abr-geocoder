@@ -14,8 +14,13 @@ var (
 
 	// kanjiSegmentRe matches consecutive sequences of kanji numbers.
 	// Each match is a contiguous segment to be processed as a unit.
-	kanjiSegmentRe = regexp.MustCompile(`[一二三四五六七八九十百千万億零〇]+`)
+	kanjiSegmentRe = regexp.MustCompile(`[` + kanjiNumeralChars + `]+`)
 )
+
+// kanjiNumeralChars is the full character set that can form a kanji number
+// literal, including the multipliers 万 and 億. It is the single source for
+// every kanji-number regex character class in this package.
+const kanjiNumeralChars = "一二三四五六七八九十百千万億零〇"
 
 var kanjiDigitValues = map[rune]int{
 	'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
@@ -219,6 +224,10 @@ func KanjiToArabic(s string) (string, bool) {
 }
 
 // containsKanjiNumbers checks if the string contains any kanji numbers.
+// The set is kanjiNumeralChars plus the formal digits (壱弐…拾), but minus
+// the multipliers 万/億: a convertible number always contains a digit or
+// 十/百/千, while a lone 万/億 usually belongs to an ordinary place name
+// (e.g. 万代町) and must not trigger conversion.
 func containsKanjiNumbers(s string) bool {
 	// Fast path: check if string is ASCII-only (common case)
 	for i := 0; i < len(s); i++ {
@@ -255,11 +264,11 @@ var (
 	// kanjiNoKanjiPattern matches kanji number + ノ/の + kanji number.
 	// e.g., "二ノ八" matches to convert to "2-8". The character class matches
 	// kanjiSegmentRe so multipliers like 千/万 are included (e.g., "千五ノ三").
-	kanjiNoKanjiPattern = regexp.MustCompile(`([一二三四五六七八九十百千万億零〇]+)[のノ]([一二三四五六七八九十百千万億零〇]+)`)
+	kanjiNoKanjiPattern = regexp.MustCompile(`([` + kanjiNumeralChars + `]+)[のノ]([` + kanjiNumeralChars + `]+)`)
 
 	// arabicNoKanjiPattern matches arabic number + ノ/の + kanji number for chained processing.
 	// e.g., "8ノ一" matches to convert to "8-1" (after first pass converted "二ノ八" → "2-8")
-	arabicNoKanjiPattern = regexp.MustCompile(`(\d+)[のノ]([一二三四五六七八九十百千万億零〇]+)`)
+	arabicNoKanjiPattern = regexp.MustCompile(`(\d+)[のノ]([` + kanjiNumeralChars + `]+)`)
 
 	// arabicNoArabicPattern matches arabic number + ノ/の + arabic number.
 	// Handles fully-converted chained patterns like "2ノ8ノ1" and intermediate states
