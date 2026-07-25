@@ -61,6 +61,10 @@ abrdb import [options]
 - `-q, --quiet` - 進捗表示を抑制
 - `-v, --verbose` - 詳細なファイル一覧を表示（--dry-run時）
 
+環境変数:
+- `ABRDB_DOWNLOAD_DIR` - ダウンロード先ディレクトリ（default: `/tmp/abrdb/data`。Docker イメージは `/tmp/abrdb`、docker-compose は `~/.abrdb/data` を設定済み）
+- `ABRDB_FEED_URL` - ABR データフィードの URL（通常は変更不要）
+
 例:
 ```bash
 # 変更確認のみ（インポートなし）

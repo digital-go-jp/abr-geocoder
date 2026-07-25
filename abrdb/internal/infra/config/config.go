@@ -7,7 +7,10 @@ import (
 
 // Default configuration values.
 const (
-	DefaultFeedURL     = "https://dataset.address-br.digital.go.jp/api/feed/dcat-us/1.1.json"
+	DefaultFeedURL = "https://dataset.address-br.digital.go.jp/api/feed/dcat-us/1.1.json"
+	// DefaultDownloadDir applies when ABRDB_DOWNLOAD_DIR is unset. The Docker
+	// image (ENV /tmp/abrdb) and docker-compose (~/.abrdb/data) each pin their
+	// own value via that variable, so this default only affects bare binaries.
 	DefaultDownloadDir = "/tmp/abrdb/data"
 )
 
