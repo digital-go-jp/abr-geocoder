@@ -40,7 +40,7 @@ jobs:
         run: cd ${{ matrix.module }} && go mod verify && go vet ./...
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.11.4
+          version: v2.12.2
           working-directory: ${{ matrix.module }}
       # Go 1.26 `go fix` bundles the modernize suite; -diff exits non-zero on any change.
       - name: modernize ${{ matrix.module }}
