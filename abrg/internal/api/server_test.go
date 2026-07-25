@@ -75,6 +75,18 @@ func TestNewGinServer_WithoutCache(t *testing.T) {
 		if w := serveRequest(t, server, "/health"); w.Code != http.StatusOK {
 			t.Errorf("EnabledPos=%v: GET /health status = %d, want %d", enabledPos, w.Code, http.StatusOK)
 		}
+
+		// The component interface fields must stay untyped nil so that nil
+		// checks keep working; a typed-nil *repository.DB would slip through.
+		if server.repo != nil {
+			t.Errorf("EnabledPos=%v: repo = %#v, want untyped nil", enabledPos, server.repo)
+		}
+		if server.matcher != nil {
+			t.Errorf("EnabledPos=%v: matcher = %#v, want untyped nil", enabledPos, server.matcher)
+		}
+		if server.reverseGeocoder != nil {
+			t.Errorf("EnabledPos=%v: reverseGeocoder = %#v, want untyped nil", enabledPos, server.reverseGeocoder)
+		}
 	}
 }
 

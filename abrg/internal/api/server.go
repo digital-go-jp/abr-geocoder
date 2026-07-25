@@ -183,21 +183,7 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 
 	configureCORS(router, cfg.CORSAllowOrigin)
 
-	var matcher *matching.Impl
-	var repo *repository.DB
-	var reverseGeocoder *reverse.ReverseGeocoder
-
-	if cfg.Cache != nil {
-		repo = repository.NewRepository(cfg.Cache.DB())
-		matcher = matching.NewMatcher(repo, cfg.Cache.Lookups())
-		reverseGeocoder = reverse.NewReverseGeocoder(repo,
-			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableRsdtdsp),
-			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableParcel),
-		)
-	}
-
 	server := &GinServer{
-		repo:            repo,
 		router:          router,
 		apiVersion:      cfg.APIVersion,
 		dbVersion:       cfg.CacheConfig.DBVersion,
@@ -207,11 +193,16 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 		cache:           cfg.Cache,
 	}
 
-	if matcher != nil {
-		server.matcher = matcher
-	}
-	if reverseGeocoder != nil {
-		server.reverseGeocoder = reverseGeocoder
+	// Assign the components only when they exist so the interface fields stay
+	// untyped nil (a typed-nil *repository.DB would make nil checks pass).
+	if cfg.Cache != nil {
+		repo := repository.NewRepository(cfg.Cache.DB())
+		server.repo = repo
+		server.matcher = matching.NewMatcher(repo, cfg.Cache.Lookups())
+		server.reverseGeocoder = reverse.NewReverseGeocoder(repo,
+			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableRsdtdsp),
+			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableParcel),
+		)
 	}
 
 	registerEndpoints(router, server)
