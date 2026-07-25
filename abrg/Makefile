@@ -62,7 +62,6 @@ help:
 	@echo "  test-unit     - Run unit tests only"
 	@echo "  test-issues   - Run all issue tests (requires CACHE_PATH=/abs/path.duckdb)"
 	@echo "  test-issue1   - Run issue1 test (requires CACHE_PATH=/abs/path.duckdb)"
-	@echo "  test-integration - Run integration tests"
 	@echo "  test-coverage - Run tests with coverage report"
 	@echo "  test-coverage-pkg PKG=./path - Run coverage for specific package"
 	@echo ""
