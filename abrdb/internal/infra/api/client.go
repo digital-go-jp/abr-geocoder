@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"net/url"
@@ -183,7 +185,7 @@ func (c *Client) DownloadFile(ctx context.Context, fileURL, destPath string) err
 		return fmt.Errorf("create directory: %w", err)
 	}
 
-	tmp, err := os.CreateTemp(filepath.Dir(destPath), filepath.Base(destPath)+".tmp-*")
+	tmp, err := createUniqueTemp(destPath)
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}
@@ -202,14 +204,22 @@ func (c *Client) DownloadFile(ctx context.Context, fileURL, destPath string) err
 	return nil
 }
 
-// writeAndClose copies r into out and closes it, restoring the regular file
-// permissions that os.Create would have used.
-func writeAndClose(out *os.File, r io.Reader) error {
-	if err := out.Chmod(0o644); err != nil {
-		_ = out.Close()
-		return fmt.Errorf("chmod file: %w", err)
+// createUniqueTemp exclusively creates a temp file next to destPath with the
+// same 0666-minus-umask permissions that os.Create would give the final file.
+func createUniqueTemp(destPath string) (*os.File, error) {
+	for range 10 {
+		p := fmt.Sprintf("%s.%d.tmp", destPath, rand.Uint64())
+		f, err := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o666)
+		if errors.Is(err, fs.ErrExist) {
+			continue
+		}
+		return f, err
 	}
+	return nil, errors.New("could not find a free temp file name")
+}
 
+// writeAndClose copies r into out and closes it.
+func writeAndClose(out *os.File, r io.Reader) error {
 	if _, err := io.Copy(out, r); err != nil {
 		_ = out.Close()
 		return fmt.Errorf("write file: %w", err)

@@ -305,4 +305,23 @@ func TestDownloadFile_LeavesOnlyFinalFile(t *testing.T) {
 		}
 		t.Errorf("directory contents = %v, want only data.csv.zip", names)
 	}
+
+	// The final file must carry the same 0666-minus-umask permissions that
+	// os.Create gives. A reference file makes the check umask-independent.
+	ref, err := os.Create(filepath.Join(dir, "reference"))
+	if err != nil {
+		t.Fatalf("create reference file: %v", err)
+	}
+	_ = ref.Close()
+	refInfo, err := os.Stat(ref.Name())
+	if err != nil {
+		t.Fatalf("stat reference file: %v", err)
+	}
+	gotInfo, err := os.Stat(dest)
+	if err != nil {
+		t.Fatalf("stat downloaded file: %v", err)
+	}
+	if gotInfo.Mode().Perm() != refInfo.Mode().Perm() {
+		t.Errorf("downloaded file mode = %v, want %v (0666 &^ umask)", gotInfo.Mode().Perm(), refInfo.Mode().Perm())
+	}
 }
