@@ -29,7 +29,7 @@ all: build
 
 build: abrg-build abrdb-build
 
-test: abrg-test abrdb-test
+test: abrg-test abrdb-test common-test
 
 lint: abrg-lint abrdb-lint common-lint
 
