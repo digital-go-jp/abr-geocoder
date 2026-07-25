@@ -140,7 +140,7 @@ func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p Searc
 		ml := matchlevel.DetermineMatchLevel(&result.IDs)
 
 		// Calculate unmatched part from normalizedAddr (preserves user-visible form)
-		unmatchedParts := extractUnmatchedFromStandardized(p.NormalizedAddr, matchedAddr)
+		unmatchedParts := extractUnmatchedSegments(p.NormalizedAddr, matchedAddr)
 
 		// Calculate score based on how much of the input matched
 		matchedLen := utf8.RuneCountInString(brd.NormalizedAddress)

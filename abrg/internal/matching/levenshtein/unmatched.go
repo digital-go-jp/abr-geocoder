@@ -114,7 +114,7 @@ func extractUnmatchedAddress(
 		return util.ExtractUnmatchedParts(normalizedAddr, normalizedAddr, matchedAddr, searchAddr)
 	}
 
-	remaining := extractUnmatchedFromStandardized(normalizedAddr, matchedAddr)
+	remaining := extractUnmatchedSegments(normalizedAddr, matchedAddr)
 
 	// If koaza is fully matched and no remaining text, nothing is unmatched
 	if addr.Koaza != nil && strings.Contains(matchedAddr, *addr.Koaza) && len(remaining) == 0 {
@@ -124,12 +124,12 @@ func extractUnmatchedAddress(
 	return remaining
 }
 
-// extractUnmatchedFromStandardized extracts the unmatched portion from normalizedAddr
+// extractUnmatchedSegments extracts the unmatched portion from normalizedAddr
 // by finding where the matched address ends and returning the rest.
 //
 //	e.g., normalizedAddr="香川県丸亀市原田町字東三分一1926-1", matchedAddr="香川県丸亀市原田町"
 //	-> returns ["字東三分一1926-1"]
-func extractUnmatchedFromStandardized(originalAddr, matchedAddr string) []string {
+func extractUnmatchedSegments(originalAddr, matchedAddr string) []string {
 	// Split originalAddr into address part and building name parts (separated by space)
 	originalAddr = strings.ReplaceAll(originalAddr, "　", " ")
 	parts := strings.SplitN(originalAddr, " ", 2)
