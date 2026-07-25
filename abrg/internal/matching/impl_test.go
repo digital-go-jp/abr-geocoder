@@ -7,6 +7,8 @@ import (
 	"abrg/internal/model"
 	"abrg/internal/repository"
 	"abrg/internal/transform"
+
+	"abrg/internal/matchlevel"
 )
 
 func Test_derefString(t *testing.T) {
@@ -48,8 +50,8 @@ func TestMatchLevelToDetail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := matchLevelToDetail(tt.level); got != tt.expected {
-				t.Errorf("matchLevelToDetail(%q) = %d, want %d", tt.level, got, tt.expected)
+			if got := matchlevel.Detail(tt.level); got != tt.expected {
+				t.Errorf("matchlevel.Detail(%q) = %d, want %d", tt.level, got, tt.expected)
 			}
 		})
 	}

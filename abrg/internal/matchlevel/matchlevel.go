@@ -41,3 +41,27 @@ func DetermineMatchLevel(ids *model.IDs) model.MatchLevel {
 
 	return model.MatchLevelUnknown
 }
+
+// Detail converts a match level to a numeric detail value.
+// Higher values indicate more detailed matches.
+// Residential addresses (住居表示) are prioritized over parcel (地番).
+func Detail(level model.MatchLevel) int {
+	switch level {
+	case model.MatchLevelResidentialDetail:
+		return 7
+	case model.MatchLevelResidentialBlock:
+		return 6
+	case model.MatchLevelParcel:
+		return 5
+	case model.MatchLevelMachiazaDetail:
+		return 4
+	case model.MatchLevelMachiaza:
+		return 3
+	case model.MatchLevelCity:
+		return 2
+	case model.MatchLevelPrefecture:
+		return 1
+	default:
+		return 0
+	}
+}

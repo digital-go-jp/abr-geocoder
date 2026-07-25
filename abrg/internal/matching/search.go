@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"abrg/internal/matching/levenshtein"
+	"abrg/internal/matchlevel"
 	"abrg/internal/model"
 )
 
@@ -140,7 +141,7 @@ func sortAndLimitResults(results []model.MatchedResult, limit int) []model.Match
 		}
 
 		// Scores are equal or very close, compare by match level detail
-		return cmp.Compare(matchLevelToDetail(b.MatchLevel), matchLevelToDetail(a.MatchLevel))
+		return cmp.Compare(matchlevel.Detail(b.MatchLevel), matchlevel.Detail(a.MatchLevel))
 	})
 
 	if len(results) > limit {
