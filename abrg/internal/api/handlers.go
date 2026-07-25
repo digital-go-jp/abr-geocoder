@@ -181,8 +181,5 @@ func (s *GinServer) RootHandler(c *gin.Context) {
 }
 
 func (s *GinServer) PositionDataDisabledHandler(c *gin.Context) {
-	c.JSON(http.StatusServiceUnavailable, gin.H{
-		"status":  "error",
-		"message": "This endpoint requires enable_pos=true in the database.",
-	})
+	c.JSON(http.StatusServiceUnavailable, errorResponse("This endpoint requires enable_pos=true in the database."))
 }
