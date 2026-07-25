@@ -57,10 +57,7 @@ func serveRequest(t *testing.T, s *GinServer, target string) *httptest.ResponseR
 
 func TestNewGinServer_WithoutCache(t *testing.T) {
 	for _, enabledPos := range []bool{false, true} {
-		server, err := NewGinServer(ServerConfig{EnabledPos: enabledPos})
-		if err != nil {
-			t.Fatalf("NewGinServer() error = %v", err)
-		}
+		server := NewGinServer(ServerConfig{EnabledPos: enabledPos})
 
 		want := []string{"/", "/health", "/normalize"}
 		if got := registeredPaths(server); !slices.Equal(got, want) {
@@ -82,12 +79,9 @@ func TestNewGinServer_WithoutCache(t *testing.T) {
 func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 	c := setupQuickstartCache(t)
 
-	server, err := NewGinServer(ServerConfig{
+	server := NewGinServer(ServerConfig{
 		EnabledPos: true, EnabledCategory: "basic", EnabledPref: "13", Cache: c,
 	})
-	if err != nil {
-		t.Fatalf("NewGinServer() error = %v", err)
-	}
 
 	want := []string{"/", "/geocode", "/health", "/match", "/normalize", "/reverse"}
 	if got := registeredPaths(server); !slices.Equal(got, want) {
@@ -192,12 +186,9 @@ func firstFeature(t *testing.T, body map[string]any) map[string]any {
 func TestNewGinServer_WithCachePosDisabled(t *testing.T) {
 	c := setupQuickstartCache(t)
 
-	server, err := NewGinServer(ServerConfig{
+	server := NewGinServer(ServerConfig{
 		EnabledPos: false, EnabledCategory: "basic", EnabledPref: "13", Cache: c,
 	})
-	if err != nil {
-		t.Fatalf("NewGinServer() error = %v", err)
-	}
 
 	// The position endpoints stay registered but answer with the disabled response.
 	want := []string{"/", "/geocode", "/health", "/match", "/normalize", "/reverse"}

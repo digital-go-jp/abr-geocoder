@@ -65,7 +65,7 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		"pref", srvCfg.EnabledPref,
 		"pos", srvCfg.EnabledPos)
 
-	server, err := api.NewGinServer(api.ServerConfig{
+	server := api.NewGinServer(api.ServerConfig{
 		APIVersion:      version.Version,
 		DBVersion:       srvCfg.DBVersion,
 		EnabledPos:      srvCfg.EnabledPos,
@@ -74,19 +74,6 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		CORSAllowOrigin: cfg.Server.CORSAllowOrigin,
 		Cache:           dbCache,
 	})
-	if err != nil {
-		// Close cache on server creation failure
-		if dbCache != nil {
-			if closeErr := dbCache.Close(); closeErr != nil {
-				slog.Warn("failed to close cache after server creation failure", "event", "cache_close", "error", closeErr)
-			}
-		}
-		// Treat Ctrl-C / context cancellation during initialization as a clean shutdown
-		if errors.Is(err, context.Canceled) {
-			return nil
-		}
-		return fmt.Errorf("failed to create server: %w", err)
-	}
 	defer func() {
 		if err := server.Close(); err != nil {
 			slog.Warn("failed to close server resources", "event", "server_close", "error", err)

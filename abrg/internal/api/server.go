@@ -122,7 +122,7 @@ func registerPositionEndpoint(r *gin.Engine, path string, component any, enableP
 	}
 }
 
-func NewGinServer(cfg ServerConfig) (*GinServer, error) {
+func NewGinServer(cfg ServerConfig) *GinServer {
 	router := gin.New()
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
 		Formatter: accessLogFormatter,
@@ -176,7 +176,7 @@ func NewGinServer(cfg ServerConfig) (*GinServer, error) {
 	router.GET("/health", server.HealthHandler)
 	router.GET("/", server.RootHandler)
 
-	return server, nil
+	return server
 }
 
 func (s *GinServer) Handler() http.Handler {
