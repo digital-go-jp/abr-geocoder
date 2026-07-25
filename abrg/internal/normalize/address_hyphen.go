@@ -246,65 +246,99 @@ func scanAddressMarkers(s string) (hasMarker, hasFloor bool) {
 	return
 }
 
-func preprocessRoomFloor(s string) string {
-	// Handle room number pattern first (e.g., 17-10-202室 → 17-10 -202室)
-	s = roomNumber.ReplaceAllString(s, "${1} -${2}")
-	// Handle floor number pattern (e.g., 2-2-5-1F → 2-2-5 -1F, 5-3-5階 → 5-3 -5階)
-	s = floorNumber.ReplaceAllString(s, "${1} -${2}")
+// replaceRule pairs a pattern with its replacement. Rules in a table apply
+// in declaration order; the order is part of the normalization spec.
+type replaceRule struct {
+	re   *regexp.Regexp
+	repl string
+}
+
+// applyRules applies every rule to s in order.
+func applyRules(s string, rules []replaceRule) string {
+	for _, r := range rules {
+		s = r.re.ReplaceAllString(s, r.repl)
+	}
 	return s
 }
 
-// It returns the processed string and true if processing should stop.
-func processIllegalBanchi(s string) (string, bool) {
-	// N番地N号棟 (incorrect format but specific pattern)
-	if next := banchiGoTou.ReplaceAllString(s, "${1} ${2}号棟"); next != s {
-		return next, true
-	}
-	// N番地N棟 pattern (e.g., 1番地1棟301号 → 1 1棟301号)
-	if next := banchiTou.ReplaceAllString(s, "${1} ${2}棟"); next != s {
-		return next, true
-	}
-	// N番地N号 (incorrect format) should not be fully converted
-	if next := banchiGo.ReplaceAllString(s, "${1}-${2}"); next != s {
-		return next, true
+// applyFirstMatch applies the first rule that changes s and reports whether
+// any rule matched.
+func applyFirstMatch(s string, rules []replaceRule) (string, bool) {
+	for _, r := range rules {
+		if next := r.re.ReplaceAllString(s, r.repl); next != s {
+			return next, true
+		}
 	}
 	return s, false
 }
 
+// roomFloorRules split room/floor suffixes (e.g., 17-10-202室 → 17-10 -202室,
+// 2-2-5-1F → 2-2-5 -1F).
+var roomFloorRules = []replaceRule{
+	{roomNumber, "${1} -${2}"},
+	{floorNumber, "${1} -${2}"},
+}
+
+func preprocessRoomFloor(s string) string {
+	return applyRules(s, roomFloorRules)
+}
+
+// illegalBanchiRules handle incorrect 番地 formats; only the first matching
+// rule applies and stops further processing.
+var illegalBanchiRules = []replaceRule{
+	{banchiGoTou, "${1} ${2}号棟"}, // N番地M号棟 → N M号棟
+	{banchiTou, "${1} ${2}棟"},    // N番地M棟 → N M棟 (e.g., 1番地1棟301号 → 1 1棟301号)
+	{banchiGo, "${1}-${2}"},      // N番地M号 → N-M (not fully converted)
+}
+
+// It returns the processed string and true if processing should stop.
+func processIllegalBanchi(s string) (string, bool) {
+	return applyFirstMatch(s, illegalBanchiRules)
+}
+
+// banchiRules convert 番地 lot numbers to hyphens.
+var banchiRules = []replaceRule{
+	{banchiNoGo, "${1}-${2}"},                  // N番地の/ノM号 → N-M
+	{banchiNo, "${1}-${2}"},                    // N番地の/ノM → N-M
+	{banchiHyphenGo, "${1}-${2}"},              // N番地-M号 → N-M (remove 号)
+	{banchiHyphen, "${1}-${2}"},                // N番地-M → N-M (号なし)
+	{banchiWithHyphenNumeric, "${1}-${2}${3}"}, // N番地M-P → N-M-P
+	{banchiBuilding, "${1}-${2} ${3}"},         // N番地M+建物名 → N-M 建物名
+	{banchiEnd, "${1}-${2}"},                   // N番地M (末尾) → N-M
+	{banchiSakiNotEnd, "${1} ${2}"},            // N番地先+後続文字 → N番地先 後続文字 (add space for building separation)
+	{banchiSingleEnd, "${1}"},                  // N番地（末尾） → N
+	{banchiSingleNotEnd, "${1} ${2}"},          // N番地（末尾ではない） → N 後続文字
+}
+
+// banHyphenRules convert N番-M forms (e.g., 11番-1004号 → 11-1004, 1番-2 → 1-2).
+var banHyphenRules = []replaceRule{
+	{banHyphenGo, "${1}-${2}"},
+	{banHyphen, "${1}-${2}"},
+}
+
 func processBanchi(s string) string {
 	if strings.Contains(s, "番地") {
-		s = banchiNoGo.ReplaceAllString(s, "${1}-${2}")                  // N番地の/ノM号 → N-M
-		s = banchiNo.ReplaceAllString(s, "${1}-${2}")                    // N番地の/ノM → N-M
-		s = banchiHyphenGo.ReplaceAllString(s, "${1}-${2}")              // N番地-M号 → N-M (remove 号)
-		s = banchiHyphen.ReplaceAllString(s, "${1}-${2}")                // N番地-M → N-M (号なし)
-		s = banchiWithHyphenNumeric.ReplaceAllString(s, "${1}-${2}${3}") // N番地M-P → N-M-P
-		s = banchiBuilding.ReplaceAllString(s, "${1}-${2} ${3}")         // N番地M+建物名 → N-M 建物名
-		s = banchiEnd.ReplaceAllString(s, "${1}-${2}")                   // N番地M (末尾) → N-M
-		s = banchiSakiNotEnd.ReplaceAllString(s, "${1} ${2}")            // N番地先+後続文字 → N番地先 後続文字 (add space for building separation)
-		s = banchiSingleEnd.ReplaceAllString(s, "${1}")                  // N番地（末尾） → N
-		s = banchiSingleNotEnd.ReplaceAllString(s, "${1} ${2}")          // N番地（末尾ではない） → N 後続文字
+		s = applyRules(s, banchiRules)
 	}
 	if strings.Contains(s, "番-") {
-		// Handle N番-N号 pattern (e.g., 11番-1004号 → 11-1004)
-		s = banHyphenGo.ReplaceAllString(s, "${1}-${2}")
-		// Handle N番-N pattern (without 号) (e.g., 1番-2 → 1-2)
-		s = banHyphen.ReplaceAllString(s, "${1}-${2}")
+		s = applyRules(s, banHyphenRules)
 	}
 	return s
 }
 
+// banchoRules convert numbers following 番町 town names (e.g., 一番町9番8号 →
+// 一番町9-8, 番町9-10パークコート → 番町9-10 パークコート).
+var banchoRules = []replaceRule{
+	{banchoBanchi, "${1}${2}-${3}"},        // N番町M番地O → N番町M-O
+	{banchoBanGo, "${1}${2}-${3}"},         // 番町N番M号 → 番町N-M
+	{banchoBanWithNumber, "${1}${2}-${3}"}, // 番町N番M → 番町N-M
+	{banchoBanOnly, "${1}${2}${3}"},        // 番町N番[non-digit] → 番町N[non-digit]
+	{banchoBanEnd, "${1}${2}"},             // 番町N番 (at end) → 番町N
+	{banchoHyphenBuilding, "${1} ${2}"},    // 番町N-M[building] → 番町N-M [building]
+}
+
 func processBancho(s string) string {
-	// Handle N番町N番地M pattern first (e.g., 1番町188番地2 → 1番町188-2)
-	s = banchoBanchi.ReplaceAllString(s, "${1}${2}-${3}")
-	// Handle ○番町N番N号 pattern (e.g., 一番町9番8号 → 一番町9-8)
-	s = banchoBanGo.ReplaceAllString(s, "${1}${2}-${3}")
-	// Handle 番町 patterns (e.g., 二番町1番2 → 二番町1-2)
-	s = banchoBanWithNumber.ReplaceAllString(s, "${1}${2}-${3}") // 番町N番M → 番町N-M
-	s = banchoBanOnly.ReplaceAllString(s, "${1}${2}${3}")        // 番町N番[non-digit] → 番町N[non-digit]
-	s = banchoBanEnd.ReplaceAllString(s, "${1}${2}")             // 番町N番 (at end) → 番町N
-	// Handle 番町N-M[building] pattern (e.g., 番町9-10パークコート)
-	s = banchoHyphenBuilding.ReplaceAllString(s, "${1} ${2}")
-	return s
+	return applyRules(s, banchoRules)
 }
 
 // AddressNumbersToHyphen converts address number patterns (番地, 番, 号) to hyphenated format.
@@ -343,6 +377,17 @@ func AddressNumbersToHyphen(s string) (string, bool) {
 	s = processGoAndPostfix(s)
 
 	return s, s != original
+}
+
+// banGoRules convert N番M号 forms. banNoGo must come first so N番MのO号 is
+// handled before the plain 番/号 rules.
+var banGoRules = []replaceRule{
+	{banNoGo, "${1}-${2}-${3}"}, // N番MのO号 → N-M-O
+	{banGoWithAlphanumeric, "${1}-${2} ${3}"},
+	{banGoShitsu, "${1}-${2} -${3}号室"},
+	{banGoWithBuilding, "${1}-${2} ${3}"}, // N番M号+建物名 → N-M 建物名
+	{banGoWithRoomNum, "${1}-${2} ${3}"},  // N番M号+部屋番号 → N-M 部屋番号
+	{banGoSpace, "${1}-${2} "},            // N番M号+スペース → N-M (スペース保持)
 }
 
 // replaceBanGoEnd replaces "N番M号" at end of string with "N-M" without regex.
@@ -414,14 +459,8 @@ func processBan(s, original string) string {
 
 	// N番N号 patterns with 号
 	if strings.Contains(s, "号") {
-		// N番MのO号 pattern - must come before banGoPattern
-		s = banNoGo.ReplaceAllString(s, "${1}-${2}-${3}")
-		s = banGoWithAlphanumeric.ReplaceAllString(s, "${1}-${2} ${3}")
-		s = banGoShitsu.ReplaceAllString(s, "${1}-${2} -${3}号室")
-		s = banGoWithBuilding.ReplaceAllString(s, "${1}-${2} ${3}") // N番M号+建物名 → N-M 建物名
-		s = banGoWithRoomNum.ReplaceAllString(s, "${1}-${2} ${3}")  // N番M号+部屋番号 → N-M 部屋番号
-		s = banGoSpace.ReplaceAllString(s, "${1}-${2} ")            // N番M号+スペース → N-M (スペース保持)
-		s = replaceBanGoEnd(s)                                      // N番M号 (末尾) → N-M (optimized)
+		s = applyRules(s, banGoRules)
+		s = replaceBanGoEnd(s) // N番M号 (末尾) → N-M (optimized)
 	}
 
 	// N番の/ノN patterns
@@ -478,18 +517,17 @@ func processNoPatterns(s string) string {
 	return s
 }
 
-// convertNoPatternAfterDigit converts のN/ノN patterns only when preceded by a digit.
+// noAfterDigitRules convert のN/ノN patterns preceded by a digit.
+var noAfterDigitRules = []replaceRule{
+	{digitNoDigitGo, "${1}-${3} ${4}"},   // Nの/ノM号X → N-M X (remove 号, add space before non-digit)
+	{digitNoDigitGoEnd, "${1}-${3}${4}"}, // Nの/ノM号 at end/space → N-M (remove 号, preserve trailing)
+	{digitNoDigit, "${1}-${3} ${4}"},     // Nの/ノMX → N-M X (add space before non-digit)
+	{digitNoDigitEnd, "${1}-${3}${4}"},   // Nの/ノM at end → N-M
+}
 
+// convertNoPatternAfterDigit converts のN/ノN patterns only when preceded by a digit.
 func convertNoPatternAfterDigit(s string) string {
-	// Handle "Nの/ノM号X" → "N-M X" (remove 号, add space before non-digit)
-	s = digitNoDigitGo.ReplaceAllString(s, "${1}-${3} ${4}")
-	// Handle "Nの/ノM号" at end/space → "N-M" (remove 号, preserve trailing)
-	s = digitNoDigitGoEnd.ReplaceAllString(s, "${1}-${3}${4}")
-	// Handle "Nの/ノMX" → "N-M X" (add space before non-digit)
-	s = digitNoDigit.ReplaceAllString(s, "${1}-${3} ${4}")
-	// Handle "Nの/ノM" at end → "N-M"
-	s = digitNoDigitEnd.ReplaceAllString(s, "${1}-${3}${4}")
-	return s
+	return applyRules(s, noAfterDigitRules)
 }
 
 // hasBanGoPattern checks for pattern "数字+番+数字(ハイフン数字)*+号" without regex.
@@ -547,23 +585,15 @@ func hasBanTouPattern(s string) bool {
 	return char.IsASCIIDigit(lastRuneBefore)
 }
 
+// goAndPostfixRules run after the main conversion passes.
+var goAndPostfixRules = []replaceRule{
+	{trailingGo, "${1}"},      // remove trailing 号 for hyphenated address patterns
+	{gochi, "${1}${2}"},       // 号地 pattern
+	{bancho, "${1}${2} ${3}"}, // ○番町 followed by building name
+}
+
 func processGoAndPostfix(s string) string {
-	// Remove trailing 号 for hyphenated address patterns
-	if next := trailingGo.ReplaceAllString(s, "${1}"); next != s {
-		s = next
-	}
-
-	// Handle 号地 pattern
-	if next := gochi.ReplaceAllString(s, "${1}${2}"); next != s {
-		s = next
-	}
-
-	// Handle ○番町 followed by building name
-	if next := bancho.ReplaceAllString(s, "${1}${2} ${3}"); next != s {
-		s = next
-	}
-
-	return s
+	return applyRules(s, goAndPostfixRules)
 }
 
 // addSpaceAfterFirstArabicNumber adds a space after the first occurrence of arabic number-hyphen pattern (e.g., 1-2-3).
