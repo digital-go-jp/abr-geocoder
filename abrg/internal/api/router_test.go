@@ -111,7 +111,7 @@ func TestGeocodeRequest_Validation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
 			router.GET("/test", func(c *gin.Context) {
-				var req geocodeRequest
+				var req addressRequest
 				if err := c.ShouldBindQuery(&req); err != nil {
 					c.JSON(http.StatusBadRequest, errorResponse("Invalid request parameters"))
 					return
@@ -314,7 +314,7 @@ func TestMatchRequest_Validation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
 			router.GET("/test", func(c *gin.Context) {
-				var req matchRequest
+				var req addressRequest
 				if err := c.ShouldBindQuery(&req); err != nil {
 					c.JSON(http.StatusBadRequest, errorResponse("Invalid request parameters"))
 					return
@@ -350,7 +350,7 @@ func TestCategoryValues(t *testing.T) {
 		t.Run("valid_category_"+category, func(t *testing.T) {
 			router := gin.New()
 			router.GET("/test", func(c *gin.Context) {
-				var req geocodeRequest
+				var req addressRequest
 				if err := c.ShouldBindQuery(&req); err != nil {
 					c.JSON(http.StatusBadRequest, errorResponse("Invalid request parameters"))
 					return

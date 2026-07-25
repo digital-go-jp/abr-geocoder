@@ -20,8 +20,8 @@ type baseRequest struct {
 	Limit    int    `form:"limit,default=1" binding:"min=1,max=5"`
 }
 
-// geocodeRequest represents geocoding request parameters.
-type geocodeRequest struct {
+// addressRequest represents address-based (match/geocode) request parameters.
+type addressRequest struct {
 	baseRequest
 	Address string `form:"address" binding:"required"`
 }
@@ -31,12 +31,6 @@ type reverseRequest struct {
 	baseRequest
 	Lat float64 `form:"lat" binding:"required,min=-90,max=90"`
 	Lon float64 `form:"lon" binding:"required,min=-180,max=180"`
-}
-
-// matchRequest represents match request parameters.
-type matchRequest struct {
-	baseRequest
-	Address string `form:"address" binding:"required"`
 }
 
 // normalizeRequest represents address standardization request parameters.

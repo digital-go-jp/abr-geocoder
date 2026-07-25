@@ -12,7 +12,7 @@ import (
 )
 
 func (s *GinServer) GeocodeHandler(c *gin.Context) {
-	var req geocodeRequest
+	var req addressRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		sendBadRequest(c, formatBindError(err))
 		return
@@ -85,7 +85,7 @@ func (s *GinServer) ReverseHandler(c *gin.Context) {
 }
 
 func (s *GinServer) MatchHandler(c *gin.Context) {
-	var req matchRequest
+	var req addressRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		sendBadRequest(c, formatBindError(err))
 		return
