@@ -32,7 +32,7 @@ run:
 
 # Clean build artifacts
 clean:
-	rm -f /tmp/$(BINARY) coverage.out coverage.html
+	rm -f ./$(BINARY) coverage.out coverage.html
 	$(EXTRA_CLEAN)
 
 # Run all tests
