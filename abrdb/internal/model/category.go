@@ -22,13 +22,13 @@ var AllCategory = []FileCategory{
 	CategoryParcel,
 }
 
-// CategoryGroups defines predefined category groups
-var CategoryGroups = map[string][]FileCategory{
+// categoryGroups defines predefined category groups
+var categoryGroups = map[string][]FileCategory{
 	"basic":   {CategoryPref, CategoryCity, CategoryTown},
 	"rsdtdsp": {CategoryPref, CategoryCity, CategoryTown, CategoryRsdtdspBlk, CategoryRsdtdspRsdt},
 	"parcel":  {CategoryPref, CategoryCity, CategoryTown, CategoryParcel},
 }
 
 func CategoryGroup(groupName string) []FileCategory {
-	return CategoryGroups[groupName]
+	return categoryGroups[groupName]
 }
