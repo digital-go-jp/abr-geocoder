@@ -57,7 +57,7 @@ func adjustMachiazaIDForChome(machiazaID, chomeNum string) string {
 
 // searchResidential searches for residential address using 2-stage approach.
 func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress) (*model.MatchedResult, error) {
-	numbers := parsed.numberParts()
+	numbers := parsed.Numbers
 	if len(numbers) == 0 {
 		return nil, nil
 	}

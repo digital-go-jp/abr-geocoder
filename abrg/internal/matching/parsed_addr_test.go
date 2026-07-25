@@ -186,7 +186,7 @@ func TestParsedAddressString(t *testing.T) {
 	}
 }
 
-func TestParsedAddress_numberParts(t *testing.T) {
+func TestParsedAddress_Numbers(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -206,9 +206,9 @@ func TestParsedAddress_numberParts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parsed := parseSearchAddr(tt.input)
-			result := parsed.numberParts()
+			result := parsed.Numbers
 			if !slices.Equal(result, tt.expected) {
-				t.Errorf("parseSearchAddr(%q).numberParts() = %v, want %v", tt.input, result, tt.expected)
+				t.Errorf("parseSearchAddr(%q).Numbers = %v, want %v", tt.input, result, tt.expected)
 			}
 		})
 	}
