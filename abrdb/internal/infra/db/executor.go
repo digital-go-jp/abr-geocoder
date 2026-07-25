@@ -3,13 +3,10 @@ package db
 
 import (
 	"context"
-	"database/sql/driver"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	commondb "abr.local/common/db"
@@ -18,20 +15,6 @@ import (
 // QueryExecutor handles database query execution using pgxpool.
 type QueryExecutor struct {
 	pool *pgxpool.Pool
-}
-
-// sqlResult wraps pgconn.CommandTag to implement sql.Result interface
-type sqlResult struct {
-	tag pgconn.CommandTag
-}
-
-func (r *sqlResult) LastInsertId() (int64, error) {
-	// pgx doesn't support LastInsertId in the traditional sense
-	return 0, errors.New("pgx does not support LastInsertId")
-}
-
-func (r *sqlResult) RowsAffected() (int64, error) {
-	return r.tag.RowsAffected(), nil
 }
 
 // NewQueryExecutor creates a new query executor with pgxpool.
@@ -70,13 +53,14 @@ func (q *QueryExecutor) Query(ctx context.Context, query string, args ...any) (p
 }
 
 // Exec executes a query that does not return rows.
-// Returns a driver.Result compatible value and error.
-func (q *QueryExecutor) Exec(ctx context.Context, query string, args ...any) (driver.Result, error) {
-	tag, err := q.pool.Exec(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return &sqlResult{tag: tag}, nil
+func (q *QueryExecutor) Exec(ctx context.Context, query string, args ...any) error {
+	_, err := q.pool.Exec(ctx, query, args...)
+	return err
+}
+
+// QueryRow executes a query that returns at most one row.
+func (q *QueryExecutor) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
+	return q.pool.QueryRow(ctx, query, args...)
 }
 
 // Close closes the connection pool.

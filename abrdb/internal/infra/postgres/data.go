@@ -14,7 +14,7 @@ import (
 // statement, which dominated import time at scale.
 func DeleteFileScope(ctx context.Context, executor *db.QueryExecutor, tableName, filename string) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE %s", tableName, buildDeleteCondition(filename))
-	if _, err := executor.Exec(ctx, query); err != nil {
+	if err := executor.Exec(ctx, query); err != nil {
 		return fmt.Errorf("delete %s rows for %q: %w", tableName, filename, err)
 	}
 	return nil
@@ -23,7 +23,7 @@ func DeleteFileScope(ctx context.Context, executor *db.QueryExecutor, tableName,
 // TableIsEmpty reports whether the table has no rows.
 func TableIsEmpty(ctx context.Context, executor *db.QueryExecutor, tableName string) (bool, error) {
 	var exists bool
-	row := executor.Pool().QueryRow(ctx, fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s)", tableName))
+	row := executor.QueryRow(ctx, fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s)", tableName))
 	if err := row.Scan(&exists); err != nil {
 		return false, fmt.Errorf("check %s is empty: %w", tableName, err)
 	}
@@ -35,7 +35,7 @@ func TableIsEmpty(ctx context.Context, executor *db.QueryExecutor, tableName str
 // first import does not pay row-by-row index maintenance.
 func EnsureLgCodeIndex(ctx context.Context, executor *db.QueryExecutor, tableName string) error {
 	query := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_lg_code ON %s (lg_code)", tableName, tableName)
-	if _, err := executor.Exec(ctx, query); err != nil {
+	if err := executor.Exec(ctx, query); err != nil {
 		return fmt.Errorf("create lg_code index on %s: %w", tableName, err)
 	}
 	return nil

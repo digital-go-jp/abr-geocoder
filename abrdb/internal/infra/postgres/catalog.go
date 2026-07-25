@@ -32,7 +32,7 @@ func scanFile(s scanner, f *model.File) error {
 // UpsertFile inserts or updates a file record.
 // updated_at is only changed when actual data changes occur.
 func UpsertFile(ctx context.Context, executor *db.QueryExecutor, record *model.File) error {
-	_, err := executor.Exec(ctx, `
+	err := executor.Exec(ctx, `
 		INSERT INTO abrdb_catalog (
 			file_type, file_category, pref_code, file_key,
 			filename,
@@ -171,7 +171,7 @@ func updateFileStatus(ctx context.Context, executor *db.QueryExecutor, needsDown
 		WHERE filename IN (%s)
 	`, strings.Join(placeholders, ", "))
 
-	_, err := executor.Exec(ctx, query, args...)
+	err := executor.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update file status: %w", err)
 	}
@@ -220,7 +220,7 @@ func GetPendingSummary(ctx context.Context, executor *db.QueryExecutor) ([]Pendi
 // If either file in a pair has needs_import=true, both are set to true.
 // This ensures that text and pos files are always imported together.
 func SyncPairImportStatus(ctx context.Context, executor *db.QueryExecutor) error {
-	_, err := executor.Exec(ctx, `
+	err := executor.Exec(ctx, `
 		UPDATE abrdb_catalog AS target
 		SET needs_import = true, updated_at = CURRENT_TIMESTAMP
 		WHERE needs_import = false

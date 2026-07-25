@@ -21,7 +21,7 @@ func LoadABRDBConfig(ctx context.Context, executor *QueryExecutor) (*ABRDBConfig
 	config := &ABRDBConfig{}
 
 	query := `SELECT config_key, config_value FROM abrdb_config ORDER BY config_key`
-	rows, err := executor.Pool().Query(ctx, query)
+	rows, err := executor.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("query config: %w", err)
 	}

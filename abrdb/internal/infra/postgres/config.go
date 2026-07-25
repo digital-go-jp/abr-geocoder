@@ -18,7 +18,7 @@ func SaveConfigValue(ctx context.Context, executor *db.QueryExecutor, key, value
         ON CONFLICT (config_key)
         DO UPDATE SET config_value = EXCLUDED.config_value, updated_at = CURRENT_TIMESTAMP
     `
-	if _, err := executor.Exec(ctx, q, key, value); err != nil {
+	if err := executor.Exec(ctx, q, key, value); err != nil {
 		return fmt.Errorf("save config %q: %w", key, err)
 	}
 	return nil
