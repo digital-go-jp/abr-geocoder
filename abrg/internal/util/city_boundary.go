@@ -3,7 +3,7 @@ package util
 import "unicode/utf8"
 
 // CityBoundary resolves the city/ward boundary of an address by longest-prefix
-// match against the set of known city names, falling back to FindCityBoundary's
+// match against the set of known city names, falling back to findCityBoundary's
 // heuristic when no known city name is a prefix of the address.
 //
 // The dictionary match is what distinguishes cities whose name contains a 市/町/村
@@ -32,7 +32,7 @@ func NewCityBoundary(cityStrings []string) *CityBoundary {
 
 // Find returns the byte index immediately after the city boundary in addr.
 // It prefers the longest known city name that is a prefix of addr; if none
-// matches (or the matcher is nil/empty) it falls back to the FindCityBoundary
+// matches (or the matcher is nil/empty) it falls back to the findCityBoundary
 // heuristic, preserving behavior for ward-only and prefecture-prefixed inputs.
 func (b *CityBoundary) Find(addr string) int {
 	if b != nil && len(b.set) > 0 {
@@ -45,7 +45,7 @@ func (b *CityBoundary) Find(addr string) int {
 			}
 		}
 	}
-	return FindCityBoundary(addr)
+	return findCityBoundary(addr)
 }
 
 // isCityMarker reports whether ch is a Japanese city/ward/town/village suffix character.
@@ -53,10 +53,10 @@ func isCityMarker(ch rune) bool {
 	return ch == '区' || ch == '市' || ch == '町' || ch == '村'
 }
 
-// FindCityBoundary finds the byte index immediately after the city/ward boundary in addr.
+// findCityBoundary finds the byte index immediately after the city/ward boundary in addr.
 //
 //	e.g., "大阪市天王寺区烏ヶ辻町" -> index after "区"
-func FindCityBoundary(addr string) int {
+func findCityBoundary(addr string) int {
 	cityEndIdx := -1
 	for i, ch := range addr {
 		if !isCityMarker(ch) {

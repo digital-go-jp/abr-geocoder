@@ -78,8 +78,8 @@ func TestFindCityBoundary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FindCityBoundary(tt.addr); got != tt.want {
-				t.Errorf("FindCityBoundary(%q) = %v, want %v", tt.addr, got, tt.want)
+			if got := findCityBoundary(tt.addr); got != tt.want {
+				t.Errorf("findCityBoundary(%q) = %v, want %v", tt.addr, got, tt.want)
 			}
 		})
 	}

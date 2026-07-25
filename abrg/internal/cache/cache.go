@@ -213,7 +213,7 @@ func (c *DuckDBCache) buildCityPrefectureCodes(ctx context.Context) error {
 }
 
 // This enables faster Levenshtein search by filtering to specific lg_code.
-// The key format is "city+ward" (e.g., "京都市中京区") to match FindCityBoundary output.
+// The key format is "city+ward" (e.g., "京都市中京区") to match findCityBoundary output.
 // For towns with counties, both "county+city" and "city" keys are added.
 // Note: city_ward names that exist in multiple prefectures (e.g., "池田町") are excluded
 // because they map to multiple lg_codes and cannot be uniquely resolved.
