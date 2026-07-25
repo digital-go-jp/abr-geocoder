@@ -2,6 +2,8 @@ package schema
 
 import (
 	"os"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -25,6 +27,100 @@ var abrgRequiredColumns = map[string][]string{
 		"rsdt_num", "rsdt_num2", "rep_lon", "rep_lat",
 	},
 	"mt_parcel_unified": {"lg_code", "machiaza_id", "prc_id", "prc_num1", "prc_num2", "prc_num3", "rep_lon", "rep_lat"},
+}
+
+// abrgCacheSQLPath locates abrg's cache build SQL inside the repository
+// checkout. The contract test requires it; a missing file is a failure, not a
+// skip, because the whole point is keeping both modules in sync.
+const abrgCacheSQLPath = "../../../abrg/internal/cache/sql.go"
+
+var (
+	// pgTableRefRe matches "FROM/JOIN pg.public.<table> <alias>".
+	pgTableRefRe = regexp.MustCompile(`(?:FROM|JOIN)\s+pg\.public\.(mt_\w+)\s+(\w+)`)
+	// qualifiedColRe matches "<alias>.<column>" references.
+	qualifiedColRe = regexp.MustCompile(`\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)\b`)
+)
+
+// sqlKeywords are tokens that can follow a table reference that has no alias.
+var sqlKeywords = map[string]bool{
+	"WHERE": true, "ON": true, "GROUP": true, "ORDER": true, "UNION": true,
+	"INNER": true, "LEFT": true, "JOIN": true, "SELECT": true, "LIMIT": true,
+}
+
+// abrgCacheSQLColumns extracts, per pg.public.mt_* table, the alias-qualified
+// column names referenced by abrg's cache build SQL. Unqualified references
+// (single-table statements without an alias) are not attributed; every such
+// statement in sql.go only repeats columns that are also alias-qualified
+// elsewhere.
+func abrgCacheSQLColumns(t *testing.T) map[string]map[string]bool {
+	t.Helper()
+	data, err := os.ReadFile(abrgCacheSQLPath)
+	if err != nil {
+		t.Fatalf("read abrg cache SQL (required for the schema contract): %v", err)
+	}
+	src := string(data)
+
+	aliases := make(map[string]string)
+	for _, m := range pgTableRefRe.FindAllStringSubmatch(src, -1) {
+		table, alias := m[1], m[2]
+		if sqlKeywords[alias] {
+			continue
+		}
+		if prev, ok := aliases[alias]; ok && prev != table {
+			t.Fatalf("alias %q maps to both %s and %s; per-statement parsing needed", alias, prev, table)
+		}
+		aliases[alias] = table
+	}
+	if len(aliases) == 0 {
+		t.Fatal("no pg.public.mt_* table references found in abrg cache SQL")
+	}
+
+	columns := make(map[string]map[string]bool)
+	for _, m := range qualifiedColRe.FindAllStringSubmatch(src, -1) {
+		table, ok := aliases[m[1]]
+		if !ok {
+			continue
+		}
+		if columns[table] == nil {
+			columns[table] = make(map[string]bool)
+		}
+		columns[table][m[2]] = true
+	}
+	return columns
+}
+
+// TestAbrgRequiredColumns_MatchesAbrgCacheSQL keeps abrgRequiredColumns in
+// sync with abrg/internal/cache/sql.go in both directions: every listed
+// table/column must be referenced by the SQL, and every table/column the SQL
+// references must be listed.
+func TestAbrgRequiredColumns_MatchesAbrgCacheSQL(t *testing.T) {
+	sqlColumns := abrgCacheSQLColumns(t)
+
+	for table, cols := range abrgRequiredColumns {
+		referenced, ok := sqlColumns[table]
+		if !ok {
+			t.Errorf("table %s is listed but not referenced by abrg cache SQL", table)
+			continue
+		}
+		for _, col := range cols {
+			if !referenced[col] {
+				t.Errorf("table %s: column %s is listed but not referenced by abrg cache SQL", table, col)
+			}
+		}
+	}
+
+	for table, referenced := range sqlColumns {
+		listed := abrgRequiredColumns[table]
+		if listed == nil {
+			t.Errorf("table %s is referenced by abrg cache SQL but missing from abrgRequiredColumns", table)
+			continue
+		}
+		for col := range referenced {
+			if !slices.Contains(listed, col) {
+				t.Errorf("table %s: column %s is referenced by abrg cache SQL but missing from abrgRequiredColumns", table, col)
+			}
+		}
+	}
 }
 
 // ddlColumnsByTable parses GenerateDDL output into a per-table set of column names.
