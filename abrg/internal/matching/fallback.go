@@ -187,7 +187,6 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 }
 
 // tryOazaChoSearch tries to find an oaza_cho record for city-level matches.
-
 func (n *Impl) tryOazaChoSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
 	chomeSearchAddr := convertColonToChome(nctx.Input.SearchAddr)
 	if chomeSearchAddr.HasChome == nctx.Input.SearchAddr.HasChome {
@@ -206,9 +205,4 @@ func (n *Impl) tryOazaChoSearch(ctx context.Context, nctx *normalizeContext) ([]
 	adjustedSearchAddr := adjustSearchAddrForMatch(nctx.Input.SearchAddr, results[0].StructuredAddress.OazaCho)
 	setUnmatchedAddress(&results[0], nctx.Input.NormalizedAddr, nctx.Input.StandardizedAddr, results[0].MatchedAddress, adjustedSearchAddr)
 	return results, nil
-}
-
-// detectCityPrefectureCode detects prefecture code from city name using prefix map lookup.
-func (n *Impl) detectCityPrefectureCode(address string) string {
-	return n.cityPrefixMap.lookup(address)
 }

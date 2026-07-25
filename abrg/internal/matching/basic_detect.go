@@ -118,3 +118,8 @@ func (n *Impl) detectLgCode(searchAddr string) string {
 
 	return ""
 }
+
+// detectCityPrefectureCode detects prefecture code from city name using prefix map lookup.
+func (n *Impl) detectCityPrefectureCode(address string) string {
+	return n.cityPrefixMap.lookup(address)
+}
