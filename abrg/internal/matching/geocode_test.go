@@ -253,7 +253,7 @@ func TestGeocodeNoCoordinates(t *testing.T) {
 	}
 
 	if len(response.Features) == 0 {
-		t.Skip("No features returned")
+		t.Fatal("no features returned")
 	}
 
 	feature := response.Features[0]
@@ -323,7 +323,7 @@ func TestGeocodeCoordinatesLevel(t *testing.T) {
 			}
 
 			if len(response.Features) == 0 {
-				t.Skip("No features returned")
+				t.Fatal("no features returned")
 			}
 
 			feature := response.Features[0]
