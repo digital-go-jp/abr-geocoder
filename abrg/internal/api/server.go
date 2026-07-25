@@ -125,7 +125,18 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 		Formatter: accessLogFormatter,
 		SkipPaths: []string{"/health"},
 	}))
-	router.Use(gin.Recovery())
+	// Keep every error response, including panics and unmatched routes, on the
+	// JSON error contract {"status":"error","message":"..."}.
+	router.Use(gin.CustomRecovery(func(c *gin.Context, _ any) {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse("Internal Server Error"))
+	}))
+	router.HandleMethodNotAllowed = true
+	router.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, errorResponse("not found"))
+	})
+	router.NoMethod(func(c *gin.Context) {
+		c.JSON(http.StatusMethodNotAllowed, errorResponse("method not allowed"))
+	})
 
 	configureCORS(router, cfg.CORSAllowOrigin)
 

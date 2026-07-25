@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/gin-gonic/gin"
+
 	"abrg/internal/cache"
 )
 
@@ -215,4 +217,55 @@ func TestNewGinServer_WithCachePosDisabled(t *testing.T) {
 	if w := serveRequest(t, server, "/match?address=東京都千代田区紀尾井町"); w.Code != http.StatusOK {
 		t.Errorf("GET /match status = %d, want %d", w.Code, http.StatusOK)
 	}
+}
+
+// TestNewGinServer_ErrorResponsesAreJSON pins the JSON error contract for
+// responses outside the registered routes: unknown paths, disallowed methods,
+// and recovered panics.
+func TestNewGinServer_ErrorResponsesAreJSON(t *testing.T) {
+	server := NewGinServer(ServerConfig{})
+	server.router.GET("/panic-test", func(*gin.Context) { panic("boom") })
+
+	assertJSONError := func(t *testing.T, w *httptest.ResponseRecorder, wantCode int, wantMessage string) {
+		t.Helper()
+		if w.Code != wantCode {
+			t.Errorf("status = %d, want %d", w.Code, wantCode)
+		}
+		if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+			t.Errorf("Content-Type = %q, want application/json", ct)
+		}
+		var body map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Fatalf("unmarshal response %q: %v", w.Body.String(), err)
+		}
+		if body["status"] != "error" {
+			t.Errorf("status field = %v, want error", body["status"])
+		}
+		if body["message"] != wantMessage {
+			t.Errorf("message = %v, want %q", body["message"], wantMessage)
+		}
+	}
+
+	serve := func(t *testing.T, method, target string) *httptest.ResponseRecorder {
+		t.Helper()
+		w := httptest.NewRecorder()
+		req, err := http.NewRequestWithContext(t.Context(), method, target, nil)
+		if err != nil {
+			t.Fatalf("NewRequestWithContext(%q) error = %v", target, err)
+		}
+		server.Handler().ServeHTTP(w, req)
+		return w
+	}
+
+	t.Run("unknown path returns JSON 404", func(t *testing.T) {
+		assertJSONError(t, serve(t, http.MethodGet, "/no-such-route"), http.StatusNotFound, "not found")
+	})
+
+	t.Run("disallowed method returns JSON 405", func(t *testing.T) {
+		assertJSONError(t, serve(t, http.MethodPost, "/health"), http.StatusMethodNotAllowed, "method not allowed")
+	})
+
+	t.Run("panic returns JSON 500", func(t *testing.T) {
+		assertJSONError(t, serve(t, http.MethodGet, "/panic-test"), http.StatusInternalServerError, "Internal Server Error")
+	})
 }
