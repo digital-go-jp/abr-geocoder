@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"abrg/internal/char"
 	"abrg/internal/model"
 )
 
@@ -311,7 +312,7 @@ func isAllDigits(s string) bool {
 		return false
 	}
 	for i := 0; i < len(s); i++ {
-		if !IsASCIIDigit(s[i]) {
+		if !char.IsASCIIDigit(s[i]) {
 			return false
 		}
 	}
@@ -360,7 +361,7 @@ func extractUnmatchedWithAt(searchAddr string) string {
 
 func ExtractTrailingAddressNumbers(searchAddr string) string {
 	return extractTrailingBytes(searchAddr, func(b byte) bool {
-		return IsASCIIDigit(b) || b == '-'
+		return char.IsASCIIDigit(b) || b == '-'
 	})
 }
 

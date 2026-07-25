@@ -4,12 +4,14 @@ package util
 import (
 	"strings"
 	"unicode"
+
+	"abrg/internal/char"
 )
 
 // Used to extract chome (丁目) numbers from the portion before "@" in internal address format.
 // Returns an empty string if s does not end with ASCII digits.
 func ExtractChomeDigits(s string) string {
-	return extractTrailingBytes(s, IsASCIIDigit)
+	return extractTrailingBytes(s, char.IsASCIIDigit)
 }
 
 func extractTrailingBytes(s string, match func(byte) bool) string {

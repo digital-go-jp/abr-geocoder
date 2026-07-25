@@ -6,6 +6,8 @@ package transform
 import (
 	"regexp"
 	"strings"
+
+	"abrg/internal/char"
 )
 
 // senGoPattern matches Hokkaido colonial division addresses like "7線1号" or "10線西5号".
@@ -19,7 +21,7 @@ func isHokkaidoSenPattern(s string) bool {
 		return false
 	}
 	runes := []rune(s)
-	return len(runes) >= 2 && runes[len(runes)-2] >= '0' && runes[len(runes)-2] <= '9'
+	return len(runes) >= 2 && char.IsASCIIDigit(runes[len(runes)-2])
 }
 
 // IsSenGoPattern checks if the address contains Hokkaido sen-go pattern (N線:M号).

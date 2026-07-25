@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"abrg/internal/char"
 	"abrg/internal/matchlevel"
 	"abrg/internal/model"
 	"abrg/internal/repository"
@@ -136,7 +137,7 @@ func isPartialKoazaMatch(searchAddr, stdAddress string) bool {
 	// The extra suffix in stdAddress must be non-digit
 	suffix := stdAddress[len(searchAddr):]
 	for i := 0; i < len(suffix); i++ {
-		if suffix[i] >= '0' && suffix[i] <= '9' {
+		if char.IsASCIIDigit(suffix[i]) {
 			return false
 		}
 	}
@@ -239,7 +240,7 @@ func isFalseChomeMatch(searchAddr, stdAddress string) bool {
 		return false
 	}
 	oazaEnd := atIdx
-	for oazaEnd > 0 && stdAddress[oazaEnd-1] >= '0' && stdAddress[oazaEnd-1] <= '9' {
+	for oazaEnd > 0 && char.IsASCIIDigit(stdAddress[oazaEnd-1]) {
 		oazaEnd--
 	}
 	if oazaEnd == atIdx {

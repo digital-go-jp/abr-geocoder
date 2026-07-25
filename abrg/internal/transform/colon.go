@@ -3,6 +3,8 @@ package transform
 import (
 	"regexp"
 	"strings"
+
+	"abrg/internal/char"
 )
 
 // Regex patterns for colon insertion between text and address numbers.
@@ -32,7 +34,7 @@ var (
 )
 
 func isAddressEndChar(r rune) bool {
-	return (r >= '0' && r <= '9') ||
+	return char.IsASCIIDigit(r) ||
 		(r >= 'A' && r <= 'Z') ||
 		(r >= 'ア' && r <= 'ン') ||
 		(r >= '一' && r <= '龥')
@@ -45,7 +47,7 @@ func isGaikuPattern(s string) bool {
 	}
 	runes := []rune(s)
 	for i := 0; i < len(runes)-1; i++ {
-		if runes[i] == '街' && runes[i+1] == '区' && i > 0 && runes[i-1] >= '0' && runes[i-1] <= '9' {
+		if runes[i] == '街' && runes[i+1] == '区' && i > 0 && char.IsASCIIDigit(runes[i-1]) {
 			return true
 		}
 	}

@@ -1,10 +1,5 @@
 package util
 
-// IsASCIIDigit reports whether b is an ASCII digit ('0'–'9').
-func IsASCIIDigit(b byte) bool {
-	return b >= '0' && b <= '9'
-}
-
 // isKanjiNumeral reports whether r is a kanji numeral (一二三四五六七八九十〇百千).
 func isKanjiNumeral(r rune) bool {
 	switch r {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"abrg/internal/char"
 	"abrg/internal/model"
 	"abrg/internal/repository"
 )
@@ -38,7 +39,7 @@ func adjustMachiazaIDForChome(machiazaID, chomeNum string) string {
 	// Extract only digit characters from chomeNum
 	var digits []byte
 	for _, r := range chomeNum {
-		if r >= '0' && r <= '9' {
+		if char.IsASCIIDigit(r) {
 			digits = append(digits, byte(r))
 		}
 	}

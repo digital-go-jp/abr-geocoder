@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"abrg/internal/util"
+	"abrg/internal/char"
 )
 
 // =============================================================================
@@ -195,7 +195,7 @@ var addressComponents = []string{
 
 func hasASCIIDigit(s string) bool {
 	for i := 0; i < len(s); i++ {
-		if util.IsASCIIDigit(s[i]) {
+		if char.IsASCIIDigit(s[i]) {
 			return true
 		}
 	}
@@ -216,7 +216,7 @@ func scanAddressMarkers(s string) (hasMarker, hasFloor bool) {
 				return
 			}
 		}
-		prevDigit = util.IsASCIIDigit(b)
+		prevDigit = char.IsASCIIDigit(b)
 
 		// Check for Japanese characters (3-byte UTF-8)
 		if i+2 >= n {
@@ -405,13 +405,13 @@ func replaceBanGoEnd(s string) string {
 	}
 
 	// Check digit before 番
-	if !util.IsASCIIDigit(s[banIdx-1]) {
+	if !char.IsASCIIDigit(s[banIdx-1]) {
 		return s
 	}
 
 	// Find start of first number (before 番)
 	numStart := banIdx - 1
-	for numStart > 0 && util.IsASCIIDigit(s[numStart-1]) {
+	for numStart > 0 && char.IsASCIIDigit(s[numStart-1]) {
 		numStart--
 	}
 
@@ -420,11 +420,11 @@ func replaceBanGoEnd(s string) string {
 	between := s[banIdx+len("番") : goIdx]
 
 	// Validate: must be digits optionally with hyphens (e.g., "5", "5-3", "5-3-1")
-	if len(between) == 0 || !util.IsASCIIDigit(between[0]) {
+	if len(between) == 0 || !char.IsASCIIDigit(between[0]) {
 		return s
 	}
 	for i := 1; i < len(between); i++ {
-		if !util.IsASCIIDigit(between[i]) && between[i] != '-' {
+		if !char.IsASCIIDigit(between[i]) && between[i] != '-' {
 			return s
 		}
 	}
@@ -442,7 +442,7 @@ func processBan(s, original string) string {
 			loc := banGai.FindStringIndex(s)
 			if loc != nil && loc[0] > 0 {
 				prevChar := s[loc[0]-1]
-				if util.IsASCIIDigit(prevChar) {
+				if char.IsASCIIDigit(prevChar) {
 					s = banGai.ReplaceAllString(s, "${1}番街 ")
 				}
 			}
@@ -564,7 +564,7 @@ func hasBanGoPattern(s string) bool {
 		return false
 	}
 	// First char must be digit
-	return util.IsASCIIDigit(between[0])
+	return char.IsASCIIDigit(between[0])
 }
 
 // hasBanTouPattern checks for pattern "数字+番+数字+棟" without regex.
@@ -589,7 +589,7 @@ func hasBanTouPattern(s string) bool {
 
 	// Check for digit before 番
 	lastRuneBefore, _ := utf8.DecodeLastRuneInString(s[:banIdx])
-	return lastRuneBefore >= '0' && lastRuneBefore <= '9'
+	return char.IsASCIIDigit(lastRuneBefore)
 }
 
 func processGoAndPostfix(s string) string {
@@ -675,7 +675,7 @@ func addSpaceAfterNumberBeforeJapanese(s string) (string, bool) {
 				if runes[0] == 'の' || runes[0] == 'ノ' {
 					// Check if followed by digit
 					if len(runes) >= 2 {
-						if runes[1] >= '0' && runes[1] <= '9' {
+						if char.IsASCIIDigit(runes[1]) {
 							isAddressComponent = true
 						}
 					}
@@ -702,7 +702,7 @@ func addSpaceAfterNumberBeforeJapanese(s string) (string, bool) {
 					// Check if followed by digit and eventually 丁目
 					if len(runes) >= 2 {
 						secondRune := runes[1]
-						if secondRune >= '0' && secondRune <= '9' {
+						if char.IsASCIIDigit(secondRune) {
 							// Check if the pattern ends with 丁目
 							if strings.Contains(afterNum, "丁目") {
 								isAddressComponent = true

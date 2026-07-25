@@ -1,7 +1,11 @@
 // Package model defines data structures for API requests and responses.
 package model
 
-import "strings"
+import (
+	"strings"
+
+	"abrg/internal/char"
+)
 
 type MatchLevel string
 
@@ -184,15 +188,11 @@ func (w *addressWriter) write(ptr *string, prefix string) {
 	switch {
 	case prefix != "":
 		w.sb.WriteString(prefix)
-	case isASCIIDigit(w.last) && isASCIIDigit(s[0]):
+	case char.IsASCIIDigit(w.last) && char.IsASCIIDigit(s[0]):
 		w.sb.WriteString("-")
 	}
 	w.sb.WriteString(s)
 	w.last = s[len(s)-1]
-}
-
-func isASCIIDigit(b byte) bool {
-	return b >= '0' && b <= '9'
 }
 
 func hasValue(ptr *string) bool {

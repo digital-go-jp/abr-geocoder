@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"abrg/internal/char"
 	"abrg/internal/model"
 	"abrg/internal/transform"
 )
@@ -35,7 +36,7 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 	}
 
 	// Second try: if afterColon starts with a digit, try searching with chome included
-	if hasColon && len(afterColon) > 0 && afterColon[0] >= '0' && afterColon[0] <= '9' {
+	if hasColon && len(afterColon) > 0 && char.IsASCIIDigit(afterColon[0]) {
 		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, originalAddr)
 		if err != nil {
 			return pref, searchAddrWithColon, nil, err
