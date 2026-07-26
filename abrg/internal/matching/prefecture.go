@@ -47,19 +47,15 @@ func (n *Impl) queryPrefectureRecord(ctx context.Context, prefCode, normalizedAd
 }
 
 // buildCityResult constructs a city-level MatchedResult from a cache_city query row.
+//
+// NOTE: levenshtein.tryFallbackCitySearchByScore builds a similar city-level
+// result but is intentionally a separate implementation: it carries the row's
+// coordinates and returns the unmatched remainder verbatim (no 番地/width
+// normalization), whereas this builder normalizes the remainder with
+// NormalizeUnmatchedNumbers and never has coordinates in its source row.
 func buildCityResult(cr *repository.CityResult, searchAddr, normalizedAddr string, cityEnd int) *model.MatchedResult {
-	// Build matched address (pref + county + city + ward)
-	matchedAddr := cr.Pref
-	if cr.County != nil && *cr.County != "" {
-		matchedAddr += *cr.County
-	}
-	matchedAddr += cr.City
-	if cr.Ward != nil && *cr.Ward != "" {
-		matchedAddr += *cr.Ward
-	}
-
-	// Build structured address
 	sa := model.StructuredAddress{Pref: &cr.Pref, County: cr.County, City: &cr.City, Ward: cr.Ward}
+	matchedAddr := model.FormatAddress(&sa)
 
 	unmatchedParts := extractCityUnmatched(matchedAddr, cr.Pref, searchAddr, normalizedAddr, cityEnd)
 

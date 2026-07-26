@@ -175,6 +175,11 @@ func standardizedRemainder(standardized, matchedAddr, pref string, boundary *uti
 	return standardized[boundary.Find(standardized):]
 }
 
+// NOTE: matching.buildCityResult builds a similar city-level result but is
+// intentionally a separate implementation: it normalizes the unmatched
+// remainder with NormalizeUnmatchedNumbers and its source row never carries
+// coordinates, whereas this fallback keeps the remainder verbatim and
+// propagates the row's coordinates.
 func tryFallbackCitySearchByScore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]model.MatchedResult, error) {
 	cityEndIdx := p.CityBoundary.Find(p.SearchAddr)
 	if cityEndIdx <= 0 {
