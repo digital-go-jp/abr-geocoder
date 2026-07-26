@@ -33,6 +33,17 @@ func TestBuildPostgresAttachSQL(t *testing.T) {
 			want:     "ATTACH 'sslmode=prefer' AS pg (TYPE postgres, READ_ONLY, SECRET pg_secret)",
 		},
 		{
+			// Pins the intentional unification for abrg cache build: an empty
+			// DB_SSLMODE is omitted so libpq falls back to its default, where
+			// abrg formerly emitted the invalid value 'sslmode=' and failed to
+			// connect. abrdb has always omitted it.
+			name:     "read only with empty sslmode omitted",
+			sslMode:  "",
+			secret:   "pg_secret",
+			readOnly: true,
+			want:     "ATTACH '' AS pg (TYPE postgres, READ_ONLY, SECRET pg_secret)",
+		},
+		{
 			name:    "single quotes escaped",
 			sslMode: "pre'fer",
 			secret:  "s",
