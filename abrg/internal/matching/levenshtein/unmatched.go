@@ -234,6 +234,12 @@ func toHalfWidthDigit(r rune) rune {
 }
 
 // isFullWidthHyphen checks if rune is a full-width hyphen variant.
+//
+// NOTE: intentionally different from the dash set in normalize.NormalizeDashes.
+// That function normalizes raw user input (17 dash variants, ー only between
+// digits); this one post-processes an already-normalized unmatched remainder,
+// so it handles only the variants that survive normalization and converts ー
+// unconditionally (e.g. remainder "2ー3" from a chome split).
 func isFullWidthHyphen(r rune) bool {
 	return r == '−' || r == '－' || r == 'ー' || r == '—' || r == '―'
 }
