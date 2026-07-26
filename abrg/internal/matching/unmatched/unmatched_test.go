@@ -12,7 +12,6 @@ import (
 func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 	tests := []struct {
 		name           string
-		originalAddr   string
 		normalizedAddr string
 		matchedAddr    string
 		searchAddr     string
@@ -20,7 +19,6 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 	}{
 		{
 			name:           "at without colon extracts numbers after at",
-			originalAddr:   "北海道小樽市入船3丁目4-1",
 			normalizedAddr: "北海道小樽市入船3丁目4-1",
 			matchedAddr:    "北海道小樽市入船3丁目",
 			searchAddr:     "小樽市入船3@4-1",
@@ -28,7 +26,6 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 		},
 		{
 			name:           "at without colon and nothing after at means full match",
-			originalAddr:   "文京区大塚一丁目",
 			normalizedAddr: "文京区大塚一丁目",
 			matchedAddr:    "東京都文京区大塚1丁目",
 			searchAddr:     "文京区大塚1@",
@@ -36,7 +33,6 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 		},
 		{
 			name:           "no colon nor at extracts suffix of normalized beyond matched",
-			originalAddr:   "愛知県清須市助七一",
 			normalizedAddr: "愛知県清須市助七一",
 			matchedAddr:    "愛知県清須市助七",
 			searchAddr:     "清須市助七1",
@@ -44,7 +40,6 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 		},
 		{
 			name:           "no colon nor at falls back to trailing numbers of searchAddr",
-			originalAddr:   "神戸市中央区磯上通8丁目3-5",
 			normalizedAddr: "神戸市中央区磯上通8丁目3-5",
 			matchedAddr:    "兵庫県神戸市中央区磯上通8丁目",
 			searchAddr:     "神戸市中央区磯上通8丁目3-5",
@@ -52,7 +47,6 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 		},
 		{
 			name:           "koaza prefix before colon is prepended to unmatched numbers",
-			originalAddr:   "佐賀県嬉野市嬉野町下野長波須ハ丙1234",
 			normalizedAddr: "佐賀県嬉野市嬉野町下野長波須ハ丙1234",
 			matchedAddr:    "佐賀県嬉野市嬉野町大字下野",
 			searchAddr:     "嬉野市嬉野町下野長波須ハ丙:1234",
@@ -60,7 +54,6 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 		},
 		{
 			name:           "chome consumed as bare number after colon",
-			originalAddr:   "東京都文京区大塚2",
 			normalizedAddr: "東京都文京区大塚2",
 			matchedAddr:    "東京都文京区大塚二丁目",
 			searchAddr:     "文京区大塚:2",
@@ -68,7 +61,6 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 		},
 		{
 			name:           "colon with trailing empty after part keeps matched address",
-			originalAddr:   "東京都港区虎ノ門1",
 			normalizedAddr: "東京都港区虎ノ門1",
 			matchedAddr:    "東京都港区虎ノ門1丁目",
 			searchAddr:     "港区虎ノ門:",
@@ -76,7 +68,6 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 		},
 		{
 			name:           "building names only when everything matched",
-			originalAddr:   "東京都渋谷区神宮前 タワーB 2階",
 			normalizedAddr: "東京都渋谷区神宮前 タワーB 2階",
 			matchedAddr:    "東京都渋谷区神宮前",
 			searchAddr:     "",
@@ -86,10 +77,10 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExtractUnmatchedParts(tt.originalAddr, tt.normalizedAddr, tt.matchedAddr, tt.searchAddr)
+			got := ExtractUnmatchedParts(tt.normalizedAddr, tt.matchedAddr, tt.searchAddr)
 			if !slices.Equal(got, tt.want) {
-				t.Errorf("ExtractUnmatchedParts(%q, %q, %q, %q) = %v, want %v",
-					tt.originalAddr, tt.normalizedAddr, tt.matchedAddr, tt.searchAddr, got, tt.want)
+				t.Errorf("ExtractUnmatchedParts(%q, %q, %q) = %v, want %v",
+					tt.normalizedAddr, tt.matchedAddr, tt.searchAddr, got, tt.want)
 			}
 		})
 	}

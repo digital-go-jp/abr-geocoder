@@ -28,17 +28,16 @@ func CreateUnmatchedResult(originalAddr string) model.MatchedResult {
 	}
 }
 
-// ExtractUnmatchedParts extracts unmatched parts from standardized addresses.
+// ExtractUnmatchedParts extracts unmatched parts from a normalized address.
 // Returns user-friendly unmatched parts with building names as separate elements.
 //
 // Parameters:
-//   - originalAddr: original user input (used for preserving format where possible)
-//   - normalizedAddr: lightly standardized with building names (e.g., "東京都中央区八丁堀四丁目12-7 サニービル")
+//   - normalizedAddr: basic-normalized input with building names (e.g., "東京都中央区八丁堀四丁目12-7 サニービル")
 //   - matchedAddr: matched address from database (e.g., "東京都文京区大塚1丁目"), used for chome pattern detection
 //   - searchAddr: fully transformed for search (e.g., "中央区8丁堀4@:12-7")
 //
 // Note: Currently uses searchAddr for address portion (may contain transformed forms like "8丁" and "@").
-func ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, searchAddr string) []string {
+func ExtractUnmatchedParts(normalizedAddr, matchedAddr, searchAddr string) []string {
 	var unmatchedParts []string
 
 	// Split normalizedAddr into address part and building name
@@ -55,7 +54,7 @@ func ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, searchAddr
 
 	unmatchedAddr := addressPart
 	if hasColon && afterColon != "" {
-		unmatchedAddr = extractUnmatchedWithColon(originalAddr, standardizedAddrPart, addressPart, beforeColon, afterColon)
+		unmatchedAddr = extractUnmatchedWithColon(normalizedAddr, standardizedAddrPart, addressPart, beforeColon, afterColon)
 	} else if searchAddr == "" {
 		// Empty searchAddr means no specific unmatched portion to extract
 		// This happens when everything matched or we only want building names

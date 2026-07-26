@@ -5,13 +5,12 @@ import "abrg/internal/model"
 // normalizeInput holds immutable input data for normalization.
 // These values are set once at the start and never modified during processing.
 type normalizeInput struct {
-	NormalizedAddr   string                  // Basic-normalized input (comments removed, NFKC applied)
-	StandardizedAddr string                  // Lightly standardized address (for user display)
-	SearchAddr       parsedAddress           // Parsed search address (eliminates redundant parseSearchAddr calls)
-	Pref             string                  // Prefecture code filter
-	Limit            int                     // Max results
-	Category         model.Category          // Requested category filter (all/basic/rsdtdsp/parcel)
-	AddressType      model.NormalizeCategory // Category type (residential/parcel/undetermined/unknown)
+	NormalizedAddr string                  // Basic-normalized input (comments removed, NFKC applied); also the user-facing form for unmatched extraction
+	SearchAddr     parsedAddress           // Parsed search address (eliminates redundant parseSearchAddr calls)
+	Pref           string                  // Prefecture code filter
+	Limit          int                     // Max results
+	Category       model.Category          // Requested category filter (all/basic/rsdtdsp/parcel)
+	AddressType    model.NormalizeCategory // Category type (residential/parcel/undetermined/unknown)
 }
 
 // normalizeState holds mutable state during normalization.

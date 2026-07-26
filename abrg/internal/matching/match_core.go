@@ -51,7 +51,7 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 
 	normalizedAddr := normalize.BasicNormalize(query.Address)
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
-	pref, searchAddr, basicResults, err := n.detectBasicResultsWithBasic(ctx, normalizedAddr, query.Pref, normalizedAddr)
+	pref, searchAddr, basicResults, err := n.detectBasicResultsWithBasic(ctx, normalizedAddr, query.Pref)
 	if err != nil {
 		return nil, fmt.Errorf("detect basic results: %w", err)
 	}
@@ -65,13 +65,12 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 
 	nctx := &normalizeContext{
 		Input: normalizeInput{
-			NormalizedAddr:   normalizedAddr,
-			StandardizedAddr: normalizedAddr,
-			SearchAddr:       parseSearchAddr(searchAddr),
-			Pref:             pref,
-			Limit:            query.Limit,
-			Category:         query.Category,
-			AddressType:      addressType,
+			NormalizedAddr: normalizedAddr,
+			SearchAddr:     parseSearchAddr(searchAddr),
+			Pref:           pref,
+			Limit:          query.Limit,
+			Category:       query.Category,
+			AddressType:    addressType,
 		},
 		State: normalizeState{
 			LgCode:       lgCode,

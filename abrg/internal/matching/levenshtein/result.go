@@ -45,7 +45,7 @@ func ExtractSearchNumbers(searchAddr string) string {
 }
 
 // processResults processes query results and returns normalized results.
-func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr, originalAddr string, category model.Category, limit int) []model.MatchedResult {
+func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, category model.Category, limit int) []model.MatchedResult {
 	results := make([]model.MatchedResult, 0, limit)
 	addressLen := utf8.RuneCountInString(searchAddr)
 
@@ -100,7 +100,7 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 	})
 
 	// Select best variant among results with the same top score
-	results = selectBestFromTiedResults(results, searchNumbers, originalAddr)
+	results = selectBestFromTiedResults(results, searchNumbers, normalizedAddr)
 
 	if len(results) > limit {
 		results = results[:limit]

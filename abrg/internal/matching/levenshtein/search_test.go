@@ -66,11 +66,11 @@ func TestTryFallbackCitySearchByScore_ForwardsPrefCode(t *testing.T) {
 	}}
 
 	_, err := tryFallbackCitySearchByScore(t.Context(), repo, SearchParams{
-		Category:         model.CategoryAll,
-		StandardizedAddr: "府中市上下町甲148番地",
-		SearchAddr:       "府中市上下町甲148番地",
-		Pref:             "34",
-		Limit:            1,
+		Category:       model.CategoryAll,
+		NormalizedAddr: "府中市上下町甲148番地",
+		SearchAddr:     "府中市上下町甲148番地",
+		Pref:           "34",
+		Limit:          1,
 	})
 	if err != nil {
 		t.Fatalf("tryFallbackCitySearchByScore() error = %v", err)
@@ -90,10 +90,10 @@ func TestTryFallbackCitySearchByScore_FullMatchYieldsNilUnmatched(t *testing.T) 
 	}}
 
 	results, err := tryFallbackCitySearchByScore(t.Context(), repo, SearchParams{
-		Category:         model.CategoryAll,
-		StandardizedAddr: "福山市",
-		SearchAddr:       "福山市",
-		Limit:            1,
+		Category:       model.CategoryAll,
+		NormalizedAddr: "福山市",
+		SearchAddr:     "福山市",
+		Limit:          1,
 	})
 	if err != nil {
 		t.Fatalf("tryFallbackCitySearchByScore() error = %v", err)

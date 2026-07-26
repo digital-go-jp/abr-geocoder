@@ -153,14 +153,13 @@ func sortAndLimitResults(results []model.MatchedResult, limit int) []model.Match
 // buildLevenshteinParams constructs SearchParams from the normalize context.
 func (n *Impl) buildLevenshteinParams(nctx *normalizeContext, lgCode, machiazaID string) levenshtein.SearchParams {
 	return levenshtein.SearchParams{
-		Category:         model.CategoryBasic,
-		StandardizedAddr: nctx.Input.StandardizedAddr,
-		SearchAddr:       nctx.Input.SearchAddr.String(),
-		Pref:             nctx.Input.Pref,
-		LgCode:           lgCode,
-		MachiazaID:       machiazaID,
-		NormalizedAddr:   nctx.Input.NormalizedAddr,
-		Limit:            nctx.Input.Limit,
-		CityBoundary:     n.cityBoundary,
+		Category:       model.CategoryBasic,
+		SearchAddr:     nctx.Input.SearchAddr.String(),
+		Pref:           nctx.Input.Pref,
+		LgCode:         lgCode,
+		MachiazaID:     machiazaID,
+		NormalizedAddr: nctx.Input.NormalizedAddr,
+		Limit:          nctx.Input.Limit,
+		CityBoundary:   n.cityBoundary,
 	}
 }

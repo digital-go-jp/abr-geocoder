@@ -8,18 +8,18 @@ import (
 	"abrg/internal/model"
 )
 
-func setUnmatchedAddress(result *model.MatchedResult, originalAddr, normalizedAddr, matchedAddr, adjustedSearchAddr string) {
+func setUnmatchedAddress(result *model.MatchedResult, normalizedAddr, adjustedSearchAddr string) {
 	searchNumbers := levenshtein.ExtractSearchNumbers(adjustedSearchAddr)
 	if searchNumbers != "" && result.StructuredAddress.Chome == nil && levenshtein.IsSearchNumbersPartOfPlaceName(&result.StructuredAddress, searchNumbers) {
 		// Don't treat as place name match if original contains 番地 pattern
 		// e.g., "二丁目２番地" - the "2" from "２番地" is a block number, not chome
-		if !hasBanchiPattern(originalAddr) {
+		if !hasBanchiPattern(normalizedAddr) {
 			result.UnmatchedAddress = nil
 			return
 		}
 	}
 
-	unmatchedParts := unmatched.ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, adjustedSearchAddr)
+	unmatchedParts := unmatched.ExtractUnmatchedParts(normalizedAddr, result.MatchedAddress, adjustedSearchAddr)
 	if len(unmatchedParts) > 0 {
 		result.UnmatchedAddress = unmatchedParts
 		return

@@ -93,7 +93,7 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		return nil, fmt.Errorf("database query failed: %w", err)
 	}
 
-	return processResults(rows, p.SearchAddr, searchNumbers, p.StandardizedAddr, p.NormalizedAddr, p.Category, p.Limit), nil
+	return processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Category, p.Limit), nil
 }
 
 // searchWithPrefixMatch searches for addresses where the DB's normalized_address is a prefix of searchAddr.
@@ -203,7 +203,7 @@ func tryFallbackCitySearchByScore(ctx context.Context, repo levenshteinQuerier, 
 	}
 
 	matchedAddr := model.FormatAddress(&sa)
-	unmatchedStdPart := standardizedRemainder(p.StandardizedAddr, matchedAddr, cr.Pref, p.CityBoundary)
+	unmatchedStdPart := standardizedRemainder(p.NormalizedAddr, matchedAddr, cr.Pref, p.CityBoundary)
 	unmatchedParts := strings.Fields(unmatchedStdPart)
 	if len(unmatchedParts) == 0 {
 		unmatchedParts = nil // fully matched must be nil (JSON null), not []

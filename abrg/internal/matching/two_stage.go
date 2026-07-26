@@ -48,7 +48,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 	}
 	if results != nil {
 		for i := range results {
-			setTwoStageUnmatchedAddress(&results[i], nctx.Input.StandardizedAddr, searchAddrStr)
+			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, searchAddrStr)
 		}
 		return results, nil
 	}
@@ -89,7 +89,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	// finalize sets unmatched address and applies parcel-specific post-processing.
 	finalize := func(results []model.MatchedResult, usedSearchAddr string) []model.MatchedResult {
 		for i := range results {
-			setTwoStageUnmatchedAddress(&results[i], nctx.Input.StandardizedAddr, usedSearchAddr)
+			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, usedSearchAddr)
 		}
 		transform.MergeKyotoStToResults(results, nctx.State.BasicResults)
 		return results
