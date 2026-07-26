@@ -2,54 +2,11 @@ package duckdb
 
 import (
 	"regexp"
-	"strings"
 	"testing"
-
-	"abr.local/common/db"
 )
 
-// buildPostgresAttachSQL is tested here because it's a private function
-// specific to the duckdb package. Comprehensive tests for BuildPostgresSecretSQL
-// are in common/db/postgres_secret_test.go.
-func TestBuildPostgresAttachSQL(t *testing.T) {
-	cases := []struct {
-		name    string
-		sslMode string
-		want    string
-	}{
-		{
-			name:    "with sslmode",
-			sslMode: "require",
-			want:    "ATTACH 'sslmode=require' AS pg (TYPE postgres, SECRET abrdb_pg_secret)",
-		},
-		{
-			name:    "empty sslmode",
-			sslMode: "",
-			want:    "ATTACH '' AS pg (TYPE postgres, SECRET abrdb_pg_secret)",
-		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := buildPostgresAttachSQL(tc.sslMode, "abrdb_pg_secret")
-			if got != tc.want {
-				t.Errorf("got %q, want %q", got, tc.want)
-			}
-		})
-	}
-}
-
-// Regression test: password must not leak into ATTACH SQL (credentials only in SECRET).
-func TestBuildPostgresSecretSQL_DoesNotAppearInAttachSQL(t *testing.T) {
-	cfg := db.DBConfig{
-		Host: "h", Port: "5432", Database: "d", User: "u",
-		Password: "super_secret_pw_do_not_leak",
-		SSLMode:  "require",
-	}
-	attachSQL := buildPostgresAttachSQL(cfg.SSLMode, "s")
-	if strings.Contains(attachSQL, cfg.Password) {
-		t.Errorf("password leaked into ATTACH SQL: %s", attachSQL)
-	}
-}
+// ATTACH SQL generation is shared via common/db.BuildPostgresAttachSQL and
+// tested in common/db/attach_test.go.
 
 func TestGenerateTableNames(t *testing.T) {
 	tests := []struct {

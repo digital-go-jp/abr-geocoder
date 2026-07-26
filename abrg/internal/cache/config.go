@@ -22,27 +22,16 @@ func (c *Config) PosEnabled() bool {
 
 // loadConfigFromRows scans config key-value rows into a Config struct.
 func loadConfigFromRows(rows *sql.Rows) (*Config, error) {
-	cfg := &Config{}
-	for rows.Next() {
-		var key, value string
-		if err := rows.Scan(&key, &value); err != nil {
-			return nil, fmt.Errorf("scan config row: %w", err)
-		}
-		switch key {
-		case db.KeyABRDBVersion:
-			cfg.DBVersion = value
-		case db.KeyEnabledCategory:
-			cfg.EnabledCategory = value
-		case db.KeyEnabledPref:
-			cfg.EnabledPref = value
-		case db.KeyEnabledPos:
-			cfg.EnabledPos = value
-		}
+	decoded, err := db.ScanABRDBConfig(rows)
+	if err != nil {
+		return nil, err
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate config rows: %w", err)
-	}
-	return cfg, nil
+	return &Config{
+		DBVersion:       decoded.Version,
+		EnabledPref:     decoded.EnabledPref,
+		EnabledCategory: decoded.EnabledCategory,
+		EnabledPos:      decoded.EnabledPos,
+	}, nil
 }
 
 // loadConfigFromTable loads config from the specified config table.

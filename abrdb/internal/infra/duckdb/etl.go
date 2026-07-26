@@ -256,19 +256,9 @@ func (e *ETL) attachPostgres() error {
 	if _, err := e.db.ExecContext(context.Background(), secretSQL); err != nil {
 		return fmt.Errorf("create postgres secret: %w", err)
 	}
-	attachSQL := buildPostgresAttachSQL(e.pgConf.SSLMode, pgSecretName)
+	attachSQL := db.BuildPostgresAttachSQL(e.pgConf.SSLMode, pgSecretName, false)
 	if _, err := e.db.ExecContext(context.Background(), attachSQL); err != nil {
 		return fmt.Errorf("attach postgres: %w", err)
 	}
 	return nil
-}
-
-// sslmode rides on ATTACH's connection string because DuckDB's postgres SECRET
-// type does not accept sslmode as a field.
-func buildPostgresAttachSQL(sslMode, secretName string) string {
-	opts := ""
-	if sslMode != "" {
-		opts = "sslmode=" + strings.ReplaceAll(sslMode, "'", "''")
-	}
-	return fmt.Sprintf("ATTACH '%s' AS pg (TYPE postgres, SECRET %s)", opts, secretName)
 }

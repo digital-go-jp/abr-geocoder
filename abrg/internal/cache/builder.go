@@ -113,13 +113,13 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	}
 
 	attachStart := time.Now()
-	attachSQL := fmt.Sprintf("ATTACH 'sslmode=%s' AS pg (TYPE POSTGRES, READ_ONLY, SECRET pg_secret);", db.SqlEscape(dbCfg.SSLMode))
+	attachSQL := db.BuildPostgresAttachSQL(dbCfg.SSLMode, "pg_secret", true)
 	if _, err := conn.ExecContext(ctx, attachSQL); err != nil {
 		return nil, fmt.Errorf("failed to attach PostgreSQL database: %w", err)
 	}
 	phaseSec["attach"] = time.Since(attachStart).Seconds()
 
-	cfg, err := loadConfigFromTable(ctx, conn, "pg.abrdb_config")
+	cfg, err := loadConfigFromTable(ctx, conn, "pg."+db.TableABRDBConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config from PostgreSQL: %w", err)
 	}

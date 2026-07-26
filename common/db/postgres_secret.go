@@ -22,6 +22,22 @@ func SqlEscape(s string) string {
 //
 // DuckDB limitation: CREATE SECRET does not support parameterized queries,
 // so manual string escaping is necessary.
+// BuildPostgresAttachSQL returns the ATTACH statement that links the "pg"
+// alias to PostgreSQL through the named secret. sslmode rides on the ATTACH
+// connection string because DuckDB's postgres SECRET type does not accept
+// sslmode as a field; an empty sslMode is omitted so libpq uses its default.
+func BuildPostgresAttachSQL(sslMode, secretName string, readOnly bool) string {
+	conn := ""
+	if sslMode != "" {
+		conn = "sslmode=" + SqlEscape(sslMode)
+	}
+	options := "TYPE postgres, SECRET " + secretName
+	if readOnly {
+		options = "TYPE postgres, READ_ONLY, SECRET " + secretName
+	}
+	return fmt.Sprintf("ATTACH '%s' AS pg (%s)", conn, options)
+}
+
 func BuildPostgresSecretSQL(cfg DBConfig, secretName string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "CREATE OR REPLACE SECRET %s (TYPE postgres", secretName)
