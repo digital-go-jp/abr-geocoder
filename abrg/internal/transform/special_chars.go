@@ -18,11 +18,15 @@ import (
 //go:embed special_chars.tsv
 var specialCharsData string
 
-var specialCharReplacer = newSpecialCharReplacer(specialCharsData)
+var specialCharReplacer = strings.NewReplacer(parseSpecialCharPairs(specialCharsData)...)
 
-func newSpecialCharReplacer(data string) *strings.Replacer {
+// parseSpecialCharPairs parses the TSV data into a flat from/to list in file
+// order. Lines are stripped of a trailing \r so a CRLF checkout parses
+// identically to an LF one.
+func parseSpecialCharPairs(data string) []string {
 	var pairs []string
 	for i, line := range strings.Split(data, "\n") {
+		line = strings.TrimSuffix(line, "\r")
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -33,7 +37,7 @@ func newSpecialCharReplacer(data string) *strings.Replacer {
 		}
 		pairs = append(pairs, fields[0], fields[1])
 	}
-	return strings.NewReplacer(pairs...)
+	return pairs
 }
 
 // StandardizeSpecialChars converts special characters and variant kanji (異体字) used in addresses.

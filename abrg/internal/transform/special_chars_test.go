@@ -1,6 +1,30 @@
 package transform
 
-import "testing"
+import (
+	"slices"
+	"strings"
+	"testing"
+)
+
+// TestParseSpecialCharPairs_CRLF pins that a CRLF checkout of the embedded
+// TSV yields exactly the same pair list as the LF form.
+func TestParseSpecialCharPairs_CRLF(t *testing.T) {
+	want := parseSpecialCharPairs(specialCharsData)
+	if len(want) != 386*2 {
+		t.Fatalf("parseSpecialCharPairs() returned %d pairs, want 386", len(want)/2)
+	}
+
+	crlf := strings.ReplaceAll(specialCharsData, "\n", "\r\n")
+	got := parseSpecialCharPairs(crlf)
+	if !slices.Equal(got, want) {
+		t.Errorf("parseSpecialCharPairs(CRLF) differs from LF parse: got %d entries, want %d", len(got), len(want))
+	}
+	for _, s := range got {
+		if strings.ContainsRune(s, '\r') {
+			t.Errorf("parseSpecialCharPairs(CRLF) entry %q contains \\r", s)
+		}
+	}
+}
 
 func TestStandardizeSpecialChars(t *testing.T) {
 	tests := []struct {
