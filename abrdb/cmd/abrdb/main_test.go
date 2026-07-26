@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"abrdb/internal/cli/command"
+	"abrdb/internal/infra/db"
 )
 
 // TestMain doubles as the subprocess entry point for the exit code contract
@@ -163,6 +164,11 @@ func TestExitCode(t *testing.T) {
 		{
 			name: "generic error exits 2",
 			err:  errors.New("connection refused"),
+			want: 2,
+		},
+		{
+			name: "import lock held by another process exits 2",
+			err:  fmt.Errorf("acquire lock: %w", db.ErrImportLocked),
 			want: 2,
 		},
 		{

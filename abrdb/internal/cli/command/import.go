@@ -117,6 +117,12 @@ Use --force to skip change detection and import immediately.`,
 
 			// Force mode: skip change detection and re-import every in-scope file
 			if opts.Force {
+				lock, err := sc.QueryExecutor.AcquireImportLock(ctx)
+				if err != nil {
+					return err
+				}
+				defer lock.Release(context.WithoutCancel(ctx))
+
 				services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
 				if err != nil {
 					return err
@@ -200,7 +206,9 @@ func initImportServices(sc *ServiceContainer, store *postgres.Catalog, categoryI
 	}, nil
 }
 
-// runImportDryRun handles the dry-run mode: compare catalog only, no downloads or imports
+// runImportDryRun handles the dry-run mode: compare catalog only, no downloads or imports.
+// It only reads, so it does not take the import lock and may run concurrently
+// with an actual import.
 func runImportDryRun(
 	ctx context.Context,
 	store pendingSummaryStore,
@@ -264,6 +272,16 @@ func runImportWithChangeDetection(
 			"updated_files", len(scanResult.UpdatedFiles),
 		)
 	}
+
+	// The scan above ran before the lock and is advisory only. The import
+	// mutates the data tables, so it runs under the exclusive advisory lock,
+	// and the catalog is rescanned after the lock is taken (ScanAndUpdate in
+	// executeImportPipeline), closing the check-then-act window.
+	lock, err := sc.QueryExecutor.AcquireImportLock(ctx)
+	if err != nil {
+		return err
+	}
+	defer lock.Release(context.WithoutCancel(ctx))
 
 	services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
 	if err != nil {
