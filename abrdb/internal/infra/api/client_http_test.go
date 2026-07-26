@@ -177,8 +177,9 @@ func TestDownloadFile_Non200LeavesNoFiles(t *testing.T) {
 	}))
 	defer server.Close()
 
+	client, _ := newFastRetryClient(server.URL)
 	destPath := filepath.Join(t.TempDir(), "mt_pref_all.csv.zip")
-	err := New(server.URL).DownloadFile(t.Context(), server.URL+"/f.csv.zip", destPath)
+	err := client.DownloadFile(t.Context(), server.URL+"/f.csv.zip", destPath)
 	if err == nil {
 		t.Fatal("DownloadFile: want error on 500, got nil")
 	}
@@ -192,10 +193,12 @@ func TestDownloadFile_Non200LeavesNoFiles(t *testing.T) {
 }
 
 func TestFetchFeed_RefetchesAfterError(t *testing.T) {
+	// The first logical fetch must exhaust every retry (1 + 3 retries = 4
+	// requests) before FetchFeed reports the error; the next call re-fetches.
 	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if callCount.Add(1) == 1 {
-			w.WriteHeader(http.StatusInternalServerError) // first call fails
+		if callCount.Add(1) <= 4 {
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -203,7 +206,7 @@ func TestFetchFeed_RefetchesAfterError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL)
+	client, _ := newFastRetryClient(server.URL)
 	ctx := t.Context()
 
 	// A failed fetch must not be cached...
@@ -214,8 +217,8 @@ func TestFetchFeed_RefetchesAfterError(t *testing.T) {
 	if _, err := client.FetchFeed(ctx); err != nil {
 		t.Fatalf("second FetchFeed: want success, got %v", err)
 	}
-	if got := callCount.Load(); got != 2 {
-		t.Errorf("HTTP calls = %d, want 2 (error must trigger a refetch)", got)
+	if got := callCount.Load(); got != 5 {
+		t.Errorf("HTTP calls = %d, want 5 (4 exhausted attempts + refetch)", got)
 	}
 }
 
