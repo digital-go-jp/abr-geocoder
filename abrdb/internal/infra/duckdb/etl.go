@@ -15,6 +15,7 @@ import (
 	"abr.local/common/duck"
 
 	"abrdb/internal/schema"
+	"abrdb/internal/util"
 )
 
 const pgSecretName = "abrdb_pg_secret"
@@ -223,12 +224,17 @@ func (e *ETL) transformAndLoadWithSuffixTx(ctx context.Context, tx *sql.Tx, cate
 	transformer := newTransformer(categoryInfo)
 	tn := generateTableNames(suffix)
 
+	insertSQL, err := buildInsertSQL(categoryInfo, tn.Transformed)
+	if err != nil {
+		return fmt.Errorf("build insert for %s: %w", categoryInfo.TableName, err)
+	}
+
 	steps := []struct {
 		name string
 		sql  string
 	}{
 		{"transform", transformer.buildTransformSQL(hasPosData, tn)},
-		{"insert", fmt.Sprintf("INSERT INTO pg.%s SELECT * EXCLUDE (join_seq) FROM %s WHERE join_seq = 1", categoryInfo.TableName, tn.Transformed)},
+		{"insert", insertSQL},
 	}
 	stepSec := make([]any, 0, len(steps)*2)
 	for _, step := range steps {
@@ -240,6 +246,30 @@ func (e *ETL) transformAndLoadWithSuffixTx(ctx context.Context, tx *sql.Tx, cate
 	}
 	slog.DebugContext(ctx, "transform step timing", append([]any{"event", "transform_timing", "file", filename}, stepSec...)...)
 	return nil
+}
+
+// buildInsertSQL lists the same explicit columns (CategoryInfo.OutputColumns)
+// on both the INSERT and the SELECT side, so a column-order drift between the
+// transformed temp table and the PostgreSQL DDL fails loudly instead of
+// inserting silently misaligned data (the previous SELECT * EXCLUDE form
+// relied on the two orders matching by construction).
+func buildInsertSQL(categoryInfo *schema.CategoryInfo, transformedTable string) (string, error) {
+	table, err := util.QuoteIdentifier(categoryInfo.TableName)
+	if err != nil {
+		return "", err
+	}
+	if len(categoryInfo.OutputColumns) == 0 {
+		return "", fmt.Errorf("no output columns for table %s", categoryInfo.TableName)
+	}
+	quoted := make([]string, len(categoryInfo.OutputColumns))
+	for i, col := range categoryInfo.OutputColumns {
+		if quoted[i], err = util.QuoteIdentifier(col); err != nil {
+			return "", err
+		}
+	}
+	cols := strings.Join(quoted, ", ")
+	return fmt.Sprintf("INSERT INTO pg.%s (%s) SELECT %s FROM %s WHERE join_seq = 1",
+		table, cols, cols, transformedTable), nil
 }
 
 func (e *ETL) initializeDuckDB() error {

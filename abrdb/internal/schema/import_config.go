@@ -158,11 +158,28 @@ func (cat *CategoryConfig) toCategoryInfo() *CategoryInfo {
 		TextColumns:      textCols,
 		PosColumns:       posCols,
 		JoinColumns:      cat.JoinColumns,
+		OutputColumns:    dedupColumns(textCols, posCols),
 		Filters:          filters,
 		TextColumnTypes:  textColTypes,
 		PosColumnTypes:   posColTypes,
 		FullwidthColumns: fullwidthCols,
 	}
+}
+
+// dedupColumns returns text columns followed by the pos-only columns, keeping
+// first-seen order. This is the column order of both the transformed temp
+// table and the PostgreSQL table DDL (see mergeColumns).
+func dedupColumns(textCols, posCols []string) []string {
+	seen := make(map[string]struct{}, len(textCols)+len(posCols))
+	out := make([]string, 0, len(textCols)+len(posCols))
+	for _, c := range slices.Concat(textCols, posCols) {
+		if _, ok := seen[c]; ok {
+			continue
+		}
+		seen[c] = struct{}{}
+		out = append(out, c)
+	}
+	return out
 }
 
 func extractColumnInfo(columns []ColumnDef, trackFullwidth bool) ([]string, map[string]string, map[string]bool) {
@@ -210,6 +227,7 @@ type CategoryInfo struct {
 	TextColumns      []string
 	PosColumns       []string
 	JoinColumns      []string
+	OutputColumns    []string // deduplicated text+pos columns: the single source for INSERT and transform SELECT column lists
 	Filters          FilterConfig
 	TextColumnTypes  map[string]string // column name -> DuckDB type for text CSV
 	PosColumnTypes   map[string]string // column name -> DuckDB type for position CSV
