@@ -53,6 +53,10 @@ func (n *Impl) queryPrefectureRecord(ctx context.Context, prefCode, normalizedAd
 // coordinates and returns the unmatched remainder verbatim (no 番地/width
 // normalization), whereas this builder normalizes the remainder with
 // NormalizeUnmatchedNumbers and never has coordinates in its source row.
+//
+// FormatAddress equals the plain pref+county+city+ward concatenation only
+// while no administrative name ends or starts with an ASCII digit; the
+// premise is verified by repository.TestFormatAddress_CityRowsMatchPlainConcat.
 func buildCityResult(cr *repository.CityResult, searchAddr, normalizedAddr string, cityEnd int) *model.MatchedResult {
 	sa := model.StructuredAddress{Pref: &cr.Pref, County: cr.County, City: &cr.City, Ward: cr.Ward}
 	matchedAddr := model.FormatAddress(&sa)
