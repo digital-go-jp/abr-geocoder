@@ -78,11 +78,6 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 		return nil, fmt.Errorf("failed to initialize spatial extension: %w", err)
 	}
 
-	// Register Go UDFs (in-memory only, doesn't require write access)
-	if err := cache.registerUDFs(ctx); err != nil {
-		return nil, fmt.Errorf("failed to register UDFs: %w", err)
-	}
-
 	// Build city-prefecture mapping from existing cache
 	if err := cache.buildCityPrefectureCodes(ctx); err != nil {
 		return nil, fmt.Errorf("failed to build city-prefecture mapping: %w", err)
@@ -286,8 +281,4 @@ func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	}
 
 	return rows.Err()
-}
-
-func (c *DuckDBCache) registerUDFs(ctx context.Context) error {
-	return registerUDF(ctx, c.db)
 }
