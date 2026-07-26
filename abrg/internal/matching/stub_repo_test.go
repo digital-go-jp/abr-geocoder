@@ -3,10 +3,22 @@ package matching
 // Stub-repository tests for the matching orchestration layer. They run without
 // a DuckDB cache: the repository interface is faked with rows copied from the
 // production cache, and the expected feature JSON is pinned from the real
-// pipeline output observed with the full nationwide cache (abrg match/geocode,
-// 2026-07-26). This keeps the orchestration branches (category dispatch,
+// pipeline output. This keeps the orchestration branches (category dispatch,
 // two-stage search, fallback chain, city/prefecture records, Levenshtein
 // fallback) exercised in CI where the cache-dependent suites are skipped.
+//
+// Provenance of the pinned expectations (for regeneration):
+//   - Cache: full nationwide cache built 2026-07-26 with enabled_pref=all,
+//     enabled_category=all, enabled_pos=true (result_info db_version 3.0.12).
+//   - Binary: abrg 3.0.17 built from refactor/phase4-boundaries head 676ce78.
+//   - Expected JSON: the features array of
+//     printf '<address>\n' > in.txt &&
+//     CACHE_PATH=$HOME/.abrg/cache/abrg.duckdb \
+//       ./abrg match -q -c <category> -i in.txt -o out.json
+//     (geocode cases use ./abrg geocode with the same flags).
+//   - Fixture rows: the same cache queried read-only with the duckdb CLI
+//     against cache_machiaza / cache_city / cache_pref / cache_rsdtdsp /
+//     cache_parcel, coordinates rounded to 6 digits via round(ST_X(geom),6).
 
 import (
 	"context"
