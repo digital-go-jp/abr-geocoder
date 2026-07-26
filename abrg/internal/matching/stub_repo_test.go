@@ -11,8 +11,10 @@ package matching
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -24,7 +26,10 @@ import (
 
 // stubRepo implements implQuerier and matching.CoordinatesGetter with canned
 // rows keyed by the query parameters. Unknown keys yield empty results, which
-// is how the "not found" branches are reached.
+// is how the "not found" branches are reached. Every method records its full
+// parameter set into calls so tests can pin the exact search conditions the
+// orchestration issues, and errByMethod injects a failure into a method to
+// pin error propagation.
 type stubRepo struct {
 	basicByAddr  map[string][]repository.BasicResult
 	levenByAddr  map[string][]repository.BasicResult
@@ -36,15 +41,23 @@ type stubRepo struct {
 	parcelByKey  map[string]*repository.ParcelResult
 	coordsByKey  map[string][]float64
 
-	calls []string
+	errByMethod map[string]error
+	calls       []string
 }
 
 func (s *stubRepo) record(format string, args ...any) {
 	s.calls = append(s.calls, fmt.Sprintf(format, args...))
 }
 
+func (s *stubRepo) injected(method string) error {
+	return s.errByMethod[method]
+}
+
 func (s *stubRepo) FindBasicByAddress(_ context.Context, params repository.BasicSearchParams) ([]repository.BasicResult, error) {
-	s.record("FindBasicByAddress(%q, pref=%q)", params.Address, params.PrefCode)
+	s.record("FindBasicByAddress(%q, pref=%q, limit=%d)", params.Address, params.PrefCode, params.Limit)
+	if err := s.injected("FindBasicByAddress"); err != nil {
+		return nil, err
+	}
 	rows := s.basicByAddr[params.Address]
 	if params.Limit > 0 && len(rows) > params.Limit {
 		rows = rows[:params.Limit]
@@ -53,44 +66,66 @@ func (s *stubRepo) FindBasicByAddress(_ context.Context, params repository.Basic
 }
 
 func (s *stubRepo) FindBasicByLevenshtein(_ context.Context, params repository.LevenshteinParams) ([]repository.BasicResult, error) {
-	s.record("FindBasicByLevenshtein(%q, pref=%q, lg=%q)", params.SearchAddr, params.PrefCode, params.LgCode)
+	s.record("FindBasicByLevenshtein(%q, pref=%q, lg=%q, machiaza=%q, limit=%d)",
+		params.SearchAddr, params.PrefCode, params.LgCode, params.MachiazaID, params.Limit)
+	if err := s.injected("FindBasicByLevenshtein"); err != nil {
+		return nil, err
+	}
 	return s.levenByAddr[params.SearchAddr], nil
 }
 
 func (s *stubRepo) FindBasicByPrefix(_ context.Context, params repository.PrefixParams) ([]repository.BasicResult, error) {
-	s.record("FindBasicByPrefix(%q, pref=%q)", params.BaseAddr, params.PrefCode)
+	s.record("FindBasicByPrefix(%q, pref=%q, limit=%d)", params.BaseAddr, params.PrefCode, params.Limit)
+	if err := s.injected("FindBasicByPrefix"); err != nil {
+		return nil, err
+	}
 	return s.prefixByAddr[params.BaseAddr], nil
 }
 
 func (s *stubRepo) FindCityByAddress(_ context.Context, params repository.CitySearchParams) (*repository.CityResult, error) {
-	s.record("FindCityByAddress(%q, lg=%q)", params.CityAddr, params.LgCode)
-	return nil, nil
+	s.record("FindCityByAddress(%q, lg=%q, pref=%q)", params.CityAddr, params.LgCode, params.PrefCode)
+	return nil, s.injected("FindCityByAddress")
 }
 
 func (s *stubRepo) FindCityRecord(_ context.Context, params repository.CityRecordParams) (*repository.CityResult, error) {
 	s.record("FindCityRecord(%q, pref=%q)", params.CityPart, params.PrefCode)
+	if err := s.injected("FindCityRecord"); err != nil {
+		return nil, err
+	}
 	return s.cityByPart[params.CityPart], nil
 }
 
 func (s *stubRepo) FindCityRecordFuzzy(_ context.Context, params repository.CityFuzzyParams) (*repository.CityResult, error) {
 	s.record("FindCityRecordFuzzy(%q, pref=%q, dist=%d)", params.CityPart, params.PrefCode, params.MaxEditDistance)
+	if err := s.injected("FindCityRecordFuzzy"); err != nil {
+		return nil, err
+	}
 	return s.fuzzyByPart[params.CityPart], nil
 }
 
 func (s *stubRepo) FindPrefecture(_ context.Context, prefCode string) (*repository.PrefectureResult, error) {
 	s.record("FindPrefecture(%q)", prefCode)
+	if err := s.injected("FindPrefecture"); err != nil {
+		return nil, err
+	}
 	return s.prefByCode[prefCode], nil
 }
 
 func (s *stubRepo) FindResidentialBestMatch(_ context.Context, lgCode, machiazaID string, f repository.ResidentialFilter) (*repository.ResidentialBestResult, error) {
 	key := strings.Join([]string{lgCode, machiazaID, f.BlkNum, f.RsdtNum, f.RsdtNum2}, "|")
 	s.record("FindResidentialBestMatch(%s)", key)
+	if err := s.injected("FindResidentialBestMatch"); err != nil {
+		return nil, err
+	}
 	return s.rsdtByKey[key], nil
 }
 
 func (s *stubRepo) FindParcelExact(_ context.Context, lgCode, machiazaID string, f repository.ParcelFilter) (*repository.ParcelResult, error) {
 	key := strings.Join([]string{lgCode, machiazaID, f.PrcNum1, f.PrcNum2, f.PrcNum3}, "|")
 	s.record("FindParcelExact(%s)", key)
+	if err := s.injected("FindParcelExact"); err != nil {
+		return nil, err
+	}
 	return s.parcelByKey[key], nil
 }
 
@@ -278,10 +313,17 @@ func TestMatch_StubRepo(t *testing.T) {
 		address  string
 		category model.Category
 		wantJSON string
+		// wantCalls, when set, pins the exact repository call sequence with
+		// full parameters for one representative scenario per category.
+		wantCalls []string
 	}{
 		{
 			// category=basic: machiaza hit + unmatched numbers (handleBasicFallback).
 			name: "basic machiaza with unmatched numbers", address: "東京都千代田区紀尾井町1-3", category: model.CategoryBasic,
+			wantCalls: []string{
+				`FindBasicByAddress("1000代田区紀尾井町", pref="13", limit=5)`,
+				`FindBasicByAddress("1000代田区紀尾井町1", pref="13", limit=5)`,
+			},
 			wantJSON: `[{"matched_address":"東京都千代田区紀尾井町","unmatched_address":["1-3"],"match_level":"machiaza","score":1,"ids":{"lg_code":"131016","machiaza_id":"0056000","rsdt_addr_flg":"1","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"東京都","county":null,"city":"千代田区","ward":null,"kyoto_st":null,"oaza_cho":"紀尾井町","chome":null,"koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
@@ -312,12 +354,21 @@ func TestMatch_StubRepo(t *testing.T) {
 		{
 			// two-stage residential with chome-adjusted machiaza_id (0018000 → 0018002).
 			name: "rsdtdsp chome adjustment", address: "千葉県浦安市舞浜2-11", category: model.CategoryResidential,
+			wantCalls: []string{
+				`FindBasicByAddress("浦安市舞浜", pref="12", limit=5)`,
+				`FindResidentialBestMatch(122271|0018002|11||)`,
+			},
 			wantJSON: `[{"matched_address":"千葉県浦安市舞浜2丁目11","unmatched_address":null,"match_level":"rsdtdsp_blk","score":1,"ids":{"lg_code":"122271","machiaza_id":"0018002","rsdt_addr_flg":"1","blk_id":"011","rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"千葉県","county":null,"city":"浦安市","ward":null,"kyoto_st":null,"oaza_cho":"舞浜","chome":"2丁目","koaza":null,"machiaza_dist":null,"blk_num":"11","rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
 			// two-stage parcel: chome-adjusted attempt misses, plain 2-11 hits.
 			// rsdt_addr_flg is null because the base machiaza has one row per flag (issue #262).
 			name: "parcel with ambiguous rsdt flag", address: "千葉県浦安市舞浜2-11", category: model.CategoryParcel,
+			wantCalls: []string{
+				`FindBasicByAddress("浦安市舞浜", pref="12", limit=5)`,
+				`FindParcelExact(122271|0018000|11||)`,
+				`FindParcelExact(122271|0018000|2|11|)`,
+			},
 			wantJSON: `[{"matched_address":"千葉県浦安市舞浜2-11","unmatched_address":null,"match_level":"parcel","score":1,"ids":{"lg_code":"122271","machiaza_id":"0018000","rsdt_addr_flg":null,"blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":"000020001100000"},"structured_address":{"pref":"千葉県","county":null,"city":"浦安市","ward":null,"kyoto_st":null,"oaza_cho":"舞浜","chome":null,"koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":"2","prc_num2":"11","prc_num3":null}}]`,
 		},
 		{
@@ -380,6 +431,16 @@ func TestMatch_StubRepo(t *testing.T) {
 			// tryLevenshteinFallback + fuzzyMatchAllowsTwoStage: same-length substitution
 			// resolves the rsdt detail, capped to the fuzzy town score (#246).
 			name: "all levenshtein fallback resolves detail", address: "東京都千代田区紀●井町1-3", category: model.CategoryAll,
+			wantCalls: []string{
+				// First try: base before the colon; second try repeats the base
+				// inside detectMachiaza for the full colon form, then falls back
+				// to the chome pattern 1@ before Levenshtein resolves the town.
+				`FindBasicByAddress("1000代田区紀●井町", pref="13", limit=5)`,
+				`FindBasicByAddress("1000代田区紀●井町", pref="13", limit=5)`,
+				`FindBasicByAddress("1000代田区紀●井町1@", pref="13", limit=5)`,
+				`FindBasicByLevenshtein("1000代田区紀●井町:1-3", pref="13", lg="", machiaza="", limit=1)`,
+				`FindResidentialBestMatch(131016|0056000|1|3|)`,
+			},
 			wantJSON: `[{"matched_address":"東京都千代田区紀尾井町1-3","unmatched_address":null,"match_level":"rsdtdsp_rsdt","score":0.67,"ids":{"lg_code":"131016","machiaza_id":"0056000","rsdt_addr_flg":"1","blk_id":"001","rsdt_id":"003","rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"東京都","county":null,"city":"千代田区","ward":null,"kyoto_st":null,"oaza_cho":"紀尾井町","chome":null,"koaza":null,"machiaza_dist":null,"blk_num":"1","rsdt_num":"3","rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
@@ -402,6 +463,59 @@ func TestMatch_StubRepo(t *testing.T) {
 				t.Fatalf("Match: %v\nrepo calls:\n  %s", err, strings.Join(repo.calls, "\n  "))
 			}
 			assertFeaturesJSON(t, repo, resp.Features, tt.wantJSON)
+			if tt.wantCalls != nil && !slices.Equal(repo.calls, tt.wantCalls) {
+				t.Errorf("repo call sequence mismatch\ngot:\n  %s\nwant:\n  %s",
+					strings.Join(repo.calls, "\n  "), strings.Join(tt.wantCalls, "\n  "))
+			}
+		})
+	}
+}
+
+// TestMatch_RepoErrorPropagation pins that repository failures on the main
+// query paths surface as Match errors instead of degrading to a fixed result.
+func TestMatch_RepoErrorPropagation(t *testing.T) {
+	sentinel := errors.New("stub repo failure")
+
+	tests := []struct {
+		name        string
+		method      string
+		address     string
+		category    model.Category
+		wantMessage string
+	}{
+		{
+			name: "basic search failure", method: "FindBasicByAddress",
+			address: "東京都千代田区紀尾井町1-3", category: model.CategoryBasic,
+			wantMessage: "detect basic results",
+		},
+		{
+			name: "levenshtein failure", method: "FindBasicByLevenshtein",
+			address: "東京都千代田区紀●井町1-3", category: model.CategoryAll,
+			wantMessage: "database query failed",
+		},
+		{
+			name: "two-stage residential failure", method: "FindResidentialBestMatch",
+			address: "千葉県浦安市舞浜2-11", category: model.CategoryResidential,
+			wantMessage: "residential search",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			matcher, repo := newStubMatcher()
+			repo.errByMethod = map[string]error{tt.method: sentinel}
+			_, err := matcher.Match(t.Context(), model.MatchQuery{
+				Address:  tt.address,
+				Category: tt.category,
+				Pref:     model.All,
+				Limit:    1,
+			})
+			if !errors.Is(err, sentinel) {
+				t.Fatalf("err = %v, want wrapped sentinel", err)
+			}
+			if !strings.Contains(err.Error(), tt.wantMessage) {
+				t.Errorf("err = %q, want it to contain %q", err, tt.wantMessage)
+			}
 		})
 	}
 }
