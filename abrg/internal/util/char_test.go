@@ -2,7 +2,7 @@ package util
 
 import "testing"
 
-func Test_isKanjiNumeral(t *testing.T) {
+func Test_IsKanjiNumeral(t *testing.T) {
 	tests := []struct {
 		name string
 		r    rune
@@ -29,8 +29,8 @@ func Test_isKanjiNumeral(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isKanjiNumeral(tt.r); got != tt.want {
-				t.Errorf("isKanjiNumeral(%q) = %v, want %v", tt.r, got, tt.want)
+			if got := IsKanjiNumeral(tt.r); got != tt.want {
+				t.Errorf("IsKanjiNumeral(%q) = %v, want %v", tt.r, got, tt.want)
 			}
 		})
 	}

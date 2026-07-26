@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"abrg/internal/matching/levenshtein"
+	"abrg/internal/matching/unmatched"
 	"abrg/internal/model"
-	"abrg/internal/util"
 )
 
 func (n *Impl) handleFallback(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
@@ -63,7 +63,7 @@ func (n *Impl) handleFallback(ctx context.Context, nctx *normalizeContext) ([]mo
 	}
 
 	// Last resort: return completely unmatched
-	return []model.MatchedResult{util.CreateUnmatchedResult(nctx.Input.NormalizedAddr)}, nil
+	return []model.MatchedResult{unmatched.CreateUnmatchedResult(nctx.Input.NormalizedAddr)}, nil
 }
 
 // handleBasicFallback tries to find more specific matches (chome or oaza_cho) when applicable.

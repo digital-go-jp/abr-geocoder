@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"abrg/internal/matching/levenshtein"
+	"abrg/internal/matching/unmatched"
 	"abrg/internal/model"
 	"abrg/internal/repository"
 	"abrg/internal/util"
@@ -21,7 +22,7 @@ func (n *Impl) queryPrefectureRecord(ctx context.Context, prefCode, normalizedAd
 	}
 
 	// Build unmatched address parts
-	addressPart, buildingParts := util.SplitStandardizedAddress(normalizedAddr)
+	addressPart, buildingParts := unmatched.SplitStandardizedAddress(normalizedAddr)
 
 	unmatchedAddr, _ := strings.CutPrefix(addressPart, pr.PrefName)
 
@@ -76,7 +77,7 @@ func buildCityResult(cr *repository.CityResult, searchAddr, normalizedAddr strin
 
 // extractCityUnmatched extracts unmatched address parts for city-level results.
 func extractCityUnmatched(matchedAddr, pref, searchAddr, normalizedAddr string, cityEnd int) []string {
-	addressPart, buildingParts := util.SplitStandardizedAddress(normalizedAddr)
+	addressPart, buildingParts := unmatched.SplitStandardizedAddress(normalizedAddr)
 
 	var unmatchedAddr string
 	if after, found := strings.CutPrefix(addressPart, matchedAddr); found && after != "" {

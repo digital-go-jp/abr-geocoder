@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"abrg/internal/matching/unmatched"
 	"abrg/internal/model"
 	"abrg/internal/normalize"
 	"abrg/internal/util"
@@ -59,7 +60,7 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 
 	// If location detection failed, return unmatched result
 	if pref == model.All && lgCode == "" && machiazaID == "" {
-		return []model.MatchedResult{util.CreateUnmatchedResult(normalizedAddr)}, nil
+		return []model.MatchedResult{unmatched.CreateUnmatchedResult(normalizedAddr)}, nil
 	}
 
 	nctx := &normalizeContext{

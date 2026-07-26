@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"abrg/internal/matching/levenshtein"
+	"abrg/internal/matching/unmatched"
 	"abrg/internal/model"
-	"abrg/internal/util"
 )
 
 func setUnmatchedAddress(result *model.MatchedResult, originalAddr, normalizedAddr, matchedAddr, adjustedSearchAddr string) {
@@ -19,7 +19,7 @@ func setUnmatchedAddress(result *model.MatchedResult, originalAddr, normalizedAd
 		}
 	}
 
-	unmatchedParts := util.ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, adjustedSearchAddr)
+	unmatchedParts := unmatched.ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, adjustedSearchAddr)
 	if len(unmatchedParts) > 0 {
 		result.UnmatchedAddress = unmatchedParts
 		return

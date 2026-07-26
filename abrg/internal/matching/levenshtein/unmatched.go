@@ -5,6 +5,7 @@ package levenshtein
 import (
 	"strings"
 
+	"abrg/internal/matching/unmatched"
 	"abrg/internal/model"
 	"abrg/internal/transform"
 	"abrg/internal/util"
@@ -91,7 +92,7 @@ func extractUnmatchedAddress(
 
 		// Number not matched to place name - include in unmatched parts
 		adjustedSearchAddr := adjustSearchAddrForChome(addr, searchNumbers, searchAddr)
-		unmatchedParts := util.ExtractUnmatchedParts(normalizedAddr, normalizedAddr, matchedAddr, adjustedSearchAddr)
+		unmatchedParts := unmatched.ExtractUnmatchedParts(normalizedAddr, normalizedAddr, matchedAddr, adjustedSearchAddr)
 
 		// Check if koaza is fully matched
 		if addr.Koaza != nil && strings.Contains(matchedAddr, *addr.Koaza) {
@@ -111,7 +112,7 @@ func extractUnmatchedAddress(
 
 	// No number to match
 	if category == model.CategoryBasic && strings.Contains(searchAddr, "@") {
-		return util.ExtractUnmatchedParts(normalizedAddr, normalizedAddr, matchedAddr, searchAddr)
+		return unmatched.ExtractUnmatchedParts(normalizedAddr, normalizedAddr, matchedAddr, searchAddr)
 	}
 
 	remaining := extractUnmatchedSegments(normalizedAddr, matchedAddr)
