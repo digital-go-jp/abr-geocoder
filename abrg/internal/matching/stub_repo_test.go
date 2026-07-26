@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"abrg/internal/cache"
+	"abrg/internal/matchlevel"
 	"abrg/internal/model"
 	"abrg/internal/repository"
 	"abrg/internal/util"
@@ -39,7 +40,12 @@ type stubRepo struct {
 	prefByCode   map[string]*repository.PrefectureResult
 	rsdtByKey    map[string]*repository.ResidentialBestResult
 	parcelByKey  map[string]*repository.ParcelResult
-	coordsByKey  map[string][]float64
+
+	// Coordinate maps for the three tiers of the parent-coordinate fallback,
+	// keyed like the corresponding cache tables.
+	machiazaCoords map[string][]float64 // lgCode|machiazaID
+	cityCoords     map[string][]float64 // lgCode
+	prefCoords     map[string][]float64 // lgCode or 2-digit pref code
 
 	errByMethod map[string]error
 	calls       []string
@@ -129,14 +135,26 @@ func (s *stubRepo) FindParcelExact(_ context.Context, lgCode, machiazaID string,
 	return s.parcelByKey[key], nil
 }
 
-// Coordinates implements matching.CoordinatesGetter for the Geocode tests.
+// Coordinates implements matching.CoordinatesGetter for the Geocode tests,
+// mirroring the fallback tiers of repository.DB.Coordinates (impl.go):
+// machiaza row → city row → prefecture row by lg_code → prefecture by code.
 func (s *stubRepo) Coordinates(_ context.Context, lgCode, machiazaID string) ([]float64, model.MatchLevel) {
 	s.record("Coordinates(%q, %q)", lgCode, machiazaID)
-	if c, ok := s.coordsByKey[lgCode+"|"+machiazaID]; ok {
-		if machiazaID == "" {
-			return c, model.MatchLevelCity
+	if machiazaID != "" {
+		if c, ok := s.machiazaCoords[lgCode+"|"+machiazaID]; ok {
+			return c, matchlevel.DetermineMatchLevel(&model.IDs{LgCode: &lgCode, MachiazaID: &machiazaID})
 		}
-		return c, model.MatchLevelMachiaza
+	}
+	if c, ok := s.cityCoords[lgCode]; ok {
+		return c, model.MatchLevelCity
+	}
+	if c, ok := s.prefCoords[lgCode]; ok {
+		return c, model.MatchLevelPrefecture
+	}
+	if len(lgCode) >= model.LgCodePrefLength {
+		if c, ok := s.prefCoords[lgCode[:model.LgCodePrefLength]]; ok {
+			return c, model.MatchLevelPrefecture
+		}
 	}
 	return nil, ""
 }
@@ -252,8 +270,9 @@ func newStubRepo() *stubRepo {
 				PrcID: new("012170000400000"), PrcNum1: new("1217"), PrcNum2: new("4"),
 			},
 		},
-		coordsByKey: map[string][]float64{
-			"122246|": {140.000732, 35.776764},
+		cityCoords: map[string][]float64{
+			"122246": {140.000732, 35.776764},
+			"172022": {136.9673, 37.04311},
 		},
 	}
 }
@@ -572,6 +591,13 @@ func TestGeocode_StubRepo(t *testing.T) {
 			// Coordinates come from the residential row; coordinates_level = match_level.
 			name: "geometry from match result", address: "東京都千代田区紀尾井町1-3", category: model.CategoryResidential,
 			wantJSON: `[{"type":"Feature","geometry":{"type":"Point","coordinates":[139.736389,35.679108]},"properties":{"matched_address":"東京都千代田区紀尾井町1-3","unmatched_address":null,"score":1,"match_level":"rsdtdsp_rsdt","coordinates_level":"rsdtdsp_rsdt","ids":{"lg_code":"131016","machiaza_id":"0056000","rsdt_addr_flg":"1","blk_id":"001","rsdt_id":"003","rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"東京都","county":null,"city":"千代田区","ward":null,"kyoto_st":null,"oaza_cho":"紀尾井町","chome":null,"koaza":null,"machiaza_dist":null,"blk_num":"1","rsdt_num":"3","rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}}]`,
+		},
+		{
+			// Machiaza-level result whose row has no coordinates: the parent
+			// lookup misses the machiaza tier and falls back to the city row,
+			// so coordinates_level is city while match_level stays machiaza_detail.
+			name: "geometry falls back from machiaza to city", address: "石川県七尾市大田町111", category: model.CategoryBasic,
+			wantJSON: `[{"type":"Feature","geometry":{"type":"Point","coordinates":[136.9673,37.04311]},"properties":{"matched_address":"石川県七尾市大田町111","unmatched_address":null,"score":1,"match_level":"machiaza_detail","coordinates_level":"city","ids":{"lg_code":"172022","machiaza_id":"0022145","rsdt_addr_flg":"0","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"石川県","county":null,"city":"七尾市","ward":null,"kyoto_st":null,"oaza_cho":"大田町","chome":null,"koaza":"111","machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}}]`,
 		},
 		{
 			// City-level result has no coordinates; getCoordinatesFromParent fills them.
