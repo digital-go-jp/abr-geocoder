@@ -57,7 +57,7 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		"pref", cacheCfg.EnabledPref,
 		"pos", cacheCfg.PosEnabled())
 
-	server := api.NewGinServer(api.ServerConfig{
+	server := api.NewGinServer(ctx, api.ServerConfig{
 		APIVersion:      version.Version,
 		CORSAllowOrigin: cfg.Server.CORSAllowOrigin,
 		Cache:           dbCache,

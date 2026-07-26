@@ -59,7 +59,7 @@ func serveRequest(t *testing.T, s *GinServer, target string) *httptest.ResponseR
 
 func TestNewGinServer_WithoutCache(t *testing.T) {
 	for _, enabledPos := range []string{"false", "true"} {
-		server := NewGinServer(ServerConfig{CacheConfig: cache.Config{EnabledPos: enabledPos}})
+		server := NewGinServer(t.Context(), ServerConfig{CacheConfig: cache.Config{EnabledPos: enabledPos}})
 
 		want := []string{"/", "/health", "/normalize"}
 		if got := registeredPaths(server); !slices.Equal(got, want) {
@@ -93,7 +93,7 @@ func TestNewGinServer_WithoutCache(t *testing.T) {
 func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 	c := setupQuickstartCache(t)
 
-	server := NewGinServer(ServerConfig{
+	server := NewGinServer(t.Context(), ServerConfig{
 		Cache:       c,
 		CacheConfig: cache.Config{EnabledPos: "true", EnabledCategory: "basic", EnabledPref: "13"},
 	})
@@ -201,7 +201,7 @@ func firstFeature(t *testing.T, body map[string]any) map[string]any {
 func TestNewGinServer_WithCachePosDisabled(t *testing.T) {
 	c := setupQuickstartCache(t)
 
-	server := NewGinServer(ServerConfig{
+	server := NewGinServer(t.Context(), ServerConfig{
 		Cache:       c,
 		CacheConfig: cache.Config{EnabledPos: "false", EnabledCategory: "basic", EnabledPref: "13"},
 	})
@@ -235,7 +235,7 @@ func TestNewGinServer_WithCachePosDisabled(t *testing.T) {
 // responses outside the registered routes: unknown paths, disallowed methods,
 // and recovered panics.
 func TestNewGinServer_ErrorResponsesAreJSON(t *testing.T) {
-	server := NewGinServer(ServerConfig{})
+	server := NewGinServer(t.Context(), ServerConfig{})
 	server.router.GET("/panic-test", func(*gin.Context) { panic("boom") })
 
 	assertJSONError := func(t *testing.T, w *httptest.ResponseRecorder, wantCode int, wantMessage string) {

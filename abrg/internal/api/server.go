@@ -162,7 +162,7 @@ func registerEndpoints(router *gin.Engine, server *GinServer) {
 	}
 }
 
-func NewGinServer(cfg ServerConfig) *GinServer {
+func NewGinServer(ctx context.Context, cfg ServerConfig) *GinServer {
 	router := gin.New()
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
 		Formatter: accessLogFormatter,
@@ -200,8 +200,8 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 		server.repo = repo
 		server.matcher = matching.NewMatcher(repo, cfg.Cache.Lookups())
 		server.reverseGeocoder = reverse.NewReverseGeocoder(repo,
-			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableRsdtdsp),
-			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableParcel),
+			reverse.TableExists(ctx, cfg.Cache.DB(), duckdb.TableRsdtdsp),
+			reverse.TableExists(ctx, cfg.Cache.DB(), duckdb.TableParcel),
 		)
 	}
 
