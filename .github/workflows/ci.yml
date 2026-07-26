@@ -58,5 +58,27 @@ jobs:
         with:
           go-version: '1.26.x'
           cache: true
+      # Version pinned via each module's go.mod tool directive, so local and
+      # CI runs use the same scanner.
       - name: govulncheck ${{ matrix.module }}
-        run: cd ${{ matrix.module }} && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: cd ${{ matrix.module }} && go tool govulncheck ./...
+
+  # The tool directive is per-module; this job fails when the three modules
+  # pin different govulncheck versions.
+  vuln-version-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - name: check govulncheck version is identical across modules
+        run: |
+          for m in abrg abrdb common; do
+            (cd "$m" && go list -m -f '{{.Version}}' golang.org/x/vuln)
+          done | sort -u | tee versions.txt
+          if [ "$(wc -l < versions.txt)" -ne 1 ]; then
+            echo "::error::golang.org/x/vuln versions differ across modules"
+            exit 1
+          fi

@@ -63,9 +63,10 @@ fmt:
 	goimports -w .
 	golangci-lint run --fix
 
-# Security vulnerability scan
+# Security vulnerability scan (version pinned via the go.mod tool directive,
+# so local and CI runs use the same scanner)
 vuln:
-	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	go tool govulncheck ./...
 
 # Modernize check (CI-friendly): fail if `go fix` would change anything.
 # Go 1.26 `go fix` bundles the modernize analyzer suite; run `make fmt` to apply.
