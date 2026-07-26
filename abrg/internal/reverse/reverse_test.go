@@ -13,11 +13,15 @@ import (
 
 var initTestReverseGeocoder = testutil.NewCacheOnce(func(c *cache.DuckDBCache) (*ReverseGeocoder, error) {
 	db := c.DB()
-	return NewReverseGeocoder(
-		repository.NewRepository(db),
-		TableExists(context.Background(), db, "cache_rsdtdsp"),
-		TableExists(context.Background(), db, "cache_parcel"),
-	), nil
+	hasRsdtdsp, err := TableExists(context.Background(), db, "cache_rsdtdsp")
+	if err != nil {
+		return nil, err
+	}
+	hasParcel, err := TableExists(context.Background(), db, "cache_parcel")
+	if err != nil {
+		return nil, err
+	}
+	return NewReverseGeocoder(repository.NewRepository(db), hasRsdtdsp, hasParcel), nil
 })
 
 func setupTestReverseGeocoder(t *testing.T) *ReverseGeocoder {

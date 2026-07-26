@@ -162,7 +162,7 @@ func registerEndpoints(router *gin.Engine, server *GinServer) {
 	}
 }
 
-func NewGinServer(ctx context.Context, cfg ServerConfig) *GinServer {
+func NewGinServer(ctx context.Context, cfg ServerConfig) (*GinServer, error) {
 	router := gin.New()
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
 		Formatter: accessLogFormatter,
@@ -199,15 +199,20 @@ func NewGinServer(ctx context.Context, cfg ServerConfig) *GinServer {
 		repo := repository.NewRepository(cfg.Cache.DB())
 		server.repo = repo
 		server.matcher = matching.NewMatcher(repo, cfg.Cache.Lookups())
-		server.reverseGeocoder = reverse.NewReverseGeocoder(repo,
-			reverse.TableExists(ctx, cfg.Cache.DB(), duckdb.TableRsdtdsp),
-			reverse.TableExists(ctx, cfg.Cache.DB(), duckdb.TableParcel),
-		)
+		hasRsdtdsp, err := reverse.TableExists(ctx, cfg.Cache.DB(), duckdb.TableRsdtdsp)
+		if err != nil {
+			return nil, err
+		}
+		hasParcel, err := reverse.TableExists(ctx, cfg.Cache.DB(), duckdb.TableParcel)
+		if err != nil {
+			return nil, err
+		}
+		server.reverseGeocoder = reverse.NewReverseGeocoder(repo, hasRsdtdsp, hasParcel)
 	}
 
 	registerEndpoints(router, server)
 
-	return server
+	return server, nil
 }
 
 func (s *GinServer) Handler() http.Handler {

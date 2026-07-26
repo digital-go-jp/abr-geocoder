@@ -57,12 +57,16 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		"pref", cacheCfg.EnabledPref,
 		"pos", cacheCfg.PosEnabled())
 
-	server := api.NewGinServer(ctx, api.ServerConfig{
+	server, err := api.NewGinServer(ctx, api.ServerConfig{
 		APIVersion:      version.Version,
 		CORSAllowOrigin: cfg.Server.CORSAllowOrigin,
 		Cache:           dbCache,
 		CacheConfig:     *cacheCfg,
 	})
+	if err != nil {
+		_ = dbCache.Close()
+		return fmt.Errorf("failed to initialize server: %w", err)
+	}
 	defer func() {
 		if err := server.Close(); err != nil {
 			slog.Warn("failed to close server resources", "event", "server_close", "error", err)

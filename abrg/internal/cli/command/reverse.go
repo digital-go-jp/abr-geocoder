@@ -44,10 +44,15 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 	}
 	defer setup.Cleanup()
 
-	reverser := reverse.NewReverseGeocoder(setup.Repo,
-		reverse.TableExists(ctx, setup.DB, duckdb.TableRsdtdsp),
-		reverse.TableExists(ctx, setup.DB, duckdb.TableParcel),
-	)
+	hasRsdtdsp, err := reverse.TableExists(ctx, setup.DB, duckdb.TableRsdtdsp)
+	if err != nil {
+		return err
+	}
+	hasParcel, err := reverse.TableExists(ctx, setup.DB, duckdb.TableParcel)
+	if err != nil {
+		return err
+	}
+	reverser := reverse.NewReverseGeocoder(setup.Repo, hasRsdtdsp, hasParcel)
 	categoryVal := model.Category(setup.resolveCategory(opts.Category))
 
 	p := newDefaultProcessor(setup, func(ctx context.Context, line string) (*model.ReverseResponse, error) {

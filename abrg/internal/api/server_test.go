@@ -35,6 +35,16 @@ func setupQuickstartCache(t *testing.T) *cache.DuckDBCache {
 	return c
 }
 
+// mustNewGinServer builds a GinServer and fails the test on error.
+func mustNewGinServer(t *testing.T, cfg ServerConfig) *GinServer {
+	t.Helper()
+	server, err := NewGinServer(t.Context(), cfg)
+	if err != nil {
+		t.Fatalf("NewGinServer() error = %v", err)
+	}
+	return server
+}
+
 func registeredPaths(s *GinServer) []string {
 	var paths []string
 	for _, route := range s.router.Routes() {
@@ -59,7 +69,7 @@ func serveRequest(t *testing.T, s *GinServer, target string) *httptest.ResponseR
 
 func TestNewGinServer_WithoutCache(t *testing.T) {
 	for _, enabledPos := range []string{"false", "true"} {
-		server := NewGinServer(t.Context(), ServerConfig{CacheConfig: cache.Config{EnabledPos: enabledPos}})
+		server := mustNewGinServer(t, ServerConfig{CacheConfig: cache.Config{EnabledPos: enabledPos}})
 
 		want := []string{"/", "/health", "/normalize"}
 		if got := registeredPaths(server); !slices.Equal(got, want) {
@@ -90,10 +100,32 @@ func TestNewGinServer_WithoutCache(t *testing.T) {
 	}
 }
 
+// TestNewGinServer_CancelledContext pins the fail-fast contract: a context
+// that is already cancelled must abort initialization with an error instead
+// of silently marking the reverse tables as unavailable.
+func TestNewGinServer_CancelledContext(t *testing.T) {
+	c := setupQuickstartCache(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if _, err := NewGinServer(ctx, ServerConfig{
+		Cache:       c,
+		CacheConfig: cache.Config{EnabledPos: "true", EnabledCategory: "basic", EnabledPref: "13"},
+	}); err == nil {
+		t.Fatal("NewGinServer() with cancelled context = nil error, want error")
+	}
+
+	// Without a cache no queries run, so even a cancelled context succeeds.
+	if _, err := NewGinServer(ctx, ServerConfig{}); err != nil {
+		t.Fatalf("NewGinServer() without cache = %v, want nil error", err)
+	}
+}
+
 func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 	c := setupQuickstartCache(t)
 
-	server := NewGinServer(t.Context(), ServerConfig{
+	server := mustNewGinServer(t, ServerConfig{
 		Cache:       c,
 		CacheConfig: cache.Config{EnabledPos: "true", EnabledCategory: "basic", EnabledPref: "13"},
 	})
@@ -201,7 +233,7 @@ func firstFeature(t *testing.T, body map[string]any) map[string]any {
 func TestNewGinServer_WithCachePosDisabled(t *testing.T) {
 	c := setupQuickstartCache(t)
 
-	server := NewGinServer(t.Context(), ServerConfig{
+	server := mustNewGinServer(t, ServerConfig{
 		Cache:       c,
 		CacheConfig: cache.Config{EnabledPos: "false", EnabledCategory: "basic", EnabledPref: "13"},
 	})
@@ -235,7 +267,7 @@ func TestNewGinServer_WithCachePosDisabled(t *testing.T) {
 // responses outside the registered routes: unknown paths, disallowed methods,
 // and recovered panics.
 func TestNewGinServer_ErrorResponsesAreJSON(t *testing.T) {
-	server := NewGinServer(t.Context(), ServerConfig{})
+	server := mustNewGinServer(t, ServerConfig{})
 	server.router.GET("/panic-test", func(*gin.Context) { panic("boom") })
 
 	assertJSONError := func(t *testing.T, w *httptest.ResponseRecorder, wantCode int, wantMessage string) {
