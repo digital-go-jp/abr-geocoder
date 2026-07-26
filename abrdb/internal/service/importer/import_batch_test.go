@@ -46,13 +46,22 @@ func (f *fakeLoader) textPaths() []string {
 }
 
 type fakeStore struct {
-	mu      sync.Mutex
-	pending map[model.FileCategory][]*model.File
-	pendErr error
-	marked  [][]string
-	deleted []string
-	empty   bool
-	indexed []string
+	mu         sync.Mutex
+	pending    map[model.FileCategory][]*model.File
+	pendErr    error
+	marked     [][]string
+	deleted    []string
+	empty      bool
+	indexed    []string
+	analyzed   [][]string
+	analyzeErr error
+}
+
+func (f *fakeStore) AnalyzeTables(_ context.Context, tableNames []string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.analyzed = append(f.analyzed, slices.Clone(tableNames))
+	return f.analyzeErr
 }
 
 func (f *fakeStore) DeleteFileScope(_ context.Context, tableName, filename string) error {
@@ -290,5 +299,83 @@ func TestImportCategoryBatch_SkipsDeleteWhenTableEmpty(t *testing.T) {
 	}
 	if len(store.indexed) != 1 {
 		t.Errorf("EnsureLgCodeIndex calls = %v, want 1", store.indexed)
+	}
+}
+
+// --- DB-24: post-import ANALYZE ---
+
+// TestImportCategoryBatch_AnalyzesUpdatedTables pins the DB-24 contract:
+// after every category imports successfully, exactly one ANALYZE pass runs
+// over the deduplicated set of tables this run wrote, in category order.
+func TestImportCategoryBatch_AnalyzesUpdatedTables(t *testing.T) {
+	catA, catB, catC := model.FileCategory("a"), model.FileCategory("b"), model.FileCategory("c")
+	store := &fakeStore{pending: map[model.FileCategory][]*model.File{
+		catA: {textFile(catA, "a/1", "a1.zip")},
+		catB: {textFile(catB, "b/1", "b1.zip")},
+		catC: {textFile(catC, "c/1", "c1.zip")},
+	}}
+	infoMap := map[string]*schema.CategoryInfo{
+		"a": {TableName: "mt_shared"},
+		"b": {TableName: "mt_shared"}, // same table as a: must be analyzed once
+		"c": {TableName: "mt_other"},
+	}
+
+	svc := New(&fakeLoader{}, store, noopMonitor{}, downloadDir, infoMap)
+	if _, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{catA, catB, catC}); err != nil {
+		t.Fatalf("ImportCategoryBatch: %v", err)
+	}
+
+	want := [][]string{{"mt_shared", "mt_other"}}
+	if len(store.analyzed) != 1 || !slices.Equal(store.analyzed[0], want[0]) {
+		t.Errorf("AnalyzeTables calls = %v, want %v", store.analyzed, want)
+	}
+}
+
+func TestImportCategoryBatch_NoPendingSkipsAnalyze(t *testing.T) {
+	store := &fakeStore{pending: map[model.FileCategory][]*model.File{}}
+	svc := newService(&fakeLoader{}, store, model.CategoryPref)
+
+	if _, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref}); err != nil {
+		t.Fatalf("ImportCategoryBatch: %v", err)
+	}
+	if len(store.analyzed) != 0 {
+		t.Errorf("AnalyzeTables calls = %v, want none", store.analyzed)
+	}
+}
+
+// TestImportCategoryBatch_AnalyzeFailureFailsImport pins that an ANALYZE
+// failure is an import failure (exit 2 at the CLI), not a warning: stale
+// statistics would derail the subsequent cache build.
+func TestImportCategoryBatch_AnalyzeFailureFailsImport(t *testing.T) {
+	analyzeErr := errors.New("permission denied for table mt_pref_unified")
+	store := &fakeStore{
+		pending: map[model.FileCategory][]*model.File{
+			model.CategoryPref: {textFile(model.CategoryPref, "pref/13", "pref_text.zip")},
+		},
+		analyzeErr: analyzeErr,
+	}
+	svc := newService(&fakeLoader{}, store, model.CategoryPref)
+
+	_, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref})
+	if !errors.Is(err, analyzeErr) {
+		t.Fatalf("err = %v, want wrapped %v", err, analyzeErr)
+	}
+}
+
+// TestImportCategoryBatch_LoadFailureSkipsAnalyze: a failed category import
+// aborts before any ANALYZE runs.
+func TestImportCategoryBatch_LoadFailureSkipsAnalyze(t *testing.T) {
+	failing := filepath.Join(downloadDir, "pref_text.zip")
+	loader := &fakeLoader{errFor: map[string]error{failing: errors.New("etl boom")}}
+	store := &fakeStore{pending: map[model.FileCategory][]*model.File{
+		model.CategoryPref: {textFile(model.CategoryPref, "pref/13", "pref_text.zip")},
+	}}
+
+	svc := newService(loader, store, model.CategoryPref)
+	if _, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryPref}); err == nil {
+		t.Fatal("err = nil, want load failure")
+	}
+	if len(store.analyzed) != 0 {
+		t.Errorf("AnalyzeTables calls = %v, want none after a failed import", store.analyzed)
 	}
 }

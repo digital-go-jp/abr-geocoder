@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"abrdb/internal/util"
 )
@@ -36,6 +38,26 @@ func (c *Catalog) EnsureLgCodeIndex(ctx context.Context, tableName string) error
 	query := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_lg_code ON %s (lg_code)", tableName, tableName)
 	if err := c.executor.Exec(ctx, query); err != nil {
 		return fmt.Errorf("create lg_code index on %s: %w", tableName, err)
+	}
+	return nil
+}
+
+// AnalyzeTables refreshes planner statistics for the given tables after a
+// bulk import. Stale post-import statistics make the DuckDB postgres scanner
+// used by `abrg cache build` pick catastrophic join plans (a measured 11 s
+// phase became 15+ min), so a failure here is an import failure, not a
+// warning.
+func (c *Catalog) AnalyzeTables(ctx context.Context, tableNames []string) error {
+	for _, name := range tableNames {
+		quoted, err := util.QuoteIdentifier(name)
+		if err != nil {
+			return fmt.Errorf("analyze table: %w", err)
+		}
+		start := time.Now()
+		if err := c.executor.Exec(ctx, "ANALYZE "+quoted); err != nil {
+			return fmt.Errorf("analyze %s: %w", name, err)
+		}
+		slog.InfoContext(ctx, "analyzed table", "event", "analyze", "table", name, "sec", time.Since(start).Seconds())
 	}
 	return nil
 }

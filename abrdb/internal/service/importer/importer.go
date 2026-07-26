@@ -21,14 +21,15 @@ type loader interface {
 	LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath, posPath string) error
 }
 
-// catalogStore reads pending imports, clears previously imported rows, and
-// records completed imports.
+// catalogStore reads pending imports, clears previously imported rows,
+// records completed imports, and refreshes statistics on imported tables.
 type catalogStore interface {
 	PendingImportsByCategory(ctx context.Context, categories []model.FileCategory) (map[model.FileCategory][]*model.File, error)
 	TableIsEmpty(ctx context.Context, tableName string) (bool, error)
 	DeleteFileScope(ctx context.Context, tableName, filename string) error
 	EnsureLgCodeIndex(ctx context.Context, tableName string) error
 	MarkAsImported(ctx context.Context, filenames ...string) error
+	AnalyzeTables(ctx context.Context, tableNames []string) error
 }
 
 type service struct {
@@ -72,6 +73,11 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 
 	phaseTimes := make(map[string]float64)
 
+	// Tables written by this run, deduplicated in category order, for the
+	// post-import ANALYZE.
+	var updatedTables []string
+	seenTables := make(map[string]struct{})
+
 	// Process each category with timing
 	for _, cat := range category {
 		pendingFiles := pendingByCategory[cat]
@@ -107,6 +113,24 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 			return nil, fmt.Errorf("ensure lg_code index on %q: %w", categoryInfo.TableName, err)
 		}
 		phaseTimes[string(cat)] = time.Since(categoryStart).Seconds()
+
+		if _, seen := seenTables[categoryInfo.TableName]; !seen {
+			seenTables[categoryInfo.TableName] = struct{}{}
+			updatedTables = append(updatedTables, categoryInfo.TableName)
+		}
+	}
+
+	// Refresh statistics once every category has imported successfully, while
+	// the caller still holds the import lock. Stale statistics after a bulk
+	// import derail the subsequent `abrg cache build` (see Catalog.AnalyzeTables),
+	// so an ANALYZE failure fails the import.
+	if len(updatedTables) > 0 {
+		start := time.Now()
+		if err := s.store.AnalyzeTables(ctx, updatedTables); err != nil {
+			return nil, fmt.Errorf("analyze imported tables: %w", err)
+		}
+		slog.Info("post-import analyze completed", "event", "analyze",
+			"tables", updatedTables, "total_sec", time.Since(start).Seconds())
 	}
 
 	return phaseTimes, nil
