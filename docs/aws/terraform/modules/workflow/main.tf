@@ -135,9 +135,13 @@ resource "aws_sfn_state_machine" "data_update" {
       # Step 1: Check for changes (dry-run)
       # - exit 0: no changes -> end workflow
       # - exit 1: changes pending -> continue to import (caught as task failure)
+      # TimeoutSeconds on each task is 5-10x its measured normal duration, so a
+      # hung task (e.g. an uncancellable DuckDB query) is stopped instead of
+      # blocking the workflow forever.
       CheckChanges = {
-        Type     = "Task"
-        Resource = "arn:aws:states:::ecs:runTask.sync"
+        Type           = "Task"
+        Resource       = "arn:aws:states:::ecs:runTask.sync"
+        TimeoutSeconds = 900
         Parameters = {
           Cluster        = var.ecs_cluster_arn
           TaskDefinition = var.abrdb_import_task_arn
@@ -166,7 +170,10 @@ resource "aws_sfn_state_machine" "data_update" {
         # exit 0 (no changes) -> success -> end
         Next = "NoChanges"
         # exit 1 (changes pending) and genuine errors both surface as
-        # States.TaskFailed, so the exit code decides which one it was
+        # States.TaskFailed, so the exit code decides which one it was.
+        # States.Timeout is deliberately not caught: a timeout must not be
+        # classified as a change-detection result, so it fails the whole
+        # execution loudly.
         Catch = [
           {
             ErrorEquals = ["States.TaskFailed"]
@@ -218,8 +225,9 @@ resource "aws_sfn_state_machine" "data_update" {
       }
       # Step 2: Import data (with changes detected)
       UpdateData = {
-        Type     = "Task"
-        Resource = "arn:aws:states:::ecs:runTask.sync"
+        Type           = "Task"
+        Resource       = "arn:aws:states:::ecs:runTask.sync"
+        TimeoutSeconds = 3600
         Parameters = {
           Cluster        = var.ecs_cluster_arn
           TaskDefinition = var.abrdb_import_task_arn
@@ -249,8 +257,9 @@ resource "aws_sfn_state_machine" "data_update" {
       }
       # Step 3: Build cache
       BuildCache = {
-        Type     = "Task"
-        Resource = "arn:aws:states:::ecs:runTask.sync"
+        Type           = "Task"
+        Resource       = "arn:aws:states:::ecs:runTask.sync"
+        TimeoutSeconds = 1800
         Parameters = {
           Cluster        = var.ecs_cluster_arn
           TaskDefinition = var.abrg_cache_build_task_arn
@@ -271,8 +280,9 @@ resource "aws_sfn_state_machine" "data_update" {
       }
       # Step 4: Restart service
       RestartService = {
-        Type     = "Task"
-        Resource = "arn:aws:states:::aws-sdk:ecs:updateService"
+        Type           = "Task"
+        Resource       = "arn:aws:states:::aws-sdk:ecs:updateService"
+        TimeoutSeconds = 600
         Parameters = {
           Cluster            = var.ecs_cluster_name
           Service            = var.ecs_service_name
