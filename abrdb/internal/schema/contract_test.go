@@ -172,38 +172,28 @@ func assertDDLSatisfiesAbrgContract(t *testing.T, cfg *ImportConfig) {
 }
 
 // TestGenerateDDL_SatisfiesAbrgContract verifies that the DDL generated from
-// the embedded default import config defines every table and column that
-// abrg's cache build SQL depends on.
+// every embedded import config profile defines each table and column that
+// abrg's cache build SQL depends on. `abrdb import` resolves its config from
+// these profiles, so this covers every config an import can actually run with.
 func TestGenerateDDL_SatisfiesAbrgContract(t *testing.T) {
-	cfg, err := ParseImportConfig(DefaultConfigYAML)
-	if err != nil {
-		t.Fatalf("ParseImportConfig(DefaultConfigYAML) error = %v", err)
+	for _, name := range ProfileNames() {
+		t.Run(name, func(t *testing.T) {
+			cfg, err := LoadProfile(name)
+			if err != nil {
+				t.Fatalf("LoadProfile(%q) error = %v", name, err)
+			}
+			assertDDLSatisfiesAbrgContract(t, cfg)
+		})
 	}
-	assertDDLSatisfiesAbrgContract(t, cfg)
-}
-
-// TestGenerateDDL_FullConfigSatisfiesAbrgContract verifies the same contract
-// for config_full.yaml, which can be installed via `abrdb init` with a custom
-// config file.
-func TestGenerateDDL_FullConfigSatisfiesAbrgContract(t *testing.T) {
-	data, err := os.ReadFile("config_full.yaml")
-	if err != nil {
-		t.Fatalf("read config_full.yaml: %v", err)
-	}
-	cfg, err := ParseImportConfig(data)
-	if err != nil {
-		t.Fatalf("ParseImportConfig(config_full.yaml) error = %v", err)
-	}
-	assertDDLSatisfiesAbrgContract(t, cfg)
 }
 
 // TestGenerateDDL_ColumnParity pins that ddlColumnsByTable sees exactly the
 // merged text+pos columns for each category, guarding the parser this
 // contract test relies on.
 func TestGenerateDDL_ColumnParity(t *testing.T) {
-	cfg, err := ParseImportConfig(DefaultConfigYAML)
+	cfg, err := ParseImportConfig(defaultConfigYAML)
 	if err != nil {
-		t.Fatalf("ParseImportConfig(DefaultConfigYAML) error = %v", err)
+		t.Fatalf("ParseImportConfig(defaultConfigYAML) error = %v", err)
 	}
 	tables := ddlColumnsByTable(t, cfg.GenerateDDL())
 

@@ -63,7 +63,10 @@ func NewInitCmd() *cobra.Command {
 			var configYAML []byte
 			var err error
 			if opts.Config == "" {
-				configYAML = schema.DefaultConfigYAML
+				configYAML, err = schema.ProfileYAML(schema.DefaultProfile)
+				if err != nil {
+					return err
+				}
 			} else {
 				configYAML, err = os.ReadFile(opts.Config)
 				if err != nil {

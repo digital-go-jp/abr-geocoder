@@ -25,7 +25,7 @@ func TestToCategoryInfo_OutputColumns(t *testing.T) {
 // TestOutputColumnsMatchDDLOrder pins that for every category in the default
 // config, OutputColumns equals the column order of the generated DDL.
 func TestOutputColumnsMatchDDLOrder(t *testing.T) {
-	cfg, err := ParseImportConfig(DefaultConfigYAML)
+	cfg, err := ParseImportConfig(defaultConfigYAML)
 	if err != nil {
 		t.Fatalf("parse default config: %v", err)
 	}

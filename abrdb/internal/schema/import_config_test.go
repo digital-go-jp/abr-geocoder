@@ -237,9 +237,9 @@ func TestCategoryConfig_ToCategoryInfo(t *testing.T) {
 // TestParseImportConfig_EmbeddedDefault guards the shipped default config: a
 // broken config_default.yaml would otherwise only surface at `abrdb init` time.
 func TestParseImportConfig_EmbeddedDefault(t *testing.T) {
-	cfg, err := ParseImportConfig(DefaultConfigYAML)
+	cfg, err := ParseImportConfig(defaultConfigYAML)
 	if err != nil {
-		t.Fatalf("ParseImportConfig(DefaultConfigYAML) error = %v", err)
+		t.Fatalf("ParseImportConfig(defaultConfigYAML) error = %v", err)
 	}
 	if cfg.Version != 1 {
 		t.Errorf("Version = %d, want 1", cfg.Version)

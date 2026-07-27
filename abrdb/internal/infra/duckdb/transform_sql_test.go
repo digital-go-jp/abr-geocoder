@@ -163,7 +163,7 @@ func splitTopLevelCommas(s string) []string {
 // both the INSERT and SELECT side. A drift in either generator breaks this
 // test instead of silently misaligning columns.
 func TestTransformColumnsMatchInsertColumns(t *testing.T) {
-	cfg, err := schema.ParseImportConfig(schema.DefaultConfigYAML)
+	cfg, err := schema.LoadProfile(schema.DefaultProfile)
 	if err != nil {
 		t.Fatalf("parse default config: %v", err)
 	}
