@@ -157,37 +157,39 @@ func splitTopLevelCommas(s string) []string {
 	return append(parts, strings.TrimSpace(s[start:]))
 }
 
-// TestTransformColumnsMatchInsertColumns pins the DB-12 contract for every
-// category in the shipped default config: the transform SELECT emits exactly
+// TestTransformColumnsMatchInsertColumns pins the column-alignment contract
+// for every category in every shipped profile: the transform SELECT emits exactly
 // OutputColumns (+ join_seq), which is the same list buildInsertSQL names on
 // both the INSERT and SELECT side. A drift in either generator breaks this
 // test instead of silently misaligning columns.
 func TestTransformColumnsMatchInsertColumns(t *testing.T) {
-	cfg, err := schema.LoadProfile(schema.DefaultProfile)
-	if err != nil {
-		t.Fatalf("parse default config: %v", err)
-	}
 	tn := tableNames{Text: "txt", Pos: "pos", Transformed: "out"}
 
-	for name, info := range cfg.ToCategoryInfoMap() {
-		for _, hasPos := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%s_hasPos=%v", name, hasPos), func(t *testing.T) {
-				wantAliases := append(slices.Clone(info.OutputColumns), "join_seq")
-				got := selectAliases(t, newTransformer(info).buildTransformSQL(hasPos, tn))
-				if !slices.Equal(got, wantAliases) {
-					t.Errorf("transform SELECT aliases = %v, want OutputColumns+join_seq %v", got, wantAliases)
-				}
-
-				insertSQL, err := buildInsertSQL(info, tn.Transformed)
-				if err != nil {
-					t.Fatalf("buildInsertSQL: %v", err)
-				}
-				for _, col := range info.OutputColumns {
-					if !strings.Contains(insertSQL, `"`+col+`"`) {
-						t.Errorf("insert SQL missing column %q: %s", col, insertSQL)
+	for _, profile := range schema.ProfileNames() {
+		cfg, err := schema.LoadProfile(profile)
+		if err != nil {
+			t.Fatalf("parse %s config: %v", profile, err)
+		}
+		for name, info := range cfg.ToCategoryInfoMap() {
+			for _, hasPos := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/%s_hasPos=%v", profile, name, hasPos), func(t *testing.T) {
+					wantAliases := append(slices.Clone(info.OutputColumns), "join_seq")
+					got := selectAliases(t, newTransformer(info).buildTransformSQL(hasPos, tn))
+					if !slices.Equal(got, wantAliases) {
+						t.Errorf("transform SELECT aliases = %v, want OutputColumns+join_seq %v", got, wantAliases)
 					}
-				}
-			})
+
+					insertSQL, err := buildInsertSQL(info, tn.Transformed)
+					if err != nil {
+						t.Fatalf("buildInsertSQL: %v", err)
+					}
+					for _, col := range info.OutputColumns {
+						if !strings.Contains(insertSQL, `"`+col+`"`) {
+							t.Errorf("insert SQL missing column %q: %s", col, insertSQL)
+						}
+					}
+				})
+			}
 		}
 	}
 }

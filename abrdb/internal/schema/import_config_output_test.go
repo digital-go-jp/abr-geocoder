@@ -22,21 +22,23 @@ func TestToCategoryInfo_OutputColumns(t *testing.T) {
 	}
 }
 
-// TestOutputColumnsMatchDDLOrder pins that for every category in the default
-// config, OutputColumns equals the column order of the generated DDL.
+// TestOutputColumnsMatchDDLOrder pins that for every category in every
+// shipped profile, OutputColumns equals the column order of the generated DDL.
 func TestOutputColumnsMatchDDLOrder(t *testing.T) {
-	cfg, err := ParseImportConfig(defaultConfigYAML)
-	if err != nil {
-		t.Fatalf("parse default config: %v", err)
-	}
-	for name, cat := range cfg.Category {
-		merged := cat.mergeColumns()
-		ddlOrder := make([]string, len(merged))
-		for i, col := range merged {
-			ddlOrder[i] = col.Name
+	for _, profile := range ProfileNames() {
+		cfg, err := LoadProfile(profile)
+		if err != nil {
+			t.Fatalf("parse %s config: %v", profile, err)
 		}
-		if got := cat.toCategoryInfo().OutputColumns; !slices.Equal(got, ddlOrder) {
-			t.Errorf("category %s: OutputColumns = %v, want DDL order %v", name, got, ddlOrder)
+		for name, cat := range cfg.Category {
+			merged := cat.mergeColumns()
+			ddlOrder := make([]string, len(merged))
+			for i, col := range merged {
+				ddlOrder[i] = col.Name
+			}
+			if got := cat.toCategoryInfo().OutputColumns; !slices.Equal(got, ddlOrder) {
+				t.Errorf("%s/%s: OutputColumns = %v, want DDL order %v", profile, name, got, ddlOrder)
+			}
 		}
 	}
 }
