@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"math"
 	"os"
 	"path/filepath"
@@ -69,6 +70,30 @@ func TestFileInfo(t *testing.T) {
 			t.Error("FileInfo() expected error for non-existent file")
 		}
 	})
+}
+
+// TestLoadInfo_OmitsAbsentTables pins that tables not present in the cache
+// (category tables of a build that did not need them) are left out of the
+// Tables map instead of being reported as unavailable.
+func TestLoadInfo_OmitsAbsentTables(t *testing.T) {
+	path := newTestCacheFile(t, map[string]string{"build_time": "2026-01-01T00:00:00Z"}, stubRsdtdspSQL)
+
+	info, err := LoadInfo(context.Background(), path)
+	if err != nil {
+		t.Fatalf("LoadInfo() error = %v", err)
+	}
+
+	if info.BuildTime != "2026-01-01T00:00:00Z" {
+		t.Errorf("BuildTime = %q, want the config value", info.BuildTime)
+	}
+	for _, table := range []string{"cache_pref", "cache_city", "cache_machiaza", "cache_rsdtdsp"} {
+		if count, ok := info.Tables[table]; !ok || count != 0 {
+			t.Errorf("Tables[%q] = %d, %v; want 0, true", table, count, ok)
+		}
+	}
+	if count, ok := info.Tables["cache_parcel"]; ok {
+		t.Errorf("Tables[cache_parcel] = %d, want omitted", count)
+	}
 }
 
 // TestInfo_Fields tests that Info struct fields are correctly set.

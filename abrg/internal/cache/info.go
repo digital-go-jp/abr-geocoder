@@ -59,9 +59,18 @@ func LoadInfo(ctx context.Context, cachePath string) (*Info, error) {
 	_ = conn.QueryRowContext(ctx, "SELECT config_value FROM cache_config WHERE config_key = 'build_time'").Scan(&info.BuildTime)
 	_ = conn.QueryRowContext(ctx, "SELECT config_value FROM cache_config WHERE config_key = ?", KeySchemaVersion).Scan(&info.SchemaVersion)
 
-	// Table names are trusted constants from duckdb.AllTables.
-	// Negative count means the row count is unavailable.
+	// Table names are trusted constants from duckdb.AllTables. Tables absent
+	// from the cache (category tables of a build that did not need them) are
+	// omitted; a negative count means the row count is unavailable.
 	for _, table := range duckdb.AllTables {
+		exists, err := tableExists(ctx, conn, table)
+		if err != nil {
+			info.Tables[table] = -1
+			continue
+		}
+		if !exists {
+			continue
+		}
 		var count int
 		query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
 		if err := conn.QueryRowContext(ctx, query).Scan(&count); err != nil {
