@@ -117,7 +117,7 @@ resource "aws_api_gateway_integration_response" "proxy_options" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-API-Key'"
     "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
-    "method.response.header.Access-Control-Allow-Origin"  = var.cors_allow_origin
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.cors_allow_origin}'"
   }
 }
 
@@ -188,7 +188,7 @@ resource "aws_api_gateway_integration_response" "root_options" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-API-Key'"
     "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
-    "method.response.header.Access-Control-Allow-Origin"  = var.cors_allow_origin
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.cors_allow_origin}'"
   }
 }
 
@@ -207,6 +207,8 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.root.id,
       aws_api_gateway_method.root_options.id,
       aws_api_gateway_integration.root_options.id,
+      aws_api_gateway_integration_response.proxy_options.response_parameters,
+      aws_api_gateway_integration_response.root_options.response_parameters,
     ]))
   }
 

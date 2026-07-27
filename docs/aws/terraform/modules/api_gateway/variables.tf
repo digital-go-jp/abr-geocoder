@@ -26,8 +26,12 @@ variable "log_retention_days" {
 }
 
 variable "cors_allow_origin" {
+  # Preflight is answered here, while the response to the actual GET carries
+  # whatever the backend returns, so both have to be fed the same value. Only a
+  # single origin can be expressed: the MOCK integration returns one fixed
+  # string and cannot reflect the request's Origin.
   type        = string
-  default     = "'*'"
-  description = "CORS Access-Control-Allow-Origin value (restrict to specific domains in production, e.g. \"'https://example.com'\")"
+  default     = "*"
+  description = "CORS Access-Control-Allow-Origin value, unquoted (e.g. \"*\" or \"https://example.com\"). Must match the value given to the ECS service."
 }
 

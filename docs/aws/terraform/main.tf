@@ -39,9 +39,10 @@ locals {
   log_level          = "info"
   log_retention_days = 30
 
-  # Public read-only API, so "'*'" is the default. Restrict to specific
-  # origins (e.g. "'https://example.com'") for authenticated or internal use.
-  cors_allow_origin = "'*'"
+  # Fed to both the API Gateway preflight and the serve task, which each answer
+  # a different half of a CORS exchange. Public read-only API, so every origin
+  # is allowed.
+  cors_allow_origin = "*"
 }
 
 module "network" {
@@ -90,6 +91,7 @@ module "ecs" {
   abrg_memory        = local.abrg_memory
   log_level          = local.log_level
   log_retention_days = local.log_retention_days
+  cors_allow_origin  = local.cors_allow_origin
 }
 
 module "api_gateway" {
