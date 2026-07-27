@@ -65,6 +65,8 @@ abrdb import [options]
 環境変数:
 - `ABRDB_DOWNLOAD_DIR` - ダウンロード先ディレクトリ（default: `/tmp/abrdb/data`。Docker イメージは `/tmp/abrdb`、docker-compose は `~/.abrdb/data` を設定済み）
 - `ABRDB_FEED_URL` - ABR データフィードの URL（通常は変更不要）
+- `ABRDB_DOWNLOAD_CONCURRENCY` - ダウンロードの並列数（default: CPU コア数、上限 32）
+- `ABRDB_IMPORT_CONCURRENCY` - インポート（ETL）の並列数（default: CPU コア数、上限 32）
 
 例:
 ```bash
