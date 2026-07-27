@@ -5,7 +5,11 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
+
+	"abrg/internal/schema"
 )
 
 // TestInfo_SizeMB tests the SizeMB method of Info.
@@ -94,6 +98,58 @@ func TestLoadInfo_OmitsAbsentTables(t *testing.T) {
 	if count, ok := info.Tables["cache_parcel"]; ok {
 		t.Errorf("Tables[cache_parcel] = %d, want omitted", count)
 	}
+}
+
+// TestLoadInfo_SchemaVersionWarning pins that LoadInfo reports a failed
+// schema version check as a warning with rebuild advice instead of refusing
+// to inspect the cache.
+func TestLoadInfo_SchemaVersionWarning(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name        string
+		configRows  map[string]string
+		wantWarning []string
+	}{
+		{
+			name:        "missing schema version",
+			configRows:  nil,
+			wantWarning: []string{"no schema version", "abrg cache build"},
+		},
+		{
+			name:        "mismatched schema version",
+			configRows:  map[string]string{KeySchemaVersion: "999"},
+			wantWarning: []string{"cache schema version 999", "abrg cache build"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, err := LoadInfo(ctx, newTestCacheFile(t, tt.configRows))
+			if err != nil {
+				t.Fatalf("LoadInfo() error = %v", err)
+			}
+			for _, want := range tt.wantWarning {
+				if !strings.Contains(info.Warning, want) {
+					t.Errorf("Warning %q does not contain %q", info.Warning, want)
+				}
+			}
+		})
+	}
+
+	t.Run("current schema version has no warning", func(t *testing.T) {
+		current, err := schema.Version()
+		if err != nil {
+			t.Fatalf("schema.Version(): %v", err)
+		}
+		info, err := LoadInfo(ctx, newTestCacheFile(t, map[string]string{KeySchemaVersion: strconv.Itoa(current)}))
+		if err != nil {
+			t.Fatalf("LoadInfo() error = %v", err)
+		}
+		if info.Warning != "" {
+			t.Errorf("Warning = %q, want empty", info.Warning)
+		}
+	})
 }
 
 // TestInfo_Fields tests that Info struct fields are correctly set.
