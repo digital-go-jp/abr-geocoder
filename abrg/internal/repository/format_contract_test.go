@@ -7,7 +7,7 @@ import (
 )
 
 // TestFormatAddress_CityRowsMatchPlainConcat pins the data premise behind
-// matching.buildCityResult (CORE-7): model.FormatAddress inserts a hyphen
+// matching.buildCityResult: model.FormatAddress inserts a hyphen
 // between adjacent ASCII digits across parts, so replacing the former plain
 // concatenation of pref+county+city+ward is only equivalent while no
 // administrative name in cache_city ends or starts with an ASCII digit.

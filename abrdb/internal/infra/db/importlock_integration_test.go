@@ -30,7 +30,7 @@ func newIntegrationExecutor(t *testing.T) *QueryExecutor {
 	return qe
 }
 
-// TestImportLockIntegration_AcquireContendRelease pins the DB-23 core against
+// TestImportLockIntegration_AcquireContendRelease pins the import lock against
 // a real server: acquisition on a dedicated session, immediate failure of a
 // contending acquisition, protection against idle_session_timeout, and
 // re-acquisition after release.

@@ -327,9 +327,9 @@ func TestImportCategoryBatch_SkipsDeleteWhenTableEmpty(t *testing.T) {
 	}
 }
 
-// --- DB-24: post-import ANALYZE ---
+// --- post-import ANALYZE ---
 
-// TestImportCategoryBatch_AnalyzesUpdatedTables pins the DB-24 contract:
+// TestImportCategoryBatch_AnalyzesUpdatedTables pins the ANALYZE contract:
 // after every category imports successfully, exactly one ANALYZE pass runs
 // over the deduplicated set of tables this run wrote, in category order.
 func TestImportCategoryBatch_AnalyzesUpdatedTables(t *testing.T) {
