@@ -627,85 +627,66 @@ func addSpaceAfterFirstArabicNumber(s string) (string, bool) {
 	return s, s != original
 }
 
-// addSpaceAfterNumberBeforeJapanese adds a space after a number when it's followed by Japanese text.
-
+// addSpaceAfterNumberBeforeJapanese adds a space after a number when it's
+// followed by Japanese text, unless the text continues the same address token
+// (see sameAddressToken). The scan stops at the first kept token.
 func addSpaceAfterNumberBeforeJapanese(s string) (string, bool) {
 	original := s
 
-	pattern := numberBeforeJapanese
 	for {
-		matches := pattern.FindStringSubmatchIndex(s)
+		matches := numberBeforeJapanese.FindStringSubmatchIndex(s)
 		if matches == nil {
 			break
 		}
-
-		// Check if this is part of an address component
-		isAddressComponent := false
-		for _, comp := range addressComponents {
-			// Check if the Japanese character is the start of an address component
-			if matches[4] < len(s) && len(s[matches[4]:]) >= len(comp) {
-				if s[matches[4]:matches[4]+len(comp)] == comp {
-					isAddressComponent = true
-					break
-				}
-			}
-		}
-
-		// Special case: の/ノ followed by digit (e.g., "本町6の1丁目")
-		// This pattern is used in addresses like "本町6の1丁目" where 6の1 is a block number
-		if !isAddressComponent && matches[4] < len(s) {
-			afterNum := s[matches[4]:]
-			runes := []rune(afterNum)
-			if len(runes) >= 1 {
-				if runes[0] == 'の' || runes[0] == 'ノ' {
-					// Check if followed by digit
-					if len(runes) >= 2 {
-						if char.IsASCIIDigit(runes[1]) {
-							isAddressComponent = true
-						}
-					}
-					// Special case: address ending with Nの/Nノ (e.g., "天池町1の", "天池町1ノ")
-					// These are valid koaza patterns in Ishikawa (e.g., "金沢市天池町1ノ")
-					if len(runes) == 1 {
-						isAddressComponent = true
-					}
-				}
-			}
-		}
-
-		// Special case: kanji followed by digit followed by 丁目 (e.g., "東1北2丁目")
-		// Pattern: 数字+漢字+数字+丁目 - don't add space between first digit and kanji
-		// This handles Hokkaido Nakashibetsu-style addresses (e.g., "中標津町東1北2丁目")
-		// and other similar patterns where kanji+digit+丁目 forms a single location identifier
-		if !isAddressComponent && matches[4] < len(s) {
-			afterNum := s[matches[4]:]
-			runes := []rune(afterNum)
-			if len(runes) >= 1 {
-				firstRune := runes[0]
-				// Check if it's a kanji (CJK Unified Ideographs range)
-				if firstRune >= 0x4E00 && firstRune <= 0x9FFF {
-					// Check if followed by digit and eventually 丁目
-					if len(runes) >= 2 {
-						secondRune := runes[1]
-						if char.IsASCIIDigit(secondRune) {
-							// Check if the pattern ends with 丁目
-							if strings.Contains(afterNum, "丁目") {
-								isAddressComponent = true
-							}
-						}
-					}
-				}
-			}
-		}
-
-		if !isAddressComponent {
-			// Add space between number and Japanese text
-			s = s[:matches[3]] + " " + s[matches[3]:]
-		} else {
-			// Skip this match by replacing with a placeholder
+		if sameAddressToken(s[matches[4]:]) {
 			break
 		}
+		// Add space between number and Japanese text
+		s = s[:matches[3]] + " " + s[matches[3]:]
 	}
 
 	return s, s != original
+}
+
+// sameAddressToken reports whether the Japanese text right after a number
+// continues the same address token, so no space is inserted before it.
+func sameAddressToken(after string) bool {
+	return startsWithAddressComponent(after) || isNoParticleBlock(after) || isKanjiDigitChome(after)
+}
+
+// startsWithAddressComponent matches suffixes like 丁目/番地/号 that attach
+// directly to the preceding number.
+func startsWithAddressComponent(after string) bool {
+	for _, comp := range addressComponents {
+		if strings.HasPrefix(after, comp) {
+			return true
+		}
+	}
+	return false
+}
+
+// isNoParticleBlock matches の/ノ used as a block-number separator
+// ("本町6の1丁目") or a trailing Nの/Nノ koaza as used in Ishikawa
+// ("金沢市天池町1ノ").
+func isNoParticleBlock(after string) bool {
+	runes := []rune(after)
+	if len(runes) == 0 || (runes[0] != 'の' && runes[0] != 'ノ') {
+		return false
+	}
+	return len(runes) == 1 || char.IsASCIIDigit(runes[1])
+}
+
+// isKanjiDigitChome matches kanji+digit sequences that lead into 丁目, as in
+// Hokkaido Nakashibetsu-style addresses ("中標津町東1北2丁目"), where
+// digit+kanji+digit+丁目 forms a single location identifier.
+func isKanjiDigitChome(after string) bool {
+	runes := []rune(after)
+	if len(runes) < 2 {
+		return false
+	}
+	// CJK Unified Ideographs range
+	if runes[0] < 0x4E00 || runes[0] > 0x9FFF {
+		return false
+	}
+	return char.IsASCIIDigit(runes[1]) && strings.Contains(after, "丁目")
 }
