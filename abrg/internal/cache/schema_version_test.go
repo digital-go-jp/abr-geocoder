@@ -129,4 +129,26 @@ func TestSaveConfigToCache_WritesSchemaVersion(t *testing.T) {
 	if want := strconv.Itoa(current); got != want {
 		t.Errorf("schema_version = %q, want %q", got, want)
 	}
+
+	// schema_version is the completion marker and must be written last, so
+	// a build that dies partway leaves a cache the version check rejects.
+	// DuckDB scans this freshly inserted single-row-group table in insertion
+	// order, which makes the write order observable.
+	rows, err := conn.QueryContext(ctx, "SELECT config_key FROM cache_config")
+	if err != nil {
+		t.Fatalf("read config keys: %v", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var last string
+	for rows.Next() {
+		if err := rows.Scan(&last); err != nil {
+			t.Fatalf("scan config key: %v", err)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate config keys: %v", err)
+	}
+	if last != KeySchemaVersion {
+		t.Errorf("last written config key = %q, want %q (completion marker must be last)", last, KeySchemaVersion)
+	}
 }

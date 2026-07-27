@@ -249,20 +249,21 @@ func saveConfigToCache(ctx context.Context, conn *sql.DB, cfg *Config) error {
 	}
 	const insertSQL = `INSERT INTO cache_config (config_key, config_value) VALUES (?, ?)`
 	configs := []struct{ key, value string }{
-		{KeySchemaVersion, strconv.Itoa(schemaVersion)},
 		{db.KeyABRDBVersion, cfg.DBVersion},
 		{db.KeyEnabledCategory, cfg.EnabledCategory},
 		{db.KeyEnabledPref, cfg.EnabledPref},
 		{db.KeyEnabledPos, cfg.EnabledPos},
+		{"build_time", time.Now().Format(time.RFC3339)},
+		// KeySchemaVersion doubles as the completion marker and must stay
+		// last: a build that dies before this write leaves a cache without a
+		// schema version, which the open-time check rejects with a rebuild
+		// instruction.
+		{KeySchemaVersion, strconv.Itoa(schemaVersion)},
 	}
 	for _, c := range configs {
 		if _, err := conn.ExecContext(ctx, insertSQL, c.key, c.value); err != nil {
 			return fmt.Errorf("failed to insert %s: %w", c.key, err)
 		}
-	}
-	// Add build time
-	if _, err := conn.ExecContext(ctx, insertSQL, "build_time", time.Now().Format(time.RFC3339)); err != nil {
-		return fmt.Errorf("failed to insert build_time: %w", err)
 	}
 	return nil
 }
