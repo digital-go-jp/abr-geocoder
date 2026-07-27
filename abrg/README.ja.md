@@ -25,7 +25,7 @@ PostgreSQLからDuckDBキャッシュファイルを構築します。
 ./abrg cache build
 ```
 
-キャッシュにはスキーマ版が記録され、起動時にバイナリの要求する版と照合します。バイナリ更新後にスキーマ版のエラーが出た場合は `cache build` で再構築してください。
+キャッシュにはスキーマ版が記録され、起動時にバイナリの要求する版と照合します。バイナリ更新後にスキーマ版のエラーが出た場合は `cache build` で再構築してください。住居表示 (cache_rsdtdsp)・地番 (cache_parcel) のテーブルは enabled_category に含まれるカテゴリの分だけ作られます。
 
 ### `abrg cache info`
 
