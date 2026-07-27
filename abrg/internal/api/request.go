@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 
 	"abrg/internal/model"
@@ -68,6 +71,28 @@ func (s *GinServer) validateParams(category, pref string) (model.Category, strin
 
 func errorResponse(message string) gin.H {
 	return gin.H{"status": "error", "message": message}
+}
+
+var registerFormTagNamesOnce sync.Once
+
+// registerFormTagNames makes validator errors name fields by their form tag,
+// so 400 messages refer to the query parameter clients actually send
+// (address) instead of the Go struct field (Address). The registration is on
+// gin's process-wide binding engine, hence the once guard.
+func registerFormTagNames() {
+	registerFormTagNamesOnce.Do(func() {
+		v, ok := binding.Validator.Engine().(*validator.Validate)
+		if !ok {
+			return
+		}
+		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+			name, _, _ := strings.Cut(fld.Tag.Get("form"), ",")
+			if name == "" || name == "-" {
+				return fld.Name
+			}
+			return name
+		})
+	})
 }
 
 // formatBindError extracts field-level details from Gin binding errors.

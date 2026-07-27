@@ -162,6 +162,7 @@ func registerEndpoints(router *gin.Engine, server *GinServer) {
 }
 
 func NewGinServer(cfg ServerConfig) *GinServer {
+	registerFormTagNames()
 	router := gin.New()
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
 		Formatter: accessLogFormatter,
