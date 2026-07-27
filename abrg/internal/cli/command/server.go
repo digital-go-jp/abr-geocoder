@@ -65,7 +65,7 @@ func runServer(ctx context.Context, cacheFlag string) error {
 	})
 	if err != nil {
 		_ = dbCache.Close()
-		return fmt.Errorf("failed to initialize server: %w", err)
+		return serverInitError(err)
 	}
 	defer func() {
 		if err := server.Close(); err != nil {
@@ -83,6 +83,16 @@ func runServer(ctx context.Context, cacheFlag string) error {
 	}
 
 	return runHTTPServer(ctx, srv)
+}
+
+// serverInitError converts a server initialization failure into the command
+// result. Cancellation (Ctrl-C / SIGTERM) during initialization is a clean
+// shutdown and yields nil; any other error is wrapped.
+func serverInitError(err error) error {
+	if errors.Is(err, context.Canceled) {
+		return nil
+	}
+	return fmt.Errorf("failed to initialize server: %w", err)
 }
 
 // runHTTPServer runs an http.Server until ctx is cancelled, then performs

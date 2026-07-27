@@ -2,11 +2,51 @@ package command
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"testing"
 	"time"
 )
+
+func TestServerInitError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		err     error
+		wantNil bool
+	}{
+		{
+			name:    "cancellation during initialization is a clean shutdown",
+			err:     fmt.Errorf("check table existence: %w", context.Canceled),
+			wantNil: true,
+		},
+		{
+			name:    "other initialization errors are returned",
+			err:     errors.New("catalog error"),
+			wantNil: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := serverInitError(tt.err)
+			if tt.wantNil {
+				if got != nil {
+					t.Fatalf("serverInitError() = %v, want nil", got)
+				}
+				return
+			}
+			if !errors.Is(got, tt.err) {
+				t.Fatalf("serverInitError() = %v, want wrapped %v", got, tt.err)
+			}
+		})
+	}
+}
 
 func TestRunHTTPServer_GracefulShutdownOnContextCancel(t *testing.T) {
 	t.Parallel()
