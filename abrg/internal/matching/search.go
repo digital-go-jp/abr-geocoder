@@ -31,36 +31,9 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 	nctx.State = newState
 
 	if !usedLevenshteinFallback || n.fuzzyMatchAllowsTwoStage(nctx) {
-		switch nctx.Input.AddressType {
-		case model.NormalizeCategoryResidential:
-			results, err = n.tryTwoStageResidential(ctx, nctx)
-			if err != nil {
-				return nil, err
-			}
-
-		case model.NormalizeCategoryParcel:
-			results, err = n.tryTwoStageParcel(ctx, nctx)
-			if err != nil {
-				return nil, err
-			}
-
-		case model.NormalizeCategoryUndetermined, model.NormalizeCategoryUnknown:
-			results, err = n.tryTwoStageResidential(ctx, nctx)
-			if err != nil {
-				return nil, err
-			}
-
-			// Try parcel only if no complete residential match
-			hasCompleteResidentialMatch := len(results) > 0 &&
-				results[0].Score == 1.0 &&
-				results[0].MatchLevel == model.MatchLevelResidentialDetail
-			if !hasCompleteResidentialMatch {
-				parcelResults, parcelErr := n.tryTwoStageParcel(ctx, nctx)
-				if parcelErr != nil {
-					return nil, parcelErr
-				}
-				results = append(results, parcelResults...)
-			}
+		results, err = n.tryDetailedSearch(ctx, nctx)
+		if err != nil {
+			return nil, err
 		}
 
 		// A detail resolved from a fuzzy (sub-1.0) town match must not outrank an
@@ -80,6 +53,41 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 	}
 
 	return sortAndLimitResults(results, nctx.Input.Limit), nil
+}
+
+// tryDetailedSearch runs the two-stage residential/parcel searches for the
+// detected address category. Undetermined and unknown inputs try residential
+// first and add parcel results unless residential already produced a complete
+// detail match; any other category returns no results and leaves the caller
+// to fall back to basic results.
+func (n *Impl) tryDetailedSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
+	switch nctx.Input.AddressType {
+	case model.NormalizeCategoryResidential:
+		return n.tryTwoStageResidential(ctx, nctx)
+
+	case model.NormalizeCategoryParcel:
+		return n.tryTwoStageParcel(ctx, nctx)
+
+	case model.NormalizeCategoryUndetermined, model.NormalizeCategoryUnknown:
+		results, err := n.tryTwoStageResidential(ctx, nctx)
+		if err != nil {
+			return nil, err
+		}
+
+		// Try parcel only if no complete residential match
+		hasCompleteResidentialMatch := len(results) > 0 &&
+			results[0].Score == 1.0 &&
+			results[0].MatchLevel == model.MatchLevelResidentialDetail
+		if hasCompleteResidentialMatch {
+			return results, nil
+		}
+		parcelResults, err := n.tryTwoStageParcel(ctx, nctx)
+		if err != nil {
+			return nil, err
+		}
+		return append(results, parcelResults...), nil
+	}
+	return nil, nil
 }
 
 // tryLevenshteinFallback attempts Levenshtein search when no BasicResults exist.
