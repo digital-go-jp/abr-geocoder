@@ -195,26 +195,21 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config) (map[string]float64, error) {
 	phaseSec := make(map[string]float64)
 
-	switch cfg.EnabledCategory {
-	case "basic":
-		// No category-specific tables
-	case "rsdtdsp":
-		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
-			return nil, err
-		}
-	case "parcel":
-		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
-			return nil, err
-		}
-	case "all":
-		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
-			return nil, err
-		}
-		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
-			return nil, err
-		}
+	category := cfg.EnabledCategory
+	switch category {
+	case "basic", "rsdtdsp", "parcel", "all":
 	default:
-		return nil, fmt.Errorf("unknown category: %q", cfg.EnabledCategory)
+		return nil, fmt.Errorf("unknown category: %q", category)
+	}
+	if category == "rsdtdsp" || category == "all" {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
+			return nil, err
+		}
+	}
+	if category == "parcel" || category == "all" {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
+			return nil, err
+		}
 	}
 
 	basicSec, err := insertBasicTables(ctx, conn, cfg)
