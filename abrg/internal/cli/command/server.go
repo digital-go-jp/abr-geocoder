@@ -27,7 +27,13 @@ func NewServerCmd() *cobra.Command {
 		Short: "Start the ABR Geocoder server",
 		Long:  `Start the ABR Geocoder server that provides geocoding and reverse geocoding APIs.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runServer(cmd.Context(), cachePath)
+			// Cancellation (Ctrl-C / SIGTERM) anywhere in startup or serving
+			// is a clean shutdown. It is handled once here, wrapping the whole
+			// run, so refactoring an individual init step cannot lose it.
+			if err := runServer(cmd.Context(), cachePath); err != nil && !errors.Is(err, context.Canceled) {
+				return err
+			}
+			return nil
 		},
 	}
 
