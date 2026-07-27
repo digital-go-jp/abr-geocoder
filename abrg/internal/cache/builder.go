@@ -156,7 +156,22 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 		_, _ = conn.ExecContext(context.Background(), "DETACH pg;")
 	}()
 
-	switch category {
+	buildSec, err := buildCacheTables(ctx, conn, cfg)
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(phaseSec, buildSec)
+
+	return phaseSec, nil
+}
+
+// buildCacheTables creates and populates every cache table for the configured
+// category, creates the indexes, and saves the configuration. The source
+// PostgreSQL database must already be attached as pg.
+func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config) (map[string]float64, error) {
+	phaseSec := make(map[string]float64)
+
+	switch cfg.EnabledCategory {
 	case "basic":
 		// No category-specific tables
 	case "rsdtdsp":
@@ -175,10 +190,10 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("unknown category: %q", category)
+		return nil, fmt.Errorf("unknown category: %q", cfg.EnabledCategory)
 	}
 
-	basicSec, err := insertBasicTables(ctx, conn)
+	basicSec, err := insertBasicTables(ctx, conn, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -203,10 +218,10 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	return phaseSec, nil
 }
 
-func insertBasicTables(ctx context.Context, conn *sql.DB) (map[string]float64, error) {
+func insertBasicTables(ctx context.Context, conn *sql.DB, cfg *Config) (map[string]float64, error) {
 	phaseSec := make(map[string]float64)
 
-	sec, err := execTimed(ctx, conn, "insert", "machiaza", insertMachiazaSQL)
+	sec, err := execTimed(ctx, conn, "insert", "machiaza", buildInsertMachiazaSQL(cfg.HasResidential(), cfg.HasParcel()))
 	if err != nil {
 		return nil, err
 	}
