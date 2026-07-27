@@ -227,6 +227,30 @@ func (c *Catalog) GetPendingSummary(ctx context.Context) ([]PendingSummary, erro
 	return results, nil
 }
 
+// CountOrphanPosFiles counts pending pos files that have no text counterpart
+// in the catalog. The feed publishes such files for a few municipalities;
+// imports always start from the text file, so these rows stay needs_import
+// forever and never appear in the pending summary.
+func (c *Catalog) CountOrphanPosFiles(ctx context.Context) (int, error) {
+	var count int
+	err := c.executor.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM abrdb_catalog p
+		WHERE p.file_type = 'pos'
+		  AND p.needs_import
+		  AND NOT EXISTS (
+			SELECT 1 FROM abrdb_catalog t
+			WHERE t.file_key = p.file_key
+			  AND t.file_category = p.file_category
+			  AND t.file_type = 'text'
+		  )
+	`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count orphan pos files: %w", err)
+	}
+	return count, nil
+}
+
 // SyncPairImportStatus synchronizes needs_import flag between text/pos pairs.
 // If either file in a pair has needs_import=true, both are set to true.
 // This ensures that text and pos files are always imported together.

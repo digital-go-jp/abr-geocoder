@@ -183,6 +183,24 @@ type importServices struct {
 type pendingSummaryStore interface {
 	GetPendingSummary(ctx context.Context) ([]postgres.PendingSummary, error)
 	PendingAnalyzeTables(ctx context.Context) ([]string, error)
+	CountOrphanPosFiles(ctx context.Context) (int, error)
+}
+
+// warnOrphanPosFiles surfaces pos files whose text counterpart the feed never
+// published. They stay needs_import forever but are invisible in the pending
+// summary (which counts text files), so without this warning the catalog holds
+// pending rows while the run reports "No changes detected". The warning is
+// best-effort and never affects the exit code contract.
+func warnOrphanPosFiles(ctx context.Context, store pendingSummaryStore) {
+	count, err := store.CountOrphanPosFiles(ctx)
+	if err != nil {
+		slog.Warn("failed to count orphan pos files", "event", "import", "error", err)
+		return
+	}
+	if count > 0 {
+		slog.Warn("pos files without a text counterpart stay pending and are never imported",
+			"event", "import", "count", count)
+	}
 }
 
 // initImportServices initializes DuckDB ETL, download, and import services.
@@ -236,6 +254,7 @@ func runImportDryRun(
 	if err != nil {
 		return fmt.Errorf("scan and compare catalog: %w", err)
 	}
+	warnOrphanPosFiles(ctx, store)
 	return printDryRunSummary(ctx, store, result, opts.Verbose)
 }
 
@@ -268,6 +287,8 @@ func runImportWithChangeDetection(
 	if err != nil {
 		return fmt.Errorf("get pending analyze tables: %w", err)
 	}
+
+	warnOrphanPosFiles(ctx, store)
 
 	// Determine if there's anything to do. A non-empty analyze backlog counts
 	// as pending work even without file changes, so a failed ANALYZE is

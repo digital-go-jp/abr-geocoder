@@ -43,6 +43,8 @@ type fakeSummaryStore struct {
 	err            error
 	pendingAnalyze []string
 	analyzeErr     error
+	orphanPos      int
+	orphanPosErr   error
 }
 
 func (f *fakeSummaryStore) GetPendingSummary(context.Context) ([]postgres.PendingSummary, error) {
@@ -51,6 +53,10 @@ func (f *fakeSummaryStore) GetPendingSummary(context.Context) ([]postgres.Pendin
 
 func (f *fakeSummaryStore) PendingAnalyzeTables(context.Context) ([]string, error) {
 	return f.pendingAnalyze, f.analyzeErr
+}
+
+func (f *fakeSummaryStore) CountOrphanPosFiles(context.Context) (int, error) {
+	return f.orphanPos, f.orphanPosErr
 }
 
 // TestRunImportDryRun_ExitCodes pins the dry-run exit code contract through
@@ -92,6 +98,22 @@ func TestRunImportDryRun_ExitCodes(t *testing.T) {
 			store:     &fakeSummaryStore{pendingAnalyze: []string{"mt_town_unified"}},
 			scan:      &catalog.ScanResult{},
 			wantExit1: true,
+		},
+		{
+			// Orphan pos files (no text counterpart in the feed) stay
+			// needs_import forever. They are surfaced as a warning only and
+			// must never flip the exit code, or the daily workflow would
+			// report "changes pending" on every run.
+			name:  "orphan pos files alone exit 0",
+			store: &fakeSummaryStore{orphanPos: 1},
+			scan:  &catalog.ScanResult{},
+		},
+		{
+			// The warning is best-effort: a failed orphan count must not
+			// break the dry-run contract.
+			name:  "orphan pos count failure still exits 0",
+			store: &fakeSummaryStore{orphanPosErr: summaryErr},
+			scan:  &catalog.ScanResult{},
 		},
 		{
 			name:    "summary failure exits 2",
