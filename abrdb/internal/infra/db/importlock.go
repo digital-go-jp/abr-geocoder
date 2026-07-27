@@ -46,6 +46,15 @@ func (q *QueryExecutor) AcquireImportLock(ctx context.Context) (*ImportLock, err
 		conn.Release()
 		return nil, ErrImportLocked
 	}
+
+	// This session sits idle while the import runs on other connections. With
+	// idle_session_timeout set, the server would kill the session and
+	// silently release the advisory lock, letting a second import in. The
+	// error is ignored on purpose: the GUC exists from PostgreSQL 14, and on
+	// older servers - where the SET fails as an unrecognized parameter - no
+	// idle timeout can cut the session either.
+	_, _ = conn.Exec(ctx, "SET idle_session_timeout = 0")
+
 	return &ImportLock{conn: conn}, nil
 }
 
