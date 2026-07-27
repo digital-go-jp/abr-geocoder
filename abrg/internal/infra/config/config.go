@@ -23,7 +23,7 @@ const DefaultCORSAllowOrigin = "*"
 // origin, which the middleware rejects outright.
 func splitOrigins(value string) []string {
 	var origins []string
-	for _, origin := range strings.Split(value, ",") {
+	for origin := range strings.SplitSeq(value, ",") {
 		if origin = strings.TrimSpace(origin); origin != "" {
 			origins = append(origins, origin)
 		}
