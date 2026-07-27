@@ -294,6 +294,26 @@ func TestFindNearestResidential_Fixture(t *testing.T) {
 	if !(results[0].Distance <= results[1].Distance && results[1].Distance <= results[2].Distance) {
 		t.Errorf("distances not ascending: %f, %f, %f", results[0].Distance, results[1].Distance, results[2].Distance)
 	}
+
+	t.Run("point beyond radius returns empty", func(t *testing.T) {
+		results, err := repo.FindNearestResidential(ctx, SpatialParams{Lon: 135.5023, Lat: 34.6937, Limit: 3, Radius: 0.009})
+		if err != nil {
+			t.Fatalf("FindNearestResidential() error = %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("FindNearestResidential() returned %d results, want 0", len(results))
+		}
+	})
+
+	t.Run("prefecture filter mismatch returns empty", func(t *testing.T) {
+		results, err := repo.FindNearestResidential(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Pref: "14", Radius: 0.009})
+		if err != nil {
+			t.Fatalf("FindNearestResidential() error = %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("FindNearestResidential() returned %d results, want 0", len(results))
+		}
+	})
 }
 
 func TestFindNearestParcel_Fixture(t *testing.T) {
@@ -324,4 +344,24 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 	if !(results[0].Distance <= results[1].Distance && results[1].Distance <= results[2].Distance) {
 		t.Errorf("distances not ascending: %f, %f, %f", results[0].Distance, results[1].Distance, results[2].Distance)
 	}
+
+	t.Run("point beyond radius returns empty", func(t *testing.T) {
+		results, err := repo.FindNearestParcel(ctx, SpatialParams{Lon: 135.5023, Lat: 34.6937, Limit: 3, Radius: 0.009})
+		if err != nil {
+			t.Fatalf("FindNearestParcel() error = %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("FindNearestParcel() returned %d results, want 0", len(results))
+		}
+	})
+
+	t.Run("prefecture filter mismatch returns empty", func(t *testing.T) {
+		results, err := repo.FindNearestParcel(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Pref: "14", Radius: 0.009})
+		if err != nil {
+			t.Fatalf("FindNearestParcel() error = %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("FindNearestParcel() returned %d results, want 0", len(results))
+		}
+	})
 }
