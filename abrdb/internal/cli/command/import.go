@@ -194,8 +194,11 @@ type pendingSummaryStore interface {
 // published. They stay needs_import forever but are invisible in the pending
 // summary (which counts text files), so without this warning the catalog holds
 // pending rows while the run reports "No changes detected". The warning is
-// best-effort and never affects the exit code contract.
+// best-effort and never affects the exit code contract; the count query is
+// bounded so it cannot delay process exit indefinitely.
 func warnOrphanPosFiles(ctx context.Context, store pendingSummaryStore) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 	count, err := store.CountOrphanPosFiles(ctx)
 	if err != nil {
 		slog.Warn("failed to count orphan pos files", "event", "import", "error", err)
