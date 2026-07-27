@@ -1,5 +1,7 @@
 # DuckDB Cache Schema for abrg geocoder
-version: 1
+# version 2: cache_rsdtdsp / cache_parcel exist only when enabled_category
+# includes them (created by CTAS at build time, no longer declared here).
+version: 2
 
 tables:
   cache_machiaza:

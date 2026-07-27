@@ -12,9 +12,11 @@ import (
 
 // The tests in this file run the repository SQL against the committed
 // quickstart cache (Tokyo, basic category, pos enabled) so that queries and
-// scan code are exercised without a full nationwide cache. cache_rsdtdsp and
-// cache_parcel exist but are empty in this cache, which pins the empty-result
-// paths of the residential/parcel queries.
+// scan code are exercised without a full nationwide cache. The cache has no
+// cache_rsdtdsp / cache_parcel tables; the residential/parcel queries are
+// covered by fixture_test.go (empty-result paths included), and requests for
+// unavailable categories are stopped before the repository by category
+// validation and the reverse availability guard.
 const quickstartCachePath = "../../../quickstart/tokyo_basic.duckdb"
 
 // Kioicho, Chiyoda-ku in the quickstart cache. normalized_address stores the
@@ -371,46 +373,6 @@ func TestCoordinates(t *testing.T) {
 	})
 }
 
-func TestFindResidentialBestMatch_EmptyTable(t *testing.T) {
-	repo := setupRepo(t)
-	ctx := context.Background()
-
-	filters := []ResidentialFilter{
-		{BlkNum: "1"},
-		{BlkNum: "1", RsdtNum: "2"},
-		{BlkNum: "1", RsdtNum: "2", RsdtNum2: "3"},
-	}
-	for _, filter := range filters {
-		result, err := repo.FindResidentialBestMatch(ctx, chiyodaLgCode, kioichoMachiazaID, filter)
-		if err != nil {
-			t.Fatalf("FindResidentialBestMatch(%+v) error = %v", filter, err)
-		}
-		if result != nil {
-			t.Errorf("FindResidentialBestMatch(%+v) = %+v, want nil", filter, result)
-		}
-	}
-}
-
-func TestFindParcelExact_EmptyTable(t *testing.T) {
-	repo := setupRepo(t)
-	ctx := context.Background()
-
-	filters := []ParcelFilter{
-		{PrcNum1: "1"},
-		{PrcNum1: "1", PrcNum2: "2"},
-		{PrcNum1: "1", PrcNum2: "2", PrcNum3: "3"},
-	}
-	for _, filter := range filters {
-		result, err := repo.FindParcelExact(ctx, chiyodaLgCode, kioichoMachiazaID, filter)
-		if err != nil {
-			t.Fatalf("FindParcelExact(%+v) error = %v", filter, err)
-		}
-		if result != nil {
-			t.Errorf("FindParcelExact(%+v) = %+v, want nil", filter, result)
-		}
-	}
-}
-
 func TestFindNearestBasic(t *testing.T) {
 	repo := setupRepo(t)
 	ctx := context.Background()
@@ -448,28 +410,4 @@ func TestFindNearestBasic(t *testing.T) {
 			t.Error("FindNearestBasic() error = nil, want error")
 		}
 	})
-}
-
-func TestFindNearestResidential_EmptyTable(t *testing.T) {
-	repo := setupRepo(t)
-
-	results, err := repo.FindNearestResidential(context.Background(), SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Radius: 0.009})
-	if err != nil {
-		t.Fatalf("FindNearestResidential() error = %v", err)
-	}
-	if len(results) != 0 {
-		t.Errorf("FindNearestResidential() returned %d results, want 0", len(results))
-	}
-}
-
-func TestFindNearestParcel_EmptyTable(t *testing.T) {
-	repo := setupRepo(t)
-
-	results, err := repo.FindNearestParcel(context.Background(), SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Radius: 0.009})
-	if err != nil {
-		t.Fatalf("FindNearestParcel() error = %v", err)
-	}
-	if len(results) != 0 {
-		t.Errorf("FindNearestParcel() returned %d results, want 0", len(results))
-	}
 }
