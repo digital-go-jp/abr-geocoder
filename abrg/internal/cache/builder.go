@@ -86,6 +86,29 @@ func initSchema(ctx context.Context, conn *sql.DB) error {
 	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
 		return fmt.Errorf("failed to execute init schema: %w", err)
 	}
+	// The YAML schema only covers the always-present tables; category tables
+	// from a previous build are dropped here and recreated by CTAS if the
+	// configured category needs them.
+	if _, err := conn.ExecContext(ctx, dropCategoryTablesSQL); err != nil {
+		return fmt.Errorf("failed to drop stale category tables: %w", err)
+	}
+	return nil
+}
+
+// buildCategoryTable creates one category table via CTAS and its spatial
+// index, recording the timings in phaseSec.
+func buildCategoryTable(ctx context.Context, conn *sql.DB, phaseSec map[string]float64, name, createSQL, indexSQL string) error {
+	sec, err := execTimed(ctx, conn, "create", name, createSQL)
+	if err != nil {
+		return err
+	}
+	phaseSec[name] = sec
+
+	sec, err = execTimed(ctx, conn, "index", name, indexSQL)
+	if err != nil {
+		return err
+	}
+	phaseSec[name+"_index"] = sec
 	return nil
 }
 
@@ -137,28 +160,20 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	case "basic":
 		// No category-specific tables
 	case "rsdtdsp":
-		sec, err := execTimed(ctx, conn, "create", "rsdtdsp", createRsdtdspSQL)
-		if err != nil {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
 			return nil, err
 		}
-		phaseSec["rsdtdsp"] = sec
 	case "parcel":
-		sec, err := execTimed(ctx, conn, "create", "parcel", createParcelSQL)
-		if err != nil {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
 			return nil, err
 		}
-		phaseSec["parcel"] = sec
 	case "all":
-		sec, err := execTimed(ctx, conn, "create", "rsdtdsp", createRsdtdspSQL)
-		if err != nil {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
 			return nil, err
 		}
-		phaseSec["rsdtdsp"] = sec
-		sec, err = execTimed(ctx, conn, "create", "parcel", createParcelSQL)
-		if err != nil {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
 			return nil, err
 		}
-		phaseSec["parcel"] = sec
 	default:
 		return nil, fmt.Errorf("unknown category: %q", category)
 	}

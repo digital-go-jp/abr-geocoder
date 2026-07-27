@@ -1,6 +1,25 @@
 package cache
 
 // SQL constants for data insertion from PostgreSQL to DuckDB cache.
+//
+// The category tables (cache_rsdtdsp / cache_parcel) exist only in caches
+// whose enabled_category includes them. They are created by the CTAS
+// statements below rather than by cache_schema.yaml, so their whole DDL
+// (table shape, spatial indexes, cleanup of stale copies) lives in this file.
+
+// dropCategoryTablesSQL removes category tables left over from a previous
+// build so that a category table exists if and only if the current build
+// created it.
+const dropCategoryTablesSQL = `
+DROP TABLE IF EXISTS cache_rsdtdsp;
+DROP TABLE IF EXISTS cache_parcel;
+`
+
+// Note: No index on (lg_code, machiaza_id) for the category tables - Row
+// Group statistics from the CTAS ORDER BY provide sufficient filtering.
+const createRsdtdspIndexSQL = `CREATE INDEX IF NOT EXISTS idx_rsdtdsp_geom ON cache_rsdtdsp USING RTREE(geom)`
+
+const createParcelIndexSQL = `CREATE INDEX IF NOT EXISTS idx_parcel_geom ON cache_parcel USING RTREE(geom)`
 
 // insertMachiazaSQL inserts town/machiaza-level data from PostgreSQL.
 // This should be called AFTER cache_parcel and cache_rsdtdsp are populated.

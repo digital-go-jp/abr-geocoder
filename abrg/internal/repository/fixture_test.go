@@ -13,12 +13,40 @@ import (
 // in-memory DuckDB built from schema.InitSchemaSQL with hand-inserted rows,
 // so the row scan paths (NULL conversion, match conditions, match levels) are
 // exercised with actual data. The quickstart cache cannot cover these because
-// its cache_rsdtdsp and cache_parcel tables are empty.
+// it is a basic-category cache without cache_rsdtdsp and cache_parcel.
 
 const (
 	fixtureLgCode     = "131016"
 	fixtureMachiazaID = "0001000"
 )
+
+// createCategoryTablesSQL creates the category tables for tests. At build
+// time these tables come from the CTAS statements in cache/sql.go, not from
+// schema.InitSchemaSQL; the column shape here mirrors the CTAS output.
+const createCategoryTablesSQL = `
+CREATE TABLE cache_rsdtdsp (
+	pref_code SMALLINT,
+	lg_code CHAR(6),
+	machiaza_id CHAR(7),
+	blk_id CHAR(3),
+	rsdt_id CHAR(3),
+	rsdt2_id CHAR(5),
+	blk_num VARCHAR,
+	rsdt_num VARCHAR,
+	rsdt_num2 VARCHAR,
+	geom GEOMETRY
+);
+CREATE TABLE cache_parcel (
+	pref_code SMALLINT,
+	lg_code CHAR(6),
+	machiaza_id CHAR(7),
+	prc_id CHAR(15),
+	prc_num1 VARCHAR,
+	prc_num2 VARCHAR,
+	prc_num3 VARCHAR,
+	geom GEOMETRY
+);
+`
 
 func newFixtureRepo(t *testing.T) *DB {
 	t.Helper()
@@ -40,6 +68,9 @@ func newFixtureRepo(t *testing.T) *DB {
 	}
 	if _, err := db.ExecContext(ctx, initSQL); err != nil {
 		t.Fatalf("init schema: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, createCategoryTablesSQL); err != nil {
+		t.Fatalf("create category tables: %v", err)
 	}
 
 	fixtures := []string{
