@@ -377,7 +377,7 @@ aws ecs update-service --cluster $ECS_CLUSTER --service abrg-service --force-new
 
 ### 設定（取り込みフィルタ）変更の反映
 
-`abrdb import` は取り込み設定（`abrdb/internal/schema/config_default.yaml` の `filters` 等）を **イメージ埋め込みではなく `abrdb init` 時に DB（`abrdb_config`）へ保存された設定から読み込みます**。そのため `config_default.yaml` を変更してイメージを更新しただけでは反映されません（保存済みの旧設定が使われ続けます）。反映するには `init` で保存設定を更新し、全件取り込みし直します。
+`abrdb import` の取り込み設定（`abrdb/internal/schema/config_default.yaml` の `filters` 等）は**イメージに埋め込まれており、イメージ更新後の `import` から新しい設定が使われます**。ただし取り込み済みデータには適用されないため、反映には全件再取り込みが必要です。列構成が変わる変更では `import` がエラーで停止するため、`init` でテーブルを再作成してから全件取り込みし直します。
 
 > **⚠️ 重要**: `abrdb init` は**全データテーブルを DROP・再作成してリセットします**（`DROP TABLE ... CASCADE`）。取り込み済みデータ（町字・住居表示・地番）と catalog は消えます。**`init` は必ず `import` とセットで実行**してください。単独実行すると DB が空になります。実行中もサービスは S3 の既存キャッシュを配信し続けるため API はダウンしませんが、**空 DB のまま `cache build` を実行しない**でください（空キャッシュになります）。
 
