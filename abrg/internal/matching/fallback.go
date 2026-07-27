@@ -11,18 +11,12 @@ import (
 	"abrg/internal/model"
 )
 
-// debugEnabled reports whether debug logging is active. Call sites that fire
-// on every request must check this before building debugMatchPath arguments,
-// so the disabled path costs a single level check.
-func debugEnabled(ctx context.Context) bool {
-	return slog.Default().Enabled(ctx, slog.LevelDebug)
-}
-
 // debugMatchPath records which non-exact resolution path produced the result,
 // so unexpected resolutions can be traced in production with LOG_LEVEL=DEBUG.
-// Each request fires at most a handful of these, never per-character work.
+// Each request fires at most a handful of these, never per-character work;
+// the early level check keeps the disabled cost to the variadic call itself.
 func debugMatchPath(ctx context.Context, path, address string, attrs ...any) {
-	if !debugEnabled(ctx) {
+	if !slog.Default().Enabled(ctx, slog.LevelDebug) {
 		return
 	}
 	slog.DebugContext(ctx, "match resolved by fallback path",
