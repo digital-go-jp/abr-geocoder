@@ -27,6 +27,18 @@ func queryLogParams(q model.MatchQuery) []any {
 	return []any{"address", q.Address, "pref", q.Pref, "category", q.Category, "limit", q.Limit}
 }
 
+// sendMatchQueryError maps a match/geocode pipeline error to its response:
+// data missing from the cache is 503, anything else is logged and answered
+// with 500.
+func sendMatchQueryError(c *gin.Context, msg, event string, err error, query model.MatchQuery) {
+	if errors.Is(err, matching.ErrDataUnavailable) {
+		c.JSON(http.StatusServiceUnavailable, errorResponse(err.Error()))
+		return
+	}
+	logHandlerError(msg, event, err, queryLogParams(query)...)
+	sendInternalServerError(c)
+}
+
 // setMatchLevelLog records the top feature's match level for access logging.
 func setMatchLevelLog(c *gin.Context, level model.MatchLevel) {
 	c.Set(ctxKeyMatchLevel, string(level))
@@ -46,8 +58,7 @@ func (s *GinServer) GeocodeHandler(c *gin.Context) {
 
 	result, err := matching.Geocode(c.Request.Context(), s.matcher, s.repo, query)
 	if err != nil {
-		logHandlerError("geocode request failed", "geocode", err, queryLogParams(query)...)
-		sendInternalServerError(c)
+		sendMatchQueryError(c, "geocode request failed", "geocode", err, query)
 		return
 	}
 
@@ -127,8 +138,7 @@ func (s *GinServer) MatchHandler(c *gin.Context) {
 
 	result, err := s.matcher.Match(c.Request.Context(), query)
 	if err != nil {
-		logHandlerError("match request failed", "match", err, queryLogParams(query)...)
-		sendInternalServerError(c)
+		sendMatchQueryError(c, "match request failed", "match", err, query)
 		return
 	}
 

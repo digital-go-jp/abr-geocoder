@@ -108,10 +108,22 @@ func (n *Impl) normalizeByCategory(ctx context.Context, nctx *normalizeContext, 
 	case model.CategoryBasic:
 		return n.handleFallback(ctx, nctx)
 	case model.CategoryResidential:
+		if !n.hasResidential {
+			return nil, fmt.Errorf("residential %w", ErrDataUnavailable)
+		}
 		return n.tryTwoStageOrFallback(ctx, nctx, n.tryTwoStageResidential)
 	case model.CategoryParcel:
+		if !n.hasParcel {
+			return nil, fmt.Errorf("parcel %w", ErrDataUnavailable)
+		}
 		return n.tryTwoStageOrFallback(ctx, nctx, n.tryTwoStageParcel)
 	case model.CategoryAll:
+		if !n.hasResidential {
+			return nil, fmt.Errorf("residential %w", ErrDataUnavailable)
+		}
+		if !n.hasParcel {
+			return nil, fmt.Errorf("parcel %w", ErrDataUnavailable)
+		}
 		return n.normalizeAll(ctx, nctx)
 	default:
 		return nil, fmt.Errorf("unknown category: %s", category)

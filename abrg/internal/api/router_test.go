@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"abrg/internal/matching"
 	"abrg/internal/model"
 	"abrg/internal/reverse"
 )
@@ -1129,6 +1130,13 @@ func TestGeocodeHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusInternalServerError,
 			wantErrorField: true,
 		},
+		{
+			name:           "data unavailable maps to 503",
+			query:          "?address=東京都&category=all",
+			mockErr:        fmt.Errorf("residential %w", matching.ErrDataUnavailable),
+			wantStatus:     http.StatusServiceUnavailable,
+			wantErrorField: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1201,6 +1209,13 @@ func TestMatchHandler_Integration(t *testing.T) {
 			query:          "?address=東京都&category=all",
 			mockErr:        errors.New("normalize failed"),
 			wantStatus:     http.StatusInternalServerError,
+			wantErrorField: true,
+		},
+		{
+			name:           "data unavailable maps to 503",
+			query:          "?address=東京都&category=all",
+			mockErr:        fmt.Errorf("parcel %w", matching.ErrDataUnavailable),
+			wantStatus:     http.StatusServiceUnavailable,
 			wantErrorField: true,
 		},
 	}

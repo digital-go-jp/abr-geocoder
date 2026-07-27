@@ -85,7 +85,7 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	}
 
 	if initMatcher {
-		setup.Matcher = matching.NewMatcher(setup.Repo, dbCache.Lookups())
+		setup.Matcher = matching.NewMatcher(setup.Repo, dbCache.Lookups(), cacheCfg.HasResidential(), cacheCfg.HasParcel())
 	}
 
 	inFile, err := os.Open(opts.InputFile)

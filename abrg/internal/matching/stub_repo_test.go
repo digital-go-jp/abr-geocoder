@@ -311,7 +311,7 @@ func newStubLookups() cache.Lookups {
 
 func newStubMatcher() (*Impl, *stubRepo) {
 	repo := newStubRepo()
-	return NewMatcher(repo, newStubLookups()), repo
+	return NewMatcher(repo, newStubLookups(), true, true), repo
 }
 
 // assertFeaturesJSON compares got (marshalled) against the pinned JSON from the

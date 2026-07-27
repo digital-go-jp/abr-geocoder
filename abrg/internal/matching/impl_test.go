@@ -286,7 +286,11 @@ func BenchmarkNormalize(b *testing.B) {
 	if err != nil {
 		b.Skipf("Failed to create cache: %v", err)
 	}
-	normalizer := NewMatcher(repository.NewRepository(c.DB()), c.Lookups())
+	cfg, err := cache.LoadConfig(b.Context(), c.DB())
+	if err != nil {
+		b.Fatalf("load cache config: %v", err)
+	}
+	normalizer := NewMatcher(repository.NewRepository(c.DB()), c.Lookups(), cfg.HasResidential(), cfg.HasParcel())
 
 	queries := []model.MatchQuery{
 		{

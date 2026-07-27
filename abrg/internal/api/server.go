@@ -197,11 +197,11 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 	if cfg.Cache != nil {
 		repo := repository.NewRepository(cfg.Cache.DB())
 		server.repo = repo
-		server.matcher = matching.NewMatcher(repo, cfg.Cache.Lookups())
 		// Data availability follows the build configuration; the presence of
 		// the category tables themselves is verified at cache open.
-		server.reverseGeocoder = reverse.NewReverseGeocoder(repo,
-			cfg.CacheConfig.HasResidential(), cfg.CacheConfig.HasParcel())
+		hasResidential, hasParcel := cfg.CacheConfig.HasResidential(), cfg.CacheConfig.HasParcel()
+		server.matcher = matching.NewMatcher(repo, cfg.Cache.Lookups(), hasResidential, hasParcel)
+		server.reverseGeocoder = reverse.NewReverseGeocoder(repo, hasResidential, hasParcel)
 	}
 
 	registerEndpoints(router, server)
