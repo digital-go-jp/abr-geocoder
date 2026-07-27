@@ -433,20 +433,23 @@ func replaceBanGoEnd(s string) string {
 	return s[:numStart] + s[numStart:banIdx] + "-" + between
 }
 
+// processBanGai splits a N番街 sequence from a following building name, or
+// marks the 番街 boundary with a space when the sequence follows a digit.
+func processBanGai(s string) string {
+	if next := banGaiWithBuilding.ReplaceAllString(s, "${1} ${2}"); next != s {
+		return next
+	}
+	loc := banGai.FindStringIndex(s)
+	if loc != nil && loc[0] > 0 && char.IsASCIIDigit(s[loc[0]-1]) {
+		return banGai.ReplaceAllString(s, "${1}番街 ")
+	}
+	return s
+}
+
 func processBan(s, original string) string {
 	// N番街, N番先 patterns - must come first (番屋敷, 番戸, 番館 are kept as-is by banBuilding exclusion)
 	if strings.Contains(s, "番街") {
-		if next := banGaiWithBuilding.ReplaceAllString(s, "${1} ${2}"); next != s {
-			s = next
-		} else {
-			loc := banGai.FindStringIndex(s)
-			if loc != nil && loc[0] > 0 {
-				prevChar := s[loc[0]-1]
-				if char.IsASCIIDigit(prevChar) {
-					s = banGai.ReplaceAllString(s, "${1}番街 ")
-				}
-			}
-		}
+		s = processBanGai(s)
 	}
 	if strings.Contains(s, "番先") {
 		s = banSakiNotEnd.ReplaceAllString(s, "${1} ${2}")
