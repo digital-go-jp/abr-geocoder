@@ -26,7 +26,7 @@ type InitOptions struct {
 	Category  string
 	EnablePos bool
 	Force     bool   // Skip confirmation for existing data
-	Config    string // Config file path (geocoder or full)
+	Profile   string // Embedded import config profile name
 }
 
 // NewInitCmd creates a new init command
@@ -56,32 +56,17 @@ func NewInitCmd() *cobra.Command {
   # Enable position data
   abrdb init --pref 10 --pos
 
-  # Use custom config file
-  abrdb init --pref 10 --config /path/to/config.yaml`,
+  # Import all ABR columns instead of the geocoder subset
+  abrdb init --pref 10 --profile full`,
 		RunE: WithServices(func(ctx context.Context, sc *ServiceContainer) error {
-			// Read config: use embedded default or custom file
-			var configYAML []byte
-			var err error
-			if opts.Config == "" {
-				configYAML, err = schema.ProfileYAML(schema.DefaultProfile)
-				if err != nil {
-					return err
-				}
-			} else {
-				configYAML, err = os.ReadFile(opts.Config)
-				if err != nil {
-					return fmt.Errorf("read config file: %w", err)
-				}
-			}
-
-			importCfg, err := schema.ParseImportConfig(configYAML)
+			importCfg, err := schema.LoadProfile(opts.Profile)
 			if err != nil {
-				return fmt.Errorf("parse import config: %w", err)
+				return err
 			}
 			ddl := importCfg.GenerateDDL()
 
 			migrator := postgres.NewMigrator(sc.QueryExecutor, ddl)
-			return runInit(ctx, sc.QueryExecutor, migrator, opts, string(configYAML))
+			return runInit(ctx, sc.QueryExecutor, migrator, opts)
 		}),
 	}
 
@@ -99,12 +84,15 @@ func NewInitCmd() *cobra.Command {
 		"Enable position data processing. Env: ABRDB_POS")
 
 	cmd.Flags().BoolVar(&opts.Force, "force", false, "Skip confirmation prompt for existing data")
-	cmd.Flags().StringVar(&opts.Config, "config", "", "Path to custom import config YAML file")
+
+	cmd.Flags().StringVar(&opts.Profile, "profile",
+		env.GetEnv("ABRDB_PROFILE", schema.DefaultProfile),
+		fmt.Sprintf("Embedded import config profile (%s). Env: ABRDB_PROFILE", strings.Join(schema.ProfileNames(), ", ")))
 
 	return cmd
 }
 
-func runInit(ctx context.Context, executor *db.QueryExecutor, migrator interface{ RunMigrations(context.Context) error }, opts *InitOptions, configYAML string) error {
+func runInit(ctx context.Context, executor *db.QueryExecutor, migrator interface{ RunMigrations(context.Context) error }, opts *InitOptions) error {
 	// Validate inputs before running migrations: migrations drop and recreate
 	// tables, so invalid input must not destroy existing data.
 	if _, err := util.ParsePref(opts.Pref); err != nil {
@@ -139,7 +127,7 @@ func runInit(ctx context.Context, executor *db.QueryExecutor, migrator interface
 	}
 
 	// Save configuration to database - keep original inputs (group name and raw pref)
-	if err := postgres.SaveInitConfig(ctx, executor, opts.Pref, opts.Category, opts.EnablePos, configYAML); err != nil {
+	if err := postgres.SaveInitConfig(ctx, executor, opts.Pref, opts.Category, opts.EnablePos, opts.Profile); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}
 
@@ -157,6 +145,8 @@ func runInit(ctx context.Context, executor *db.QueryExecutor, migrator interface
 	fmt.Fprintf(os.Stderr, "  Category: %s\n", opts.Category)
 
 	fmt.Fprintf(os.Stderr, "  Position: %s\n", onOff(opts.EnablePos))
+
+	fmt.Fprintf(os.Stderr, "  Profile: %s\n", opts.Profile)
 
 	return nil
 }

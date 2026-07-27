@@ -38,7 +38,7 @@ func TestScanABRDBConfig(t *testing.T) {
 		{KeyEnabledPref, "all"},
 		{KeyEnabledCategory, "all"},
 		{KeyEnabledPos, "true"},
-		{KeyImportConfig, "categories: []"},
+		{KeyImportConfigProfile, "default"},
 		{"unknown_key", "ignored"},
 	}}
 
@@ -48,11 +48,11 @@ func TestScanABRDBConfig(t *testing.T) {
 	}
 
 	want := ABRDBConfig{
-		Version:          "3.0.13",
-		EnabledPref:      "all",
-		EnabledCategory:  "all",
-		EnabledPos:       "true",
-		ImportConfigYAML: "categories: []",
+		Version:             "3.0.13",
+		EnabledPref:         "all",
+		EnabledCategory:     "all",
+		EnabledPos:          "true",
+		ImportConfigProfile: "default",
 	}
 	if *got != want {
 		t.Errorf("ScanABRDBConfig() = %+v, want %+v", *got, want)

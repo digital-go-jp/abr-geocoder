@@ -6,5 +6,7 @@ const (
 	KeyEnabledPref     = "enabled_pref"
 	KeyEnabledCategory = "enabled_category"
 	KeyEnabledPos      = "enabled_pos"
-	KeyImportConfig    = "import_config"
+	// KeyImportConfigProfile names the embedded import config profile chosen at
+	// `abrdb init`; the YAML itself is resolved from the abrdb binary.
+	KeyImportConfigProfile = "import_config_profile"
 )

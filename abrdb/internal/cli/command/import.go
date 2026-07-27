@@ -71,17 +71,19 @@ Use --force to skip change detection and import immediately.`,
 				return fmt.Errorf("load config from database: %w", err)
 			}
 			switch {
-			case importConfig.ImportConfigYAML == "":
-				return errors.New("import config not found in database: run 'abrdb init' first")
+			case importConfig.Profile == "":
+				return errors.New("import config profile not found in database: run 'abrdb init' first")
 			case len(importConfig.EnabledPref) == 0:
 				return errors.New("enabled_pref not configured: run 'abrdb init' first")
 			case len(importConfig.EnabledCategory) == 0:
 				return errors.New("enabled_category not configured: run 'abrdb init' first")
 			}
 
-			importCfg, err := schema.ParseImportConfig([]byte(importConfig.ImportConfigYAML))
+			// The database names the profile; the config itself is embedded in
+			// this binary, so config changes take effect on binary update.
+			importCfg, err := schema.LoadProfile(importConfig.Profile)
 			if err != nil {
-				return fmt.Errorf("parse import config: %w", err)
+				return fmt.Errorf("resolve import config profile: %w: run 'abrdb init' to reinitialize", err)
 			}
 			categoryInfoMap := importCfg.ToCategoryInfoMap()
 

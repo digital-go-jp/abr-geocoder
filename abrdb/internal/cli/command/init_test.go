@@ -9,11 +9,12 @@ import (
 
 func TestNewInitCmd_EnvVars(t *testing.T) {
 	tests := []struct {
-		name     string
-		envVars  map[string]string
-		wantPref string
-		wantCats string
-		wantPos  bool
+		name        string
+		envVars     map[string]string
+		wantPref    string
+		wantCats    string
+		wantPos     bool
+		wantProfile string
 	}{
 		{
 			name:     "defaults when no env",
@@ -21,6 +22,16 @@ func TestNewInitCmd_EnvVars(t *testing.T) {
 			wantPref: "all",
 			wantCats: "basic",
 			wantPos:  false,
+		},
+		{
+			name: "reads ABRDB_PROFILE from env",
+			envVars: map[string]string{
+				"ABRDB_PROFILE": "full",
+			},
+			wantPref:    "all",
+			wantCats:    "basic",
+			wantPos:     false,
+			wantProfile: "full",
 		},
 		{
 			name: "reads ABRDB_PREF from env",
@@ -77,6 +88,7 @@ func TestNewInitCmd_EnvVars(t *testing.T) {
 			_ = os.Unsetenv("ABRDB_PREF")
 			_ = os.Unsetenv("ABRDB_CATEGORY")
 			_ = os.Unsetenv("ABRDB_POS")
+			_ = os.Unsetenv("ABRDB_PROFILE")
 			for k, v := range tt.envVars {
 				_ = os.Setenv(k, v)
 			}
@@ -84,6 +96,7 @@ func TestNewInitCmd_EnvVars(t *testing.T) {
 				_ = os.Unsetenv("ABRDB_PREF")
 				_ = os.Unsetenv("ABRDB_CATEGORY")
 				_ = os.Unsetenv("ABRDB_POS")
+				_ = os.Unsetenv("ABRDB_PROFILE")
 			})
 
 			// Create command and check flag defaults
@@ -92,6 +105,7 @@ func TestNewInitCmd_EnvVars(t *testing.T) {
 			pref, _ := cmd.Flags().GetString("pref")
 			cats, _ := cmd.Flags().GetString("category")
 			pos, _ := cmd.Flags().GetBool("pos")
+			profile, _ := cmd.Flags().GetString("profile")
 
 			if pref != tt.wantPref {
 				t.Errorf("pref = %q, want %q", pref, tt.wantPref)
@@ -101,6 +115,13 @@ func TestNewInitCmd_EnvVars(t *testing.T) {
 			}
 			if pos != tt.wantPos {
 				t.Errorf("pos = %v, want %v", pos, tt.wantPos)
+			}
+			wantProfile := tt.wantProfile
+			if wantProfile == "" {
+				wantProfile = "default"
+			}
+			if profile != wantProfile {
+				t.Errorf("profile = %q, want %q", profile, wantProfile)
 			}
 		})
 	}
@@ -132,7 +153,7 @@ func TestRunInit_ValidatesBeforeMigrations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &fakeMigrator{}
-			err := runInit(t.Context(), nil, m, &tt.opts, "")
+			err := runInit(t.Context(), nil, m, &tt.opts)
 			if err == nil {
 				t.Fatal("runInit() = nil, want validation error")
 			}
@@ -148,7 +169,7 @@ func TestRunInit_ValidatesBeforeMigrations(t *testing.T) {
 func TestRunInit_MigrationErrorAfterValidation(t *testing.T) {
 	sentinel := errors.New("migration boom")
 	m := &fakeMigrator{err: sentinel}
-	err := runInit(t.Context(), nil, m, &InitOptions{Pref: "13", Category: "basic", Force: true}, "")
+	err := runInit(t.Context(), nil, m, &InitOptions{Pref: "13", Category: "basic", Force: true})
 	if !errors.Is(err, sentinel) {
 		t.Fatalf("runInit() = %v, want wrapped %v", err, sentinel)
 	}

@@ -8,11 +8,11 @@ const TableABRDBConfig = "abrdb_config"
 
 // ABRDBConfig holds the settings stored in the abrdb_config table.
 type ABRDBConfig struct {
-	Version          string
-	EnabledPref      string
-	EnabledCategory  string
-	EnabledPos       string
-	ImportConfigYAML string
+	Version             string
+	EnabledPref         string
+	EnabledCategory     string
+	EnabledPos          string
+	ImportConfigProfile string
 }
 
 // ConfigRows is the minimal row iterator satisfied by both pgx.Rows and
@@ -41,8 +41,8 @@ func ScanABRDBConfig(rows ConfigRows) (*ABRDBConfig, error) {
 			config.EnabledCategory = value
 		case KeyEnabledPos:
 			config.EnabledPos = value
-		case KeyImportConfig:
-			config.ImportConfigYAML = value
+		case KeyImportConfigProfile:
+			config.ImportConfigProfile = value
 		}
 	}
 	if err := rows.Err(); err != nil {
