@@ -81,9 +81,19 @@ func (e *ETL) Close() error {
 func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath string, posPath string) error {
 	suffix := "_" + strings.TrimSuffix(filepath.Base(textPath), ".csv.zip")
 
-	defer e.cleanupTempTables(context.Background(), suffix)
+	// TEMP tables are connection-local in DuckDB and survive the commit, so
+	// the whole load runs on one pinned connection and the deferred DROP uses
+	// that same connection; a pool-level DROP would land on an arbitrary
+	// connection and silently miss them, accumulating them in memory.
+	conn, err := e.db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire duckdb connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+	// WithoutCancel keeps the cleanup working after a mid-import cancellation.
+	defer cleanupTempTables(context.WithoutCancel(ctx), conn, suffix)
 
-	tx, err := e.db.BeginTx(ctx, nil)
+	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
@@ -123,10 +133,10 @@ func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, t
 	return err
 }
 
-func (e *ETL) cleanupTempTables(ctx context.Context, suffix string) {
+func cleanupTempTables(ctx context.Context, conn *sql.Conn, suffix string) {
 	tn := generateTableNames(suffix)
 	for _, table := range []string{tn.Text, tn.Pos, tn.Transformed} {
-		_, _ = e.db.ExecContext(ctx, "DROP TABLE IF EXISTS "+table)
+		_, _ = conn.ExecContext(ctx, "DROP TABLE IF EXISTS "+table)
 	}
 }
 
