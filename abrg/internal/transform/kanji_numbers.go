@@ -46,6 +46,25 @@ func kanjiMultiplier(r rune) (int, bool) {
 	return v, ok
 }
 
+// isPositionStructureStart reports whether runes[start] begins a
+// position-value structure (倍数構造): a multiplier alone (十, 百, 千), or a
+// digit immediately followed by a multiplier (二十). A digit alone or two
+// digits in a row (一二) is a plain digit sequence, not a position structure.
+// Non-multiplier characters after a multiplier merely stop the structure
+// later: 千代 still starts one (千 → 1000, 代 stops processing).
+func isPositionStructureStart(runes []rune, start int) bool {
+	r := runes[start]
+	if _, isDigit := kanjiDigitValue(r); isDigit {
+		if start+1 >= len(runes) {
+			return false // digit alone
+		}
+		_, isMult := kanjiMultiplier(runes[start+1])
+		return isMult
+	}
+	_, isMult := kanjiMultiplier(r)
+	return isMult
+}
+
 // evalKanjiNumber evaluates a kanji number sequence starting at position start in runes.
 // It processes position-value structures like 百二十三 (323), 十二 (12), 千二百 (1200), 一万二千 (12000).
 // Supports multipliers: 億 (100000000), 万 (10000), 千 (1000), 百 (100), 十 (10).
@@ -63,39 +82,7 @@ func evalKanjiNumber(runes []rune, start int) (int, int) {
 	if start >= len(runes) {
 		return 0, 0
 	}
-
-	r := runes[start]
-
-	// evalKanjiNumber processes position-structure (倍数構造) patterns:
-	// Valid forms:
-	//   - Multiplier ONLY: 十, 百, 千 → (10, 1), (100, 1), (1000, 1)
-	//   - Digit + Multiplier: 二十 → (20, 2)
-	//   - Multiplier + Digit + Multiplier + Digit: 百二十三 → (123, 5)
-	//
-	// Invalid forms (return (0, 0)):
-	//   - Digit ONLY: 九 → (0, 0)
-	//   - Multiple Digits in sequence: 一二 → (0, 0), 九九十 (at start) → (0, 0)
-	//
-	// Key rule: If starting with a digit, the NEXT character must be a multiplier.
-	// Otherwise, it's a simple digit sequence, not a position-structure.
-	// Note: Non-multiplier characters following a multiplier stop the position-structure.
-	// E.g., 千代 → (1000, 1) where 千 converts to 1000 and 代 stops processing.
-
-	if _, isDigit := kanjiDigitValue(r); isDigit {
-		// Starting with a digit: next must be a multiplier for this to be position-structure
-		if start+1 >= len(runes) {
-			return 0, 0 // digit alone
-		}
-		next := runes[start+1]
-		if _, isMult := kanjiMultiplier(next); !isMult {
-			return 0, 0 // digit followed by non-multiplier: simple digit sequence
-		}
-		// digit + multiplier: valid position-structure, continue processing
-	} else if _, isMult := kanjiMultiplier(r); isMult {
-		// Starting with a multiplier (千, 百, 十)
-		// All multipliers are processed equally
-	} else {
-		// Not a digit or multiplier
+	if !isPositionStructureStart(runes, start) {
 		return 0, 0
 	}
 
