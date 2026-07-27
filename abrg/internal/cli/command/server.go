@@ -57,16 +57,12 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		"pref", cacheCfg.EnabledPref,
 		"pos", cacheCfg.PosEnabled())
 
-	server, err := api.NewGinServer(ctx, api.ServerConfig{
+	server := api.NewGinServer(api.ServerConfig{
 		APIVersion:      version.Version,
 		CORSAllowOrigin: cfg.Server.CORSAllowOrigin,
 		Cache:           dbCache,
 		CacheConfig:     *cacheCfg,
 	})
-	if err != nil {
-		_ = dbCache.Close()
-		return serverInitError(err)
-	}
 	defer func() {
 		if err := server.Close(); err != nil {
 			slog.Warn("failed to close server resources", "event", "server_close", "error", err)
@@ -83,16 +79,6 @@ func runServer(ctx context.Context, cacheFlag string) error {
 	}
 
 	return runHTTPServer(ctx, srv)
-}
-
-// serverInitError converts a server initialization failure into the command
-// result. Cancellation (Ctrl-C / SIGTERM) during initialization is a clean
-// shutdown and yields nil; any other error is wrapped.
-func serverInitError(err error) error {
-	if errors.Is(err, context.Canceled) {
-		return nil
-	}
-	return fmt.Errorf("failed to initialize server: %w", err)
 }
 
 // runHTTPServer runs an http.Server until ctx is cancelled, then performs

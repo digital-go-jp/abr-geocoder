@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"abr.local/common/db"
+
+	"abrg/internal/model"
 )
 
 // KeySchemaVersion is the cache_config key holding the DuckDB cache schema
@@ -23,6 +25,18 @@ type Config struct {
 // PosEnabled reports whether the cache was built with position data enabled.
 func (c *Config) PosEnabled() bool {
 	return c.EnabledPos == "true"
+}
+
+// HasResidential reports whether the cache was built with residential
+// (rsdtdsp) data. enabled_category is the source of truth for data
+// availability; table presence is verified once at cache open.
+func (c *Config) HasResidential() bool {
+	return c.EnabledCategory == model.All || c.EnabledCategory == string(model.CategoryResidential)
+}
+
+// HasParcel reports whether the cache was built with parcel data.
+func (c *Config) HasParcel() bool {
+	return c.EnabledCategory == model.All || c.EnabledCategory == string(model.CategoryParcel)
 }
 
 // loadConfigFromRows scans config key-value rows into a Config struct.

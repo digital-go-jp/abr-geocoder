@@ -37,16 +37,14 @@ type processorOptions struct {
 
 // processorSetup holds initialized components for processing commands.
 type processorSetup struct {
-	DB              *sql.DB
-	Repo            *repository.DB
-	Matcher         matching.Matcher
-	InFile          *os.File
-	OutFile         *os.File
-	Monitor         progress.Monitor
-	DBVersion       string
-	EnabledCategory string
-	EnabledPref     string
-	cleanup         []func()
+	DB       *sql.DB
+	Repo     *repository.DB
+	Matcher  matching.Matcher
+	InFile   *os.File
+	OutFile  *os.File
+	Monitor  progress.Monitor
+	CacheCfg *cache.Config
+	cleanup  []func()
 }
 
 // Cleanup releases all resources in reverse order.
@@ -74,16 +72,14 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 		setup.Cleanup()
 		return nil, fmt.Errorf("failed to load cache config: %w", err)
 	}
-	setup.DBVersion = cacheCfg.DBVersion
-	setup.EnabledCategory = cacheCfg.EnabledCategory
-	setup.EnabledPref = cacheCfg.EnabledPref
+	setup.CacheCfg = cacheCfg
 
 	slog.Debug("cache configuration",
 		"event", "cache_config",
-		"pref", setup.EnabledPref,
-		"category", setup.EnabledCategory)
+		"pref", cacheCfg.EnabledPref,
+		"category", cacheCfg.EnabledCategory)
 
-	if err := validateOptions(opts, setup.EnabledCategory, setup.EnabledPref); err != nil {
+	if err := validateOptions(opts, cacheCfg.EnabledCategory, cacheCfg.EnabledPref); err != nil {
 		setup.Cleanup()
 		return nil, err
 	}
@@ -125,14 +121,14 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 
 func (s *processorSetup) resolveCategory(category string) string {
 	if category == "" {
-		return s.EnabledCategory
+		return s.CacheCfg.EnabledCategory
 	}
 	return category
 }
 
 // setResultInfo sets common result info fields.
 func (s *processorSetup) setResultInfo(info *model.ResultInfo) {
-	info.SetMeta(version.Version, s.DBVersion, s.EnabledCategory, s.EnabledPref)
+	info.SetMeta(version.Version, s.CacheCfg.DBVersion, s.CacheCfg.EnabledCategory, s.CacheCfg.EnabledPref)
 }
 
 // registerCommonFlags registers common flags for processing commands.
