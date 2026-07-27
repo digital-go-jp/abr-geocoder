@@ -502,3 +502,28 @@ func TestImportCategoryBatch_MergesBacklogWithCurrentRun(t *testing.T) {
 		t.Errorf("AnalyzeTables calls = %v, want [%v]", store.analyzed, want)
 	}
 }
+
+// TestImportCategoryBatch_OrphanPosOnlyIsNotAnUpdate: a pending pos file
+// without its text counterpart (known ABR feed state) forms no importable
+// pair - the table is neither written nor analyzed.
+func TestImportCategoryBatch_OrphanPosOnlyIsNotAnUpdate(t *testing.T) {
+	cat := model.FileCategory("a")
+	loader := &fakeLoader{}
+	store := &fakeStore{pending: map[model.FileCategory][]*model.File{
+		cat: {posFile(cat, "a/221023", "orphan_pos.zip")},
+	}}
+	svc := New(loader, store, noopMonitor{}, downloadDir, map[string]*schema.CategoryInfo{
+		"a": {TableName: "mt_parcel_unified"},
+	})
+
+	times, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{cat})
+	if err != nil {
+		t.Fatalf("ImportCategoryBatch: %v", err)
+	}
+	if len(loader.calls) != 0 || len(store.indexed) != 0 || len(times) != 0 {
+		t.Errorf("orphan pos must not import: loads=%d indexed=%v times=%v", len(loader.calls), store.indexed, times)
+	}
+	if len(store.analyzed) != 0 || len(store.pendingAnalyze) != 0 {
+		t.Errorf("orphan pos must not trigger ANALYZE: analyzed=%v pendingAnalyze=%v", store.analyzed, store.pendingAnalyze)
+	}
+}

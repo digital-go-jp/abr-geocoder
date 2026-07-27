@@ -96,6 +96,13 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 		pairs := catalog.GroupFilesByPairKey(pendingFiles)
 		slog.Debug("importing file pairs", "event", "import_pairs", "category", cat, "pair_count", len(pairs))
 
+		// Orphan pos files without a text counterpart (a known ABR feed state)
+		// form no importable pair: nothing is written, so the table must not
+		// be marked updated or re-analyzed.
+		if len(pairs) == 0 {
+			continue
+		}
+
 		// Initial build into an empty table has nothing to delete. Skipping the
 		// deletes also lets the lg_code index be created after the bulk insert
 		// (below) instead of being maintained row by row during it.
