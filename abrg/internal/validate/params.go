@@ -63,3 +63,19 @@ func ValidatePref(prefStr, enabledPref string) (string, error) {
 
 	return prefStr, nil
 }
+
+// MinLimit and MaxLimit bound the number of results a single query may return.
+// The gin binding tag on baseRequest.Limit in internal/api declares the same
+// range and cannot reference these constants, since struct tags are literals.
+const (
+	MinLimit = 1
+	MaxLimit = 5
+)
+
+// ValidateLimit validates that limit is within the supported range.
+func ValidateLimit(limit int) error {
+	if limit < MinLimit || limit > MaxLimit {
+		return fmt.Errorf("invalid limit '%d': must be between %d and %d", limit, MinLimit, MaxLimit)
+	}
+	return nil
+}

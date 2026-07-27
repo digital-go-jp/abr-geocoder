@@ -58,6 +58,10 @@ func (g *ReverseGeocoder) Reverse(ctx context.Context, query model.ReverseQuery)
 		return nil, err
 	}
 
+	if query.Limit <= 0 {
+		query.Limit = 1
+	}
+
 	// Find nearest addresses based on category level
 	features, err := g.findNearestAddresses(ctx, query)
 	if err != nil {

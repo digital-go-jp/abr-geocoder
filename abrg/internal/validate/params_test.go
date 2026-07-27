@@ -245,3 +245,27 @@ func TestCategoryCompatible(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateLimit(t *testing.T) {
+	tests := []struct {
+		name    string
+		limit   int
+		wantErr bool
+	}{
+		{"negative is rejected", -1, true},
+		{"zero is rejected", 0, true},
+		{"lower bound is accepted", 1, false},
+		{"upper bound is accepted", 5, false},
+		{"above upper bound is rejected", 6, true},
+		{"far above upper bound is rejected", 1000, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateLimit(tt.limit)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateLimit(%d) error = %v, wantErr %v", tt.limit, err, tt.wantErr)
+			}
+		})
+	}
+}

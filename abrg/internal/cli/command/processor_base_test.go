@@ -7,6 +7,29 @@ import (
 	"abrg/internal/model"
 )
 
+// TestValidateOptionsLimit pins that validateOptions is wired to
+// validate.ValidateLimit. The bounds themselves are covered by
+// validate.TestValidateLimit.
+func TestValidateOptionsLimit(t *testing.T) {
+	tests := []struct {
+		name    string
+		limit   int
+		wantErr bool
+	}{
+		{"in-range limit is accepted", 1, false},
+		{"out-of-range limit is rejected", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateOptions(processorOptions{Limit: tt.limit}, "all", "all")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateOptions(Limit=%d) error = %v, wantErr %v", tt.limit, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestResolveQueryParams(t *testing.T) {
 	tests := []struct {
 		name            string

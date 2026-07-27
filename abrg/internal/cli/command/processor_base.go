@@ -143,13 +143,15 @@ func registerCommonFlags(cmd *cobra.Command, opts *processorOptions) {
 	cmd.Flags().StringVarP(&opts.OutputFile, "output", "o", "", "Output file path (required)")
 	cmd.Flags().StringVarP(&opts.Category, "category", "c", "", "Category (all, basic, rsdtdsp, parcel)")
 	cmd.Flags().StringVarP(&opts.Pref, "pref", "p", "", "Prefecture filter (prefecture code or 'all')")
-	cmd.Flags().IntVarP(&opts.Limit, "limit", "l", 1, "Maximum results per address (1-5)")
+	cmd.Flags().IntVarP(&opts.Limit, "limit", "l", validate.MinLimit,
+		fmt.Sprintf("Maximum results per address (%d-%d)", validate.MinLimit, validate.MaxLimit))
 	cmd.Flags().BoolVarP(&opts.Quiet, "quiet", "q", false, "Suppress progress output")
 	_ = cmd.MarkFlagRequired("input")
 	_ = cmd.MarkFlagRequired("output")
 }
 
-// validateOptions validates category and pref options against the cache configuration.
+// validateOptions validates the category, pref and limit options against the
+// cache configuration.
 func validateOptions(opts processorOptions, enabledCategory, enabledPref string) error {
 	if opts.Category != "" {
 		if _, err := validate.ValidateCategory(opts.Category, enabledCategory); err != nil {
@@ -161,7 +163,7 @@ func validateOptions(opts processorOptions, enabledCategory, enabledPref string)
 			return err
 		}
 	}
-	return nil
+	return validate.ValidateLimit(opts.Limit)
 }
 
 // newDefaultProcessor creates a ParallelProcessor with standard settings.
