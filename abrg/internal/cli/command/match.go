@@ -28,7 +28,7 @@ func NewMatchCmd() *cobra.Command {
 }
 
 func runMatch(ctx context.Context, opts processorOptions) error {
-	setup, err := setupProcessor(ctx, opts, "Matching", true)
+	setup, err := setupProcessor(ctx, opts, "Matching", processorNeeds{Matcher: true})
 	if err != nil {
 		return err
 	}

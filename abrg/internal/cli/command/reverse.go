@@ -37,7 +37,7 @@ Example:
 }
 
 func runReverse(ctx context.Context, opts processorOptions) error {
-	setup, err := setupProcessor(ctx, opts, "Reverse geocoding", false)
+	setup, err := setupProcessor(ctx, opts, "Reverse geocoding", processorNeeds{Pos: true})
 	if err != nil {
 		return err
 	}

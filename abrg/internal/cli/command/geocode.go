@@ -29,7 +29,7 @@ func NewGeocodeCmd() *cobra.Command {
 }
 
 func runGeocode(ctx context.Context, opts processorOptions) error {
-	setup, err := setupProcessor(ctx, opts, "Geocoding", true)
+	setup, err := setupProcessor(ctx, opts, "Geocoding", processorNeeds{Matcher: true, Pos: true})
 	if err != nil {
 		return err
 	}

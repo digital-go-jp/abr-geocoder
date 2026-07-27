@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -58,9 +59,17 @@ func (s *processorSetup) Cleanup() {
 	}
 }
 
+// processorNeeds declares what setupProcessor must build and what the cache
+// must provide for a command to run.
+type processorNeeds struct {
+	// Matcher requests a Matcher instance.
+	Matcher bool
+	// Pos requires the cache to hold position data.
+	Pos bool
+}
+
 // setupProcessor initializes common components for processing commands.
-// If initMatcher is true, the Matcher field is initialized.
-func setupProcessor(ctx context.Context, opts processorOptions, taskName string, initMatcher bool) (*processorSetup, error) {
+func setupProcessor(ctx context.Context, opts processorOptions, taskName string, needs processorNeeds) (*processorSetup, error) {
 	setup := &processorSetup{}
 
 	dbCache, err := cache.NewDuckDBCache(ctx)
@@ -88,9 +97,14 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 		return nil, err
 	}
 
+	if needs.Pos && !cacheCfg.PosEnabled() {
+		setup.Cleanup()
+		return nil, errors.New("this command requires enable_pos=true in the database")
+	}
+
 	setup.resolveQueryParams(opts)
 
-	if initMatcher {
+	if needs.Matcher {
 		setup.Matcher = matching.NewMatcher(setup.Repo, dbCache.Lookups(), cacheCfg.HasResidential(), cacheCfg.HasParcel())
 	}
 

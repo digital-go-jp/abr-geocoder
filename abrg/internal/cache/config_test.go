@@ -2,6 +2,26 @@ package cache
 
 import "testing"
 
+func TestConfigPosEnabled(t *testing.T) {
+	tests := []struct {
+		enabledPos string
+		want       bool
+	}{
+		{"true", true},
+		{"false", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		t.Run("enabled_pos "+tt.enabledPos, func(t *testing.T) {
+			cfg := &Config{EnabledPos: tt.enabledPos}
+			if got := cfg.PosEnabled(); got != tt.want {
+				t.Errorf("PosEnabled() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestConfigDataAvailability(t *testing.T) {
 	tests := []struct {
 		enabledCategory string
