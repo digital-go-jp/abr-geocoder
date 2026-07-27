@@ -11,17 +11,6 @@ func SqlEscape(s string) string {
 	return strings.ReplaceAll(s, "'", "''")
 }
 
-// Used by multiple binaries (abrg, abrdb) to ensure
-// consistent and safe SQL generation across all tools.
-//
-// Security notes:
-// - Port value is validated: must be numeric and within range 1-65535
-// - String parameters are properly escaped using SqlEscape (single quotes doubled)
-// - Invalid port values are silently omitted (DuckDB will use default if needed)
-// - Out-of-range ports (e.g., -1, 0, 65536, 99999) are rejected
-//
-// DuckDB limitation: CREATE SECRET does not support parameterized queries,
-// so manual string escaping is necessary.
 // BuildPostgresAttachSQL returns the ATTACH statement that links the "pg"
 // alias to PostgreSQL through the named secret. sslmode rides on the ATTACH
 // connection string because DuckDB's postgres SECRET type does not accept
@@ -38,6 +27,17 @@ func BuildPostgresAttachSQL(sslMode, secretName string, readOnly bool) string {
 	return fmt.Sprintf("ATTACH '%s' AS pg (%s)", conn, options)
 }
 
+// BuildPostgresSecretSQL builds the CREATE SECRET statement shared by abrg
+// and abrdb so both binaries generate consistent and safe SQL.
+//
+// Security notes:
+// - Port value is validated: must be numeric and within range 1-65535
+// - String parameters are properly escaped using SqlEscape (single quotes doubled)
+// - Invalid port values are silently omitted (DuckDB will use default if needed)
+// - Out-of-range ports (e.g., -1, 0, 65536, 99999) are rejected
+//
+// DuckDB limitation: CREATE SECRET does not support parameterized queries,
+// so manual string escaping is necessary.
 func BuildPostgresSecretSQL(cfg DBConfig, secretName string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "CREATE OR REPLACE SECRET %s (TYPE postgres", secretName)
