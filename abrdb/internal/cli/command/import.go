@@ -141,7 +141,11 @@ Use --force to skip change detection and import immediately.`,
 				}
 				defer func() { _ = services.etl.Close() }()
 
-				return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, importConfig.EnabledCategory, false, true)
+				if err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, importConfig.EnabledCategory, false, true); err != nil {
+					return err
+				}
+				warnOrphanPosFiles(context.WithoutCancel(ctx), store)
+				return nil
 			}
 
 			// Default: check for changes first, import only if updates exist
@@ -288,8 +292,6 @@ func runImportWithChangeDetection(
 		return fmt.Errorf("get pending analyze tables: %w", err)
 	}
 
-	warnOrphanPosFiles(ctx, store)
-
 	// Determine if there's anything to do. A non-empty analyze backlog counts
 	// as pending work even without file changes, so a failed ANALYZE is
 	// retried by the next scheduled run instead of being dropped.
@@ -298,6 +300,7 @@ func runImportWithChangeDetection(
 	hasPendingAnalyze := len(pendingAnalyze) > 0
 
 	if !hasS3Changes && !hasPendingWork && !hasPendingAnalyze {
+		warnOrphanPosFiles(ctx, store)
 		slog.Info("no changes detected", "event", "import")
 		fmt.Println("No changes detected.")
 		return nil
@@ -338,7 +341,13 @@ func runImportWithChangeDetection(
 	}
 	defer func() { _ = services.etl.Close() }()
 
-	return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork || hasPendingAnalyze, false)
+	if err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork || hasPendingAnalyze, false); err != nil {
+		return err
+	}
+	// Warn after the pipeline so orphans first registered by this run's
+	// catalog scan are reported now instead of on the next run.
+	warnOrphanPosFiles(context.WithoutCancel(ctx), store)
+	return nil
 }
 
 // executeImportPipeline runs the full import pipeline: scan → download → import.
