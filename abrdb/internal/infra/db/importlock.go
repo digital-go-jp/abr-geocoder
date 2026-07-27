@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -48,9 +49,16 @@ func (q *QueryExecutor) AcquireImportLock(ctx context.Context) (*ImportLock, err
 	return &ImportLock{conn: conn}, nil
 }
 
-// Release unlocks and returns the connection to the pool. If the unlock query
-// fails, the connection is closed instead, which drops the session lock with it.
+// Release unlocks and returns the connection to the pool. The unlock runs
+// independently of the caller's cancellation but with its own short deadline,
+// so a SIGTERM or workflow timeout cannot leave the CLI hanging on an
+// unresponsive server. If the unlock fails, the connection is closed instead
+// and pgxpool discards it on Release; ending the session makes the server
+// release the advisory lock with it.
 func (l *ImportLock) Release(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+
 	if _, err := l.conn.Exec(ctx, "SELECT pg_advisory_unlock($1, $2)", importLockClassID, importLockObjID); err != nil {
 		_ = l.conn.Conn().Close(ctx)
 	}

@@ -122,7 +122,7 @@ Use --force to skip change detection and import immediately.`,
 				if err != nil {
 					return err
 				}
-				defer lock.Release(context.WithoutCancel(ctx))
+				defer lock.Release(ctx)
 
 				services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
 				if err != nil {
@@ -298,7 +298,7 @@ func runImportWithChangeDetection(
 	if err != nil {
 		return err
 	}
-	defer lock.Release(context.WithoutCancel(ctx))
+	defer lock.Release(ctx)
 
 	services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
 	if err != nil {
