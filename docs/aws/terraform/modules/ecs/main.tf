@@ -126,6 +126,14 @@ variable "log_retention_days" {
   description = "CloudWatch Logs retention in days"
 }
 
+variable "cors_allow_origin" {
+  # Must match the value given to the API Gateway module: preflight is answered
+  # there while the response to the actual GET comes from this service.
+  type        = string
+  default     = "*"
+  description = "CORS Access-Control-Allow-Origin value the serve task returns"
+}
+
 variable "log_level" {
   type        = string
   default     = "debug"
@@ -290,7 +298,8 @@ resource "aws_ecs_task_definition" "abrg" {
       environment = [
         { name = "PORT", value = "3000" },
         { name = "GIN_MODE", value = "release" },
-        { name = "CACHE_PATH", value = "/tmp/abrg.duckdb" }
+        { name = "CACHE_PATH", value = "/tmp/abrg.duckdb" },
+        { name = "CORS_ALLOW_ORIGIN", value = var.cors_allow_origin }
       ]
 
       # Use ephemeral storage instead of tmpfs (cache file is ~6 GB)

@@ -32,10 +32,10 @@ const (
 var _ io.Closer = (*GinServer)(nil)
 
 type ServerConfig struct {
-	APIVersion      string
-	CORSAllowOrigin string
-	Cache           *cache.DuckDBCache // Pre-created cache for dependency injection
-	CacheConfig     cache.Config       // Configuration loaded from the cache
+	APIVersion       string
+	CORSAllowOrigins []string
+	Cache            *cache.DuckDBCache // Pre-created cache for dependency injection
+	CacheConfig      cache.Config       // Configuration loaded from the cache
 }
 
 type reverser interface {
@@ -55,16 +55,27 @@ type GinServer struct {
 	cache           *cache.DuckDBCache
 }
 
-func configureCORS(r *gin.Engine, allowOrigin string) {
-	if allowOrigin == "" {
-		r.Use(cors.Default())
-	} else {
-		r.Use(cors.New(cors.Config{
-			AllowOrigins: []string{allowOrigin},
-			AllowMethods: []string{"GET", "OPTIONS"},
-			AllowHeaders: []string{"Origin", "Content-Type", "X-API-Key"},
-		}))
+// allowEveryOrigin is what an unset CORS configuration means. It matches the
+// default the config package reports, restated here so this package does not
+// depend on it.
+const allowEveryOrigin = "*"
+
+// configureCORS allows the given origins, treating an empty list as every
+// origin.
+//
+// The library's own defaults are deliberately not used for that case. Their
+// allowed headers omit X-API-Key, and a frontend built against the deployed
+// API sends that header whether or not the instance it is pointed at checks
+// it, so the preflight of a browser calling the service directly would fail.
+func configureCORS(r *gin.Engine, allowOrigins []string) {
+	if len(allowOrigins) == 0 {
+		allowOrigins = []string{allowEveryOrigin}
 	}
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: allowOrigins,
+		AllowMethods: []string{"GET", "OPTIONS"},
+		AllowHeaders: []string{"Origin", "Content-Type", "X-API-Key"},
+	}))
 }
 
 func accessLogFormatter(param gin.LogFormatterParams) string {
@@ -181,7 +192,7 @@ func NewGinServer(cfg ServerConfig) *GinServer {
 		c.JSON(http.StatusMethodNotAllowed, errorResponse("method not allowed"))
 	})
 
-	configureCORS(router, cfg.CORSAllowOrigin)
+	configureCORS(router, cfg.CORSAllowOrigins)
 
 	server := &GinServer{
 		router:          router,

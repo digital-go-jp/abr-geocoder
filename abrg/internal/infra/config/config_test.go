@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"slices"
 	"testing"
 	"time"
 )
@@ -29,18 +30,18 @@ func TestLoad(t *testing.T) {
 	saveEnvVars(t, envKeys)
 
 	tests := []struct {
-		name                string
-		envVars             map[string]string
-		wantPort            string
-		wantCachePath       string
-		wantCORSAllowOrigin string
+		name                 string
+		envVars              map[string]string
+		wantPort             string
+		wantCachePath        string
+		wantCORSAllowOrigins []string
 	}{
 		{
-			name:                "uses defaults when env not set",
-			envVars:             map[string]string{},
-			wantPort:            "3000",
-			wantCachePath:       defaultCachePath(),
-			wantCORSAllowOrigin: "",
+			name:                 "uses defaults when env not set",
+			envVars:              map[string]string{},
+			wantPort:             "3000",
+			wantCachePath:        defaultCachePath(),
+			wantCORSAllowOrigins: []string{"*"},
 		},
 		{
 			name: "uses env vars when set",
@@ -49,18 +50,18 @@ func TestLoad(t *testing.T) {
 				"CACHE_PATH":        "/tmp/cache.duckdb",
 				"CORS_ALLOW_ORIGIN": "https://example.com",
 			},
-			wantPort:            "8080",
-			wantCachePath:       "/tmp/cache.duckdb",
-			wantCORSAllowOrigin: "https://example.com",
+			wantPort:             "8080",
+			wantCachePath:        "/tmp/cache.duckdb",
+			wantCORSAllowOrigins: []string{"https://example.com"},
 		},
 		{
 			name: "partial env - only PORT set",
 			envVars: map[string]string{
 				"PORT": "9000",
 			},
-			wantPort:            "9000",
-			wantCachePath:       defaultCachePath(),
-			wantCORSAllowOrigin: "",
+			wantPort:             "9000",
+			wantCachePath:        defaultCachePath(),
+			wantCORSAllowOrigins: []string{"*"},
 		},
 	}
 
@@ -90,8 +91,62 @@ func TestLoad(t *testing.T) {
 				t.Errorf("Load().Cache.Path = %q, want %q", cfg.Cache.Path, tt.wantCachePath)
 			}
 
-			if cfg.Server.CORSAllowOrigin != tt.wantCORSAllowOrigin {
-				t.Errorf("Load().Server.CORSAllowOrigin = %q, want %q", cfg.Server.CORSAllowOrigin, tt.wantCORSAllowOrigin)
+			if !slices.Equal(cfg.Server.CORSAllowOrigins, tt.wantCORSAllowOrigins) {
+				t.Errorf("Load().Server.CORSAllowOrigins = %q, want %q", cfg.Server.CORSAllowOrigins, tt.wantCORSAllowOrigins)
+			}
+		})
+	}
+}
+
+// TestLoadCORSAllowOrigins covers the comma-separated form, which lets more
+// than one frontend be allowed, and the values that must not leave the list
+// empty: the middleware rejects a configuration allowing no origin at all.
+func TestLoadCORSAllowOrigins(t *testing.T) {
+	saveEnvVars(t, []string{"CORS_ALLOW_ORIGIN"})
+
+	tests := []struct {
+		name  string
+		value string
+		want  []string
+	}{
+		{
+			name:  "unset falls back to the default",
+			value: "",
+			want:  []string{"*"},
+		},
+		{
+			name:  "one origin",
+			value: "https://example.com",
+			want:  []string{"https://example.com"},
+		},
+		{
+			name:  "several origins",
+			value: "https://a.example,https://b.example",
+			want:  []string{"https://a.example", "https://b.example"},
+		},
+		{
+			name:  "spaces and empty entries are ignored",
+			value: " https://a.example , , https://b.example ",
+			want:  []string{"https://a.example", "https://b.example"},
+		},
+		{
+			name:  "a value that leaves nothing falls back to the default",
+			value: " , ",
+			want:  []string{"*"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.value == "" {
+				_ = os.Unsetenv("CORS_ALLOW_ORIGIN")
+			} else {
+				t.Setenv("CORS_ALLOW_ORIGIN", tt.value)
+			}
+
+			got := Load().Server.CORSAllowOrigins
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("CORSAllowOrigins = %q, want %q", got, tt.want)
 			}
 		})
 	}

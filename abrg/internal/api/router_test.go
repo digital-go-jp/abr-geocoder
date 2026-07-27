@@ -875,42 +875,89 @@ func TestPrepareQuery(t *testing.T) {
 	}
 }
 
-// TestConfigureCORS tests the configureCORS function.
-// This test verifies that configureCORS does not panic and properly configures the router.
+// TestConfigureCORS checks the headers the middleware actually returns: the
+// allowed origin is echoed back with Vary so caches do not mix responses, an
+// origin that is not listed is refused, and X-API-Key stays allowed so a
+// browser calling the service directly can send it.
 func TestConfigureCORS(t *testing.T) {
-	t.Run("empty origin uses default CORS", func(t *testing.T) {
+	newRouter := func(allowOrigins []string) *gin.Engine {
 		router := gin.New()
-		// Should not panic
-		configureCORS(router, "")
+		configureCORS(router, allowOrigins)
 		router.GET("/test", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"status": "ok"})
 		})
+		return router
+	}
 
-		// Verify router works after configuring CORS
+	// httptest defaults the host to example.com, so origins have to differ
+	// from it for a request to count as cross-origin.
+	t.Run("the default allows every origin", func(t *testing.T) {
+		router := newRouter([]string{"*"})
+
 		w := httptest.NewRecorder()
 		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
+		req.Header.Set("Origin", "https://caller.test")
 		router.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
-			t.Errorf("configureCORS() router should still work, got status %d", w.Code)
+			t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
+		}
+		if got := w.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+			t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "*")
 		}
 	})
 
-	t.Run("specific origin configured", func(t *testing.T) {
-		router := gin.New()
-		// Should not panic
-		configureCORS(router, "http://allowed.example.com")
-		router.GET("/test", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"status": "ok"})
-		})
+	t.Run("several origins are matched individually", func(t *testing.T) {
+		router := newRouter([]string{"https://a.example", "https://b.example"})
 
-		// Verify router works after configuring CORS
+		tests := []struct {
+			origin  string
+			allowed bool
+		}{
+			{origin: "https://a.example", allowed: true},
+			{origin: "https://b.example", allowed: true},
+			{origin: "https://c.example", allowed: false},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.origin, func(t *testing.T) {
+				w := httptest.NewRecorder()
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
+				req.Header.Set("Origin", tt.origin)
+				router.ServeHTTP(w, req)
+
+				got := w.Header().Get("Access-Control-Allow-Origin")
+				if tt.allowed {
+					if got != tt.origin {
+						t.Errorf("Access-Control-Allow-Origin = %q, want the request origin %q", got, tt.origin)
+					}
+					if vary := w.Header().Get("Vary"); vary != "Origin" {
+						t.Errorf("Vary = %q, want Origin so caches do not mix the two", vary)
+					}
+					return
+				}
+				if got != "" {
+					t.Errorf("Access-Control-Allow-Origin = %q, want it absent for an origin that is not listed", got)
+				}
+			})
+		}
+	})
+
+	t.Run("preflight allows X-API-Key", func(t *testing.T) {
+		router := newRouter([]string{"*"})
+
 		w := httptest.NewRecorder()
-		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodOptions, "/test", nil)
+		req.Header.Set("Origin", "https://caller.test")
+		req.Header.Set("Access-Control-Request-Method", http.MethodGet)
+		req.Header.Set("Access-Control-Request-Headers", "X-API-Key")
 		router.ServeHTTP(w, req)
 
-		if w.Code != http.StatusOK {
-			t.Errorf("configureCORS() router should still work, got status %d", w.Code)
+		// The middleware reports headers in canonical form, so the name comes
+		// back as X-Api-Key.
+		got := w.Header().Get("Access-Control-Allow-Headers")
+		if !strings.Contains(strings.ToLower(got), "x-api-key") {
+			t.Errorf("Access-Control-Allow-Headers = %q, want it to include X-API-Key", got)
 		}
 	})
 }
