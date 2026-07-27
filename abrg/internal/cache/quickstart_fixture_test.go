@@ -12,9 +12,10 @@ import (
 
 // TestQuickstartFixture_Structure pins the structure of the committed
 // quickstart cache against static expectations: the exact table and index
-// sets a version-2 basic build produces. The fixture is maintained by
-// in-place surgery instead of regeneration, and this test catches a botched
-// surgery (leftover category tables or indexes, missing config).
+// sets a version-2 basic build produces. The fixture is updated by in-place
+// surgery (a wholesale rebuild would shift data and break tests that pin row
+// contents), and this test catches a botched surgery (leftover category
+// tables or indexes, missing config).
 func TestQuickstartFixture_Structure(t *testing.T) {
 	ctx := context.Background()
 

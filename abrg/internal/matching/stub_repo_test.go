@@ -8,9 +8,10 @@ package matching
 // fallback) exercised in CI where the cache-dependent suites are skipped.
 //
 // Provenance of the pinned expectations (for regeneration):
-//   - Cache: full nationwide cache built 2026-07-26 with enabled_pref=all,
-//     enabled_category=all, enabled_pos=true (result_info db_version 3.0.12).
-//   - Binary: abrg 3.0.17 built from refactor/phase4-boundaries head 676ce78.
+//   - Cache: a full nationwide cache (enabled_pref=all, enabled_category=all,
+//     enabled_pos=true); the pinned result_info carries its db_version 3.0.12.
+//   - Binary: the abrg CLI built from the commit that last updated the
+//     expectations (any matching behavior change requires regeneration).
 //   - Expected JSON: the features array of
 //     printf '<address>\n' > in.txt &&
 //     CACHE_PATH=$HOME/.abrg/cache/abrg.duckdb \
