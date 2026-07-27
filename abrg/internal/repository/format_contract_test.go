@@ -7,12 +7,11 @@ import (
 )
 
 // TestFormatAddress_CityRowsMatchPlainConcat pins the data premise behind
-// matching.buildCityResult: model.FormatAddress inserts a hyphen
-// between adjacent ASCII digits across parts, so replacing the former plain
-// concatenation of pref+county+city+ward is only equivalent while no
-// administrative name in cache_city ends or starts with an ASCII digit.
-// This verifies the premise against every cache_city row of the quickstart
-// cache instead of assuming it.
+// matching.buildCityResult: model.FormatAddress inserts a hyphen between
+// adjacent ASCII digits across parts, so it matches the plain concatenation
+// pref+county+city+ward only while no administrative name in cache_city ends
+// or starts with an ASCII digit. This verifies the premise against every
+// cache_city row of the quickstart cache instead of assuming it.
 func TestFormatAddress_CityRowsMatchPlainConcat(t *testing.T) {
 	repo := setupRepo(t)
 

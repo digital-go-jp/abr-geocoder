@@ -138,8 +138,8 @@ resource "aws_sfn_state_machine" "data_update" {
       # TimeoutSeconds on each task is 5-10x its measured normal duration.
       # On timeout the execution fails and Step Functions attempts a
       # best-effort cancellation (ecs:StopTask) of the .sync task - the stop
-      # itself is not guaranteed, but the workflow no longer blocks forever
-      # on a hung task (e.g. an uncancellable DuckDB query).
+      # itself is not guaranteed, but the timeout bounds how long the
+      # workflow can block on a hung task (e.g. an uncancellable DuckDB query).
       CheckChanges = {
         Type           = "Task"
         Resource       = "arn:aws:states:::ecs:runTask.sync"
