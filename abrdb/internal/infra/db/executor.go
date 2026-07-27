@@ -85,23 +85,22 @@ func NewQueryExecutorFromEnv(ctx context.Context) (*QueryExecutor, error) {
 // dsnWithPoolSize sizes the pgx pool to the effective worker parallelism:
 // download and import workers update the catalog over this pool concurrently,
 // so the pool must not be smaller than the larger of the two effective worker
-// counts (+4 covers the lock session and ad-hoc queries). A stage without a
-// valid setting still runs GOMAXPROCS workers, so it counts at that value.
-// With no valid setting at all the DSN stays untouched and the pgxpool
-// default applies.
+// counts (+4 covers the lock session and ad-hoc queries). A stage with a
+// valid setting counts at that clamped value; a stage without one runs
+// GOMAXPROCS workers and counts at that. With no valid setting at all the
+// DSN stays untouched and the pgxpool default applies.
 func dsnWithPoolSize(dsn string) string {
-	// Effective floor: stages without a valid setting use GOMAXPROCS workers.
-	workers := runtime.GOMAXPROCS(0)
+	workers := 0
 	anySet := false
 	for _, name := range []string{"ABRDB_IMPORT_CONCURRENCY", "ABRDB_DOWNLOAD_CONCURRENCY"} {
-		v, ok := os.LookupEnv(name)
-		if !ok || v == "" {
-			continue
+		effective := runtime.GOMAXPROCS(0)
+		if v, ok := os.LookupEnv(name); ok && v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				anySet = true
+				effective = min(n, util.MaxConcurrency)
+			}
 		}
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			anySet = true
-			workers = max(workers, min(n, util.MaxConcurrency))
-		}
+		workers = max(workers, effective)
 	}
 	if !anySet {
 		return dsn
