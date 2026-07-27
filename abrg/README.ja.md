@@ -66,6 +66,7 @@ API仕様: [openapi/openapi.yml](openapi/openapi.yml)
 |--------|----------|------|
 | `PORT` | `3000` | サーバーポート |
 | `CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDBキャッシュファイルのパス |
+| `ABRG_DUCKDB_THREADS` | `2` | DuckDBのクエリ内並列数の上限（`0` でDuckDB既定＝コア数） |
 | `CORS_ALLOW_ORIGIN` | （空）| CORS許可オリジン（未指定時は全オリジン許可） |
 | `ABRG_HTTP_READ_TIMEOUT` | `10s` | HTTPサーバーの読み取りタイムアウト（Go duration形式） |
 | `ABRG_HTTP_WRITE_TIMEOUT` | `30s` | HTTPサーバーの書き込みタイムアウト |
