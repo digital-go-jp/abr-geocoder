@@ -18,7 +18,7 @@ func TestConcurrencyLimit(t *testing.T) {
 		{name: "unset falls back to GOMAXPROCS", set: false, want: gomaxprocs},
 		{name: "empty falls back to GOMAXPROCS", set: true, value: "", want: gomaxprocs},
 		{name: "explicit value", set: true, value: "8", want: 8},
-		{name: "clamped to the cap", set: true, value: "100", want: maxConcurrency},
+		{name: "clamped to the cap", set: true, value: "100", want: MaxConcurrency},
 		{name: "non-numeric falls back", set: true, value: "abc", want: gomaxprocs},
 		{name: "zero falls back", set: true, value: "0", want: gomaxprocs},
 		{name: "negative falls back", set: true, value: "-3", want: gomaxprocs},

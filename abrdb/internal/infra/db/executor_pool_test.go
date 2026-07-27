@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+
+	"abrdb/internal/util"
 )
 
 // TestDSNWithPoolSize pins the pool-sizing rule: the pool covers the larger of
@@ -27,7 +29,7 @@ func TestDSNWithPoolSize(t *testing.T) {
 		{name: "small explicit value still covers the unset stage", imports: "1", want: withPool(max(gomaxprocs, 1))},
 		{name: "download setting alone", download: "6", want: withPool(max(gomaxprocs, 6))},
 		{name: "larger effective count wins", imports: "4", download: "9", want: withPool(max(gomaxprocs, 9))},
-		{name: "explicit value clamped to the cap", imports: "100", want: withPool(max(gomaxprocs, poolConcurrencyCap))},
+		{name: "explicit value clamped to the cap", imports: "100", want: withPool(max(gomaxprocs, util.MaxConcurrency))},
 		{name: "invalid value keeps default", imports: "abc", want: dsn},
 		{name: "non-positive value keeps default", imports: "0", want: dsn},
 	}

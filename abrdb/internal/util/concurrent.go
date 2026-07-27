@@ -1,3 +1,5 @@
+// Package util provides shared helpers for concurrent execution and
+// identifier and filename handling.
 package util
 
 import (
@@ -11,13 +13,13 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// maxConcurrency caps operator-supplied worker limits so a typo cannot flood
+// MaxConcurrency caps operator-supplied worker limits so a typo cannot flood
 // the source feed or exhaust PostgreSQL connections.
-const maxConcurrency = 32
+const MaxConcurrency = 32
 
 // ConcurrencyLimit returns the worker limit configured in the named
 // environment variable. Unset, invalid, or non-positive values fall back to
-// GOMAXPROCS (container-aware); values above maxConcurrency are clamped.
+// GOMAXPROCS (container-aware); values above MaxConcurrency are clamped.
 func ConcurrencyLimit(envName string) int {
 	v, ok := os.LookupEnv(envName)
 	if !ok || v == "" {
@@ -29,7 +31,7 @@ func ConcurrencyLimit(envName string) int {
 			"event", "concurrency", "env", envName, "value", v)
 		return runtime.GOMAXPROCS(0)
 	}
-	return min(n, maxConcurrency)
+	return min(n, MaxConcurrency)
 }
 
 // ExecuteConcurrently runs workers over items with bounded parallelism and integrated progress tracking.

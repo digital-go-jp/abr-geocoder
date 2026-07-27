@@ -13,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	commondb "abr.local/common/db"
+
+	"abrdb/internal/util"
 )
 
 // QueryExecutor handles database query execution using pgxpool.
@@ -80,9 +82,6 @@ func NewQueryExecutorFromEnv(ctx context.Context) (*QueryExecutor, error) {
 	return NewQueryExecutor(ctx, dsnWithPoolSize(cfg.DSN()))
 }
 
-// poolConcurrencyCap mirrors the worker-limit clamp in util.ConcurrencyLimit.
-const poolConcurrencyCap = 32
-
 // dsnWithPoolSize sizes the pgx pool to the effective worker parallelism:
 // download and import workers update the catalog over this pool concurrently,
 // so the pool must not be smaller than the larger of the two effective worker
@@ -101,7 +100,7 @@ func dsnWithPoolSize(dsn string) string {
 		}
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			anySet = true
-			workers = max(workers, min(n, poolConcurrencyCap))
+			workers = max(workers, min(n, util.MaxConcurrency))
 		}
 	}
 	if !anySet {
