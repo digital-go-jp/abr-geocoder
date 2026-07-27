@@ -8,6 +8,11 @@ import (
 	"abr.local/common/db"
 )
 
+// KeySchemaVersion is the cache_config key holding the DuckDB cache schema
+// version. The key is written and read only by abrg, so it lives here rather
+// than with the abrdb_config keys in common/db.
+const KeySchemaVersion = "schema_version"
+
 type Config struct {
 	DBVersion       string
 	EnabledPref     string

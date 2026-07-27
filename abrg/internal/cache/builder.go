@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"strconv"
 	"time"
 
 	duckdbdriver "github.com/duckdb/duckdb-go/v2"
@@ -212,8 +213,13 @@ func insertBasicTables(ctx context.Context, conn *sql.DB) (map[string]float64, e
 }
 
 func saveConfigToCache(ctx context.Context, conn *sql.DB, cfg *Config) error {
+	schemaVersion, err := schema.Version()
+	if err != nil {
+		return fmt.Errorf("failed to load schema version: %w", err)
+	}
 	const insertSQL = `INSERT INTO cache_config (config_key, config_value) VALUES (?, ?)`
 	configs := []struct{ key, value string }{
+		{KeySchemaVersion, strconv.Itoa(schemaVersion)},
 		{db.KeyABRDBVersion, cfg.DBVersion},
 		{db.KeyEnabledCategory, cfg.EnabledCategory},
 		{db.KeyEnabledPref, cfg.EnabledPref},

@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 
 	"abrg/internal/infra/config"
 	"abrg/internal/infra/duckdb"
+	"abrg/internal/schema"
 	"abrg/internal/util"
 )
 
@@ -73,6 +75,12 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 		return nil, err
 	}
 
+	// Reject caches built for a different schema before running any query
+	// against their tables.
+	if err := checkSchemaVersion(ctx, conn); err != nil {
+		return nil, err
+	}
+
 	// Load spatial extension (works in read-only mode)
 	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
 		return nil, fmt.Errorf("failed to initialize spatial extension: %w", err)
@@ -100,6 +108,30 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 
 	success = true
 	return cache, nil
+}
+
+// checkSchemaVersion verifies that the schema version recorded in the cache
+// matches the version this binary was built for (cache_schema.yaml). Caches
+// without the key predate the check and are rejected as well.
+func checkSchemaVersion(ctx context.Context, conn *sql.DB) error {
+	required, err := schema.Version()
+	if err != nil {
+		return fmt.Errorf("failed to load required schema version: %w", err)
+	}
+
+	var got string
+	err = conn.QueryRowContext(ctx,
+		"SELECT config_value FROM cache_config WHERE config_key = ?", KeySchemaVersion).Scan(&got)
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("cache has no schema version (built by an older abrg): run 'abrg cache build' to rebuild")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to read cache schema version: %w", err)
+	}
+	if got != strconv.Itoa(required) {
+		return fmt.Errorf("cache schema version %s, binary requires %d: run 'abrg cache build' to rebuild", got, required)
+	}
+	return nil
 }
 
 // applyThreadLimit caps DuckDB's intra-query parallelism. The workload is
