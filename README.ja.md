@@ -2,6 +2,11 @@
 
 - [English version](./README.md)
 
+## 🚨 Version 2.2.1 から Version 2.3.0 へのアップグレード
+
+- **バグ修正**: `abrg download -c <都道府県LGCode>` で `mt_town_pos_pref**.csv`（町字マスター位置参照拡張・都道府県単位）がダウンロードされない問題を修正しました。
+- **重要**: Version 3 のリリースに伴い、Version 2.3.0 は Version 2 系の最終リリースとなります。以降の修正・機能追加は Version 3 で行われ、Version 2 系での対応はありません。
+
 ## 🚨 Version 2.2 から Version 2.2.1 へのアップグレード
 
 - データセットダウンロード用の新しいDCAT形式APIに対応しました。

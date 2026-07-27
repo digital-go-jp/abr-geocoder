@@ -3,6 +3,11 @@
 
 - [日本語版](./README.ja.md)
 
+## 🚨 Upgrade to version 2.3.0 from v2.2.1
+
+- **Bug fix**: `abrg download -c <prefecture LGCode>` no longer skips `mt_town_pos_pref**.csv` (town master position-reference extension at the prefecture level).
+- **Important**: With the upcoming Version 3 release, Version 2.3.0 is the final release of the Version 2 series. Subsequent fixes and feature additions will be made in Version 3, and no further support is planned for the Version 2 series.
+
 ## 🚨 Upgrade to version 2.2.1 from v2.2
 
 - Updated to use the new DCAT format API for downloading datasets.
