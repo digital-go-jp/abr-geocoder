@@ -15,6 +15,7 @@ import (
 	"abr.local/common/duck"
 
 	"abrdb/internal/schema"
+	"abrdb/internal/util"
 )
 
 const pgSecretName = "abrdb_pg_secret"
@@ -80,9 +81,19 @@ func (e *ETL) Close() error {
 func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath string, posPath string) error {
 	suffix := "_" + strings.TrimSuffix(filepath.Base(textPath), ".csv.zip")
 
-	defer e.cleanupTempTables(context.Background(), suffix)
+	// TEMP tables are connection-local in DuckDB and survive the commit, so
+	// the whole load runs on one pinned connection and the deferred DROP uses
+	// that same connection; a pool-level DROP would land on an arbitrary
+	// connection and silently miss them, accumulating them in memory.
+	conn, err := e.db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire duckdb connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+	// WithoutCancel keeps the cleanup working after a mid-import cancellation.
+	defer cleanupTempTables(context.WithoutCancel(ctx), conn, suffix)
 
-	tx, err := e.db.BeginTx(ctx, nil)
+	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
@@ -122,10 +133,10 @@ func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, t
 	return err
 }
 
-func (e *ETL) cleanupTempTables(ctx context.Context, suffix string) {
+func cleanupTempTables(ctx context.Context, conn *sql.Conn, suffix string) {
 	tn := generateTableNames(suffix)
 	for _, table := range []string{tn.Text, tn.Pos, tn.Transformed} {
-		_, _ = e.db.ExecContext(ctx, "DROP TABLE IF EXISTS "+table)
+		_, _ = conn.ExecContext(ctx, "DROP TABLE IF EXISTS "+table)
 	}
 }
 
@@ -223,12 +234,17 @@ func (e *ETL) transformAndLoadWithSuffixTx(ctx context.Context, tx *sql.Tx, cate
 	transformer := newTransformer(categoryInfo)
 	tn := generateTableNames(suffix)
 
+	insertSQL, err := buildInsertSQL(categoryInfo, tn.Transformed)
+	if err != nil {
+		return fmt.Errorf("build insert for %s: %w", categoryInfo.TableName, err)
+	}
+
 	steps := []struct {
 		name string
 		sql  string
 	}{
 		{"transform", transformer.buildTransformSQL(hasPosData, tn)},
-		{"insert", fmt.Sprintf("INSERT INTO pg.%s SELECT * EXCLUDE (join_seq) FROM %s WHERE join_seq = 1", categoryInfo.TableName, tn.Transformed)},
+		{"insert", insertSQL},
 	}
 	stepSec := make([]any, 0, len(steps)*2)
 	for _, step := range steps {
@@ -240,6 +256,30 @@ func (e *ETL) transformAndLoadWithSuffixTx(ctx context.Context, tx *sql.Tx, cate
 	}
 	slog.DebugContext(ctx, "transform step timing", append([]any{"event", "transform_timing", "file", filename}, stepSec...)...)
 	return nil
+}
+
+// buildInsertSQL lists the same explicit columns (CategoryInfo.OutputColumns)
+// on both the INSERT and the SELECT side, so a column-order drift between the
+// transformed temp table and the PostgreSQL DDL fails loudly instead of
+// inserting silently misaligned data (the previous SELECT * EXCLUDE form
+// relied on the two orders matching by construction).
+func buildInsertSQL(categoryInfo *schema.CategoryInfo, transformedTable string) (string, error) {
+	table, err := util.QuoteIdentifier(categoryInfo.TableName)
+	if err != nil {
+		return "", err
+	}
+	if len(categoryInfo.OutputColumns) == 0 {
+		return "", fmt.Errorf("no output columns for table %s", categoryInfo.TableName)
+	}
+	quoted := make([]string, len(categoryInfo.OutputColumns))
+	for i, col := range categoryInfo.OutputColumns {
+		if quoted[i], err = util.QuoteIdentifier(col); err != nil {
+			return "", err
+		}
+	}
+	cols := strings.Join(quoted, ", ")
+	return fmt.Sprintf("INSERT INTO pg.%s (%s) SELECT %s FROM %s WHERE join_seq = 1",
+		table, cols, cols, transformedTable), nil
 }
 
 func (e *ETL) initializeDuckDB() error {
@@ -256,19 +296,9 @@ func (e *ETL) attachPostgres() error {
 	if _, err := e.db.ExecContext(context.Background(), secretSQL); err != nil {
 		return fmt.Errorf("create postgres secret: %w", err)
 	}
-	attachSQL := buildPostgresAttachSQL(e.pgConf.SSLMode, pgSecretName)
+	attachSQL := db.BuildPostgresAttachSQL(e.pgConf.SSLMode, pgSecretName, false)
 	if _, err := e.db.ExecContext(context.Background(), attachSQL); err != nil {
 		return fmt.Errorf("attach postgres: %w", err)
 	}
 	return nil
-}
-
-// sslmode rides on ATTACH's connection string because DuckDB's postgres SECRET
-// type does not accept sslmode as a field.
-func buildPostgresAttachSQL(sslMode, secretName string) string {
-	opts := ""
-	if sslMode != "" {
-		opts = "sslmode=" + strings.ReplaceAll(sslMode, "'", "''")
-	}
-	return fmt.Sprintf("ATTACH '%s' AS pg (TYPE postgres, SECRET %s)", opts, secretName)
 }

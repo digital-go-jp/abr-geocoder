@@ -4,12 +4,22 @@ package util
 import (
 	"strings"
 	"unicode"
+
+	"abrg/internal/char"
 )
+
+// ExtractTrailingAddressNumbers returns the trailing run of ASCII digits and
+// hyphens from an address (e.g., "紀尾井町1-3" -> "1-3").
+func ExtractTrailingAddressNumbers(searchAddr string) string {
+	return extractTrailingBytes(searchAddr, func(b byte) bool {
+		return char.IsASCIIDigit(b) || b == '-'
+	})
+}
 
 // Used to extract chome (丁目) numbers from the portion before "@" in internal address format.
 // Returns an empty string if s does not end with ASCII digits.
 func ExtractChomeDigits(s string) string {
-	return extractTrailingBytes(s, IsASCIIDigit)
+	return extractTrailingBytes(s, char.IsASCIIDigit)
 }
 
 func extractTrailingBytes(s string, match func(byte) bool) string {
@@ -28,47 +38,6 @@ func extractTrailingBytes(s string, match func(byte) bool) string {
 // DuckDB's editdist3 operates on bytes, so byteLen should be len(string), not len([]rune).
 func MaxEditDistance(byteLen int) int {
 	return max(byteLen/3, 3)
-}
-
-// stripAzaMarker strips the "字" (aza) prefix from unmatched address components
-// when it's just a marker rather than part of a meaningful place name.
-//
-// Strips "字" when:
-//   - s is exactly "字" (standalone marker)
-//   - the text after "字" ends with a kanji numeral (numbered koaza like "家六", "東三分一")
-//
-// Preserves "字" when the remaining text is a place name (e.g., "字上ノ原", "字堤下").
-func stripAzaMarker(s string) string {
-	if !strings.HasPrefix(s, "字") {
-		return s
-	}
-	afterAza := strings.TrimPrefix(s, "字")
-	if afterAza == "" {
-		return ""
-	}
-	runes := []rune(afterAza)
-	if isKanjiNumeral(runes[len(runes)-1]) {
-		return afterAza
-	}
-	return s
-}
-
-// stripPrefecture removes prefecture prefix from address string.
-// Note: Cannot use normalize.removePrefectureFromAddress here due to import cycle (util ↔ normalize).
-func stripPrefecture(addr string) string {
-	if strings.HasPrefix(addr, "北海道") {
-		return addr[len("北海道"):]
-	}
-	runes := []rune(addr)
-	for i, r := range runes {
-		if (r == '都' || r == '府' || r == '県') && i >= 2 && i <= 3 {
-			return string(runes[i+1:])
-		}
-		if i >= 4 {
-			break
-		}
-	}
-	return addr
 }
 
 // oazaAzaReplacer removes 大字 and 小字 patterns in a single pass.

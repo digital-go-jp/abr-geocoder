@@ -3,14 +3,18 @@ package cache
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
 
+	"abr.local/common/db"
 	"abr.local/common/duck"
 
 	"abrg/internal/infra/config"
 	"abrg/internal/infra/duckdb"
+	"abrg/internal/model"
+	"abrg/internal/schema"
 	"abrg/internal/util"
 )
 
@@ -35,11 +39,15 @@ type DuckDBCache struct {
 func NewDuckDBCache(ctx context.Context) (*DuckDBCache, error) {
 	cfg := config.Load()
 	cachePath := duckdb.ResolvePath("", cfg.Cache.Path)
-	return NewDuckDBCacheFromPath(ctx, cachePath)
+	return newDuckDBCache(ctx, cachePath, cfg.Cache.DuckDBThreads)
 }
 
 // The cache file must already exist and be valid (created by `abrg cache build`).
 func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache, error) {
+	return newDuckDBCache(ctx, cachePath, config.Load().Cache.DuckDBThreads)
+}
+
+func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*DuckDBCache, error) {
 	// Cache file path is required
 	if cachePath == "" {
 		return nil, fmt.Errorf("cache file required: use 'abrg cache build' to create one")
@@ -65,18 +73,25 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 		db: conn,
 	}
 
-	if err := applyThreadLimit(ctx, conn); err != nil {
+	if err := applyThreadLimit(ctx, conn, duckdbThreads); err != nil {
+		return nil, err
+	}
+
+	// Reject caches built for a different schema before running any query
+	// against their tables.
+	if err := checkSchemaVersion(ctx, conn); err != nil {
+		return nil, err
+	}
+
+	// Reject caches whose category tables are missing despite the build
+	// configuration claiming them.
+	if err := checkCategoryTables(ctx, conn); err != nil {
 		return nil, err
 	}
 
 	// Load spatial extension (works in read-only mode)
 	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
 		return nil, fmt.Errorf("failed to initialize spatial extension: %w", err)
-	}
-
-	// Register Go UDFs (in-memory only, doesn't require write access)
-	if err := cache.registerUDFs(ctx); err != nil {
-		return nil, fmt.Errorf("failed to register UDFs: %w", err)
 	}
 
 	// Build city-prefecture mapping from existing cache
@@ -103,12 +118,95 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 	return cache, nil
 }
 
+// checkSchemaVersion verifies that the schema version recorded in the cache
+// matches the version this binary was built for (cache_schema.yaml). Caches
+// without the key predate the check and are rejected as well.
+func checkSchemaVersion(ctx context.Context, conn *sql.DB) error {
+	required, err := schema.Version()
+	if err != nil {
+		return fmt.Errorf("failed to load required schema version: %w", err)
+	}
+
+	var got string
+	err = conn.QueryRowContext(ctx,
+		"SELECT config_value FROM cache_config WHERE config_key = ?", KeySchemaVersion).Scan(&got)
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("cache has no schema version (built by an older abrg): run 'abrg cache build' to rebuild")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to read cache schema version: %w", err)
+	}
+	if got != strconv.Itoa(required) {
+		return fmt.Errorf("cache schema version %s, binary requires %d: run 'abrg cache build' to rebuild", got, required)
+	}
+	return nil
+}
+
+// requiredCategoryTables returns the tables a cache built with the given
+// enabled_category must contain. The basic tables are created for every
+// category and are not listed here.
+func requiredCategoryTables(category string) []string {
+	switch category {
+	case string(model.CategoryResidential):
+		return []string{duckdb.TableRsdtdsp}
+	case string(model.CategoryParcel):
+		return []string{duckdb.TableParcel}
+	case model.All:
+		return []string{duckdb.TableRsdtdsp, duckdb.TableParcel}
+	default:
+		return nil
+	}
+}
+
+// checkCategoryTables verifies at open time that every category table claimed
+// by enabled_category exists, so a corrupted or incomplete cache fails at
+// startup instead of surfacing as SQL errors at query time. Data availability
+// itself is derived from enabled_category (Config.HasResidential/HasParcel),
+// not from table presence.
+func checkCategoryTables(ctx context.Context, conn *sql.DB) error {
+	var category string
+	err := conn.QueryRowContext(ctx,
+		"SELECT config_value FROM cache_config WHERE config_key = ?", db.KeyEnabledCategory).Scan(&category)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to read enabled_category: %w", err)
+	}
+
+	for _, table := range requiredCategoryTables(category) {
+		exists, err := tableExists(ctx, conn, table)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("cache is corrupted or incomplete: table %s missing while enabled_category=%s: run 'abrg cache build' to rebuild", table, category)
+		}
+	}
+	return nil
+}
+
+// tableExists checks whether a table exists using DuckDB's information
+// schema. A query failure is returned to the caller so that a transient
+// error (e.g. a cancelled context) cannot be mistaken for a permanently
+// missing table.
+func tableExists(ctx context.Context, conn *sql.DB, tableName string) (bool, error) {
+	var exists bool
+	err := conn.QueryRowContext(ctx,
+		"SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = ?)",
+		tableName,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check table %s existence: %w", tableName, err)
+	}
+	return exists, nil
+}
+
 // applyThreadLimit caps DuckDB's intra-query parallelism. The workload is
 // dominated by small point lookups where per-query fan-out to every core only
 // contends with request- and worker-level parallelism. A value of 0 keeps the
 // DuckDB default of one thread per core.
-func applyThreadLimit(ctx context.Context, conn *sql.DB) error {
-	v := config.Load().Cache.DuckDBThreads
+func applyThreadLimit(ctx context.Context, conn *sql.DB, v string) error {
 	n, err := strconv.Atoi(v)
 	if err != nil || n < 0 {
 		return fmt.Errorf("invalid ABRG_DUCKDB_THREADS %q: must be a non-negative integer", v)
@@ -210,7 +308,7 @@ func (c *DuckDBCache) buildCityPrefectureCodes(ctx context.Context) error {
 }
 
 // This enables faster Levenshtein search by filtering to specific lg_code.
-// The key format is "city+ward" (e.g., "京都市中京区") to match FindCityBoundary output.
+// The key format is "city+ward" (e.g., "京都市中京区") to match findCityBoundary output.
 // For towns with counties, both "county+city" and "city" keys are added.
 // Note: city_ward names that exist in multiple prefectures (e.g., "池田町") are excluded
 // because they map to multiple lg_codes and cannot be uniquely resolved.
@@ -283,8 +381,4 @@ func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	}
 
 	return rows.Err()
-}
-
-func (c *DuckDBCache) registerUDFs(ctx context.Context) error {
-	return registerUDF(ctx, c.db)
 }

@@ -3,12 +3,25 @@ package matching
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"abrg/internal/matching/levenshtein"
+	"abrg/internal/matching/unmatched"
 	"abrg/internal/model"
-	"abrg/internal/util"
 )
+
+// debugMatchPath records which non-exact resolution path produced the result,
+// so unexpected resolutions can be traced in production with LOG_LEVEL=DEBUG.
+// Each request fires at most a handful of these, never per-character work;
+// the early level check keeps the disabled cost to the variadic call itself.
+func debugMatchPath(ctx context.Context, path, address string, attrs ...any) {
+	if !slog.Default().Enabled(ctx, slog.LevelDebug) {
+		return
+	}
+	slog.DebugContext(ctx, "match resolved by fallback path",
+		append([]any{"event", "match_path", "path", path, "address", address}, attrs...)...)
+}
 
 func (n *Impl) handleFallback(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
 	if len(nctx.State.BasicResults) > 0 {
@@ -19,18 +32,21 @@ func (n *Impl) handleFallback(ctx context.Context, nctx *normalizeContext) ([]mo
 	// This handles city-only addresses (e.g., "鎌ガ谷市", "柴田郡大河原町")
 	if n.repo != nil {
 		searchAddrStr := nctx.Input.SearchAddr.String()
-		cityResult, err := n.queryCityRecord(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.StandardizedAddr)
+		fuzzy := false
+		cityResult, err := n.queryCityRecord(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.NormalizedAddr)
 		if err != nil {
 			return nil, fmt.Errorf("city record query: %w", err)
 		}
 		if cityResult == nil {
 			// Fuzzy city match for addresses with mask/unknown characters (e.g., "●橋市")
-			cityResult, err = n.queryCityRecordFuzzy(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.StandardizedAddr)
+			cityResult, err = n.queryCityRecordFuzzy(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.NormalizedAddr)
 			if err != nil {
 				return nil, fmt.Errorf("fuzzy city record query: %w", err)
 			}
+			fuzzy = true
 		}
 		if cityResult != nil {
+			debugMatchPath(ctx, "city_fallback", nctx.Input.NormalizedAddr, "fuzzy", fuzzy)
 			return []model.MatchedResult{*cityResult}, nil
 		}
 	}
@@ -47,23 +63,27 @@ func (n *Impl) handleFallback(ctx context.Context, nctx *normalizeContext) ([]mo
 			return nil, fmt.Errorf("levenshtein search: %w", err)
 		}
 		if len(levenResults) > 0 {
+			debugMatchPath(ctx, "levenshtein_city", nctx.Input.NormalizedAddr,
+				"results", len(levenResults), "score", levenResults[0].Score)
 			return levenResults, nil
 		}
 	}
 
 	// If still no results but we have prefecture info, search for prefecture record in DB
 	if nctx.Input.Pref != "" && nctx.Input.Pref != model.All && n.repo != nil {
-		prefResult, err := n.queryPrefectureRecord(ctx, nctx.Input.Pref, nctx.Input.StandardizedAddr)
+		prefResult, err := n.queryPrefectureRecord(ctx, nctx.Input.Pref, nctx.Input.NormalizedAddr)
 		if err != nil {
 			return nil, fmt.Errorf("prefecture record query: %w", err)
 		}
 		if prefResult != nil {
+			debugMatchPath(ctx, "prefecture_fallback", nctx.Input.NormalizedAddr)
 			return []model.MatchedResult{*prefResult}, nil
 		}
 	}
 
 	// Last resort: return completely unmatched
-	return []model.MatchedResult{util.CreateUnmatchedResult(nctx.Input.NormalizedAddr)}, nil
+	debugMatchPath(ctx, "unmatched", nctx.Input.NormalizedAddr)
+	return []model.MatchedResult{unmatched.CreateUnmatchedResult(nctx.Input.NormalizedAddr)}, nil
 }
 
 // handleBasicFallback tries to find more specific matches (chome or oaza_cho) when applicable.
@@ -111,7 +131,7 @@ func (n *Impl) handleBasicFallback(ctx context.Context, nctx *normalizeContext) 
 	// Pass original searchAddr so extractUnmatchedWithColonNoAt can detect chome patterns
 	// (e.g., "1-1" → detects "1丁目" in matchedAddr → returns "-1")
 	if basic.UnmatchedAddress == nil && !nctx.State.UsedLevenshtein {
-		setUnmatchedAddress(basic, nctx.Input.NormalizedAddr, nctx.Input.StandardizedAddr, basic.MatchedAddress, nctx.Input.SearchAddr.String())
+		setUnmatchedAddress(basic, nctx.Input.NormalizedAddr, nctx.Input.SearchAddr.String())
 	}
 	return nctx.State.BasicResults, nil
 }
@@ -131,7 +151,8 @@ func (n *Impl) tryChomeSearch(ctx context.Context, nctx *normalizeContext) ([]mo
 		return nil, nil
 	}
 
-	setUnmatchedAddress(&results[0], nctx.Input.NormalizedAddr, nctx.Input.StandardizedAddr, results[0].MatchedAddress, nctx.Input.SearchAddr.String())
+	debugMatchPath(ctx, "chome_correction", nctx.Input.NormalizedAddr)
+	setUnmatchedAddress(&results[0], nctx.Input.NormalizedAddr, nctx.Input.SearchAddr.String())
 	return results, nil
 }
 
@@ -173,7 +194,8 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 			return nil, err
 		}
 		if len(parcelResults) > 0 {
-			setTwoStageUnmatchedAddress(&parcelResults[0], nctx.Input.StandardizedAddr, parcelAddr)
+			debugMatchPath(ctx, "numeric_koaza", nctx.Input.NormalizedAddr, "parcel", true)
+			setTwoStageUnmatchedAddress(&parcelResults[0], nctx.Input.NormalizedAddr, parcelAddr)
 			return parcelResults, nil
 		}
 	}
@@ -182,12 +204,12 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 	if len(rest) > 0 {
 		koaza.UnmatchedAddress = append(koaza.UnmatchedAddress, "-"+strings.Join(rest, "-"))
 	}
-	setTwoStageUnmatchedAddress(koaza, nctx.Input.StandardizedAddr, base)
+	debugMatchPath(ctx, "numeric_koaza", nctx.Input.NormalizedAddr, "parcel", false)
+	setTwoStageUnmatchedAddress(koaza, nctx.Input.NormalizedAddr, base)
 	return results, nil
 }
 
 // tryOazaChoSearch tries to find an oaza_cho record for city-level matches.
-
 func (n *Impl) tryOazaChoSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
 	chomeSearchAddr := convertColonToChome(nctx.Input.SearchAddr)
 	if chomeSearchAddr.HasChome == nctx.Input.SearchAddr.HasChome {
@@ -203,12 +225,8 @@ func (n *Impl) tryOazaChoSearch(ctx context.Context, nctx *normalizeContext) ([]
 		return nil, nil
 	}
 
+	debugMatchPath(ctx, "oaza_cho_correction", nctx.Input.NormalizedAddr)
 	adjustedSearchAddr := adjustSearchAddrForMatch(nctx.Input.SearchAddr, results[0].StructuredAddress.OazaCho)
-	setUnmatchedAddress(&results[0], nctx.Input.NormalizedAddr, nctx.Input.StandardizedAddr, results[0].MatchedAddress, adjustedSearchAddr)
+	setUnmatchedAddress(&results[0], nctx.Input.NormalizedAddr, adjustedSearchAddr)
 	return results, nil
-}
-
-// detectCityPrefectureCode detects prefecture code from city name using prefix map lookup.
-func (n *Impl) detectCityPrefectureCode(address string) string {
-	return n.cityPrefixMap.lookup(address)
 }

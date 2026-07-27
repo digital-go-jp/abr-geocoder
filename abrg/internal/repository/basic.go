@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"abrg/internal/char"
 	"abrg/internal/model"
 	"abrg/internal/util"
 )
@@ -139,7 +140,7 @@ func extractChomeFilter(searchAddr string) (string, string) {
 	// Extract trailing digits before "@:"
 	end := idx
 	start := end
-	for start > 0 && searchAddr[start-1] >= '0' && searchAddr[start-1] <= '9' {
+	for start > 0 && char.IsASCIIDigit(searchAddr[start-1]) {
 		start--
 	}
 	if start == end {

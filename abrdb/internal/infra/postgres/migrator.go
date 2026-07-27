@@ -11,19 +11,23 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
+// txBeginner starts a database transaction.
+type txBeginner interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
 type Migrator struct {
-	pool      *pgxpool.Pool
+	db        txBeginner
 	ddlSource string // DDL for data tables (generated from YAML config)
 }
 
-func NewMigrator(pool *pgxpool.Pool, ddlSource string) *Migrator {
-	return &Migrator{pool: pool, ddlSource: ddlSource}
+func NewMigrator(db txBeginner, ddlSource string) *Migrator {
+	return &Migrator{db: db, ddlSource: ddlSource}
 }
 
 // RunMigrations executes all SQL migration files and DDL from config.
@@ -43,7 +47,7 @@ func (m *Migrator) RunMigrations(ctx context.Context) error {
 	slices.Sort(filenames)
 
 	// Execute migrations in transaction
-	tx, err := m.pool.Begin(ctx)
+	tx, err := m.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}

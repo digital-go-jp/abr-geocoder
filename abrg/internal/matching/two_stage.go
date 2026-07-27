@@ -48,7 +48,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 	}
 	if results != nil {
 		for i := range results {
-			setTwoStageUnmatchedAddress(&results[i], nctx.Input.StandardizedAddr, searchAddrStr)
+			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, searchAddrStr)
 		}
 		return results, nil
 	}
@@ -78,7 +78,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	// (no base record to fallback to)
 	parcelCount := basic.IDs.ParcelCount
 	machiazaID := *basic.IDs.MachiazaID
-	if parcelCount == 0 && (len(machiazaID) != model.MachiazaIDLength || machiazaID[model.MachiazaBaseLength:] == model.BaseMachiazaSuffix) {
+	if parcelCount == 0 && model.IsBaseMachiazaID(machiazaID) {
 		// For has_chome=true, parcel data may exist under the chome-specific machiaza_id
 		// so we continue to search with chome adjustment
 		if !basic.IDs.HasChome {
@@ -89,7 +89,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	// finalize sets unmatched address and applies parcel-specific post-processing.
 	finalize := func(results []model.MatchedResult, usedSearchAddr string) []model.MatchedResult {
 		for i := range results {
-			setTwoStageUnmatchedAddress(&results[i], nctx.Input.StandardizedAddr, usedSearchAddr)
+			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, usedSearchAddr)
 		}
 		transform.MergeKyotoStToResults(results, nctx.State.BasicResults)
 		return results

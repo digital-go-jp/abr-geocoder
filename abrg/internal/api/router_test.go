@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,7 +14,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"abrg/internal/matching"
 	"abrg/internal/model"
+	"abrg/internal/reverse"
 )
 
 func TestMain(m *testing.M) {
@@ -111,7 +114,7 @@ func TestGeocodeRequest_Validation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
 			router.GET("/test", func(c *gin.Context) {
-				var req geocodeRequest
+				var req addressRequest
 				if err := c.ShouldBindQuery(&req); err != nil {
 					c.JSON(http.StatusBadRequest, errorResponse("Invalid request parameters"))
 					return
@@ -314,7 +317,7 @@ func TestMatchRequest_Validation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
 			router.GET("/test", func(c *gin.Context) {
-				var req matchRequest
+				var req addressRequest
 				if err := c.ShouldBindQuery(&req); err != nil {
 					c.JSON(http.StatusBadRequest, errorResponse("Invalid request parameters"))
 					return
@@ -350,7 +353,7 @@ func TestCategoryValues(t *testing.T) {
 		t.Run("valid_category_"+category, func(t *testing.T) {
 			router := gin.New()
 			router.GET("/test", func(c *gin.Context) {
-				var req geocodeRequest
+				var req addressRequest
 				if err := c.ShouldBindQuery(&req); err != nil {
 					c.JSON(http.StatusBadRequest, errorResponse("Invalid request parameters"))
 					return
@@ -495,81 +498,72 @@ func TestErrorResponse(t *testing.T) {
 	}
 }
 
-// TestRegisterPositionEndpoint tests the registerPositionEndpoint helper
-func TestRegisterPositionEndpoint(t *testing.T) {
-	handler := func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"handler": "enabled"})
-	}
-	disabledHandler := func(c *gin.Context) {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"handler": "disabled"})
-	}
-
+// TestRegisterEndpoints pins how the endpoint spec table drives both route
+// registration and the RootHandler endpoint listing.
+func TestRegisterEndpoints(t *testing.T) {
 	tests := []struct {
-		name               string
-		component          any
-		enablePositionData bool
-		wantRegistered     bool
-		wantStatus         int
-		wantHandler        string
+		name       string
+		server     *GinServer
+		wantPaths  []string // sorted registered GET paths
+		wantListed []string // exact RootHandler endpoints order
 	}{
 		{
-			name:               "component nil - no registration",
-			component:          nil,
-			enablePositionData: true,
-			wantRegistered:     false,
+			name:       "no components - core routes only",
+			server:     &GinServer{},
+			wantPaths:  []string{"/", "/health", "/normalize"},
+			wantListed: []string{"/", "/health", "/normalize"},
 		},
 		{
-			name:               "component exists, position enabled - enabled handler",
-			component:          "not-nil",
-			enablePositionData: true,
-			wantRegistered:     true,
-			wantStatus:         http.StatusOK,
-			wantHandler:        "enabled",
+			name:       "all components, position enabled",
+			server:     &GinServer{matcher: &mockMatcher{}, reverseGeocoder: &mockReverseGeocoder{}, enabledPos: true},
+			wantPaths:  []string{"/", "/geocode", "/health", "/match", "/normalize", "/reverse"},
+			wantListed: []string{"/", "/health", "/normalize", "/match", "/geocode", "/reverse"},
 		},
 		{
-			name:               "component exists, position disabled - disabled handler",
-			component:          "not-nil",
-			enablePositionData: false,
-			wantRegistered:     true,
-			wantStatus:         http.StatusServiceUnavailable,
-			wantHandler:        "disabled",
+			name:       "all components, position disabled",
+			server:     &GinServer{matcher: &mockMatcher{}, reverseGeocoder: &mockReverseGeocoder{}},
+			wantPaths:  []string{"/", "/geocode", "/health", "/match", "/normalize", "/reverse"},
+			wantListed: []string{"/", "/health", "/normalize", "/match"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			registerPositionEndpoint(router, "/test", tt.component, tt.enablePositionData, handler, disabledHandler)
+			registerEndpoints(router, tt.server)
 
-			// Check if route was registered
-			routes := router.Routes()
-			registered := false
-			for _, r := range routes {
-				if r.Path == "/test" {
-					registered = true
-					break
+			var paths []string
+			for _, r := range router.Routes() {
+				if r.Method == http.MethodGet {
+					paths = append(paths, r.Path)
 				}
 			}
-			if registered != tt.wantRegistered {
-				t.Errorf("registerPositionEndpoint() registered = %v, want %v", registered, tt.wantRegistered)
+			slices.Sort(paths)
+			if !slices.Equal(paths, tt.wantPaths) {
+				t.Errorf("registered paths = %v, want %v", paths, tt.wantPaths)
 			}
 
-			if tt.wantRegistered {
-				// Test the handler response
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequestWithContext(t.Context(), "GET", "/", nil)
+			router.ServeHTTP(w, req)
+			var root struct {
+				Endpoints []string `json:"endpoints"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &root); err != nil {
+				t.Fatalf("GET / failed to unmarshal response: %v", err)
+			}
+			if !slices.Equal(root.Endpoints, tt.wantListed) {
+				t.Errorf("GET / endpoints = %v, want %v", root.Endpoints, tt.wantListed)
+			}
+
+			// Position endpoints answer with the disabled response when
+			// registered but not listed.
+			if tt.server.matcher != nil && !tt.server.enabledPos {
 				w := httptest.NewRecorder()
-				req, _ := http.NewRequestWithContext(t.Context(), "GET", "/test", nil)
+				req, _ := http.NewRequestWithContext(t.Context(), "GET", "/geocode", nil)
 				router.ServeHTTP(w, req)
-
-				if w.Code != tt.wantStatus {
-					t.Errorf("GET /test status = %d, want %d", w.Code, tt.wantStatus)
-				}
-
-				var response map[string]string
-				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-					t.Fatalf("GET /test failed to unmarshal response: %v", err)
-				}
-				if response["handler"] != tt.wantHandler {
-					t.Errorf("GET /test handler = %v, want %q", response["handler"], tt.wantHandler)
+				if w.Code != http.StatusServiceUnavailable {
+					t.Errorf("GET /geocode status = %d, want %d", w.Code, http.StatusServiceUnavailable)
 				}
 			}
 		})
@@ -792,8 +786,8 @@ func TestSetResultInfo(t *testing.T) {
 	}
 }
 
-// TestHandleAddressRequest tests the GinServer.handleAddressRequest method.
-func TestHandleAddressRequest(t *testing.T) {
+// TestPrepareQuery tests the GinServer.prepareQuery method.
+func TestPrepareQuery(t *testing.T) {
 	tests := []struct {
 		name         string
 		address      string
@@ -847,13 +841,12 @@ func TestHandleAddressRequest(t *testing.T) {
 			}
 
 			router := gin.New()
-			var gotCategory model.Category
-			var gotPref string
+			var gotQuery model.MatchQuery
 			var gotOk bool
 
 			router.GET("/test", func(c *gin.Context) {
-				gotCategory, gotPref, gotOk = server.handleAddressRequest(
-					c, tt.address, tt.category, tt.pref)
+				gotQuery, gotOk = server.prepareQuery(
+					c, tt.address, tt.category, tt.pref, 1)
 				if gotOk {
 					c.JSON(http.StatusOK, gin.H{"status": "ok"})
 				}
@@ -864,18 +857,18 @@ func TestHandleAddressRequest(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			if gotOk != tt.wantOk {
-				t.Errorf("handleAddressRequest() ok = %v, want %v", gotOk, tt.wantOk)
+				t.Errorf("prepareQuery() ok = %v, want %v", gotOk, tt.wantOk)
 			}
 			if tt.wantOk {
-				if gotCategory != tt.wantCategory {
-					t.Errorf("handleAddressRequest() category = %v, want %v", gotCategory, tt.wantCategory)
+				if gotQuery.Category != tt.wantCategory {
+					t.Errorf("prepareQuery() category = %v, want %v", gotQuery.Category, tt.wantCategory)
 				}
-				if gotPref != tt.wantPref {
-					t.Errorf("handleAddressRequest() pref = %v, want %v", gotPref, tt.wantPref)
+				if gotQuery.Pref != tt.wantPref {
+					t.Errorf("prepareQuery() pref = %v, want %v", gotQuery.Pref, tt.wantPref)
 				}
 			} else {
 				if w.Code != tt.wantStatus {
-					t.Errorf("handleAddressRequest() status = %v, want %v", w.Code, tt.wantStatus)
+					t.Errorf("prepareQuery() status = %v, want %v", w.Code, tt.wantStatus)
 				}
 			}
 		})
@@ -1137,6 +1130,13 @@ func TestGeocodeHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusInternalServerError,
 			wantErrorField: true,
 		},
+		{
+			name:           "data unavailable maps to 503",
+			query:          "?address=東京都&category=all",
+			mockErr:        fmt.Errorf("residential %w", matching.ErrDataUnavailable),
+			wantStatus:     http.StatusServiceUnavailable,
+			wantErrorField: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1211,6 +1211,13 @@ func TestMatchHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusInternalServerError,
 			wantErrorField: true,
 		},
+		{
+			name:           "data unavailable maps to 503",
+			query:          "?address=東京都&category=all",
+			mockErr:        fmt.Errorf("parcel %w", matching.ErrDataUnavailable),
+			wantStatus:     http.StatusServiceUnavailable,
+			wantErrorField: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1258,6 +1265,7 @@ func TestReverseHandler_Integration(t *testing.T) {
 		mockErr        error
 		wantStatus     int
 		wantErrorField bool
+		wantMessage    string
 	}{
 		{
 			name:  "valid coordinates",
@@ -1292,6 +1300,26 @@ func TestReverseHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusInternalServerError,
 			wantErrorField: true,
 		},
+		{
+			// Requested category data missing from the cache is a service
+			// configuration issue, not a server fault: 503.
+			name:           "data unavailable maps to 503",
+			query:          "?lat=35.6762&lon=139.6503&category=parcel",
+			mockErr:        fmt.Errorf("parcel %w", reverse.ErrDataUnavailable),
+			wantStatus:     http.StatusServiceUnavailable,
+			wantErrorField: true,
+			wantMessage:    "parcel data not available in current cache",
+		},
+		{
+			// A category the reverse geocoder does not recognize is a client
+			// error: 400.
+			name:           "unknown category maps to 400",
+			query:          "?lat=35.6762&lon=139.6503&category=all",
+			mockErr:        fmt.Errorf("%w: bogus", reverse.ErrUnknownCategory),
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+			wantMessage:    "unknown category: bogus",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1324,6 +1352,9 @@ func TestReverseHandler_Integration(t *testing.T) {
 				}
 				if response["status"] != "error" {
 					t.Errorf("ReverseHandler() status field = %v, want %q", response["status"], "error")
+				}
+				if tt.wantMessage != "" && response["message"] != tt.wantMessage {
+					t.Errorf("ReverseHandler() message = %v, want %q", response["message"], tt.wantMessage)
 				}
 			}
 		})

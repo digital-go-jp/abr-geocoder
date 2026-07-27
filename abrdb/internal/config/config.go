@@ -1,5 +1,5 @@
-// Package util provides shared utilities for import operations.
-package util
+// Package config loads and parses the import configuration stored in the database.
+package config
 
 import (
 	"context"
@@ -16,10 +16,10 @@ import (
 
 // ImportConfig holds parsed configuration values
 type ImportConfig struct {
-	EnabledPref      []int
-	EnabledCategory  []model.FileCategory
-	EnabledPos       bool
-	ImportConfigYAML string // Raw YAML configuration for category info
+	EnabledPref     []int
+	EnabledCategory []model.FileCategory
+	EnabledPos      bool
+	Profile         string // Embedded import config profile name chosen at init
 }
 
 // LoadImportConfig loads and parses configuration from database.
@@ -42,10 +42,10 @@ func LoadImportConfig(ctx context.Context, executor *db.QueryExecutor) (*ImportC
 	enablePos := config.EnabledPos == "true"
 
 	return &ImportConfig{
-		EnabledPref:      pref,
-		EnabledCategory:  category,
-		EnabledPos:       enablePos,
-		ImportConfigYAML: config.ImportConfigYAML,
+		EnabledPref:     pref,
+		EnabledCategory: category,
+		EnabledPos:      enablePos,
+		Profile:         config.ImportConfigProfile,
 	}, nil
 }
 

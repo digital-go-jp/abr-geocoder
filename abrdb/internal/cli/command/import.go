@@ -8,14 +8,14 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
-	"abrdb/internal/infra/db"
-
 	"abr.local/common/progress"
 
+	"abrdb/internal/config"
 	"abrdb/internal/infra/duckdb"
 	"abrdb/internal/infra/postgres"
 	"abrdb/internal/model"
@@ -23,7 +23,6 @@ import (
 	"abrdb/internal/service/catalog"
 	"abrdb/internal/service/download"
 	"abrdb/internal/service/importer"
-	"abrdb/internal/util"
 )
 
 // ChangesPendingError reports that a dry-run found changes to import. It is a
@@ -67,23 +66,34 @@ Use --force to skip change detection and import immediately.`,
 			cfg := sc.Config
 
 			// Load all import configuration from database (single query)
-			importConfig, err := util.LoadImportConfig(ctx, sc.QueryExecutor)
+			importConfig, err := config.LoadImportConfig(ctx, sc.QueryExecutor)
 			if err != nil {
 				return fmt.Errorf("load config from database: %w", err)
 			}
 			switch {
-			case importConfig.ImportConfigYAML == "":
-				return errors.New("import config not found in database: run 'abrdb init' first")
+			case importConfig.Profile == "":
+				return errors.New("import config profile not found in database: run 'abrdb init' first")
 			case len(importConfig.EnabledPref) == 0:
 				return errors.New("enabled_pref not configured: run 'abrdb init' first")
 			case len(importConfig.EnabledCategory) == 0:
 				return errors.New("enabled_category not configured: run 'abrdb init' first")
 			}
 
-			importCfg, err := schema.ParseImportConfig([]byte(importConfig.ImportConfigYAML))
+			// The database names the profile; the config itself is embedded in
+			// this binary, so config changes take effect on binary update.
+			importCfg, err := schema.LoadProfile(importConfig.Profile)
 			if err != nil {
-				return fmt.Errorf("parse import config: %w", err)
+				return fmt.Errorf("resolve import config profile: %w: run 'abrdb init' to reinitialize", err)
 			}
+
+			// The tables were created at init time, possibly by a different
+			// binary. Verify they provide every column the embedded profile
+			// expects, so a profile/table mismatch stops here instead of
+			// failing mid-import.
+			if err := postgres.VerifyTableColumns(ctx, sc.QueryExecutor, importCfg.TableColumns()); err != nil {
+				return err
+			}
+
 			categoryInfoMap := importCfg.ToCategoryInfoMap()
 
 			s3Prefixes, err := buildS3Prefixes(importConfig, categoryInfoMap)
@@ -101,9 +111,10 @@ Use --force to skip change detection and import immediately.`,
 				return fmt.Errorf("create download dir %q: %w", cfg.Process.DownloadDir, err)
 			}
 
+			store := postgres.NewCatalog(sc.QueryExecutor)
 			catalogService := catalog.New(catalog.ServiceConfig{
 				APIClient:       sc.APIClient,
-				Executor:        sc.QueryExecutor,
+				Store:           store,
 				DownloadDir:     cfg.Process.DownloadDir,
 				EnabledPref:     importConfig.EnabledPref,
 				EnabledCategory: categoryMap,
@@ -113,22 +124,32 @@ Use --force to skip change detection and import immediately.`,
 
 			// Dry-run: only catalog comparison, skip DuckDB/importer initialization
 			if opts.DryRun {
-				return runImportDryRun(ctx, sc.QueryExecutor, catalogService, s3Prefixes, opts)
+				return runImportDryRun(ctx, store, catalogService, s3Prefixes, opts)
 			}
 
 			// Force mode: skip change detection and re-import every in-scope file
 			if opts.Force {
-				services, err := initImportServices(sc, categoryInfoMap, opts.Quiet)
+				lock, err := sc.QueryExecutor.AcquireImportLock(ctx)
+				if err != nil {
+					return err
+				}
+				defer lock.Release(ctx)
+
+				services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
 				if err != nil {
 					return err
 				}
 				defer func() { _ = services.etl.Close() }()
 
-				return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, importConfig.EnabledCategory, false, true)
+				if err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, importConfig.EnabledCategory, false, true); err != nil {
+					return err
+				}
+				warnOrphanPosFiles(context.WithoutCancel(ctx), store)
+				return nil
 			}
 
 			// Default: check for changes first, import only if updates exist
-			return runImportWithChangeDetection(ctx, sc, catalogService, s3Prefixes, importConfig.EnabledCategory, categoryInfoMap, opts)
+			return runImportWithChangeDetection(ctx, sc, store, catalogService, s3Prefixes, importConfig.EnabledCategory, categoryInfoMap, opts)
 		}),
 	}
 
@@ -161,31 +182,36 @@ type importServices struct {
 	importer importerAPI
 }
 
-// initImportServices initializes DuckDB ETL, download, and import services
-// pgCatalogStore adapts the postgres catalog functions to importer.catalogStore.
-type pgCatalogStore struct{ executor *db.QueryExecutor }
-
-func (s pgCatalogStore) PendingImportsByCategory(ctx context.Context, categories []model.FileCategory) (map[model.FileCategory][]*model.File, error) {
-	return postgres.PendingImportsByCategory(ctx, s.executor, categories)
+// pendingSummaryStore reports pending download/import counts per category and
+// the tables still awaiting their post-import ANALYZE.
+type pendingSummaryStore interface {
+	GetPendingSummary(ctx context.Context) ([]postgres.PendingSummary, error)
+	PendingAnalyzeTables(ctx context.Context) ([]string, error)
+	CountOrphanPosFiles(ctx context.Context) (int, error)
 }
 
-func (s pgCatalogStore) TableIsEmpty(ctx context.Context, tableName string) (bool, error) {
-	return postgres.TableIsEmpty(ctx, s.executor, tableName)
+// warnOrphanPosFiles surfaces pos files whose text counterpart the feed never
+// published. They stay needs_import forever but are invisible in the pending
+// summary (which counts text files), so without this warning the catalog holds
+// pending rows while the run reports "No changes detected". The warning is
+// best-effort and never affects the exit code contract; the count query is
+// bounded so it cannot delay process exit indefinitely.
+func warnOrphanPosFiles(ctx context.Context, store pendingSummaryStore) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	count, err := store.CountOrphanPosFiles(ctx)
+	if err != nil {
+		slog.Warn("failed to count orphan pos files", "event", "import", "error", err)
+		return
+	}
+	if count > 0 {
+		slog.Warn("pos files without a text counterpart stay pending and are never imported",
+			"event", "import", "count", count)
+	}
 }
 
-func (s pgCatalogStore) DeleteFileScope(ctx context.Context, tableName, filename string) error {
-	return postgres.DeleteFileScope(ctx, s.executor, tableName, filename)
-}
-
-func (s pgCatalogStore) EnsureLgCodeIndex(ctx context.Context, tableName string) error {
-	return postgres.EnsureLgCodeIndex(ctx, s.executor, tableName)
-}
-
-func (s pgCatalogStore) MarkAsImported(ctx context.Context, filenames ...string) error {
-	return postgres.MarkAsImported(ctx, s.executor, filenames...)
-}
-
-func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema.CategoryInfo, quiet bool) (*importServices, error) {
+// initImportServices initializes DuckDB ETL, download, and import services.
+func initImportServices(sc *ServiceContainer, store *postgres.Catalog, categoryInfoMap map[string]*schema.CategoryInfo, quiet bool) (*importServices, error) {
 	cfg := sc.Config
 
 	etl, err := duckdb.New(duckdb.ETLConfig{
@@ -199,14 +225,14 @@ func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema
 
 	downloadService := download.New(
 		sc.APIClient,
-		sc.QueryExecutor,
+		store,
 		progressMonitor,
 		cfg.Process.DownloadDir,
 	)
 
 	importService := importer.New(
 		etl,
-		pgCatalogStore{sc.QueryExecutor},
+		store,
 		progressMonitor,
 		cfg.Process.DownloadDir,
 		categoryInfoMap,
@@ -219,10 +245,12 @@ func initImportServices(sc *ServiceContainer, categoryInfoMap map[string]*schema
 	}, nil
 }
 
-// runImportDryRun handles the dry-run mode: compare catalog only, no downloads or imports
+// runImportDryRun handles the dry-run mode: compare catalog only, no downloads or imports.
+// It only reads, so it does not take the import lock and may run concurrently
+// with an actual import.
 func runImportDryRun(
 	ctx context.Context,
-	executor *db.QueryExecutor,
+	store pendingSummaryStore,
 	catalogService catalogAPI,
 	s3Prefixes []string,
 	opts *ImportOptions,
@@ -233,7 +261,8 @@ func runImportDryRun(
 	if err != nil {
 		return fmt.Errorf("scan and compare catalog: %w", err)
 	}
-	return printDryRunSummary(ctx, executor, result, opts.Verbose)
+	warnOrphanPosFiles(ctx, store)
+	return printDryRunSummary(ctx, store, result, opts.Verbose)
 }
 
 // runImportWithChangeDetection handles the default mode: check for changes first, import only if updates exist.
@@ -242,6 +271,7 @@ func runImportDryRun(
 func runImportWithChangeDetection(
 	ctx context.Context,
 	sc *ServiceContainer,
+	store *postgres.Catalog,
 	catalogService catalogAPI,
 	s3Prefixes []string,
 	enabledCategory []model.FileCategory,
@@ -255,47 +285,81 @@ func runImportWithChangeDetection(
 		return fmt.Errorf("scan and compare catalog: %w", err)
 	}
 
-	pendingSummary, err := postgres.GetPendingSummary(ctx, sc.QueryExecutor)
+	pendingSummary, err := store.GetPendingSummary(ctx)
 	if err != nil {
 		return fmt.Errorf("get pending summary: %w", err)
 	}
 
-	// Determine if there's anything to do
+	pendingAnalyze, err := store.PendingAnalyzeTables(ctx)
+	if err != nil {
+		return fmt.Errorf("get pending analyze tables: %w", err)
+	}
+
+	// Determine if there's anything to do. A non-empty analyze backlog counts
+	// as pending work even without file changes, so a failed ANALYZE is
+	// retried by the next scheduled run instead of being dropped.
 	hasS3Changes := len(scanResult.UpdatedFiles) > 0
 	hasPendingWork := len(pendingSummary) > 0
+	hasPendingAnalyze := len(pendingAnalyze) > 0
 
-	if !hasS3Changes && !hasPendingWork {
+	if !hasS3Changes && !hasPendingWork && !hasPendingAnalyze {
+		warnOrphanPosFiles(ctx, store)
 		slog.Info("no changes detected", "event", "import")
 		fmt.Println("No changes detected.")
 		return nil
 	}
 
 	// Log what we're doing
-	if hasPendingWork && !hasS3Changes {
+	switch {
+	case !hasS3Changes && !hasPendingWork:
+		slog.Info("resuming pending analyze",
+			"event", "import",
+			"tables", pendingAnalyze,
+		)
+	case hasPendingWork && !hasS3Changes:
 		slog.Info("resuming pending imports",
 			"event", "import",
 			"category_pending", len(pendingSummary),
 		)
-	} else {
+	default:
 		slog.Info("changes detected, starting import",
 			"event", "import",
 			"updated_files", len(scanResult.UpdatedFiles),
 		)
 	}
 
-	services, err := initImportServices(sc, categoryInfoMap, opts.Quiet)
+	// The scan above ran before the lock and is advisory only. The import
+	// mutates the data tables, so it runs under the exclusive advisory lock,
+	// and the catalog is rescanned after the lock is taken (ScanAndUpdate in
+	// executeImportPipeline), closing the check-then-act window.
+	lock, err := sc.QueryExecutor.AcquireImportLock(ctx)
+	if err != nil {
+		return err
+	}
+	defer lock.Release(ctx)
+
+	services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = services.etl.Close() }()
 
-	return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork, false)
+	if err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork || hasPendingAnalyze, false); err != nil {
+		return err
+	}
+	// Warn after the pipeline so orphans first registered by this run's
+	// catalog scan are reported now instead of on the next run.
+	warnOrphanPosFiles(context.WithoutCancel(ctx), store)
+	return nil
 }
 
 // executeImportPipeline runs the full import pipeline: scan → download → import.
-// hasPendingWork indicates whether there are existing pending imports in the database,
-// which affects the early-return behavior when no new S3 changes are detected.
-// force re-imports every in-scope file regardless of change detection.
+// hasPendingWork indicates whether the database holds pending imports or a
+// pending analyze backlog; it disables the early return when no new S3
+// changes are detected, so the run can finish the leftover work. With only an
+// analyze backlog, ImportCategoryBatch finds no pending files and runs the
+// ANALYZE step alone. force re-imports every in-scope file regardless of
+// change detection.
 func executeImportPipeline(
 	ctx context.Context,
 	catalogService catalogAPI,
@@ -345,12 +409,24 @@ func executeImportPipeline(
 	return nil
 }
 
-func printDryRunSummary(ctx context.Context, executor *db.QueryExecutor, scanResult *catalog.ScanResult, verbose bool) error {
-	pendingSummary, err := postgres.GetPendingSummary(ctx, executor)
+func printDryRunSummary(ctx context.Context, store pendingSummaryStore, scanResult *catalog.ScanResult, verbose bool) error {
+	pendingSummary, err := store.GetPendingSummary(ctx)
 	if err != nil {
 		return fmt.Errorf("get pending summary: %w", err)
 	}
+	pendingAnalyze, err := store.PendingAnalyzeTables(ctx)
+	if err != nil {
+		return fmt.Errorf("get pending analyze tables: %w", err)
+	}
+	return reportDryRunSummary(pendingSummary, scanResult, pendingAnalyze, verbose)
+}
 
+// reportDryRunSummary prints the dry-run summary and returns
+// ChangesPendingError (exit 1) when there is anything to download or import,
+// or when a previous run left tables awaiting ANALYZE. The exit code meaning
+// is unchanged - 1 still means "the next import run has work to do" - which
+// lets the daily workflow re-run the import and self-heal a failed ANALYZE.
+func reportDryRunSummary(pendingSummary []postgres.PendingSummary, scanResult *catalog.ScanResult, pendingAnalyze []string, verbose bool) error {
 	pendingImports := make(map[model.FileCategory]int)
 	for _, s := range pendingSummary {
 		pendingImports[s.Category] = s.ImportCount
@@ -364,7 +440,7 @@ func printDryRunSummary(ctx context.Context, executor *db.QueryExecutor, scanRes
 
 	// Collect all category (from both sources)
 	category := collectCategory(pendingImports, updatedByCategory)
-	if len(category) == 0 {
+	if len(category) == 0 && len(pendingAnalyze) == 0 {
 		fmt.Println("No changes detected.")
 		return nil
 	}
@@ -392,8 +468,12 @@ func printDryRunSummary(ctx context.Context, executor *db.QueryExecutor, scanRes
 		}
 	}
 
+	if len(pendingAnalyze) > 0 {
+		fmt.Printf("  analyze pending: %s\n", strings.Join(pendingAnalyze, ", "))
+	}
+
 	fmt.Printf("Total: %d files to download, %d pairs to import\n", totalDownload, totalImport)
-	if totalDownload > 0 || totalImport > 0 {
+	if totalDownload > 0 || totalImport > 0 || len(pendingAnalyze) > 0 {
 		return ChangesPendingError{Message: "changes pending"}
 	}
 	return nil
@@ -412,7 +492,7 @@ func collectCategory(pending map[model.FileCategory]int, updated map[model.FileC
 }
 
 // buildS3Prefixes generates S3 prefixes for all enabled category
-func buildS3Prefixes(importConfig *util.ImportConfig, categoryInfoMap map[string]*schema.CategoryInfo) ([]string, error) {
+func buildS3Prefixes(importConfig *config.ImportConfig, categoryInfoMap map[string]*schema.CategoryInfo) ([]string, error) {
 	maxPrefixes := len(importConfig.EnabledCategory)
 	if importConfig.EnabledPos {
 		maxPrefixes *= 2

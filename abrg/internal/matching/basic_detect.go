@@ -4,13 +4,14 @@ import (
 	"context"
 	"strings"
 
+	"abrg/internal/char"
 	"abrg/internal/model"
 	"abrg/internal/transform"
 )
 
-// detectBasicResultsWithBasic detects basic-level results using NormalizeAddressTextWithBasic output.
-// The normalizedAddr should be from standardize.NormalizeAddressTextWithBasic().
-func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, pref, originalAddr string) (string, string, []model.MatchedResult, error) {
+// detectBasicResultsWithBasic detects basic-level results using NormalizeBasicNormalized output.
+// The normalizedAddr should be from normalize.NormalizeBasicNormalized().
+func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, pref string) (string, string, []model.MatchedResult, error) {
 	searchAddr, _, _ := strings.Cut(normalizedAddr, " ")
 
 	// Apply variant kanji normalization (e.g., "沖繩" -> "沖縄", "ヶ/ケ" -> "ガ")
@@ -25,7 +26,7 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 	searchAddrBase, afterColon, hasColon := strings.Cut(searchAddrWithColon, ":")
 
 	// First try: search with base address (before colon)
-	basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrBase, pref, originalAddr)
+	basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrBase, pref, normalizedAddr)
 	if err != nil {
 		return pref, searchAddrWithColon, nil, err
 	}
@@ -35,8 +36,8 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 	}
 
 	// Second try: if afterColon starts with a digit, try searching with chome included
-	if hasColon && len(afterColon) > 0 && afterColon[0] >= '0' && afterColon[0] <= '9' {
-		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, originalAddr)
+	if hasColon && len(afterColon) > 0 && char.IsASCIIDigit(afterColon[0]) {
+		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr)
 		if err != nil {
 			return pref, searchAddrWithColon, nil, err
 		}
@@ -52,7 +53,7 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 	// (e.g., "中区本町" → try "横浜市中区本町", "名古屋市中区本町", etc.)
 	if pref == model.All {
 		results, addr, expandedPref, err := n.tryWardExpansion(
-			ctx, searchAddrBase, searchAddrWithColon, originalAddr,
+			ctx, searchAddrBase, searchAddrWithColon, normalizedAddr,
 		)
 		if err != nil {
 			return pref, searchAddrWithColon, nil, err
@@ -116,4 +117,9 @@ func (n *Impl) detectLgCode(searchAddr string) string {
 	}
 
 	return ""
+}
+
+// detectCityPrefectureCode detects prefecture code from city name using prefix map lookup.
+func (n *Impl) detectCityPrefectureCode(address string) string {
+	return n.cityPrefixMap.lookup(address)
 }

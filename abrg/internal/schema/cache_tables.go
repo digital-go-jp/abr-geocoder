@@ -2,6 +2,8 @@ package schema
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -20,7 +22,9 @@ var loadSQLStrings = sync.OnceValues(func() (*sqlStrings, error) {
 	}
 
 	var indexSB, spatialSB, clearSB strings.Builder
-	for tableName, table := range schema.Tables {
+	// Iterate in sorted order so the generated SQL is deterministic.
+	for _, tableName := range slices.Sorted(maps.Keys(schema.Tables)) {
+		table := schema.Tables[tableName]
 		indexSB.WriteString(table.generateIndexSQL(tableName))
 		spatialSB.WriteString(table.generateSpatialIndexSQL(tableName))
 		fmt.Fprintf(&clearSB, "DELETE FROM %s;\n", tableName)
@@ -78,9 +82,9 @@ func InitSchemaSQL() (string, error) {
 
 	var sb strings.Builder
 
-	// Generate CREATE TABLE statements
-	for tableName, table := range schema.Tables {
-		sb.WriteString(table.generateCreateTableSQL(tableName))
+	// Generate CREATE TABLE statements in sorted order for deterministic SQL
+	for _, tableName := range slices.Sorted(maps.Keys(schema.Tables)) {
+		sb.WriteString(schema.Tables[tableName].generateCreateTableSQL(tableName))
 		sb.WriteString(";\n")
 	}
 

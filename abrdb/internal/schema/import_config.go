@@ -71,6 +71,17 @@ func (c *ImportConfig) Validate() error {
 		if _, ok := validCategory[name]; !ok {
 			return fmt.Errorf("unknown category: %s", name)
 		}
+		if cat.TableName == "" {
+			return fmt.Errorf("category %s: table_name is required", name)
+		}
+		// Empty paths would become empty scan prefixes, silently matching no
+		// files and reporting "no changes".
+		if cat.S3TextPath == "" {
+			return fmt.Errorf("category %s: s3_text_path is required", name)
+		}
+		if len(cat.PosColumns) > 0 && cat.S3PosPath == "" {
+			return fmt.Errorf("category %s: s3_pos_path is required when pos_columns are defined", name)
+		}
 		if len(cat.TextColumns) == 0 {
 			return fmt.Errorf("category %s: text_columns is required", name)
 		}
@@ -80,8 +91,47 @@ func (c *ImportConfig) Validate() error {
 		if len(cat.JoinColumns) == 0 {
 			return fmt.Errorf("category %s: join_columns is required", name)
 		}
+
+		// Join columns drive the text/pos merge, so they must exist on both sides.
+		textCols := columnNameSet(cat.TextColumns)
+		posCols := columnNameSet(cat.PosColumns)
+		for _, jc := range cat.JoinColumns {
+			if _, ok := textCols[jc]; !ok {
+				return fmt.Errorf("category %s: join column %q not in text_columns", name, jc)
+			}
+			if _, ok := posCols[jc]; !ok {
+				return fmt.Errorf("category %s: join column %q not in pos_columns", name, jc)
+			}
+		}
+
+		// Unknown PG types would silently degrade to VARCHAR in the DuckDB ETL.
+		for _, col := range slices.Concat(cat.TextColumns, cat.PosColumns) {
+			if col.Name == "" {
+				return fmt.Errorf("category %s: column with empty name", name)
+			}
+			if !isKnownPGType(col.Type) {
+				return fmt.Errorf("category %s: column %s has unsupported type %q", name, col.Name, col.Type)
+			}
+		}
 	}
 	return nil
+}
+
+func columnNameSet(columns []ColumnDef) map[string]struct{} {
+	set := make(map[string]struct{}, len(columns))
+	for _, col := range columns {
+		set[col.Name] = struct{}{}
+	}
+	return set
+}
+
+// isKnownPGType mirrors the type coverage of pgTypeToDuckDB.
+func isKnownPGType(pgType string) bool {
+	if strings.HasPrefix(pgType, "CHAR") {
+		return true
+	}
+	_, ok := pgTypeToDuckDBMap[pgType]
+	return ok
 }
 
 func (c *ImportConfig) ToCategoryInfoMap() map[string]*CategoryInfo {
@@ -108,11 +158,28 @@ func (cat *CategoryConfig) toCategoryInfo() *CategoryInfo {
 		TextColumns:      textCols,
 		PosColumns:       posCols,
 		JoinColumns:      cat.JoinColumns,
+		OutputColumns:    dedupColumns(textCols, posCols),
 		Filters:          filters,
 		TextColumnTypes:  textColTypes,
 		PosColumnTypes:   posColTypes,
 		FullwidthColumns: fullwidthCols,
 	}
+}
+
+// dedupColumns returns text columns followed by the pos-only columns, keeping
+// first-seen order. This is the column order of both the transformed temp
+// table and the PostgreSQL table DDL (see mergeColumns).
+func dedupColumns(textCols, posCols []string) []string {
+	seen := make(map[string]struct{}, len(textCols)+len(posCols))
+	out := make([]string, 0, len(textCols)+len(posCols))
+	for _, c := range slices.Concat(textCols, posCols) {
+		if _, ok := seen[c]; ok {
+			continue
+		}
+		seen[c] = struct{}{}
+		out = append(out, c)
+	}
+	return out
 }
 
 func extractColumnInfo(columns []ColumnDef, trackFullwidth bool) ([]string, map[string]string, map[string]bool) {
@@ -160,10 +227,27 @@ type CategoryInfo struct {
 	TextColumns      []string
 	PosColumns       []string
 	JoinColumns      []string
+	OutputColumns    []string // deduplicated text+pos columns: the single source for INSERT and transform SELECT column lists
 	Filters          FilterConfig
 	TextColumnTypes  map[string]string // column name -> DuckDB type for text CSV
 	PosColumnTypes   map[string]string // column name -> DuckDB type for position CSV
 	FullwidthColumns map[string]bool   // columns that need full-width to half-width conversion
+}
+
+// TableColumns returns, per table name, the column names the config defines
+// (merged text+pos columns). This is the column set `abrdb init` creates for
+// each table.
+func (c *ImportConfig) TableColumns() map[string][]string {
+	result := make(map[string][]string, len(c.Category))
+	for _, cat := range c.Category {
+		merged := cat.mergeColumns()
+		names := make([]string, len(merged))
+		for i, col := range merged {
+			names[i] = col.Name
+		}
+		result[cat.TableName] = names
+	}
+	return result
 }
 
 func (c *ImportConfig) GenerateDDL() string {

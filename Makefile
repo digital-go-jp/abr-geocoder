@@ -1,4 +1,4 @@
-.PHONY: help build test lint fmt vuln modernize clean abrg-build abrg-test abrg-lint abrg-fmt abrg-vuln abrg-modernize abrdb-build abrdb-test abrdb-lint abrdb-fmt abrdb-vuln abrdb-modernize common-lint common-vuln common-modernize all
+.PHONY: help build test lint fmt vuln modernize clean abrg-build abrg-test abrg-lint abrg-fmt abrg-vuln abrg-modernize abrdb-build abrdb-test abrdb-lint abrdb-fmt abrdb-vuln abrdb-modernize common-test common-lint common-vuln common-modernize all
 
 # Default target
 help:
@@ -29,7 +29,7 @@ all: build
 
 build: abrg-build abrdb-build
 
-test: abrg-test abrdb-test
+test: abrg-test abrdb-test common-test
 
 lint: abrg-lint abrdb-lint common-lint
 
@@ -56,7 +56,7 @@ abrg-lint:
 
 abrg-run:
 	@echo "Running abrg server..."
-	@cd abrg && make run ARGS="server"
+	@cd abrg && make run ARGS="serve"
 
 abrg-fmt:
 	@cd abrg && make fmt
@@ -100,13 +100,17 @@ abrdb-clean:
 	@cd abrdb && make clean
 
 # Common module targets
+common-test:
+	@echo "Testing common..."
+	@cd common && make test
+
 common-lint:
 	@echo "Linting common..."
-	@cd common && go mod verify && go vet ./... && golangci-lint run
+	@cd common && make lint
 
 common-vuln:
-	@cd common && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	@cd common && make vuln
 
 common-modernize:
 	@echo "Modernize check common..."
-	@cd common && go fix -diff ./...
+	@cd common && make modernize

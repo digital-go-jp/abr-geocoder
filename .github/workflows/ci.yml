@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: [abrg, abrdb]
+        module: [abrg, abrdb, common]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -24,6 +24,43 @@ jobs:
         run: cd ${{ matrix.module }} && make build
       - name: Test ${{ matrix.module }}
         run: cd ${{ matrix.module }} && make test
+
+  # Runs the abrdb tests that need a real PostgreSQL (advisory lock
+  # acquisition, contention, and release). ABRDB_TEST_REQUIRE_DB turns an
+  # unreachable database into a failure instead of a skip, so these tests
+  # cannot silently stop running.
+  abrdb-db-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: abrdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ABRDB_TEST_REQUIRE_DB: '1'
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: abrdb
+      DB_SSLMODE: disable
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - name: Integration tests against PostgreSQL
+        run: cd abrdb && go test -count=1 -run Integration ./internal/infra/db/
 
   lint:
     runs-on: ubuntu-latest
@@ -36,9 +73,11 @@ jobs:
         with:
           go-version: '1.26.x'
           cache: true
+      - name: go mod verify / go vet ${{ matrix.module }}
+        run: cd ${{ matrix.module }} && go mod verify && go vet ./...
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.11.4
+          version: v2.12.2
           working-directory: ${{ matrix.module }}
       # Go 1.26 `go fix` bundles the modernize suite; -diff exits non-zero on any change.
       - name: modernize ${{ matrix.module }}
@@ -56,5 +95,27 @@ jobs:
         with:
           go-version: '1.26.x'
           cache: true
+      # Version pinned via each module's go.mod tool directive, so local and
+      # CI runs use the same scanner.
       - name: govulncheck ${{ matrix.module }}
-        run: cd ${{ matrix.module }} && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: cd ${{ matrix.module }} && go tool govulncheck ./...
+
+  # The tool directive is per-module; this job fails when the three modules
+  # pin different govulncheck versions.
+  vuln-version-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - name: check govulncheck version is identical across modules
+        run: |
+          for m in abrg abrdb common; do
+            (cd "$m" && go list -m -f '{{.Version}}' golang.org/x/vuln)
+          done | sort -u | tee versions.txt
+          if [ "$(wc -l < versions.txt)" -ne 1 ]; then
+            echo "::error::golang.org/x/vuln versions differ across modules"
+            exit 1
+          fi

@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,7 +15,7 @@ func categoryCompatible(category, enabledCategory string) error {
 	switch category {
 	case string(model.CategoryAll):
 		if enabledCategory != model.All {
-			return fmt.Errorf("category 'all' requires enabled_category to be 'all'")
+			return errors.New("category 'all' requires enabled_category to be 'all'")
 		}
 	case string(model.CategoryBasic):
 		// basic is compatible with any enabledCategory

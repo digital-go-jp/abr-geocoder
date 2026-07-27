@@ -1,5 +1,7 @@
 # DuckDB Cache Schema for abrg geocoder
-version: 1
+# version 2: cache_rsdtdsp / cache_parcel exist only when enabled_category
+# includes them; they are created by CTAS at build time, not declared here.
+version: 2
 
 tables:
   cache_machiaza:
@@ -93,57 +95,10 @@ tables:
       - name: idx_pref_geom
         column: geom
 
-  cache_rsdtdsp:
-    description: "Residential address data (block and resident)"
-    columns:
-      - name: pref_code
-        type: SMALLINT
-      - name: lg_code
-        type: CHAR(6)
-      - name: machiaza_id
-        type: CHAR(7)
-      - name: blk_id
-        type: CHAR(3)
-      - name: rsdt_id
-        type: CHAR(3)
-      - name: rsdt2_id
-        type: CHAR(5)
-      - name: blk_num
-        type: VARCHAR
-      - name: rsdt_num
-        type: VARCHAR
-      - name: rsdt_num2
-        type: VARCHAR
-      - name: geom
-        type: GEOMETRY
-    # Note: No index on (lg_code, machiaza_id) - Row Group statistics provide sufficient filtering
-    spatial_indexes:
-      - name: idx_rsdtdsp_geom
-        column: geom
-
-  cache_parcel:
-    description: "Parcel (land lot) data"
-    columns:
-      - name: pref_code
-        type: SMALLINT
-      - name: lg_code
-        type: CHAR(6)
-      - name: machiaza_id
-        type: CHAR(7)
-      - name: prc_id
-        type: CHAR(15)
-      - name: prc_num1
-        type: VARCHAR
-      - name: prc_num2
-        type: VARCHAR
-      - name: prc_num3
-        type: VARCHAR
-      - name: geom
-        type: GEOMETRY
-    # Note: No index on (lg_code, machiaza_id) - Row Group statistics provide sufficient filtering
-    spatial_indexes:
-      - name: idx_parcel_geom
-        column: geom
+  # cache_rsdtdsp and cache_parcel are not declared here: they exist only in
+  # caches whose enabled_category includes them, and are created at build time
+  # by the CTAS statements in cache/sql.go (which also defines their spatial
+  # index DDL).
 
   cache_config:
     description: "Cache metadata and configuration"
@@ -153,12 +108,3 @@ tables:
         constraints: "PRIMARY KEY"
       - name: config_value
         type: VARCHAR
-
-# PostgreSQL source table names
-source_tables:
-  pref: mt_pref_unified
-  city: mt_city_unified
-  town: mt_town_unified
-  rsdtdsp_blk: mt_rsdtdsp_blk_unified
-  rsdtdsp_rsdt: mt_rsdtdsp_rsdt_unified
-  parcel: mt_parcel_unified

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -9,10 +10,42 @@ import (
 	"abrg/internal/matching"
 	"abrg/internal/model"
 	"abrg/internal/normalize"
+	"abrg/internal/reverse"
 )
 
+// logHandlerError logs a failed handler request with its parameters.
+func logHandlerError(msg, event string, err error, params ...any) {
+	args := make([]any, 0, len(params)+4)
+	args = append(args, "event", event)
+	args = append(args, params...)
+	args = append(args, "error", err)
+	slog.Error(msg, args...)
+}
+
+// queryLogParams returns the shared log parameters for an address query.
+func queryLogParams(q model.MatchQuery) []any {
+	return []any{"address", q.Address, "pref", q.Pref, "category", q.Category, "limit", q.Limit}
+}
+
+// sendMatchQueryError maps a match/geocode pipeline error to its response:
+// data missing from the cache is 503, anything else is logged and answered
+// with 500.
+func sendMatchQueryError(c *gin.Context, msg, event string, err error, query model.MatchQuery) {
+	if errors.Is(err, matching.ErrDataUnavailable) {
+		c.JSON(http.StatusServiceUnavailable, errorResponse(err.Error()))
+		return
+	}
+	logHandlerError(msg, event, err, queryLogParams(query)...)
+	sendInternalServerError(c)
+}
+
+// setMatchLevelLog records the top feature's match level for access logging.
+func setMatchLevelLog(c *gin.Context, level model.MatchLevel) {
+	c.Set(ctxKeyMatchLevel, string(level))
+}
+
 func (s *GinServer) GeocodeHandler(c *gin.Context) {
-	var req geocodeRequest
+	var req addressRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		sendBadRequest(c, formatBindError(err))
 		return
@@ -25,14 +58,13 @@ func (s *GinServer) GeocodeHandler(c *gin.Context) {
 
 	result, err := matching.Geocode(c.Request.Context(), s.matcher, s.repo, query)
 	if err != nil {
-		slog.Error("geocode request failed", "event", "geocode", "address", query.Address, "pref", query.Pref, "category", query.Category, "limit", query.Limit, "error", err)
-		sendInternalServerError(c)
+		sendMatchQueryError(c, "geocode request failed", "geocode", err, query)
 		return
 	}
 
 	// Set result params for structured logging
 	if len(result.Features) > 0 {
-		c.Set(ctxKeyMatchLevel, string(result.Features[0].Properties.MatchLevel))
+		setMatchLevelLog(c, result.Features[0].Properties.MatchLevel)
 		if cl := result.Features[0].Properties.CoordinatesLevel; cl != nil {
 			c.Set(ctxKeyCoordLevel, string(*cl))
 		}
@@ -69,14 +101,22 @@ func (s *GinServer) ReverseHandler(c *gin.Context) {
 		Pref:     pref,
 	})
 	if err != nil {
-		slog.Error("reverse geocode request failed", "event", "reverse", "lon", req.Lon, "lat", req.Lat, "pref", pref, "category", category, "limit", req.Limit, "error", err)
-		sendInternalServerError(c)
+		switch {
+		case errors.Is(err, reverse.ErrUnknownCategory):
+			sendBadRequest(c, err.Error())
+		case errors.Is(err, reverse.ErrDataUnavailable):
+			c.JSON(http.StatusServiceUnavailable, errorResponse(err.Error()))
+		default:
+			logHandlerError("reverse geocode request failed", "reverse", err,
+				"lon", req.Lon, "lat", req.Lat, "pref", pref, "category", category, "limit", req.Limit)
+			sendInternalServerError(c)
+		}
 		return
 	}
 
 	// Set result params for structured logging
 	if len(result.Features) > 0 {
-		c.Set(ctxKeyMatchLevel, string(result.Features[0].Properties.MatchLevel))
+		setMatchLevelLog(c, result.Features[0].Properties.MatchLevel)
 		c.Set(ctxKeyDistance, result.Features[0].Properties.Distance)
 	}
 
@@ -85,7 +125,7 @@ func (s *GinServer) ReverseHandler(c *gin.Context) {
 }
 
 func (s *GinServer) MatchHandler(c *gin.Context) {
-	var req matchRequest
+	var req addressRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		sendBadRequest(c, formatBindError(err))
 		return
@@ -98,14 +138,13 @@ func (s *GinServer) MatchHandler(c *gin.Context) {
 
 	result, err := s.matcher.Match(c.Request.Context(), query)
 	if err != nil {
-		slog.Error("match request failed", "event", "match", "address", query.Address, "pref", query.Pref, "category", query.Category, "limit", query.Limit, "error", err)
-		sendInternalServerError(c)
+		sendMatchQueryError(c, "match request failed", "match", err, query)
 		return
 	}
 
 	// Set result params for structured logging
 	if len(result.Features) > 0 {
-		c.Set(ctxKeyMatchLevel, string(result.Features[0].MatchLevel))
+		setMatchLevelLog(c, result.Features[0].MatchLevel)
 	}
 
 	s.setResultInfo(&result.ResultInfo)
@@ -139,15 +178,11 @@ func (s *GinServer) HealthHandler(c *gin.Context) {
 }
 
 func (s *GinServer) RootHandler(c *gin.Context) {
-	endpoints := []string{"/", "/health", "/normalize"}
-	if s.matcher != nil {
-		endpoints = append(endpoints, "/match")
-	}
-	if s.matcher != nil && s.enabledPos {
-		endpoints = append(endpoints, "/geocode")
-	}
-	if s.reverseGeocoder != nil && s.enabledPos {
-		endpoints = append(endpoints, "/reverse")
+	endpoints := make([]string, 0, len(endpointSpecs()))
+	for _, spec := range endpointSpecs() {
+		if spec.available(s) {
+			endpoints = append(endpoints, spec.path)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -161,8 +196,5 @@ func (s *GinServer) RootHandler(c *gin.Context) {
 }
 
 func (s *GinServer) PositionDataDisabledHandler(c *gin.Context) {
-	c.JSON(http.StatusServiceUnavailable, gin.H{
-		"status":  "error",
-		"message": "This endpoint requires enable_pos=true in the database.",
-	})
+	c.JSON(http.StatusServiceUnavailable, errorResponse("This endpoint requires enable_pos=true in the database."))
 }

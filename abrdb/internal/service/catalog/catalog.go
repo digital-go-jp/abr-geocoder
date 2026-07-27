@@ -6,21 +6,31 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"slices"
 	"strings"
 
 	"abrdb/internal/infra/api"
-	"abrdb/internal/infra/postgres"
 	"abrdb/internal/model"
 	"abrdb/internal/schema"
-
-	"abrdb/internal/infra/db"
 )
 
+// apiLister lists catalog files from the DCAT feed.
+type apiLister interface {
+	ListFilesByPrefix(ctx context.Context, prefix string) ([]api.FileInfo, error)
+}
+
+// catalogStore persists catalog rows.
+type catalogStore interface {
+	FilesByCategory(ctx context.Context, category model.FileCategory) (map[string]*model.File, error)
+	UpsertFile(ctx context.Context, record *model.File) error
+	SyncPairImportStatus(ctx context.Context) error
+}
+
 type ServiceConfig struct {
-	APIClient       *api.Client
-	Executor        *db.QueryExecutor
+	APIClient       apiLister
+	Store           catalogStore
 	DownloadDir     string
 	EnabledPref     []int
 	EnabledCategory map[model.FileCategory]bool
@@ -29,8 +39,8 @@ type ServiceConfig struct {
 }
 
 type service struct {
-	apiClient       *api.Client
-	executor        *db.QueryExecutor
+	apiClient       apiLister
+	store           catalogStore
 	downloadDir     string
 	enabledPref     []int
 	enabledCategory map[model.FileCategory]bool
@@ -41,7 +51,7 @@ type service struct {
 func New(cfg ServiceConfig) *service {
 	return &service{
 		apiClient:       cfg.APIClient,
-		executor:        cfg.Executor,
+		store:           cfg.Store,
 		downloadDir:     cfg.DownloadDir,
 		enabledPref:     cfg.EnabledPref,
 		enabledCategory: cfg.EnabledCategory,
@@ -83,7 +93,7 @@ func (s *service) ScanAndUpdate(ctx context.Context, prefixes []string, force bo
 	}
 
 	// Sync text/pos pairs: if either needs import, both should be imported together
-	if err := postgres.SyncPairImportStatus(ctx, s.executor); err != nil {
+	if err := s.store.SyncPairImportStatus(ctx); err != nil {
 		return nil, fmt.Errorf("sync pair import status: %w", err)
 	}
 
@@ -97,10 +107,10 @@ type scanFilesResult struct {
 
 // scan is the unified scanning function used by both ScanAndCompare and ScanAndUpdate
 func (s *service) scan(ctx context.Context, prefixes []string, updateDB, force bool) (*scanFilesResult, error) {
-	// Build shared scan context once
-	sc, err := s.newScanContext()
+	// Read the download directory once; the set is shared across prefixes
+	localFileSet, err := buildLocalFileSet(s.downloadDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build local file set: %w", err)
 	}
 
 	result := &scanFilesResult{}
@@ -113,7 +123,7 @@ func (s *service) scan(ctx context.Context, prefixes []string, updateDB, force b
 		category := s.extractCategoryFromPrefix(prefix)
 		slog.Debug("scanning catalog files", "event", "catalog_scan", "category", category, "prefix", prefix, "file_count", len(files))
 
-		scanResult, err := s.scanFiles(ctx, files, category, sc, updateDB, force)
+		scanResult, err := s.scanFiles(ctx, files, category, localFileSet, updateDB, force)
 		if err != nil {
 			return nil, fmt.Errorf("scan files: %w", err)
 		}
@@ -125,38 +135,13 @@ func (s *service) scan(ctx context.Context, prefixes []string, updateDB, force b
 	return result, nil
 }
 
-type scanContext struct {
-	localFileSet map[string]struct{}
-}
-
-func (s *service) newScanContext() (*scanContext, error) {
-	localFileSet, err := buildLocalFileSet(s.downloadDir)
-	if err != nil {
-		return nil, fmt.Errorf("build local file set: %w", err)
-	}
-	return &scanContext{localFileSet: localFileSet}, nil
-}
-
-type fileContext struct {
-	existingFiles map[string]*model.File
-	localFileSet  map[string]struct{}
-}
-
-func (s *service) prepareFileContext(ctx context.Context, category model.FileCategory, sc *scanContext) (*fileContext, error) {
-	existingFiles, err := postgres.FilesByCategory(ctx, s.executor, category)
-	if err != nil {
-		return nil, fmt.Errorf("get existing files: %w", err)
-	}
-	return &fileContext{existingFiles: existingFiles, localFileSet: sc.localFileSet}, nil
-}
-
 // scanFiles processes S3 files against existing catalog.
 // If updateDB is true, upserts changed files to DB and returns count.
 // If updateDB is false, only returns the list of changed files (dry-run mode).
-func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category model.FileCategory, sc *scanContext, updateDB, force bool) (*scanFilesResult, error) {
-	fc, err := s.prepareFileContext(ctx, category, sc)
+func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category model.FileCategory, localFileSet map[string]struct{}, updateDB, force bool) (*scanFilesResult, error) {
+	existingFiles, err := s.store.FilesByCategory(ctx, category)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get existing files: %w", err)
 	}
 
 	result := &scanFilesResult{}
@@ -166,8 +151,8 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 			continue
 		}
 
-		existing := fc.existingFiles[file.URL]
-		_, localExists := fc.localFileSet[file.Filename]
+		existing := existingFiles[file.URL]
+		_, localExists := localFileSet[file.Filename]
 		action := decideFileAction(existing, file, localExists, updateDB, force)
 		if action.skip {
 			continue
@@ -181,7 +166,7 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 			continue
 		}
 
-		if err := postgres.UpsertFile(ctx, s.executor, record); err != nil {
+		if err := s.store.UpsertFile(ctx, record); err != nil {
 			return nil, fmt.Errorf("upsert file %q: %w", file.URL, err)
 		}
 		if action.isNewOrModified {
@@ -282,9 +267,11 @@ func (s *service) isProcessable(info *model.File) bool {
 	return true
 }
 
-// extractCategoryFromPrefix extracts category from S3 prefix using categoryInfoMap
+// extractCategoryFromPrefix extracts category from S3 prefix using categoryInfoMap.
+// Names are checked in sorted order so the result is deterministic.
 func (s *service) extractCategoryFromPrefix(prefix string) model.FileCategory {
-	for name, info := range s.categoryInfoMap {
+	for _, name := range slices.Sorted(maps.Keys(s.categoryInfoMap)) {
+		info := s.categoryInfoMap[name]
 		if strings.HasPrefix(prefix, info.S3TextPath) || strings.HasPrefix(prefix, info.S3PosPath) {
 			return model.FileCategory(name)
 		}

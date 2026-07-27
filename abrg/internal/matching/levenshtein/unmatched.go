@@ -5,6 +5,7 @@ package levenshtein
 import (
 	"strings"
 
+	"abrg/internal/matching/unmatched"
 	"abrg/internal/model"
 	"abrg/internal/transform"
 	"abrg/internal/util"
@@ -91,7 +92,7 @@ func extractUnmatchedAddress(
 
 		// Number not matched to place name - include in unmatched parts
 		adjustedSearchAddr := adjustSearchAddrForChome(addr, searchNumbers, searchAddr)
-		unmatchedParts := util.ExtractUnmatchedParts(normalizedAddr, normalizedAddr, matchedAddr, adjustedSearchAddr)
+		unmatchedParts := unmatched.ExtractUnmatchedParts(normalizedAddr, matchedAddr, adjustedSearchAddr)
 
 		// Check if koaza is fully matched
 		if addr.Koaza != nil && strings.Contains(matchedAddr, *addr.Koaza) {
@@ -111,10 +112,10 @@ func extractUnmatchedAddress(
 
 	// No number to match
 	if category == model.CategoryBasic && strings.Contains(searchAddr, "@") {
-		return util.ExtractUnmatchedParts(normalizedAddr, normalizedAddr, matchedAddr, searchAddr)
+		return unmatched.ExtractUnmatchedParts(normalizedAddr, matchedAddr, searchAddr)
 	}
 
-	remaining := extractUnmatchedFromStandardized(normalizedAddr, matchedAddr)
+	remaining := extractUnmatchedSegments(normalizedAddr, matchedAddr)
 
 	// If koaza is fully matched and no remaining text, nothing is unmatched
 	if addr.Koaza != nil && strings.Contains(matchedAddr, *addr.Koaza) && len(remaining) == 0 {
@@ -124,12 +125,12 @@ func extractUnmatchedAddress(
 	return remaining
 }
 
-// extractUnmatchedFromStandardized extracts the unmatched portion from normalizedAddr
+// extractUnmatchedSegments extracts the unmatched portion from normalizedAddr
 // by finding where the matched address ends and returning the rest.
 //
 //	e.g., normalizedAddr="香川県丸亀市原田町字東三分一1926-1", matchedAddr="香川県丸亀市原田町"
 //	-> returns ["字東三分一1926-1"]
-func extractUnmatchedFromStandardized(originalAddr, matchedAddr string) []string {
+func extractUnmatchedSegments(originalAddr, matchedAddr string) []string {
 	// Split originalAddr into address part and building name parts (separated by space)
 	originalAddr = strings.ReplaceAll(originalAddr, "　", " ")
 	parts := strings.SplitN(originalAddr, " ", 2)
@@ -233,6 +234,12 @@ func toHalfWidthDigit(r rune) rune {
 }
 
 // isFullWidthHyphen checks if rune is a full-width hyphen variant.
+//
+// NOTE: intentionally different from the dash set in normalize.NormalizeDashes.
+// That function normalizes raw user input (17 dash variants, ー only between
+// digits); this one post-processes an already-normalized unmatched remainder,
+// so it handles only the variants that survive normalization and converts ー
+// unconditionally (e.g. remainder "2ー3" from a chome split).
 func isFullWidthHyphen(r rune) bool {
 	return r == '−' || r == '－' || r == 'ー' || r == '—' || r == '―'
 }

@@ -8,6 +8,34 @@ import (
 	"time"
 )
 
+// TestServeCmd_CancelledContext pins the clean-shutdown contract of the serve
+// command: cancellation during initialization (here: before the cache open)
+// exits without an error, while real initialization failures still surface.
+func TestServeCmd_CancelledContext(t *testing.T) {
+	const quickstartCachePath = "../../../../quickstart/tokyo_basic.duckdb"
+
+	t.Run("cancellation during startup is a clean shutdown", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		cmd := NewServerCmd()
+		cmd.SetArgs([]string{"--cache", quickstartCachePath})
+		if err := cmd.ExecuteContext(ctx); err != nil {
+			t.Fatalf("serve with cancelled context = %v, want nil", err)
+		}
+	})
+
+	t.Run("real startup failures still surface", func(t *testing.T) {
+		cmd := NewServerCmd()
+		cmd.SetArgs([]string{"--cache", "/nonexistent/abrg.duckdb"})
+		cmd.SilenceUsage = true
+		cmd.SilenceErrors = true
+		if err := cmd.ExecuteContext(t.Context()); err == nil {
+			t.Fatal("serve with missing cache = nil, want error")
+		}
+	})
+}
+
 func TestRunHTTPServer_GracefulShutdownOnContextCancel(t *testing.T) {
 	t.Parallel()
 

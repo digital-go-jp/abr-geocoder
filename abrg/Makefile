@@ -5,7 +5,7 @@ EXTRA_CLEAN := rm -rf tmp
 
 include ../Makefile.common
 
-.PHONY: test-issues test-issue1 test-coverage-pkg bench-match prof help
+.PHONY: test-issues test-issue1 test-coverage-pkg bench-match help
 
 REGRESSION_PKG := ./internal/matching/issues
 
@@ -42,12 +42,6 @@ test-coverage-pkg:
 bench-match: build
 	@bash testdata/bench/run.sh ./$(BINARY) $(or $(REPS),3)
 
-# Run with profiling
-prof:
-	@echo "Running with CPU profiling..."
-	CPU_PROFILE=cpu.prof go run $(LDFLAGS) ./cmd/abrg/... $(ARGS)
-	@echo "View profile with: go tool pprof cpu.prof"
-
 # Show help
 help:
 	@echo "Available targets:"
@@ -62,7 +56,6 @@ help:
 	@echo "  test-unit     - Run unit tests only"
 	@echo "  test-issues   - Run all issue tests (requires CACHE_PATH=/abs/path.duckdb)"
 	@echo "  test-issue1   - Run issue1 test (requires CACHE_PATH=/abs/path.duckdb)"
-	@echo "  test-integration - Run integration tests"
 	@echo "  test-coverage - Run tests with coverage report"
 	@echo "  test-coverage-pkg PKG=./path - Run coverage for specific package"
 	@echo ""
@@ -73,7 +66,6 @@ help:
 	@echo "  modernize     - Check go fix modernizations (CI-friendly, no changes)"
 	@echo "  bench         - Run benchmarks"
 	@echo "  bench-match   - Compare per-record match cost (bundled Tokyo cache)"
-	@echo "  prof          - Run with profiling"
 	@echo ""
 	@echo "Other:"
 	@echo "  help          - Show this help"

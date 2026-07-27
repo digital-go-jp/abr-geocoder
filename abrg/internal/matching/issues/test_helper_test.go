@@ -1,6 +1,7 @@
 package issues
 
 import (
+	"context"
 	"testing"
 
 	"abrg/internal/cache"
@@ -11,7 +12,11 @@ import (
 )
 
 var initTestNormalizer = testutil.NewCacheOnce(func(c *cache.DuckDBCache) (matching.Matcher, error) {
-	return matching.NewMatcher(repository.NewRepository(c.DB()), c.Lookups()), nil
+	cfg, err := cache.LoadConfig(context.Background(), c.DB())
+	if err != nil {
+		return nil, err
+	}
+	return matching.NewMatcher(repository.NewRepository(c.DB()), c.Lookups(), cfg.HasResidential(), cfg.HasParcel()), nil
 })
 
 type normalizeTestCase struct {

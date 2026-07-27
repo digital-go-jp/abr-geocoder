@@ -3,6 +3,7 @@ package matching_test
 import (
 	"testing"
 
+	"abrg/internal/cache"
 	"abrg/internal/matching"
 	"abrg/internal/model"
 	"abrg/internal/repository"
@@ -17,7 +18,11 @@ func setupGeocodeTest(t *testing.T) *geocodeTestDeps {
 	t.Helper()
 	c := matching.SetupTestCache(t)
 	repo := repository.NewRepository(c.DB())
-	normalizer := matching.NewMatcher(repo, c.Lookups())
+	cfg, err := cache.LoadConfig(t.Context(), c.DB())
+	if err != nil {
+		t.Fatalf("load cache config: %v", err)
+	}
+	normalizer := matching.NewMatcher(repo, c.Lookups(), cfg.HasResidential(), cfg.HasParcel())
 	return &geocodeTestDeps{normalizer: normalizer, repo: repo}
 }
 
@@ -253,7 +258,7 @@ func TestGeocodeNoCoordinates(t *testing.T) {
 	}
 
 	if len(response.Features) == 0 {
-		t.Skip("No features returned")
+		t.Fatal("no features returned")
 	}
 
 	feature := response.Features[0]
@@ -323,7 +328,7 @@ func TestGeocodeCoordinatesLevel(t *testing.T) {
 			}
 
 			if len(response.Features) == 0 {
-				t.Skip("No features returned")
+				t.Fatal("no features returned")
 			}
 
 			feature := response.Features[0]

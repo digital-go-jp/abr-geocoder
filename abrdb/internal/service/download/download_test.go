@@ -27,8 +27,8 @@ func TestNew(t *testing.T) {
 		if svc.apiClient != nil {
 			t.Error("apiClient should be nil")
 		}
-		if svc.executor != nil {
-			t.Error("executor should be nil")
+		if svc.store != nil {
+			t.Error("store should be nil")
 		}
 		if svc.progress != nil {
 			t.Error("progress should be nil")

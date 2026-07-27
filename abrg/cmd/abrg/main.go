@@ -27,9 +27,6 @@ func main() {
 		Long: `ABR Geocoder Server is a geocoding service that provides
 address normalization, geocoding, and reverse geocoding APIs
 for Japanese addresses using the Address Base Registry (ABR).`,
-		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-			cmd.SetContext(ctx)
-		},
 	}
 
 	rootCmd.AddCommand(

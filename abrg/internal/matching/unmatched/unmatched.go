@@ -1,10 +1,15 @@
-package util
+// Package unmatched extracts the unmatched (residual) parts of an address —
+// the portion of the user input that the matched database record does not
+// cover, plus building/floor/room tokens — for the matching pipeline.
+package unmatched
 
 import (
 	"slices"
 	"strings"
 
+	"abrg/internal/char"
 	"abrg/internal/model"
+	"abrg/internal/util"
 )
 
 // CreateUnmatchedResult creates a result with the entire address as unmatched.
@@ -23,17 +28,16 @@ func CreateUnmatchedResult(originalAddr string) model.MatchedResult {
 	}
 }
 
-// ExtractUnmatchedParts extracts unmatched parts from standardized addresses.
+// ExtractUnmatchedParts extracts unmatched parts from a normalized address.
 // Returns user-friendly unmatched parts with building names as separate elements.
 //
 // Parameters:
-//   - originalAddr: original user input (used for preserving format where possible)
-//   - normalizedAddr: lightly standardized with building names (e.g., "東京都中央区八丁堀四丁目12-7 サニービル")
+//   - normalizedAddr: basic-normalized input with building names (e.g., "東京都中央区八丁堀四丁目12-7 サニービル")
 //   - matchedAddr: matched address from database (e.g., "東京都文京区大塚1丁目"), used for chome pattern detection
 //   - searchAddr: fully transformed for search (e.g., "中央区8丁堀4@:12-7")
 //
 // Note: Currently uses searchAddr for address portion (may contain transformed forms like "8丁" and "@").
-func ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, searchAddr string) []string {
+func ExtractUnmatchedParts(normalizedAddr, matchedAddr, searchAddr string) []string {
 	var unmatchedParts []string
 
 	// Split normalizedAddr into address part and building name
@@ -50,7 +54,7 @@ func ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, searchAddr
 
 	unmatchedAddr := addressPart
 	if hasColon && afterColon != "" {
-		unmatchedAddr = extractUnmatchedWithColon(originalAddr, standardizedAddrPart, addressPart, beforeColon, afterColon)
+		unmatchedAddr = extractUnmatchedWithColon(normalizedAddr, standardizedAddrPart, addressPart, beforeColon, afterColon)
 	} else if searchAddr == "" {
 		// Empty searchAddr means no specific unmatched portion to extract
 		// This happens when everything matched or we only want building names
@@ -68,7 +72,7 @@ func ExtractUnmatchedParts(originalAddr, normalizedAddr, matchedAddr, searchAddr
 		unmatchedAddr = extractUnmatchedFromStandardized(standardizedAddrPart, matchedAddr)
 		if unmatchedAddr == "" {
 			// Fallback to extracting trailing numbers from searchAddr
-			unmatchedAddr = ExtractTrailingAddressNumbers(searchAddr)
+			unmatchedAddr = util.ExtractTrailingAddressNumbers(searchAddr)
 		}
 	}
 
@@ -156,7 +160,7 @@ func extractUnmatchedWithColonAt(originalAddr, standardizedAddrPart, matchedAddr
 	// Find the chome number at the end of the part before @
 	beforeAt := parts[0]
 	// Extract trailing digits from beforeAt (e.g., "千代田区紀尾井町1" -> "1")
-	chomeNum := ExtractChomeDigits(beforeAt)
+	chomeNum := util.ExtractChomeDigits(beforeAt)
 
 	// Get the part after @ (e.g., "大阪市中央区久太郎町4@渡辺" -> "渡辺")
 	afterAt := parts[1]
@@ -228,8 +232,8 @@ func extractUnmatchedPrefixFromBeforeColon(beforeColon, matchedAddr string) stri
 	normalizedMatched = stripPrefecture(normalizedMatched)
 
 	// Remove 大字 and 字 from both
-	normalizedBefore, _ = RemoveOazaAza(normalizedBefore)
-	normalizedMatched, _ = RemoveOazaAza(normalizedMatched)
+	normalizedBefore, _ = util.RemoveOazaAza(normalizedBefore)
+	normalizedMatched, _ = util.RemoveOazaAza(normalizedMatched)
 
 	// Find where normalizedMatched ends in normalizedBefore
 	// e.g., normalizedBefore="嬉野市嬉野町下野長波須ハ丙", normalizedMatched="嬉野市嬉野町下野"
@@ -311,7 +315,7 @@ func isAllDigits(s string) bool {
 		return false
 	}
 	for i := 0; i < len(s); i++ {
-		if !IsASCIIDigit(s[i]) {
+		if !char.IsASCIIDigit(s[i]) {
 			return false
 		}
 	}
@@ -338,7 +342,7 @@ func extractOriginalGoNumber(originalAddr string) (string, bool) {
 	for start >= 0 {
 		r := runes[start]
 		// Check if this is a kanji numeral or regular digit
-		if IsAddressNumberRune(r) {
+		if util.IsAddressNumberRune(r) {
 			start--
 		} else {
 			break
@@ -358,12 +362,6 @@ func extractUnmatchedWithAt(searchAddr string) string {
 	return ""
 }
 
-func ExtractTrailingAddressNumbers(searchAddr string) string {
-	return extractTrailingBytes(searchAddr, func(b byte) bool {
-		return IsASCIIDigit(b) || b == '-'
-	})
-}
-
 // extractUnmatchedFromStandardized extracts unmatched portion by comparing
 // normalizedAddr with matchedAddr using prefix matching.
 //
@@ -374,4 +372,49 @@ func extractUnmatchedFromStandardized(normalizedAddr, matchedAddr string) string
 		return normalizedAddr[len(matchedAddr):]
 	}
 	return ""
+}
+
+// stripAzaMarker strips the "字" (aza) prefix from unmatched address components
+// when it's just a marker rather than part of a meaningful place name.
+//
+// Strips "字" when:
+//   - s is exactly "字" (standalone marker)
+//   - the text after "字" ends with a kanji numeral (numbered koaza like "家六", "東三分一")
+//
+// Preserves "字" when the remaining text is a place name (e.g., "字上ノ原", "字堤下").
+func stripAzaMarker(s string) string {
+	if !strings.HasPrefix(s, "字") {
+		return s
+	}
+	afterAza := strings.TrimPrefix(s, "字")
+	if afterAza == "" {
+		return ""
+	}
+	runes := []rune(afterAza)
+	if util.IsKanjiNumeral(runes[len(runes)-1]) {
+		return afterAza
+	}
+	return s
+}
+
+// stripPrefecture removes a prefecture prefix from an address string by
+// position heuristic (都/府/県 at rune index 2-3, plus 北海道), without needing
+// a prefecture code. It may return an empty string and keeps any leading space.
+// Deliberately separate from matching's removePrefectureFromAddress, which
+// removes only the exact name for a given prefecture code, trims leading
+// spaces, and returns the input unchanged when nothing would remain.
+func stripPrefecture(addr string) string {
+	if strings.HasPrefix(addr, "北海道") {
+		return addr[len("北海道"):]
+	}
+	runes := []rune(addr)
+	for i, r := range runes {
+		if (r == '都' || r == '府' || r == '県') && i >= 2 && i <= 3 {
+			return string(runes[i+1:])
+		}
+		if i >= 4 {
+			break
+		}
+	}
+	return addr
 }

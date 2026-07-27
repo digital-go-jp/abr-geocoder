@@ -2,12 +2,19 @@ package matching
 
 import (
 	"context"
+	"errors"
 
 	"abrg/internal/cache"
 	"abrg/internal/model"
 	"abrg/internal/repository"
 	"abrg/internal/util"
 )
+
+// ErrDataUnavailable marks match queries whose backing category data is not
+// loaded in the current cache. The HTTP layer maps it to 503. Request
+// validation normally rejects such categories with 400 first; this error
+// guards direct matcher use.
+var ErrDataUnavailable = errors.New("data not available in current cache")
 
 // implQuerier is a consumer-defined interface for the matcher's data access needs.
 type implQuerier interface {
@@ -35,10 +42,15 @@ type Impl struct {
 	wardCandidates  map[string][]cache.WardCandidate
 	cityBoundary    *util.CityBoundary
 	twoStageSearch  *twoStageSearch
+	hasResidential  bool
+	hasParcel       bool
 }
 
-// NewMatcher creates a new matcher instance.
-func NewMatcher(repo implQuerier, lookups cache.Lookups) *Impl {
+// NewMatcher creates a new matcher instance. hasResidential and hasParcel
+// report which category data the cache was built with (cache.Config
+// .HasResidential/HasParcel); categories without data are answered with
+// ErrDataUnavailable instead of querying missing tables.
+func NewMatcher(repo implQuerier, lookups cache.Lookups, hasResidential, hasParcel bool) *Impl {
 	return &Impl{
 		repo:            repo,
 		cityPrefixMap:   buildCityPrefixMap(lookups.CityPrefCodes),
@@ -46,5 +58,7 @@ func NewMatcher(repo implQuerier, lookups cache.Lookups) *Impl {
 		wardCandidates:  lookups.WardCandidates,
 		cityBoundary:    lookups.CityBoundary,
 		twoStageSearch:  newTwoStageSearch(repo),
+		hasResidential:  hasResidential,
+		hasParcel:       hasParcel,
 	}
 }

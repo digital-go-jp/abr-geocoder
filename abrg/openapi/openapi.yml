@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ジオコーダーAPI
-  version: 3.0.0
+  version: 3.0.22
   description: |
     ジオコーダーAPIは、アドレス・ベース・レジストリを利用し、住所の正規化およびジオコーディングを行うことが可能です。
 servers:
@@ -142,11 +142,11 @@ paths:
                   version:
                     type: string
                     description: APIバージョン
-                    example: "3.0.0"
+                    example: "3.0.22"
                   db_version:
                     type: string
                     description: データベースバージョン
-                    example: "3.0.0"
+                    example: "3.0.18"
                   enabled_category:
                     type: string
                     description: 有効なカテゴリ
@@ -273,11 +273,11 @@ components:
         api_version:
           type: string
           description: APIバージョン
-          example: "3.0.0"
+          example: "3.0.22"
         db_version:
           type: string
           description: DBバージョン
-          example: "3.0.0"
+          example: "3.0.18"
         enabled_category:
           type: string
           description: 有効なカテゴリ
@@ -551,8 +551,8 @@ components:
                 result_info:
                   count: 2
                   limit: 2
-                  api_version: "3.0.0"
-                  db_version: "3.0.0"
+                  api_version: "3.0.22"
+                  db_version: "3.0.18"
                   enabled_category: "all"
                   enabled_pref: "all"
                   duration_ms: 30.45
@@ -718,8 +718,8 @@ components:
                 result_info:
                   count: 2
                   limit: 2
-                  api_version: "3.0.0"
-                  db_version: "3.0.0"
+                  api_version: "3.0.22"
+                  db_version: "3.0.18"
                   enabled_category: "all"
                   enabled_pref: "all"
                   duration_ms: 683.35
@@ -863,8 +863,8 @@ components:
                 result_info:
                   count: 2
                   limit: 2
-                  api_version: "3.0.0"
-                  db_version: "3.0.0"
+                  api_version: "3.0.22"
+                  db_version: "3.0.18"
                   enabled_category: "all"
                   enabled_pref: "all"
                   duration_ms: 35.69
@@ -964,7 +964,10 @@ components:
               - status
               - message
     serviceUnavailable:
-      description: 座標データ無効（enable_pos=false に設定されている）
+      description: |
+        必要なデータが利用できません。
+        - 座標データ無効（enable_pos=false に設定されている）
+        - 指定カテゴリのデータがキャッシュに未搭載（例: "parcel data not available in current cache"）
       content:
         application/json:
           schema:

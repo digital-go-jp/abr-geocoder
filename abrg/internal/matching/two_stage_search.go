@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"abrg/internal/char"
 	"abrg/internal/model"
 	"abrg/internal/repository"
 )
@@ -38,7 +39,7 @@ func adjustMachiazaIDForChome(machiazaID, chomeNum string) string {
 	// Extract only digit characters from chomeNum
 	var digits []byte
 	for _, r := range chomeNum {
-		if r >= '0' && r <= '9' {
+		if char.IsASCIIDigit(r) {
 			digits = append(digits, byte(r))
 		}
 	}
@@ -56,7 +57,7 @@ func adjustMachiazaIDForChome(machiazaID, chomeNum string) string {
 
 // searchResidential searches for residential address using 2-stage approach.
 func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress) (*model.MatchedResult, error) {
-	numbers := parsed.numberParts()
+	numbers := parsed.Numbers
 	if len(numbers) == 0 {
 		return nil, nil
 	}
@@ -74,7 +75,12 @@ func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiaza
 	// The base machiaza_id might be for the town without chome (e.g., "0043000" for 舞浜)
 	// We need to use the chome-specific machiaza_id (e.g., "0043002" for 舞浜2丁目)
 	if parsed.HasChome && parsed.Chome != "" {
-		machiazaID = adjustMachiazaIDForChome(machiazaID, parsed.Chome)
+		adjusted := adjustMachiazaIDForChome(machiazaID, parsed.Chome)
+		if adjusted != machiazaID {
+			debugMatchPath(ctx, "chome_machiaza_adjust", parsed.Base,
+				"machiaza_id", machiazaID, "adjusted", adjusted)
+			machiazaID = adjusted
+		}
 	}
 
 	// Single query to find the best residential match across all specificity levels.
@@ -146,7 +152,7 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 	// is stored under the base machiaza_id instead of the detailed one
 	// e.g., 0098104 (寺町通御池上る上本能寺前町) -> try 0098000 (上本能寺前町)
 	// e.g., 0231136 (大字南長野県町) -> try 0231000 (大字南長野)
-	if parcelCount == 0 && len(machiazaID) == model.MachiazaIDLength && machiazaID[model.MachiazaBaseLength:] != model.BaseMachiazaSuffix {
+	if parcelCount == 0 && !model.IsBaseMachiazaID(machiazaID) {
 		baseMachiazaID := machiazaID[:model.MachiazaBaseLength] + model.BaseMachiazaSuffix
 		pr, err := s.repo.FindParcelExact(ctx, lgCode, baseMachiazaID, filter)
 		if err != nil {

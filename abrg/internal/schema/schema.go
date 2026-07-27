@@ -51,6 +51,18 @@ func loadSchema() (*cacheSchema, error) {
 	return loadSchemaOnce()
 }
 
+// Version returns the cache schema version declared in cache_schema.yaml.
+// It is written to cache_config at build time and checked when a cache is
+// opened, so a cache built for a different schema fails fast instead of
+// surfacing as SQL errors at query time.
+func Version() (int, error) {
+	s, err := loadSchema()
+	if err != nil {
+		return 0, err
+	}
+	return s.Version, nil
+}
+
 // generateCreateTableSQL generates CREATE TABLE SQL for a table.
 func (t *tableConfig) generateCreateTableSQL(tableName string) string {
 	var sb strings.Builder

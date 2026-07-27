@@ -14,7 +14,7 @@ func TestExecuteConcurrently_EmptyItems(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteConcurrently(t.Context(), []int{}, worker, nil, "test")
+	err := ExecuteConcurrently(t.Context(), []int{}, worker, nil, "test", 0)
 	if err != nil {
 		t.Errorf("ExecuteConcurrently() with empty items should return nil, got %v", err)
 	}
@@ -32,7 +32,7 @@ func TestExecuteConcurrently_AllItemsProcessed(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteConcurrently(t.Context(), items, worker, nil, "test")
+	err := ExecuteConcurrently(t.Context(), items, worker, nil, "test", 0)
 	if err != nil {
 		t.Errorf("ExecuteConcurrently() unexpected error: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestExecuteConcurrently_WorkerError(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteConcurrently(t.Context(), items, worker, nil, "test")
+	err := ExecuteConcurrently(t.Context(), items, worker, nil, "test", 0)
 	if err == nil {
 		t.Error("ExecuteConcurrently() should return error when worker fails")
 	}
@@ -78,7 +78,7 @@ func TestExecuteConcurrently_ContextCancellation(t *testing.T) {
 		}
 	}
 
-	err := ExecuteConcurrently(ctx, items, worker, nil, "test")
+	err := ExecuteConcurrently(ctx, items, worker, nil, "test", 0)
 	// The worker for item 1 cancels the context and then returns ctx.Err(), so the
 	// group must surface context.Canceled (never nil).
 	if !errors.Is(err, context.Canceled) {
@@ -95,7 +95,7 @@ func TestExecuteConcurrently_StringItems(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteConcurrently(t.Context(), items, worker, nil, "test")
+	err := ExecuteConcurrently(t.Context(), items, worker, nil, "test", 0)
 	if err != nil {
 		t.Errorf("ExecuteConcurrently() unexpected error: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestExecuteConcurrently_SingleItem(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteConcurrently(t.Context(), items, worker, nil, "test")
+	err := ExecuteConcurrently(t.Context(), items, worker, nil, "test", 0)
 	if err != nil {
 		t.Errorf("ExecuteConcurrently() unexpected error: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestExecuteConcurrently_WithMonitor_Success(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteConcurrently(t.Context(), items, worker, monitor, "test-task")
+	err := ExecuteConcurrently(t.Context(), items, worker, monitor, "test-task", 0)
 	if err != nil {
 		t.Errorf("ExecuteConcurrently() unexpected error: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestExecuteConcurrently_WithMonitor_Error(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteConcurrently(t.Context(), items, worker, monitor, "test-task")
+	err := ExecuteConcurrently(t.Context(), items, worker, monitor, "test-task", 0)
 	if err == nil {
 		t.Error("ExecuteConcurrently() should return error")
 	}

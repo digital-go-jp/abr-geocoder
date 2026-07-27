@@ -1,21 +1,43 @@
 package cache
 
-// SQL constants for data insertion from PostgreSQL to DuckDB cache.
+import (
+	"fmt"
+	"strings"
+)
 
-// insertMachiazaSQL inserts town/machiaza-level data from PostgreSQL.
-// This should be called AFTER cache_parcel and cache_rsdtdsp are populated.
+// SQL constants for data insertion from PostgreSQL to DuckDB cache.
+//
+// The category tables (cache_rsdtdsp / cache_parcel) exist only in caches
+// whose enabled_category includes them. They are created by the CTAS
+// statements below rather than by cache_schema.yaml, so their whole DDL
+// (table shape, spatial indexes, cleanup of stale copies) lives in this file.
+
+// dropCategoryTablesSQL removes category tables left over from a previous
+// build so that a category table exists if and only if the current build
+// created it.
+const dropCategoryTablesSQL = `
+DROP TABLE IF EXISTS cache_rsdtdsp;
+DROP TABLE IF EXISTS cache_parcel;
+`
+
+// Note: No index on (lg_code, machiaza_id) for the category tables - Row
+// Group statistics from the CTAS ORDER BY provide sufficient filtering.
+const createRsdtdspIndexSQL = `CREATE INDEX IF NOT EXISTS idx_rsdtdsp_geom ON cache_rsdtdsp USING RTREE(geom)`
+
+const createParcelIndexSQL = `CREATE INDEX IF NOT EXISTS idx_parcel_geom ON cache_parcel USING RTREE(geom)`
+
+// insertMachiazaSQLTemplate inserts town/machiaza-level data from PostgreSQL.
+// It must run AFTER cache_parcel and cache_rsdtdsp are populated.
 // Uses CTE + LEFT JOIN instead of correlated subqueries for better performance.
-const insertMachiazaSQL = `
+// The count CTE bodies are placeholders because the category tables exist only
+// when enabled_category includes them; buildInsertMachiazaSQL fills them in.
+const insertMachiazaSQLTemplate = `
 WITH
 parcel_cnt AS (
-	SELECT lg_code, machiaza_id, COUNT(*)::INTEGER AS parcel_count
-	FROM cache_parcel
-	GROUP BY lg_code, machiaza_id
+	{{parcel_cnt}}
 ),
 rsdt_cnt AS (
-	SELECT lg_code, machiaza_id, COUNT(*)::INTEGER AS rsdtdsp_count
-	FROM cache_rsdtdsp
-	GROUP BY lg_code, machiaza_id
+	{{rsdt_cnt}}
 ),
 oaza_has_chome AS (
 	SELECT lg_code, oaza_cho, TRUE AS has_any_chome
@@ -59,6 +81,28 @@ LEFT JOIN parcel_cnt pc ON pc.lg_code = t.lg_code AND pc.machiaza_id = t.machiaz
 LEFT JOIN rsdt_cnt rc ON rc.lg_code = t.lg_code AND rc.machiaza_id = t.machiaza_id
 LEFT JOIN oaza_has_chome oh ON oh.lg_code = t.lg_code AND oh.oaza_cho = t.oaza_cho
 `
+
+// machiazaCountCTE returns the aggregation CTE body counting rows of a
+// category table per machiaza, or an empty relation of the same shape when
+// the table is not part of this build (the LEFT JOIN then yields NULL and
+// COALESCE stores 0).
+func machiazaCountCTE(table, countCol string, exists bool) string {
+	if !exists {
+		return fmt.Sprintf("SELECT NULL::VARCHAR AS lg_code, NULL::VARCHAR AS machiaza_id, NULL::INTEGER AS %s WHERE FALSE", countCol)
+	}
+	return fmt.Sprintf(`SELECT lg_code, machiaza_id, COUNT(*)::INTEGER AS %s
+	FROM %s
+	GROUP BY lg_code, machiaza_id`, countCol, table)
+}
+
+// buildInsertMachiazaSQL returns the machiaza insert SQL for a build that has
+// (or has not) each category table.
+func buildInsertMachiazaSQL(hasRsdtdsp, hasParcel bool) string {
+	return strings.NewReplacer(
+		"{{parcel_cnt}}", machiazaCountCTE("cache_parcel", "parcel_count", hasParcel),
+		"{{rsdt_cnt}}", machiazaCountCTE("cache_rsdtdsp", "rsdtdsp_count", hasRsdtdsp),
+	).Replace(insertMachiazaSQLTemplate)
+}
 
 // insertCitySQL inserts city-level data from PostgreSQL.
 const insertCitySQL = `

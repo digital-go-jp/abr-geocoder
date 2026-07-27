@@ -11,10 +11,12 @@ import (
 )
 
 type Info struct {
-	Path      string
-	Size      int64
-	BuildTime string // Build time from cache_config
-	Tables    map[string]int
+	Path          string
+	Size          int64
+	BuildTime     string // Build time from cache_config
+	SchemaVersion string // Schema version from cache_config; empty if absent
+	Warning       string // Failed schema version check with rebuild advice; empty if the cache is usable
+	Tables        map[string]int
 }
 
 const bytesPerMB = 1024 * 1024
@@ -54,12 +56,29 @@ func LoadInfo(ctx context.Context, cachePath string) (*Info, error) {
 
 	info.Tables = make(map[string]int, len(duckdb.AllTables))
 
-	// BuildTime is optional; zero value on failure.
+	// BuildTime and SchemaVersion are optional; zero value on failure.
 	_ = conn.QueryRowContext(ctx, "SELECT config_value FROM cache_config WHERE config_key = 'build_time'").Scan(&info.BuildTime)
+	_ = conn.QueryRowContext(ctx, "SELECT config_value FROM cache_config WHERE config_key = ?", KeySchemaVersion).Scan(&info.SchemaVersion)
 
-	// Table names are trusted constants from duckdb.AllTables.
-	// Negative count means the row count is unavailable.
+	// Diagnostics intentionally do not reject caches the geocoder would
+	// refuse to open; a failed schema version check becomes a warning with
+	// the rebuild advice instead.
+	if err := checkSchemaVersion(ctx, conn); err != nil {
+		info.Warning = err.Error()
+	}
+
+	// Table names are trusted constants from duckdb.AllTables. Tables absent
+	// from the cache (category tables of a build that did not need them) are
+	// omitted; a negative count means the row count is unavailable.
 	for _, table := range duckdb.AllTables {
+		exists, err := tableExists(ctx, conn, table)
+		if err != nil {
+			info.Tables[table] = -1
+			continue
+		}
+		if !exists {
+			continue
+		}
 		var count int
 		query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
 		if err := conn.QueryRowContext(ctx, query).Scan(&count); err != nil {

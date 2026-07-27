@@ -3,6 +3,7 @@ package matching
 import (
 	"strings"
 
+	"abrg/internal/char"
 	"abrg/internal/util"
 )
 
@@ -37,16 +38,12 @@ func parseSearchAddr(searchAddr string) parsedAddress {
 		return p
 	}
 
-	// Step 1: Extract building name (after space in the number portion).
-	// The space may appear after the colon section, e.g., "港区虎ノ門:1 永島ビル9階"
-	// But we need to handle it after splitting on colon.
-	working := searchAddr
-
-	// Step 2: Check for "@" marker (chome notation)
-	if atIdx := strings.Index(working, "@"); atIdx > 0 {
+	// Check for "@" marker (chome notation). Building names (after a space,
+	// e.g., "港区虎ノ門:1 永島ビル9階") are split off in parseNumbersAndBuilding.
+	if atIdx := strings.Index(searchAddr, "@"); atIdx > 0 {
 		p.HasChome = true
-		beforeAt := working[:atIdx]
-		afterAt := working[atIdx+1:] // may start with ":" or be empty
+		beforeAt := searchAddr[:atIdx]
+		afterAt := searchAddr[atIdx+1:] // may start with ":" or be empty
 
 		p.Chome = util.ExtractChomeDigits(beforeAt)
 		if p.Chome != "" {
@@ -64,14 +61,14 @@ func parseSearchAddr(searchAddr string) parsedAddress {
 			p.AfterChome = before
 			afterColon := after
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterColon)
-		} else if len(afterAt) > 1 && afterAt[0] == '-' && afterAt[1] >= '0' && afterAt[1] <= '9' {
+		} else if len(afterAt) > 1 && afterAt[0] == '-' && char.IsASCIIDigit(afterAt[1]) {
 			// Sapporo pattern: "@-N" where N is address number after chome
 			// e.g., "北3条西1@-7" from expanded "北3西1-7" (ExpandSapporoJou + ChomeToSymbol)
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterAt)
 		}
 	} else {
 		// No "@" marker - simple "base:numbers" format
-		base, afterColon, hasColon := strings.Cut(working, ":")
+		base, afterColon, hasColon := strings.Cut(searchAddr, ":")
 		p.Base = base
 		if hasColon {
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterColon)
@@ -137,27 +134,13 @@ func (p parsedAddress) String() string {
 	return sb.String()
 }
 
-// Returns nil if no numbers are present.
-func (p parsedAddress) numberParts() []string {
-	if len(p.Numbers) == 0 {
-		return nil
-	}
-	return p.Numbers
-}
-
-// numericParts returns only the numeric parts from the number components,
-// equivalent to extractnumericParts.
+// numericParts returns only the numeric parts from the number components.
 // Filters out non-numeric parts and extracts leading digits from each part.
 func (p parsedAddress) numericParts() []string {
-	parts := p.numberParts()
-	if parts == nil {
-		return nil
-	}
-
 	var numbers []string
-	for _, part := range parts {
+	for _, part := range p.Numbers {
 		numEnd := 0
-		for numEnd < len(part) && part[numEnd] >= '0' && part[numEnd] <= '9' {
+		for numEnd < len(part) && char.IsASCIIDigit(part[numEnd]) {
 			numEnd++
 		}
 		if numEnd > 0 {

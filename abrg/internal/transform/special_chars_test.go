@@ -1,6 +1,30 @@
 package transform
 
-import "testing"
+import (
+	"slices"
+	"strings"
+	"testing"
+)
+
+// TestParseSpecialCharPairs_CRLF pins that a CRLF checkout of the embedded
+// TSV yields exactly the same pair list as the LF form.
+func TestParseSpecialCharPairs_CRLF(t *testing.T) {
+	want := parseSpecialCharPairs(specialCharsData)
+	if len(want) != 386*2 {
+		t.Fatalf("parseSpecialCharPairs() returned %d pairs, want 386", len(want)/2)
+	}
+
+	crlf := strings.ReplaceAll(specialCharsData, "\n", "\r\n")
+	got := parseSpecialCharPairs(crlf)
+	if !slices.Equal(got, want) {
+		t.Errorf("parseSpecialCharPairs(CRLF) differs from LF parse: got %d entries, want %d", len(got), len(want))
+	}
+	for _, s := range got {
+		if strings.ContainsRune(s, '\r') {
+			t.Errorf("parseSpecialCharPairs(CRLF) entry %q contains \\r", s)
+		}
+	}
+}
 
 func TestStandardizeSpecialChars(t *testing.T) {
 	tests := []struct {
@@ -417,6 +441,30 @@ func TestStandardizeSpecialChars(t *testing.T) {
 			name:        "𢉿→から: 1文字→2文字",
 			input:       "𢉿松",
 			want:        "から松",
+			wantChanged: true,
+		},
+		// ============================================================
+		// 行末コメントに飲み込まれていた異体字マッピング
+		// ============================================================
+		// 冝(U+519D) は 宜(U+5B9C) の異体字 (DB: 岐阜県大垣市上石津町祢冝上)
+		{
+			name:        "冝→宜: 祢冝上",
+			input:       "岐阜県大垣市上石津町祢冝上",
+			want:        "岐阜県大垣市上石津町祢宜上",
+			wantChanged: true,
+		},
+		// 炮(U+70AE) は 砲(U+7832) の異体字 (DB: 愛知県豊田市貝津町鉄炮迫)
+		{
+			name:        "炮→砲: 鉄炮迫",
+			input:       "愛知県豊田市貝津町鉄炮迫",
+			want:        "愛知県豊田市貝津町鉄砲迫",
+			wantChanged: true,
+		},
+		// 蘒(U+8612) → 荻(U+837B) ABR外字縮退 (DB: 山口県長門市俵山字蘒ノ尾)
+		{
+			name:        "蘒→荻: 蘒ノ尾",
+			input:       "山口県長門市俵山字蘒ノ尾",
+			want:        "山口県長門市俵山字荻ノ尾",
 			wantChanged: true,
 		},
 	}

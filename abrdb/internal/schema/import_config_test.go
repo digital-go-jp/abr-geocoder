@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -42,6 +43,8 @@ func validConfig() *ImportConfig {
 		Category: map[string]*CategoryConfig{
 			string(model.CategoryPref): {
 				TableName:   "mt_pref_unified",
+				S3TextPath:  "mt_pref/",
+				S3PosPath:   "mt_pref_pos/",
 				TextColumns: []ColumnDef{{Name: "lg_code", Type: "CHAR(6)"}},
 				PosColumns:  []ColumnDef{{Name: "lg_code", Type: "CHAR(6)"}},
 				JoinColumns: []string{"lg_code"},
@@ -71,6 +74,34 @@ func TestImportConfig_Validate(t *testing.T) {
 		{"missing join_columns", func(c *ImportConfig) {
 			c.Category[string(model.CategoryPref)].JoinColumns = nil
 		}, "join_columns is required"},
+		{"missing table_name", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].TableName = ""
+		}, "table_name is required"},
+		{"missing s3_text_path", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].S3TextPath = ""
+		}, "s3_text_path is required"},
+		{"missing s3_pos_path with pos_columns", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].S3PosPath = ""
+		}, "s3_pos_path is required"},
+		{"join column not in text_columns", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].JoinColumns = []string{"machiaza_id"}
+		}, `join column "machiaza_id" not in text_columns`},
+		{"join column not in pos_columns", func(c *ImportConfig) {
+			cat := c.Category[string(model.CategoryPref)]
+			cat.TextColumns = append(cat.TextColumns, ColumnDef{Name: "machiaza_id", Type: "CHAR(7)"})
+			cat.JoinColumns = []string{"machiaza_id"}
+		}, `join column "machiaza_id" not in pos_columns`},
+		{"unknown pg type", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].TextColumns[0].Type = "JSONB"
+		}, `unsupported type "JSONB"`},
+		{"empty column type", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].PosColumns = append(
+				c.Category[string(model.CategoryPref)].PosColumns, ColumnDef{Name: "rep_lon"})
+		}, `unsupported type ""`},
+		{"empty column name", func(c *ImportConfig) {
+			c.Category[string(model.CategoryPref)].PosColumns = append(
+				c.Category[string(model.CategoryPref)].PosColumns, ColumnDef{Type: "REAL"})
+		}, "column with empty name"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -207,9 +238,9 @@ func TestCategoryConfig_ToCategoryInfo(t *testing.T) {
 // TestParseImportConfig_EmbeddedDefault guards the shipped default config: a
 // broken config_default.yaml would otherwise only surface at `abrdb init` time.
 func TestParseImportConfig_EmbeddedDefault(t *testing.T) {
-	cfg, err := ParseImportConfig(DefaultConfigYAML)
+	cfg, err := ParseImportConfig(defaultConfigYAML)
 	if err != nil {
-		t.Fatalf("ParseImportConfig(DefaultConfigYAML) error = %v", err)
+		t.Fatalf("ParseImportConfig(defaultConfigYAML) error = %v", err)
 	}
 	if cfg.Version != 1 {
 		t.Errorf("Version = %d, want 1", cfg.Version)
@@ -244,5 +275,29 @@ func TestParseImportConfig_Errors(t *testing.T) {
 		"    join_columns: [x]\n"
 	if _, err := ParseImportConfig([]byte(yaml)); err == nil {
 		t.Error("ParseImportConfig(version 2) = nil error, want validate error")
+	}
+}
+
+// TestTableColumns pins that the drift check sees exactly the merged text+pos
+// column set per table, including pos-only columns and join-column dedup.
+func TestTableColumns(t *testing.T) {
+	cfg := validConfig()
+	cfg.Category[string(model.CategoryPref)].PosColumns = []ColumnDef{
+		{Name: "lg_code", Type: "CHAR(6)"},
+		{Name: "rep_lon", Type: "REAL", Nullable: true},
+		{Name: "rep_lat", Type: "REAL", Nullable: true},
+	}
+
+	got := cfg.TableColumns()
+	want := map[string][]string{
+		"mt_pref_unified": {"lg_code", "rep_lon", "rep_lat"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("TableColumns() has %d tables, want %d", len(got), len(want))
+	}
+	for table, cols := range want {
+		if !slices.Equal(got[table], cols) {
+			t.Errorf("TableColumns()[%q] = %v, want %v", table, got[table], cols)
+		}
 	}
 }

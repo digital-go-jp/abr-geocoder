@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"abrg/internal/char"
 	"abrg/internal/transform"
 )
 
@@ -41,7 +42,7 @@ func extractFirstNumber(s string) string {
 func leadingDigitRun(s string) string {
 	start := -1
 	for i, r := range s {
-		if r >= '0' && r <= '9' {
+		if char.IsASCIIDigit(r) {
 			if start == -1 {
 				start = i
 			}

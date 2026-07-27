@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"abrg/internal/cache"
-	"abrg/internal/infra/duckdb"
 	"abrg/internal/matching"
 	"abrg/internal/model"
 	"abrg/internal/repository"
@@ -34,12 +33,9 @@ var _ io.Closer = (*GinServer)(nil)
 
 type ServerConfig struct {
 	APIVersion      string
-	DBVersion       string
-	EnabledPos      bool
-	EnabledCategory string
-	EnabledPref     string
 	CORSAllowOrigin string
 	Cache           *cache.DuckDBCache // Pre-created cache for dependency injection
+	CacheConfig     cache.Config       // Configuration loaded from the cache
 }
 
 type reverser interface {
@@ -111,72 +107,107 @@ func accessLogFormatter(param gin.LogFormatterParams) string {
 	return buf.String()
 }
 
-func registerPositionEndpoint(r *gin.Engine, path string, component any, enablePositionData bool, handler, disabledHandler gin.HandlerFunc) {
-	if component == nil {
-		return
-	}
-	if enablePositionData {
-		r.GET(path, handler)
-	} else {
-		r.GET(path, disabledHandler)
+// endpointSpec declares one GET route. The same table drives route
+// registration and the endpoint listing served by RootHandler, so the two
+// can never drift apart.
+type endpointSpec struct {
+	path    string
+	handler func(*GinServer, *gin.Context)
+	// hasComponent reports whether the backing component is wired; nil means
+	// the endpoint needs no component. Routes without their component are not
+	// registered.
+	hasComponent func(*GinServer) bool
+	// needsPos marks endpoints that require position data. Without it the
+	// route answers with PositionDataDisabledHandler and is not listed.
+	needsPos bool
+}
+
+// endpointSpecs is ordered as the endpoints appear in the RootHandler output.
+// It is a function rather than a package variable because RootHandler is both
+// listed in and derived from the table.
+func endpointSpecs() []endpointSpec {
+	return []endpointSpec{
+		{path: "/", handler: (*GinServer).RootHandler},
+		{path: "/health", handler: (*GinServer).HealthHandler},
+		{path: "/normalize", handler: (*GinServer).NormalizeHandler},
+		{path: "/match", handler: (*GinServer).MatchHandler,
+			hasComponent: func(s *GinServer) bool { return s.matcher != nil }},
+		{path: "/geocode", handler: (*GinServer).GeocodeHandler, needsPos: true,
+			hasComponent: func(s *GinServer) bool { return s.matcher != nil }},
+		{path: "/reverse", handler: (*GinServer).ReverseHandler, needsPos: true,
+			hasComponent: func(s *GinServer) bool { return s.reverseGeocoder != nil }},
 	}
 }
 
-func NewGinServer(cfg ServerConfig) (*GinServer, error) {
+// available reports whether the endpoint serves its real handler on s.
+func (e endpointSpec) available(s *GinServer) bool {
+	if e.hasComponent != nil && !e.hasComponent(s) {
+		return false
+	}
+	return !e.needsPos || s.enabledPos
+}
+
+// registerEndpoints wires every endpointSpec onto the router.
+func registerEndpoints(router *gin.Engine, server *GinServer) {
+	for _, spec := range endpointSpecs() {
+		if spec.hasComponent != nil && !spec.hasComponent(server) {
+			continue
+		}
+		handler := spec.handler
+		if spec.needsPos && !server.enabledPos {
+			handler = (*GinServer).PositionDataDisabledHandler
+		}
+		router.GET(spec.path, func(c *gin.Context) { handler(server, c) })
+	}
+}
+
+func NewGinServer(cfg ServerConfig) *GinServer {
+	registerFormTagNames()
 	router := gin.New()
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
 		Formatter: accessLogFormatter,
 		SkipPaths: []string{"/health"},
 	}))
-	router.Use(gin.Recovery())
+	// Keep every error response, including panics and unmatched routes, on the
+	// JSON error contract {"status":"error","message":"..."}.
+	router.Use(gin.CustomRecovery(func(c *gin.Context, _ any) {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse("Internal Server Error"))
+	}))
+	router.HandleMethodNotAllowed = true
+	router.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, errorResponse("not found"))
+	})
+	router.NoMethod(func(c *gin.Context) {
+		c.JSON(http.StatusMethodNotAllowed, errorResponse("method not allowed"))
+	})
 
 	configureCORS(router, cfg.CORSAllowOrigin)
 
-	var matcher *matching.Impl
-	var repo *repository.DB
-	var reverseGeocoder *reverse.ReverseGeocoder
-
-	if cfg.Cache != nil {
-		repo = repository.NewRepository(cfg.Cache.DB())
-		matcher = matching.NewMatcher(repo, cfg.Cache.Lookups())
-		reverseGeocoder = reverse.NewReverseGeocoder(repo,
-			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableRsdtdsp),
-			reverse.TableExists(context.Background(), cfg.Cache.DB(), duckdb.TableParcel),
-		)
-	}
-
 	server := &GinServer{
-		repo:            repo,
 		router:          router,
 		apiVersion:      cfg.APIVersion,
-		dbVersion:       cfg.DBVersion,
-		enabledCategory: cfg.EnabledCategory,
-		enabledPref:     cfg.EnabledPref,
-		enabledPos:      cfg.EnabledPos,
+		dbVersion:       cfg.CacheConfig.DBVersion,
+		enabledCategory: cfg.CacheConfig.EnabledCategory,
+		enabledPref:     cfg.CacheConfig.EnabledPref,
+		enabledPos:      cfg.CacheConfig.PosEnabled(),
 		cache:           cfg.Cache,
 	}
 
-	if matcher != nil {
-		server.matcher = matcher
-	}
-	if reverseGeocoder != nil {
-		server.reverseGeocoder = reverseGeocoder
-	}
-
-	registerPositionEndpoint(router, "/geocode", server.matcher, cfg.EnabledPos,
-		server.GeocodeHandler, server.PositionDataDisabledHandler)
-	registerPositionEndpoint(router, "/reverse", server.reverseGeocoder, cfg.EnabledPos,
-		server.ReverseHandler, server.PositionDataDisabledHandler)
-
-	if matcher != nil {
-		router.GET("/match", server.MatchHandler)
+	// Assign the components only when they exist so the interface fields stay
+	// untyped nil (a typed-nil *repository.DB would make nil checks pass).
+	if cfg.Cache != nil {
+		repo := repository.NewRepository(cfg.Cache.DB())
+		server.repo = repo
+		// Data availability follows the build configuration; the presence of
+		// the category tables themselves is verified at cache open.
+		hasResidential, hasParcel := cfg.CacheConfig.HasResidential(), cfg.CacheConfig.HasParcel()
+		server.matcher = matching.NewMatcher(repo, cfg.Cache.Lookups(), hasResidential, hasParcel)
+		server.reverseGeocoder = reverse.NewReverseGeocoder(repo, hasResidential, hasParcel)
 	}
 
-	router.GET("/normalize", server.NormalizeHandler)
-	router.GET("/health", server.HealthHandler)
-	router.GET("/", server.RootHandler)
+	registerEndpoints(router, server)
 
-	return server, nil
+	return server
 }
 
 func (s *GinServer) Handler() http.Handler {

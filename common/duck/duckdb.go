@@ -9,10 +9,10 @@ import (
 	_ "github.com/duckdb/duckdb-go/v2"
 )
 
-// Open opens a DuckDB connection.
-// Note: DuckDB requires per-connection initialization (LOAD extensions, ATTACH databases).
-// The caller is responsible for ensuring extensions are loaded on each connection if needed.
-// For abrg, extensions are loaded at cache initialization time and the connection is reused.
+// Open opens a DuckDB connection pool.
+// Extension loading (LOAD) and options such as threads act on the shared
+// database instance, not on individual connections: issuing them once through
+// the pool makes them visible to every present and future pooled connection.
 func Open(path string) (*sql.DB, error) {
 	return sql.Open("duckdb", path)
 }

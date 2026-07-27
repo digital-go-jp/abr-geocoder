@@ -30,6 +30,10 @@ var katakanaDash = regexp.MustCompile(`([\d０-９])ー([\d０-９])`)
 // NormalizeDashes converts various dash characters to standard hyphen-minus.
 // The halfwidth katakana prolonged sound mark ｰ (U+FF70) is not handled here; it is
 // normalized to ー (U+30FC) by NFKC earlier in the pipeline.
+//
+// NOTE: levenshtein.NormalizeUnmatchedNumbers has its own, intentionally
+// smaller dash set for post-processing unmatched remainders (it converts ー
+// unconditionally, which would corrupt katakana words in raw input here).
 func NormalizeDashes(s string) (string, bool) {
 	original := s
 

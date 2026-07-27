@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -176,8 +177,9 @@ func TestDownloadFile_Non200LeavesNoFiles(t *testing.T) {
 	}))
 	defer server.Close()
 
+	client, _ := newFastRetryClient(server.URL)
 	destPath := filepath.Join(t.TempDir(), "mt_pref_all.csv.zip")
-	err := New(server.URL).DownloadFile(t.Context(), server.URL+"/f.csv.zip", destPath)
+	err := client.DownloadFile(t.Context(), server.URL+"/f.csv.zip", destPath)
 	if err == nil {
 		t.Fatal("DownloadFile: want error on 500, got nil")
 	}
@@ -191,10 +193,12 @@ func TestDownloadFile_Non200LeavesNoFiles(t *testing.T) {
 }
 
 func TestFetchFeed_RefetchesAfterError(t *testing.T) {
+	// The first logical fetch must exhaust every retry (1 + 3 retries = 4
+	// requests) before FetchFeed reports the error; the next call re-fetches.
 	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if callCount.Add(1) == 1 {
-			w.WriteHeader(http.StatusInternalServerError) // first call fails
+		if callCount.Add(1) <= 4 {
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -202,7 +206,7 @@ func TestFetchFeed_RefetchesAfterError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL)
+	client, _ := newFastRetryClient(server.URL)
 	ctx := t.Context()
 
 	// A failed fetch must not be cached...
@@ -213,8 +217,8 @@ func TestFetchFeed_RefetchesAfterError(t *testing.T) {
 	if _, err := client.FetchFeed(ctx); err != nil {
 		t.Fatalf("second FetchFeed: want success, got %v", err)
 	}
-	if got := callCount.Load(); got != 2 {
-		t.Errorf("HTTP calls = %d, want 2 (error must trigger a refetch)", got)
+	if got := callCount.Load(); got != 5 {
+		t.Errorf("HTTP calls = %d, want 5 (4 exhausted attempts + refetch)", got)
 	}
 }
 
@@ -227,5 +231,100 @@ func TestFetchFeed_InvalidJSON(t *testing.T) {
 
 	if _, err := New(server.URL).FetchFeed(t.Context()); err == nil {
 		t.Error("FetchFeed: want decode error for invalid JSON, got nil")
+	}
+}
+
+// TestListFilesByPrefix_AllTimestampsUnparsable pins that a feed whose every
+// matching entry lacks a parseable timestamp is reported as an error rather
+// than an empty "no changes" result.
+func TestListFilesByPrefix_AllTimestampsUnparsable(t *testing.T) {
+	const feed = `{
+  "dataset": [
+    {
+      "description": "no timestamp here",
+      "distribution": [
+        {"accessURL": "https://host/mt_pref/mt_pref_all.csv.zip"},
+        {"accessURL": "https://host/mt_pref/mt_pref_02.csv.zip"}
+      ]
+    }
+  ]
+}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(feed))
+	}))
+	defer server.Close()
+
+	_, err := New(server.URL).ListFilesByPrefix(t.Context(), "mt_pref")
+	if err == nil {
+		t.Fatal("ListFilesByPrefix() = nil, want error when all timestamps are unparsable")
+	}
+	if !strings.Contains(err.Error(), "DCAT feed format may have changed") {
+		t.Errorf("error = %v, want mention of feed format change", err)
+	}
+}
+
+// TestListFilesByPrefix_NoMatchesIsNotAnError pins that a prefix with no
+// matching files at all still returns an empty list without error.
+func TestListFilesByPrefix_NoMatchesIsNotAnError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(dcatFeed))
+	}))
+	defer server.Close()
+
+	files, err := New(server.URL).ListFilesByPrefix(t.Context(), "mt_nonexistent")
+	if err != nil {
+		t.Fatalf("ListFilesByPrefix() error = %v, want nil", err)
+	}
+	if len(files) != 0 {
+		t.Errorf("got %d files, want 0", len(files))
+	}
+}
+
+// TestDownloadFile_LeavesOnlyFinalFile pins the atomic-write contract: after a
+// successful download the destination directory contains only the final file,
+// with no temp leftovers.
+func TestDownloadFile_LeavesOnlyFinalFile(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("payload"))
+	}))
+	defer server.Close()
+
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "data.csv.zip")
+	if err := New(server.URL).DownloadFile(t.Context(), server.URL, dest); err != nil {
+		t.Fatalf("DownloadFile() error = %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "data.csv.zip" {
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Errorf("directory contents = %v, want only data.csv.zip", names)
+	}
+
+	// The final file must carry the same 0666-minus-umask permissions that
+	// os.Create gives. A reference file makes the check umask-independent.
+	ref, err := os.Create(filepath.Join(dir, "reference"))
+	if err != nil {
+		t.Fatalf("create reference file: %v", err)
+	}
+	_ = ref.Close()
+	refInfo, err := os.Stat(ref.Name())
+	if err != nil {
+		t.Fatalf("stat reference file: %v", err)
+	}
+	gotInfo, err := os.Stat(dest)
+	if err != nil {
+		t.Fatalf("stat downloaded file: %v", err)
+	}
+	if gotInfo.Mode().Perm() != refInfo.Mode().Perm() {
+		t.Errorf("downloaded file mode = %v, want %v (0666 &^ umask)", gotInfo.Mode().Perm(), refInfo.Mode().Perm())
 	}
 }

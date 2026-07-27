@@ -28,12 +28,13 @@ abrdb init [options]
   - `all`: すべて
 - `--pos=true/false` - 座標を有効化（default: false）
 - `--force` - 確認プロンプトをスキップ
-- `--config` - 設定ファイルのパス（[設定ファイル](#設定ファイル)参照）
+- `--profile` - 設定プロファイル（default: `default`、[設定プロファイル](#設定プロファイル)参照）
 
 環境変数（フラグより優先度が低い）:
 - `ABRDB_PREF` - `--pref` と同等
 - `ABRDB_CATEGORY` - `--category` と同等
 - `ABRDB_POS` - `--pos` と同等（`true`/`false`）
+- `ABRDB_PROFILE` - `--profile` と同等
 
 例:
 ```bash
@@ -61,6 +62,12 @@ abrdb import [options]
 - `-q, --quiet` - 進捗表示を抑制
 - `-v, --verbose` - 詳細なファイル一覧を表示（--dry-run時）
 
+環境変数:
+- `ABRDB_DOWNLOAD_DIR` - ダウンロード先ディレクトリ（default: `/tmp/abrdb/data`。Docker イメージは `/tmp/abrdb`、docker-compose は `~/.abrdb/data` を設定済み）
+- `ABRDB_FEED_URL` - ABR データフィードの URL（通常は変更不要）
+- `ABRDB_DOWNLOAD_CONCURRENCY` - ダウンロードの並列数（default: CPU コア数。明示指定時の上限 32）
+- `ABRDB_IMPORT_CONCURRENCY` - インポート（ETL）の並列数（default: CPU コア数。明示指定時の上限 32）
+
 例:
 ```bash
 # 変更確認のみ（インポートなし）
@@ -81,14 +88,16 @@ abrdb import --force
 abrdb show config
 ```
 
-## 設定ファイル
+## 設定プロファイル
 
-インポートするカラムを定義します。
+インポートするカラムのセットを `init --profile <名前>` で選択します。
 
-| ファイル | 説明 |
-|----------|------|
-| [`config_default.yaml`](internal/schema/config_default.yaml) | 最小限のカラム（abrg用、デフォルト） |
-| [`config_full.yaml`](internal/schema/config_full.yaml) | 全カラム |
+| プロファイル | 定義 | 説明 |
+|----------|------|------|
+| `default` | [`config_default.yaml`](internal/schema/config_default.yaml) | 最小限のカラム（abrg用、デフォルト） |
+| `full` | [`config_full.yaml`](internal/schema/config_full.yaml) | 全カラム |
+
+プロファイルを変更するには `init` を再実行し、全件取り込みし直します。設定の変わった新しいバイナリで `import` を実行した場合も、同様に `init` のやり直しを求めるエラーになることがあります。
 
 ## Docker
 

@@ -11,8 +11,24 @@ func SqlEscape(s string) string {
 	return strings.ReplaceAll(s, "'", "''")
 }
 
-// Used by multiple binaries (abrg, abrdb) to ensure
-// consistent and safe SQL generation across all tools.
+// BuildPostgresAttachSQL returns the ATTACH statement that links the "pg"
+// alias to PostgreSQL through the named secret. sslmode rides on the ATTACH
+// connection string because DuckDB's postgres SECRET type does not accept
+// sslmode as a field; an empty sslMode is omitted so libpq uses its default.
+func BuildPostgresAttachSQL(sslMode, secretName string, readOnly bool) string {
+	conn := ""
+	if sslMode != "" {
+		conn = "sslmode=" + SqlEscape(sslMode)
+	}
+	options := "TYPE postgres, SECRET " + secretName
+	if readOnly {
+		options = "TYPE postgres, READ_ONLY, SECRET " + secretName
+	}
+	return fmt.Sprintf("ATTACH '%s' AS pg (%s)", conn, options)
+}
+
+// BuildPostgresSecretSQL builds the CREATE SECRET statement shared by abrg
+// and abrdb so both binaries generate consistent and safe SQL.
 //
 // Security notes:
 // - Port value is validated: must be numeric and within range 1-65535

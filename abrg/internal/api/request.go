@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 
 	"abrg/internal/model"
@@ -20,8 +23,8 @@ type baseRequest struct {
 	Limit    int    `form:"limit,default=1" binding:"min=1,max=5"`
 }
 
-// geocodeRequest represents geocoding request parameters.
-type geocodeRequest struct {
+// addressRequest represents address-based (match/geocode) request parameters.
+type addressRequest struct {
 	baseRequest
 	Address string `form:"address" binding:"required"`
 }
@@ -31,12 +34,6 @@ type reverseRequest struct {
 	baseRequest
 	Lat float64 `form:"lat" binding:"required,min=-90,max=90"`
 	Lon float64 `form:"lon" binding:"required,min=-180,max=180"`
-}
-
-// matchRequest represents match request parameters.
-type matchRequest struct {
-	baseRequest
-	Address string `form:"address" binding:"required"`
 }
 
 // normalizeRequest represents address standardization request parameters.
@@ -76,6 +73,28 @@ func errorResponse(message string) gin.H {
 	return gin.H{"status": "error", "message": message}
 }
 
+var registerFormTagNamesOnce sync.Once
+
+// registerFormTagNames makes validator errors name fields by their form tag,
+// so 400 messages refer to the query parameter clients actually send
+// (address) instead of the Go struct field (Address). The registration is on
+// gin's process-wide binding engine, hence the once guard.
+func registerFormTagNames() {
+	registerFormTagNamesOnce.Do(func() {
+		v, ok := binding.Validator.Engine().(*validator.Validate)
+		if !ok {
+			return
+		}
+		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+			name, _, _ := strings.Cut(fld.Tag.Get("form"), ",")
+			if name == "" || name == "-" {
+				return fld.Name
+			}
+			return name
+		})
+	})
+}
+
 // formatBindError extracts field-level details from Gin binding errors.
 func formatBindError(err error) string {
 	if ve, ok := errors.AsType[validator.ValidationErrors](err); ok {
@@ -109,29 +128,18 @@ func sendGeoJSON(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, data)
 }
 
-// handleAddressRequest handles common validation for address-based requests (geocode/match).
-// It returns the validated category and pref, or sends an error response and returns false.
-func (s *GinServer) handleAddressRequest(c *gin.Context, address, categoryStr, prefStr string) (model.Category, string, bool) {
+// prepareQuery validates the request params, records them for structured
+// logging, and builds the shared MatchQuery. It returns ok=false after writing
+// an error response when validation fails.
+func (s *GinServer) prepareQuery(c *gin.Context, address, categoryStr, prefStr string, limit int) (model.MatchQuery, bool) {
 	if err := validateAddress(address); err != nil {
 		sendBadRequest(c, err.Error())
-		return "", "", false
+		return model.MatchQuery{}, false
 	}
 
 	category, pref, err := s.validateParams(categoryStr, prefStr)
 	if err != nil {
 		sendBadRequest(c, err.Error())
-		return "", "", false
-	}
-
-	return category, pref, true
-}
-
-// prepareQuery validates the request params, records them for structured
-// logging, and builds the shared MatchQuery. It returns ok=false after writing
-// an error response when validation fails.
-func (s *GinServer) prepareQuery(c *gin.Context, address, categoryStr, prefStr string, limit int) (model.MatchQuery, bool) {
-	category, pref, ok := s.handleAddressRequest(c, address, categoryStr, prefStr)
-	if !ok {
 		return model.MatchQuery{}, false
 	}
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"abrg/internal/char"
 	"abrg/internal/matchlevel"
 	"abrg/internal/model"
 	"abrg/internal/repository"
@@ -44,7 +45,7 @@ func ExtractSearchNumbers(searchAddr string) string {
 }
 
 // processResults processes query results and returns normalized results.
-func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr, originalAddr string, category model.Category, limit int) []model.MatchedResult {
+func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, category model.Category, limit int) []model.MatchedResult {
 	results := make([]model.MatchedResult, 0, limit)
 	addressLen := utf8.RuneCountInString(searchAddr)
 
@@ -99,7 +100,7 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 	})
 
 	// Select best variant among results with the same top score
-	results = selectBestFromTiedResults(results, searchNumbers, originalAddr)
+	results = selectBestFromTiedResults(results, searchNumbers, normalizedAddr)
 
 	if len(results) > limit {
 		results = results[:limit]
@@ -130,13 +131,13 @@ func isPartialKoazaMatch(searchAddr, stdAddress string) bool {
 		return false
 	}
 	// searchAddr must end with a digit
-	if len(searchAddr) == 0 || searchAddr[len(searchAddr)-1] < '0' || searchAddr[len(searchAddr)-1] > '9' {
+	if len(searchAddr) == 0 || !char.IsASCIIDigit(searchAddr[len(searchAddr)-1]) {
 		return false
 	}
 	// The extra suffix in stdAddress must be non-digit
 	suffix := stdAddress[len(searchAddr):]
 	for i := 0; i < len(suffix); i++ {
-		if suffix[i] >= '0' && suffix[i] <= '9' {
+		if char.IsASCIIDigit(suffix[i]) {
 			return false
 		}
 	}
@@ -239,7 +240,7 @@ func isFalseChomeMatch(searchAddr, stdAddress string) bool {
 		return false
 	}
 	oazaEnd := atIdx
-	for oazaEnd > 0 && stdAddress[oazaEnd-1] >= '0' && stdAddress[oazaEnd-1] <= '9' {
+	for oazaEnd > 0 && char.IsASCIIDigit(stdAddress[oazaEnd-1]) {
 		oazaEnd--
 	}
 	if oazaEnd == atIdx {
@@ -261,7 +262,7 @@ func isFalseChomeMatch(searchAddr, stdAddress string) bool {
 
 	// If extra contains only digits, it could be a real chome number
 	for i := range len(extra) {
-		if extra[i] < '0' || extra[i] > '9' {
+		if !char.IsASCIIDigit(extra[i]) {
 			return true // Non-digit in extra → place name, not chome
 		}
 	}

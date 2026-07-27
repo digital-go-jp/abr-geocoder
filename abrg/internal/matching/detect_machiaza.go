@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
+	"abrg/internal/char"
 	"abrg/internal/matching/levenshtein"
 	"abrg/internal/model"
 	"abrg/internal/repository"
 	"abrg/internal/transform"
-	"abrg/internal/util"
 )
 
 // basicFinder is a consumer-defined interface for basic address lookup.
@@ -34,7 +34,7 @@ var koazaSuffixes = []string{"街区", "地割", "分区", "番川", "番通"}
 
 func extractFirstNumberWithHyphen(address string) (base, after string, found, trailingHyphen bool) {
 	for i := 0; i < len(address); i++ {
-		if !util.IsASCIIDigit(address[i]) {
+		if !char.IsASCIIDigit(address[i]) {
 			continue
 		}
 
@@ -52,7 +52,7 @@ func extractFirstNumberWithHyphen(address string) (base, after string, found, tr
 		}
 
 		// Must have digit after hyphen for valid N-M pattern
-		if !util.IsASCIIDigit(address[numEnd+1]) {
+		if !char.IsASCIIDigit(address[numEnd+1]) {
 			continue
 		}
 
@@ -70,7 +70,7 @@ func extractFirstNumberWithHyphen(address string) (base, after string, found, tr
 
 func skipDigits(s string, start int) int {
 	i := start
-	for i < len(s) && util.IsASCIIDigit(s[i]) {
+	for i < len(s) && char.IsASCIIDigit(s[i]) {
 		i++
 	}
 	return i
@@ -135,7 +135,7 @@ func detectMachiaza(ctx context.Context, repo basicFinder, address string, prefC
 	if !found {
 		if atHyphenIdx := strings.Index(address, "@-"); atHyphenIdx >= 0 {
 			rest := address[atHyphenIdx+2:]
-			if len(rest) > 0 && util.IsASCIIDigit(rest[0]) {
+			if len(rest) > 0 && char.IsASCIIDigit(rest[0]) {
 				baseAddress = address[:atHyphenIdx+1]
 				afterColon = rest
 				found = true

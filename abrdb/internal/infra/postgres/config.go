@@ -18,7 +18,7 @@ func SaveConfigValue(ctx context.Context, executor *db.QueryExecutor, key, value
         ON CONFLICT (config_key)
         DO UPDATE SET config_value = EXCLUDED.config_value, updated_at = CURRENT_TIMESTAMP
     `
-	if _, err := executor.Exec(ctx, q, key, value); err != nil {
+	if err := executor.Exec(ctx, q, key, value); err != nil {
 		return fmt.Errorf("save config %q: %w", key, err)
 	}
 	return nil
@@ -26,7 +26,7 @@ func SaveConfigValue(ctx context.Context, executor *db.QueryExecutor, key, value
 
 // SaveInitConfig stores initialization inputs as-is (not expanded),
 // so later runs can rehydrate the original intent.
-func SaveInitConfig(ctx context.Context, executor *db.QueryExecutor, prefInput, categoryInput string, enablePos bool, importConfigYAML string) error {
+func SaveInitConfig(ctx context.Context, executor *db.QueryExecutor, prefInput, categoryInput string, enablePos bool, profile string) error {
 	if err := SaveConfigValue(ctx, executor, commondb.KeyEnabledPref, prefInput); err != nil {
 		return fmt.Errorf("save enabled pref: %w", err)
 	}
@@ -36,8 +36,8 @@ func SaveInitConfig(ctx context.Context, executor *db.QueryExecutor, prefInput, 
 	if err := SaveConfigValue(ctx, executor, commondb.KeyEnabledPos, strconv.FormatBool(enablePos)); err != nil {
 		return fmt.Errorf("save enable position data: %w", err)
 	}
-	if err := SaveConfigValue(ctx, executor, commondb.KeyImportConfig, importConfigYAML); err != nil {
-		return fmt.Errorf("save import config: %w", err)
+	if err := SaveConfigValue(ctx, executor, commondb.KeyImportConfigProfile, profile); err != nil {
+		return fmt.Errorf("save import config profile: %w", err)
 	}
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"abrdb/internal/infra/db"
+	"abrdb/internal/schema"
 )
 
 // NewShowCmd creates a new show command
@@ -62,6 +63,18 @@ func runShowConfig(ctx context.Context, executor *db.QueryExecutor) error {
 	printIfSet("  enabled_category: %s\n", cfg.EnabledCategory)
 	printIfSet("  enabled_pos: %s\n", cfg.EnabledPos)
 	printIfSet("  abrdb_version: %s\n", cfg.Version)
+	printIfSet("  import_config_profile: %s\n", cfg.ImportConfigProfile)
+
+	if cfg.ImportConfigProfile != "" {
+		// The database stores only the profile name; show the config this
+		// binary resolves it to, since that is what `abrdb import` will use.
+		data, err := schema.ProfileYAML(cfg.ImportConfigProfile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "\nWarning: %v: run 'abrdb init' to reinitialize\n", err)
+			return nil
+		}
+		fmt.Fprintf(os.Stderr, "\nImport config (embedded profile %q):\n%s", cfg.ImportConfigProfile, data)
+	}
 
 	return nil
 }

@@ -9,12 +9,12 @@ import (
 
 // Prefecture code boundaries for Japanese administrative regions.
 const (
-	MinPrefectureCode = 1
-	MaxPrefectureCode = 47
+	minPrefectureCode = 1
+	maxPrefectureCode = 47
 )
 
 func isValidPrefectureCode(code int) bool {
-	return code >= MinPrefectureCode && code <= MaxPrefectureCode
+	return code >= minPrefectureCode && code <= maxPrefectureCode
 }
 
 // ParsePrefectureCode parses and validates a prefecture code string.
@@ -30,7 +30,7 @@ func ParsePrefectureCode(s string) (int, error) {
 	}
 
 	if !isValidPrefectureCode(code) {
-		return 0, fmt.Errorf("prefecture code %d out of range (%d-%d)", code, MinPrefectureCode, MaxPrefectureCode)
+		return 0, fmt.Errorf("prefecture code %d out of range (%d-%d)", code, minPrefectureCode, maxPrefectureCode)
 	}
 
 	return code, nil

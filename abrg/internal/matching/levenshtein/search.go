@@ -93,7 +93,7 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		return nil, fmt.Errorf("database query failed: %w", err)
 	}
 
-	return processResults(rows, p.SearchAddr, searchNumbers, p.StandardizedAddr, p.NormalizedAddr, p.Category, p.Limit), nil
+	return processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Category, p.Limit), nil
 }
 
 // searchWithPrefixMatch searches for addresses where the DB's normalized_address is a prefix of searchAddr.
@@ -140,7 +140,7 @@ func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p Searc
 		ml := matchlevel.DetermineMatchLevel(&result.IDs)
 
 		// Calculate unmatched part from normalizedAddr (preserves user-visible form)
-		unmatchedParts := extractUnmatchedFromStandardized(p.NormalizedAddr, matchedAddr)
+		unmatchedParts := extractUnmatchedSegments(p.NormalizedAddr, matchedAddr)
 
 		// Calculate score based on how much of the input matched
 		matchedLen := utf8.RuneCountInString(brd.NormalizedAddress)
@@ -175,6 +175,11 @@ func standardizedRemainder(standardized, matchedAddr, pref string, boundary *uti
 	return standardized[boundary.Find(standardized):]
 }
 
+// NOTE: matching.buildCityResult builds a similar city-level result but is
+// intentionally a separate implementation: it normalizes the unmatched
+// remainder with NormalizeUnmatchedNumbers and its source row never carries
+// coordinates, whereas this fallback keeps the remainder verbatim and
+// propagates the row's coordinates.
 func tryFallbackCitySearchByScore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]model.MatchedResult, error) {
 	cityEndIdx := p.CityBoundary.Find(p.SearchAddr)
 	if cityEndIdx <= 0 {
@@ -203,7 +208,7 @@ func tryFallbackCitySearchByScore(ctx context.Context, repo levenshteinQuerier, 
 	}
 
 	matchedAddr := model.FormatAddress(&sa)
-	unmatchedStdPart := standardizedRemainder(p.StandardizedAddr, matchedAddr, cr.Pref, p.CityBoundary)
+	unmatchedStdPart := standardizedRemainder(p.NormalizedAddr, matchedAddr, cr.Pref, p.CityBoundary)
 	unmatchedParts := strings.Fields(unmatchedStdPart)
 	if len(unmatchedParts) == 0 {
 		unmatchedParts = nil // fully matched must be nil (JSON null), not []

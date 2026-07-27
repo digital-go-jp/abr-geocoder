@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrg/internal/infra/duckdb"
 	"abrg/internal/model"
 	"abrg/internal/reverse"
 	"abrg/internal/util"
@@ -44,10 +43,9 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 	}
 	defer setup.Cleanup()
 
-	reverser := reverse.NewReverseGeocoder(setup.Repo,
-		reverse.TableExists(ctx, setup.DB, duckdb.TableRsdtdsp),
-		reverse.TableExists(ctx, setup.DB, duckdb.TableParcel),
-	)
+	// Data availability follows the cache build configuration; the presence
+	// of the category tables themselves is verified at cache open.
+	reverser := reverse.NewReverseGeocoder(setup.Repo, setup.CacheCfg.HasResidential(), setup.CacheCfg.HasParcel())
 	categoryVal := model.Category(setup.resolveCategory(opts.Category))
 
 	p := newDefaultProcessor(setup, func(ctx context.Context, line string) (*model.ReverseResponse, error) {

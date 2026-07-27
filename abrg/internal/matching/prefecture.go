@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"abrg/internal/matching/levenshtein"
+	"abrg/internal/matching/unmatched"
 	"abrg/internal/model"
 	"abrg/internal/repository"
 	"abrg/internal/util"
@@ -21,7 +22,7 @@ func (n *Impl) queryPrefectureRecord(ctx context.Context, prefCode, normalizedAd
 	}
 
 	// Build unmatched address parts
-	addressPart, buildingParts := util.SplitStandardizedAddress(normalizedAddr)
+	addressPart, buildingParts := unmatched.SplitStandardizedAddress(normalizedAddr)
 
 	unmatchedAddr, _ := strings.CutPrefix(addressPart, pr.PrefName)
 
@@ -46,19 +47,19 @@ func (n *Impl) queryPrefectureRecord(ctx context.Context, prefCode, normalizedAd
 }
 
 // buildCityResult constructs a city-level MatchedResult from a cache_city query row.
+//
+// NOTE: levenshtein.tryFallbackCitySearchByScore builds a similar city-level
+// result but is intentionally a separate implementation: it carries the row's
+// coordinates and returns the unmatched remainder verbatim (no 番地/width
+// normalization), whereas this builder normalizes the remainder with
+// NormalizeUnmatchedNumbers and never has coordinates in its source row.
+//
+// FormatAddress equals the plain pref+county+city+ward concatenation only
+// while no administrative name ends or starts with an ASCII digit; the
+// premise is verified by repository.TestFormatAddress_CityRowsMatchPlainConcat.
 func buildCityResult(cr *repository.CityResult, searchAddr, normalizedAddr string, cityEnd int) *model.MatchedResult {
-	// Build matched address (pref + county + city + ward)
-	matchedAddr := cr.Pref
-	if cr.County != nil && *cr.County != "" {
-		matchedAddr += *cr.County
-	}
-	matchedAddr += cr.City
-	if cr.Ward != nil && *cr.Ward != "" {
-		matchedAddr += *cr.Ward
-	}
-
-	// Build structured address
 	sa := model.StructuredAddress{Pref: &cr.Pref, County: cr.County, City: &cr.City, Ward: cr.Ward}
+	matchedAddr := model.FormatAddress(&sa)
 
 	unmatchedParts := extractCityUnmatched(matchedAddr, cr.Pref, searchAddr, normalizedAddr, cityEnd)
 
@@ -76,7 +77,7 @@ func buildCityResult(cr *repository.CityResult, searchAddr, normalizedAddr strin
 
 // extractCityUnmatched extracts unmatched address parts for city-level results.
 func extractCityUnmatched(matchedAddr, pref, searchAddr, normalizedAddr string, cityEnd int) []string {
-	addressPart, buildingParts := util.SplitStandardizedAddress(normalizedAddr)
+	addressPart, buildingParts := unmatched.SplitStandardizedAddress(normalizedAddr)
 
 	var unmatchedAddr string
 	if after, found := strings.CutPrefix(addressPart, matchedAddr); found && after != "" {

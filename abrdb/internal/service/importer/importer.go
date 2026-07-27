@@ -21,14 +21,18 @@ type loader interface {
 	LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath, posPath string) error
 }
 
-// catalogStore reads pending imports, clears previously imported rows, and
-// records completed imports.
+// catalogStore reads pending imports, clears previously imported rows,
+// records completed imports, and refreshes statistics on imported tables.
 type catalogStore interface {
 	PendingImportsByCategory(ctx context.Context, categories []model.FileCategory) (map[model.FileCategory][]*model.File, error)
 	TableIsEmpty(ctx context.Context, tableName string) (bool, error)
 	DeleteFileScope(ctx context.Context, tableName, filename string) error
 	EnsureLgCodeIndex(ctx context.Context, tableName string) error
 	MarkAsImported(ctx context.Context, filenames ...string) error
+	AnalyzeTables(ctx context.Context, tableNames []string) error
+	PendingAnalyzeTables(ctx context.Context) ([]string, error)
+	AddPendingAnalyzeTable(ctx context.Context, tableName string) error
+	ClearPendingAnalyze(ctx context.Context) error
 }
 
 type service struct {
@@ -72,6 +76,11 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 
 	phaseTimes := make(map[string]float64)
 
+	// Tables written by this run, deduplicated in category order, for the
+	// post-import ANALYZE.
+	var updatedTables []string
+	seenTables := make(map[string]struct{})
+
 	// Process each category with timing
 	for _, cat := range category {
 		pendingFiles := pendingByCategory[cat]
@@ -87,6 +96,13 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 		pairs := catalog.GroupFilesByPairKey(pendingFiles)
 		slog.Debug("importing file pairs", "event", "import_pairs", "category", cat, "pair_count", len(pairs))
 
+		// Orphan pos files without a text counterpart (a known ABR feed state)
+		// form no importable pair: nothing is written, so the table must not
+		// be marked updated or re-analyzed.
+		if len(pairs) == 0 {
+			continue
+		}
+
 		// Initial build into an empty table has nothing to delete. Skipping the
 		// deletes also lets the lg_code index be created after the bulk insert
 		// (below) instead of being maintained row by row during it.
@@ -99,7 +115,7 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 		taskName := fmt.Sprintf("Importing %s", cat)
 		if err := util.ExecuteConcurrently(ctx, pairs, func(ctx context.Context, pair catalog.FilePairing) error {
 			return s.importFilePair(ctx, pair, categoryInfo, !tableEmpty)
-		}, s.progress, taskName); err != nil {
+		}, s.progress, taskName, util.ConcurrencyLimit("ABRDB_IMPORT_CONCURRENCY")); err != nil {
 			return nil, fmt.Errorf("import files for %q: %w", cat, err)
 		}
 
@@ -107,9 +123,58 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 			return nil, fmt.Errorf("ensure lg_code index on %q: %w", categoryInfo.TableName, err)
 		}
 		phaseTimes[string(cat)] = time.Since(categoryStart).Seconds()
+
+		if _, seen := seenTables[categoryInfo.TableName]; !seen {
+			seenTables[categoryInfo.TableName] = struct{}{}
+			updatedTables = append(updatedTables, categoryInfo.TableName)
+		}
+		// Persist the ANALYZE obligation as soon as the table is written: the
+		// files are already marked imported, so only this marker lets a later
+		// run redo an ANALYZE that fails or never runs.
+		if err := s.store.AddPendingAnalyzeTable(ctx, categoryInfo.TableName); err != nil {
+			return nil, fmt.Errorf("record pending analyze for %q: %w", categoryInfo.TableName, err)
+		}
+	}
+
+	if err := s.analyzePending(ctx, updatedTables, seenTables); err != nil {
+		return nil, err
 	}
 
 	return phaseTimes, nil
+}
+
+// analyzePending refreshes statistics once every category has imported
+// successfully, while the caller still holds the import lock. The target is
+// this run's tables plus the persisted backlog left by earlier runs whose
+// ANALYZE failed. Stale statistics after a bulk import derail the subsequent
+// `abrg cache build` (see Catalog.AnalyzeTables), so an ANALYZE failure fails
+// the import; the persisted marker is only cleared after success.
+func (s *service) analyzePending(ctx context.Context, updatedTables []string, seenTables map[string]struct{}) error {
+	persisted, err := s.store.PendingAnalyzeTables(ctx)
+	if err != nil {
+		return fmt.Errorf("load pending analyze tables: %w", err)
+	}
+	analyzeTables := updatedTables
+	for _, table := range persisted {
+		if _, seen := seenTables[table]; !seen {
+			seenTables[table] = struct{}{}
+			analyzeTables = append(analyzeTables, table)
+		}
+	}
+	if len(analyzeTables) == 0 {
+		return nil
+	}
+
+	start := time.Now()
+	if err := s.store.AnalyzeTables(ctx, analyzeTables); err != nil {
+		return fmt.Errorf("analyze imported tables: %w", err)
+	}
+	if err := s.store.ClearPendingAnalyze(ctx); err != nil {
+		return fmt.Errorf("clear pending analyze marker: %w", err)
+	}
+	slog.Info("post-import analyze completed", "event", "analyze",
+		"tables", analyzeTables, "total_sec", time.Since(start).Seconds())
+	return nil
 }
 
 func (s *service) importFilePair(ctx context.Context, pair catalog.FilePairing, categoryInfo *schema.CategoryInfo, deleteFirst bool) error {

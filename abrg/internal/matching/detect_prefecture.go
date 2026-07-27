@@ -74,6 +74,11 @@ func detectPrefectureCode(address string) string {
 	return ""
 }
 
+// removePrefectureFromAddress removes the prefecture name for prefCode from
+// the front of address, trims leading spaces, and returns the input unchanged
+// when the prefix is absent or nothing would remain. Deliberately separate
+// from the unmatched package's stripPrefecture, which strips by position
+// heuristic without a prefecture code and may return an empty string.
 func removePrefectureFromAddress(address, prefCode string) string {
 	prefName, ok := prefectureByCode[prefCode]
 	if !ok || !strings.HasPrefix(address, prefName) {

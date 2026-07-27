@@ -283,14 +283,14 @@ func TestExtractUnmatchedFromStandardized(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractUnmatchedFromStandardized(tt.originalAddr, tt.matchedAddr)
+			got := extractUnmatchedSegments(tt.originalAddr, tt.matchedAddr)
 			if len(got) != len(tt.want) {
-				t.Errorf("extractUnmatchedFromStandardized() = %v, want %v", got, tt.want)
+				t.Errorf("extractUnmatchedSegments() = %v, want %v", got, tt.want)
 				return
 			}
 			for i := range got {
 				if got[i] != tt.want[i] {
-					t.Errorf("extractUnmatchedFromStandardized()[%d] = %q, want %q", i, got[i], tt.want[i])
+					t.Errorf("extractUnmatchedSegments()[%d] = %q, want %q", i, got[i], tt.want[i])
 				}
 			}
 		})

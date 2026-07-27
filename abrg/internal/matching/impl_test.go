@@ -7,6 +7,8 @@ import (
 	"abrg/internal/model"
 	"abrg/internal/repository"
 	"abrg/internal/transform"
+
+	"abrg/internal/matchlevel"
 )
 
 func Test_derefString(t *testing.T) {
@@ -48,8 +50,8 @@ func TestMatchLevelToDetail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := matchLevelToDetail(tt.level); got != tt.expected {
-				t.Errorf("matchLevelToDetail(%q) = %d, want %d", tt.level, got, tt.expected)
+			if got := matchlevel.Detail(tt.level); got != tt.expected {
+				t.Errorf("matchlevel.Detail(%q) = %d, want %d", tt.level, got, tt.expected)
 			}
 		})
 	}
@@ -284,7 +286,11 @@ func BenchmarkNormalize(b *testing.B) {
 	if err != nil {
 		b.Skipf("Failed to create cache: %v", err)
 	}
-	normalizer := NewMatcher(repository.NewRepository(c.DB()), c.Lookups())
+	cfg, err := cache.LoadConfig(b.Context(), c.DB())
+	if err != nil {
+		b.Fatalf("load cache config: %v", err)
+	}
+	normalizer := NewMatcher(repository.NewRepository(c.DB()), c.Lookups(), cfg.HasResidential(), cfg.HasParcel())
 
 	queries := []model.MatchQuery{
 		{

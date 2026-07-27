@@ -1,7 +1,11 @@
 // Package model defines data structures for API requests and responses.
 package model
 
-import "strings"
+import (
+	"strings"
+
+	"abrg/internal/char"
+)
 
 type MatchLevel string
 
@@ -36,6 +40,12 @@ const (
 	// ABR uses 001-100 for chome in the last 3 digits of machiaza_id.
 	MaxChomeNumber = 100
 )
+
+// IsBaseMachiazaID reports whether id is a base-level machiaza ID, i.e. its
+// chome suffix is "000". IDs with an unexpected length count as base.
+func IsBaseMachiazaID(id string) bool {
+	return len(id) != MachiazaIDLength || id[MachiazaBaseLength:] == BaseMachiazaSuffix
+}
 
 // LgCode constants
 // LgCode format: PPCCCX (6 digits, JIS X 0401 + JIS X 0402 + check digit)
@@ -184,15 +194,11 @@ func (w *addressWriter) write(ptr *string, prefix string) {
 	switch {
 	case prefix != "":
 		w.sb.WriteString(prefix)
-	case isASCIIDigit(w.last) && isASCIIDigit(s[0]):
+	case char.IsASCIIDigit(w.last) && char.IsASCIIDigit(s[0]):
 		w.sb.WriteString("-")
 	}
 	w.sb.WriteString(s)
 	w.last = s[len(s)-1]
-}
-
-func isASCIIDigit(b byte) bool {
-	return b >= '0' && b <= '9'
 }
 
 func hasValue(ptr *string) bool {

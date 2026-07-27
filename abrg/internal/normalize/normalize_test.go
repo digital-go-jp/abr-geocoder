@@ -409,8 +409,8 @@ func TestNormalizeAddressText(t *testing.T) {
 	}
 }
 
-// TestNormalizeAddressTextWithBasic tests the NormalizeAddressTextWithBasic function
-func TestNormalizeAddressTextWithBasic(t *testing.T) {
+// TestNormalizeBasicNormalized tests the NormalizeBasicNormalized function
+func TestNormalizeBasicNormalized(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          string
@@ -461,30 +461,28 @@ func TestNormalizeAddressTextWithBasic(t *testing.T) {
 			var addressType model.NormalizeCategory
 
 			if tt.usePreComputed {
-				basicResult := BasicNormalize(tt.input)
-				result, addressType = NormalizeAddressTextWithBasic(tt.input, &basicResult)
+				result, addressType = NormalizeBasicNormalized(BasicNormalize(tt.input))
 			} else {
-				result, addressType = NormalizeAddressTextWithBasic(tt.input, nil)
+				result, addressType = NormalizeAddressText(tt.input)
 			}
 
 			if result != tt.expectedAddr {
-				t.Errorf("NormalizeAddressTextWithBasic(%q) address = %q, want %q", tt.input, result, tt.expectedAddr)
+				t.Errorf("NormalizeBasicNormalized(%q) address = %q, want %q", tt.input, result, tt.expectedAddr)
 			}
 
 			if addressType != tt.expectedType {
-				t.Errorf("NormalizeAddressTextWithBasic(%q) type = %q, want %q", tt.input, addressType, tt.expectedType)
+				t.Errorf("NormalizeBasicNormalized(%q) type = %q, want %q", tt.input, addressType, tt.expectedType)
 			}
 
-			// Also verify that with nil and with precomputed give the same result
-			nilResult, nilType := NormalizeAddressTextWithBasic(tt.input, nil)
-			normalized := BasicNormalize(tt.input)
-			preResult, preType := NormalizeAddressTextWithBasic(tt.input, &normalized)
+			// NormalizeAddressText and the two-step form must agree
+			textResult, textType := NormalizeAddressText(tt.input)
+			preResult, preType := NormalizeBasicNormalized(BasicNormalize(tt.input))
 
-			if nilResult != preResult {
-				t.Errorf("Results differ: nil=%q, precomputed=%q", nilResult, preResult)
+			if textResult != preResult {
+				t.Errorf("Results differ: NormalizeAddressText=%q, two-step=%q", textResult, preResult)
 			}
-			if nilType != preType {
-				t.Errorf("Types differ: nil=%q, precomputed=%q", nilType, preType)
+			if textType != preType {
+				t.Errorf("Types differ: NormalizeAddressText=%q, two-step=%q", textType, preType)
 			}
 		})
 	}

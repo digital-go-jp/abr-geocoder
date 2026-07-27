@@ -13,15 +13,23 @@ func TestLoadSchema(t *testing.T) {
 		t.Fatalf("loadSchema() error = %v", err)
 	}
 
-	if schema.Version != 1 {
-		t.Errorf("schema.Version = %d, want 1", schema.Version)
+	if schema.Version != 2 {
+		t.Errorf("schema.Version = %d, want 2", schema.Version)
 	}
 
 	// Check tables exist
-	expectedTables := []string{"cache_machiaza", "cache_city", "cache_pref", "cache_rsdtdsp", "cache_parcel"}
+	expectedTables := []string{"cache_machiaza", "cache_city", "cache_pref", "cache_config"}
 	for _, tableName := range expectedTables {
 		if _, ok := schema.Tables[tableName]; !ok {
 			t.Errorf("schema.Tables[%q] not found", tableName)
+		}
+	}
+
+	// Category tables are created at build time by CTAS (cache/sql.go), not
+	// declared in the YAML schema.
+	for _, tableName := range []string{"cache_rsdtdsp", "cache_parcel"} {
+		if _, ok := schema.Tables[tableName]; ok {
+			t.Errorf("schema.Tables[%q] found, category tables must not be declared in YAML", tableName)
 		}
 	}
 }
@@ -96,11 +104,13 @@ func TestInitSchemaSQL(t *testing.T) {
 	if !strings.Contains(sql, "cache_pref") {
 		t.Error("InitSchemaSQL should contain cache_pref")
 	}
-	if !strings.Contains(sql, "cache_rsdtdsp") {
-		t.Error("InitSchemaSQL should contain cache_rsdtdsp")
+	// Category tables come from CTAS at build time; the init SQL must not
+	// create (or clear) them.
+	if strings.Contains(sql, "cache_rsdtdsp") {
+		t.Error("InitSchemaSQL should not contain cache_rsdtdsp")
 	}
-	if !strings.Contains(sql, "cache_parcel") {
-		t.Error("InitSchemaSQL should contain cache_parcel")
+	if strings.Contains(sql, "cache_parcel") {
+		t.Error("InitSchemaSQL should not contain cache_parcel")
 	}
 
 	// Should contain DELETE statements

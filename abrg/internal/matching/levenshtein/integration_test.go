@@ -28,7 +28,7 @@ func TestProcessResults(t *testing.T) {
 	fuzzy := basicCandidate("東京都", "千代田区", "丸の内二丁目", "東京都千代田区丸の内二丁目")
 
 	call := func(cands []repository.BasicResult, limit int) []model.MatchedResult {
-		return processResults(cands, searchAddr, "", searchAddr, searchAddr, model.CategoryBasic, limit)
+		return processResults(cands, searchAddr, "", searchAddr, model.CategoryBasic, limit)
 	}
 
 	t.Run("sorts by score descending regardless of input order", func(t *testing.T) {

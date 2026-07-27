@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"os"
+	"regexp"
+	"strconv"
 	"time"
 
 	duckdbdriver "github.com/duckdb/duckdb-go/v2"
@@ -85,7 +88,52 @@ func initSchema(ctx context.Context, conn *sql.DB) error {
 	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
 		return fmt.Errorf("failed to execute init schema: %w", err)
 	}
+	// The YAML schema only covers the always-present tables; category tables
+	// from a previous build are dropped here and recreated by CTAS if the
+	// configured category needs them.
+	if _, err := conn.ExecContext(ctx, dropCategoryTablesSQL); err != nil {
+		return fmt.Errorf("failed to drop stale category tables: %w", err)
+	}
 	return nil
+}
+
+// buildCategoryTable creates one category table via CTAS and its spatial
+// index, recording the timings in phaseSec.
+func buildCategoryTable(ctx context.Context, conn *sql.DB, phaseSec map[string]float64, name, createSQL, indexSQL string) error {
+	sec, err := execTimed(ctx, conn, "create", name, createSQL)
+	if err != nil {
+		return err
+	}
+	phaseSec[name] = sec
+
+	sec, err = execTimed(ctx, conn, "index", name, indexSQL)
+	if err != nil {
+		return err
+	}
+	phaseSec[name+"_index"] = sec
+	return nil
+}
+
+// memoryLimitFormat accepts DuckDB memory-limit literals such as "8GB",
+// "512MiB", or "1.5GB". The value is interpolated into a SET statement, so
+// anything else is rejected.
+var memoryLimitFormat = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?\s*(B|KB|MB|GB|TB|KiB|MiB|GiB|TiB)$`)
+
+// cacheMemoryLimit returns the DuckDB memory limit for cache build, tunable
+// via ABRG_CACHE_MEMORY_LIMIT to match the build host. Unset or malformed
+// values fall back to the 8GB default.
+func cacheMemoryLimit() string {
+	const def = "8GB"
+	v, ok := os.LookupEnv("ABRG_CACHE_MEMORY_LIMIT")
+	if !ok || v == "" {
+		return def
+	}
+	if !memoryLimitFormat.MatchString(v) {
+		slog.Warn("ignoring invalid memory limit setting",
+			"event", "set_memory_limit", "env", "ABRG_CACHE_MEMORY_LIMIT", "value", v)
+		return def
+	}
+	return v
 }
 
 // Category-specific tables must load before basic tables (cache_machiaza has CTEs
@@ -96,7 +144,7 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	ctx, cancel := context.WithTimeout(ctx, 900*time.Second) // Large datasets need 10+ min
 	defer cancel()
 
-	if _, err := conn.ExecContext(ctx, "SET memory_limit='8GB'"); err != nil {
+	if _, err := conn.ExecContext(ctx, "SET memory_limit='"+cacheMemoryLimit()+"'"); err != nil {
 		slog.Warn("failed to set memory limit", "event", "set_memory_limit", "error", err)
 	}
 
@@ -113,13 +161,13 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	}
 
 	attachStart := time.Now()
-	attachSQL := fmt.Sprintf("ATTACH 'sslmode=%s' AS pg (TYPE POSTGRES, READ_ONLY, SECRET pg_secret);", db.SqlEscape(dbCfg.SSLMode))
+	attachSQL := db.BuildPostgresAttachSQL(dbCfg.SSLMode, "pg_secret", true)
 	if _, err := conn.ExecContext(ctx, attachSQL); err != nil {
 		return nil, fmt.Errorf("failed to attach PostgreSQL database: %w", err)
 	}
 	phaseSec["attach"] = time.Since(attachStart).Seconds()
 
-	cfg, err := loadConfigFromTable(ctx, conn, "pg.abrdb_config")
+	cfg, err := loadConfigFromTable(ctx, conn, "pg."+db.TableABRDBConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config from PostgreSQL: %w", err)
 	}
@@ -132,37 +180,39 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 		_, _ = conn.ExecContext(context.Background(), "DETACH pg;")
 	}()
 
+	buildSec, err := buildCacheTables(ctx, conn, cfg)
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(phaseSec, buildSec)
+
+	return phaseSec, nil
+}
+
+// buildCacheTables creates and populates every cache table for the configured
+// category, creates the indexes, and saves the configuration. The source
+// PostgreSQL database must already be attached as pg.
+func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config) (map[string]float64, error) {
+	phaseSec := make(map[string]float64)
+
+	category := cfg.EnabledCategory
 	switch category {
-	case "basic":
-		// No category-specific tables
-	case "rsdtdsp":
-		sec, err := execTimed(ctx, conn, "create", "rsdtdsp", createRsdtdspSQL)
-		if err != nil {
-			return nil, err
-		}
-		phaseSec["rsdtdsp"] = sec
-	case "parcel":
-		sec, err := execTimed(ctx, conn, "create", "parcel", createParcelSQL)
-		if err != nil {
-			return nil, err
-		}
-		phaseSec["parcel"] = sec
-	case "all":
-		sec, err := execTimed(ctx, conn, "create", "rsdtdsp", createRsdtdspSQL)
-		if err != nil {
-			return nil, err
-		}
-		phaseSec["rsdtdsp"] = sec
-		sec, err = execTimed(ctx, conn, "create", "parcel", createParcelSQL)
-		if err != nil {
-			return nil, err
-		}
-		phaseSec["parcel"] = sec
+	case "basic", "rsdtdsp", "parcel", "all":
 	default:
 		return nil, fmt.Errorf("unknown category: %q", category)
 	}
+	if category == "rsdtdsp" || category == "all" {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
+			return nil, err
+		}
+	}
+	if category == "parcel" || category == "all" {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
+			return nil, err
+		}
+	}
 
-	basicSec, err := insertBasicTables(ctx, conn)
+	basicSec, err := insertBasicTables(ctx, conn, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -187,10 +237,10 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	return phaseSec, nil
 }
 
-func insertBasicTables(ctx context.Context, conn *sql.DB) (map[string]float64, error) {
+func insertBasicTables(ctx context.Context, conn *sql.DB, cfg *Config) (map[string]float64, error) {
 	phaseSec := make(map[string]float64)
 
-	sec, err := execTimed(ctx, conn, "insert", "machiaza", insertMachiazaSQL)
+	sec, err := execTimed(ctx, conn, "insert", "machiaza", buildInsertMachiazaSQL(cfg.HasResidential(), cfg.HasParcel()))
 	if err != nil {
 		return nil, err
 	}
@@ -212,21 +262,27 @@ func insertBasicTables(ctx context.Context, conn *sql.DB) (map[string]float64, e
 }
 
 func saveConfigToCache(ctx context.Context, conn *sql.DB, cfg *Config) error {
+	schemaVersion, err := schema.Version()
+	if err != nil {
+		return fmt.Errorf("failed to load schema version: %w", err)
+	}
 	const insertSQL = `INSERT INTO cache_config (config_key, config_value) VALUES (?, ?)`
 	configs := []struct{ key, value string }{
 		{db.KeyABRDBVersion, cfg.DBVersion},
 		{db.KeyEnabledCategory, cfg.EnabledCategory},
 		{db.KeyEnabledPref, cfg.EnabledPref},
 		{db.KeyEnabledPos, cfg.EnabledPos},
+		{"build_time", time.Now().Format(time.RFC3339)},
+		// KeySchemaVersion doubles as the completion marker and must stay
+		// last: a build that dies before this write leaves a cache without a
+		// schema version, which the open-time check rejects with a rebuild
+		// instruction.
+		{KeySchemaVersion, strconv.Itoa(schemaVersion)},
 	}
 	for _, c := range configs {
 		if _, err := conn.ExecContext(ctx, insertSQL, c.key, c.value); err != nil {
 			return fmt.Errorf("failed to insert %s: %w", c.key, err)
 		}
-	}
-	// Add build time
-	if _, err := conn.ExecContext(ctx, insertSQL, "build_time", time.Now().Format(time.RFC3339)); err != nil {
-		return fmt.Errorf("failed to insert build_time: %w", err)
 	}
 	return nil
 }

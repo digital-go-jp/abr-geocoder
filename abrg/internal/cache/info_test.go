@@ -1,10 +1,15 @@
 package cache
 
 import (
+	"context"
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
+
+	"abrg/internal/schema"
 )
 
 // TestInfo_SizeMB tests the SizeMB method of Info.
@@ -67,6 +72,82 @@ func TestFileInfo(t *testing.T) {
 		_, err := FileInfo(filepath.Join(tmpDir, "nonexistent.duckdb"))
 		if err == nil {
 			t.Error("FileInfo() expected error for non-existent file")
+		}
+	})
+}
+
+// TestLoadInfo_OmitsAbsentTables pins that tables not present in the cache
+// (category tables of a build that did not need them) are left out of the
+// Tables map instead of being reported as unavailable.
+func TestLoadInfo_OmitsAbsentTables(t *testing.T) {
+	path := newTestCacheFile(t, map[string]string{"build_time": "2026-01-01T00:00:00Z"}, stubRsdtdspSQL)
+
+	info, err := LoadInfo(context.Background(), path)
+	if err != nil {
+		t.Fatalf("LoadInfo() error = %v", err)
+	}
+
+	if info.BuildTime != "2026-01-01T00:00:00Z" {
+		t.Errorf("BuildTime = %q, want the config value", info.BuildTime)
+	}
+	for _, table := range []string{"cache_pref", "cache_city", "cache_machiaza", "cache_rsdtdsp"} {
+		if count, ok := info.Tables[table]; !ok || count != 0 {
+			t.Errorf("Tables[%q] = %d, %v; want 0, true", table, count, ok)
+		}
+	}
+	if count, ok := info.Tables["cache_parcel"]; ok {
+		t.Errorf("Tables[cache_parcel] = %d, want omitted", count)
+	}
+}
+
+// TestLoadInfo_SchemaVersionWarning pins that LoadInfo reports a failed
+// schema version check as a warning with rebuild advice instead of refusing
+// to inspect the cache.
+func TestLoadInfo_SchemaVersionWarning(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name        string
+		configRows  map[string]string
+		wantWarning []string
+	}{
+		{
+			name:        "missing schema version",
+			configRows:  nil,
+			wantWarning: []string{"no schema version", "abrg cache build"},
+		},
+		{
+			name:        "mismatched schema version",
+			configRows:  map[string]string{KeySchemaVersion: "999"},
+			wantWarning: []string{"cache schema version 999", "abrg cache build"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, err := LoadInfo(ctx, newTestCacheFile(t, tt.configRows))
+			if err != nil {
+				t.Fatalf("LoadInfo() error = %v", err)
+			}
+			for _, want := range tt.wantWarning {
+				if !strings.Contains(info.Warning, want) {
+					t.Errorf("Warning %q does not contain %q", info.Warning, want)
+				}
+			}
+		})
+	}
+
+	t.Run("current schema version has no warning", func(t *testing.T) {
+		current, err := schema.Version()
+		if err != nil {
+			t.Fatalf("schema.Version(): %v", err)
+		}
+		info, err := LoadInfo(ctx, newTestCacheFile(t, map[string]string{KeySchemaVersion: strconv.Itoa(current)}))
+		if err != nil {
+			t.Fatalf("LoadInfo() error = %v", err)
+		}
+		if info.Warning != "" {
+			t.Errorf("Warning = %q, want empty", info.Warning)
 		}
 	})
 }

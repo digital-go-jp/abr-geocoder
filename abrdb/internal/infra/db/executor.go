@@ -3,35 +3,23 @@ package db
 
 import (
 	"context"
-	"database/sql/driver"
-	"errors"
 	"fmt"
+	"os"
+	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	commondb "abr.local/common/db"
+
+	"abrdb/internal/util"
 )
 
 // QueryExecutor handles database query execution using pgxpool.
 type QueryExecutor struct {
 	pool *pgxpool.Pool
-}
-
-// sqlResult wraps pgconn.CommandTag to implement sql.Result interface
-type sqlResult struct {
-	tag pgconn.CommandTag
-}
-
-func (r *sqlResult) LastInsertId() (int64, error) {
-	// pgx doesn't support LastInsertId in the traditional sense
-	return 0, errors.New("pgx does not support LastInsertId")
-}
-
-func (r *sqlResult) RowsAffected() (int64, error) {
-	return r.tag.RowsAffected(), nil
 }
 
 // NewQueryExecutor creates a new query executor with pgxpool.
@@ -59,9 +47,9 @@ func NewQueryExecutor(ctx context.Context, connStr string) (*QueryExecutor, erro
 	return &QueryExecutor{pool: pool}, nil
 }
 
-// Pool returns the underlying pgxpool.Pool for direct access.
-func (q *QueryExecutor) Pool() *pgxpool.Pool {
-	return q.pool
+// Begin starts a transaction on the pool.
+func (q *QueryExecutor) Begin(ctx context.Context) (pgx.Tx, error) {
+	return q.pool.Begin(ctx)
 }
 
 // Query executes a query that returns rows.
@@ -70,13 +58,14 @@ func (q *QueryExecutor) Query(ctx context.Context, query string, args ...any) (p
 }
 
 // Exec executes a query that does not return rows.
-// Returns a driver.Result compatible value and error.
-func (q *QueryExecutor) Exec(ctx context.Context, query string, args ...any) (driver.Result, error) {
-	tag, err := q.pool.Exec(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return &sqlResult{tag: tag}, nil
+func (q *QueryExecutor) Exec(ctx context.Context, query string, args ...any) error {
+	_, err := q.pool.Exec(ctx, query, args...)
+	return err
+}
+
+// QueryRow executes a query that returns at most one row.
+func (q *QueryExecutor) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
+	return q.pool.QueryRow(ctx, query, args...)
 }
 
 // Close closes the connection pool.
@@ -90,5 +79,31 @@ func (q *QueryExecutor) Close() error {
 // NewQueryExecutorFromEnv creates a new query executor using environment variables.
 func NewQueryExecutorFromEnv(ctx context.Context) (*QueryExecutor, error) {
 	cfg := commondb.LoadDBConfigFromEnv()
-	return NewQueryExecutor(ctx, cfg.DSN())
+	return NewQueryExecutor(ctx, dsnWithPoolSize(cfg.DSN()))
+}
+
+// dsnWithPoolSize sizes the pgx pool to the effective worker parallelism:
+// download and import workers update the catalog over this pool concurrently,
+// so the pool must not be smaller than the larger of the two effective worker
+// counts (+4 covers the lock session and ad-hoc queries). A stage with a
+// valid setting counts at that clamped value; a stage without one runs
+// GOMAXPROCS workers and counts at that. With no valid setting at all the
+// DSN stays untouched and the pgxpool default applies.
+func dsnWithPoolSize(dsn string) string {
+	workers := 0
+	anySet := false
+	for _, name := range []string{"ABRDB_IMPORT_CONCURRENCY", "ABRDB_DOWNLOAD_CONCURRENCY"} {
+		effective := runtime.GOMAXPROCS(0)
+		if v, ok := os.LookupEnv(name); ok && v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				anySet = true
+				effective = min(n, util.MaxConcurrency)
+			}
+		}
+		workers = max(workers, effective)
+	}
+	if !anySet {
+		return dsn
+	}
+	return dsn + "&pool_max_conns=" + strconv.Itoa(workers+4)
 }
