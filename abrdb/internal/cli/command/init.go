@@ -15,9 +15,9 @@ import (
 	"abr.local/common/env"
 	"abr.local/common/version"
 
+	"abrdb/internal/config"
 	"abrdb/internal/infra/postgres"
 	"abrdb/internal/schema"
-	"abrdb/internal/util"
 )
 
 // InitOptions holds the init command options
@@ -95,16 +95,16 @@ func NewInitCmd() *cobra.Command {
 func runInit(ctx context.Context, executor *db.QueryExecutor, migrator interface{ RunMigrations(context.Context) error }, opts *InitOptions) error {
 	// Validate inputs before running migrations: migrations drop and recreate
 	// tables, so invalid input must not destroy existing data.
-	if _, err := util.ParsePref(opts.Pref); err != nil {
+	if _, err := config.ParsePref(opts.Pref); err != nil {
 		return fmt.Errorf("parse prefecture code: %w", err)
 	}
 
-	if _, err := util.ParseCategory(opts.Category); err != nil {
+	if _, err := config.ParseCategory(opts.Category); err != nil {
 		return fmt.Errorf("parse category: %w", err)
 	}
 
 	if !opts.Force {
-		hasData, err := util.CheckExistingData(ctx, executor)
+		hasData, err := config.CheckExistingData(ctx, executor)
 		if err != nil {
 			return fmt.Errorf("check existing data: %w", err)
 		}

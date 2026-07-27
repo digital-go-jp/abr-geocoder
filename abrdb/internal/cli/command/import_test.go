@@ -6,11 +6,11 @@ import (
 	"slices"
 	"testing"
 
+	"abrdb/internal/config"
 	"abrdb/internal/infra/postgres"
 	"abrdb/internal/model"
 	"abrdb/internal/schema"
 	"abrdb/internal/service/catalog"
-	"abrdb/internal/util"
 )
 
 // fakeCatalog is a catalogAPI stub whose scan results are fixed per test case.
@@ -270,23 +270,23 @@ func TestBuildS3Prefixes(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		cfg     util.ImportConfig
+		cfg     config.ImportConfig
 		want    []string
 		wantErr bool
 	}{
 		{
 			name: "text only",
-			cfg:  util.ImportConfig{EnabledCategory: []model.FileCategory{"town"}},
+			cfg:  config.ImportConfig{EnabledCategory: []model.FileCategory{"town"}},
 			want: []string{"mt_town/"},
 		},
 		{
 			name: "pos enabled adds pos path per category",
-			cfg:  util.ImportConfig{EnabledCategory: []model.FileCategory{"town", "parcel"}, EnabledPos: true},
+			cfg:  config.ImportConfig{EnabledCategory: []model.FileCategory{"town", "parcel"}, EnabledPos: true},
 			want: []string{"mt_town/", "mt_town_pos/", "mt_parcel/", "mt_parcel_pos/"},
 		},
 		{
 			name:    "unknown category errors",
-			cfg:     util.ImportConfig{EnabledCategory: []model.FileCategory{"bogus"}},
+			cfg:     config.ImportConfig{EnabledCategory: []model.FileCategory{"bogus"}},
 			wantErr: true,
 		},
 	}

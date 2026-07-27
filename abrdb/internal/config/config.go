@@ -1,5 +1,5 @@
-// Package util provides shared utilities for import operations.
-package util
+// Package config loads and parses the import configuration stored in the database.
+package config
 
 import (
 	"context"

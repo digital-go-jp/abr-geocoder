@@ -15,6 +15,7 @@ import (
 
 	"abr.local/common/progress"
 
+	"abrdb/internal/config"
 	"abrdb/internal/infra/duckdb"
 	"abrdb/internal/infra/postgres"
 	"abrdb/internal/model"
@@ -22,7 +23,6 @@ import (
 	"abrdb/internal/service/catalog"
 	"abrdb/internal/service/download"
 	"abrdb/internal/service/importer"
-	"abrdb/internal/util"
 )
 
 // ChangesPendingError reports that a dry-run found changes to import. It is a
@@ -66,7 +66,7 @@ Use --force to skip change detection and import immediately.`,
 			cfg := sc.Config
 
 			// Load all import configuration from database (single query)
-			importConfig, err := util.LoadImportConfig(ctx, sc.QueryExecutor)
+			importConfig, err := config.LoadImportConfig(ctx, sc.QueryExecutor)
 			if err != nil {
 				return fmt.Errorf("load config from database: %w", err)
 			}
@@ -489,7 +489,7 @@ func collectCategory(pending map[model.FileCategory]int, updated map[model.FileC
 }
 
 // buildS3Prefixes generates S3 prefixes for all enabled category
-func buildS3Prefixes(importConfig *util.ImportConfig, categoryInfoMap map[string]*schema.CategoryInfo) ([]string, error) {
+func buildS3Prefixes(importConfig *config.ImportConfig, categoryInfoMap map[string]*schema.CategoryInfo) ([]string, error) {
 	maxPrefixes := len(importConfig.EnabledCategory)
 	if importConfig.EnabledPos {
 		maxPrefixes *= 2
