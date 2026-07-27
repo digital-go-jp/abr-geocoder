@@ -27,6 +27,9 @@ PostgreSQLからDuckDBキャッシュファイルを構築します。
 
 キャッシュにはスキーマ版が記録され、起動時にバイナリの要求する版と照合します。バイナリ更新後にスキーマ版のエラーが出た場合は `cache build` で再構築してください。住居表示 (cache_rsdtdsp)・地番 (cache_parcel) のテーブルは enabled_category に含まれるカテゴリの分だけ作られます。
 
+環境変数:
+- `ABRG_CACHE_MEMORY_LIMIT` - 構築時の DuckDB メモリ上限（default: `8GB`。`16GB`、`512MiB` のような形式）
+
 ### `abrg cache info`
 
 キャッシュファイルの情報を表示します。
@@ -64,6 +67,9 @@ API仕様: [openapi/openapi.yml](openapi/openapi.yml)
 | `PORT` | `3000` | サーバーポート |
 | `CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDBキャッシュファイルのパス |
 | `CORS_ALLOW_ORIGIN` | （空）| CORS許可オリジン（未指定時は全オリジン許可） |
+| `ABRG_HTTP_READ_TIMEOUT` | `10s` | HTTPサーバーの読み取りタイムアウト（Go duration形式） |
+| `ABRG_HTTP_WRITE_TIMEOUT` | `30s` | HTTPサーバーの書き込みタイムアウト |
+| `ABRG_HTTP_IDLE_TIMEOUT` | `60s` | HTTPサーバーのアイドルタイムアウト |
 | `LOG_LEVEL` | `INFO` | ログレベル（`DEBUG`, `INFO`, `WARN`, `ERROR`） |
 | `LOG_FORMAT` | `auto` | ログ形式（`json` または `text`、未指定時はTTY自動判定） |
 
