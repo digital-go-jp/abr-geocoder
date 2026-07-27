@@ -78,10 +78,10 @@ func runServer(ctx context.Context, cacheFlag string) error {
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%s", cfg.Server.Port),
 		Handler:           server.Handler(),
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: cfg.Server.ReadTimeout,
+		ReadTimeout:       cfg.Server.ReadTimeout,
+		WriteTimeout:      cfg.Server.WriteTimeout,
+		IdleTimeout:       cfg.Server.IdleTimeout,
 	}
 
 	return runHTTPServer(ctx, srv)
