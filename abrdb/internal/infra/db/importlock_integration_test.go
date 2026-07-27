@@ -3,15 +3,17 @@ package db
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 )
 
 // newIntegrationExecutor connects to the PostgreSQL configured via the DB_*
-// environment variables. CI has no PostgreSQL, so an unreachable database
-// skips the test rather than failing it; locally the tests run against the
-// devcontainer database (DB_HOST=host.docker.internal, credentials from
-// abrdb/.env).
+// environment variables. An unreachable database skips the test so runs
+// without a database stay green; ABRDB_TEST_REQUIRE_DB=1 turns the skip into
+// a failure for environments that guarantee a database, such as the dedicated
+// CI job. Locally the tests run against the devcontainer database
+// (DB_HOST=host.docker.internal, credentials from abrdb/.env).
 func newIntegrationExecutor(t *testing.T) *QueryExecutor {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
@@ -19,7 +21,10 @@ func newIntegrationExecutor(t *testing.T) *QueryExecutor {
 
 	qe, err := NewQueryExecutorFromEnv(ctx)
 	if err != nil {
-		t.Skipf("Skipping integration test: PostgreSQL not reachable (expected in CI): %v", err)
+		if os.Getenv("ABRDB_TEST_REQUIRE_DB") != "" {
+			t.Fatalf("ABRDB_TEST_REQUIRE_DB is set but PostgreSQL is not reachable: %v", err)
+		}
+		t.Skipf("Skipping integration test: PostgreSQL not reachable: %v", err)
 	}
 	t.Cleanup(func() { _ = qe.Close() })
 	return qe
