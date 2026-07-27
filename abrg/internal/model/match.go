@@ -4,8 +4,11 @@ package model
 type MatchQuery struct {
 	Address  string   `json:"address"`
 	Category Category `json:"category"`
-	Pref     string   `json:"pref"`
-	Limit    int      `json:"limit"`
+	// Pref restricts results to one prefecture code. "all" disables the
+	// filter; an empty string is not equivalent and leaves prefecture
+	// detection off in the matching engine.
+	Pref  string `json:"pref"`
+	Limit int    `json:"limit"`
 }
 
 // MatchedResult represents a matched address result

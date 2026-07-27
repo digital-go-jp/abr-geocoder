@@ -2,6 +2,7 @@ package command
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"database/sql"
 	"fmt"
@@ -44,6 +45,9 @@ type processorSetup struct {
 	OutFile  *os.File
 	Monitor  progress.Monitor
 	CacheCfg *cache.Config
+	// Category and Pref are the query parameters resolved against CacheCfg.
+	Category model.Category
+	Pref     string
 	cleanup  []func()
 }
 
@@ -84,6 +88,8 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 		return nil, err
 	}
 
+	setup.resolveQueryParams(opts)
+
 	if initMatcher {
 		setup.Matcher = matching.NewMatcher(setup.Repo, dbCache.Lookups(), cacheCfg.HasResidential(), cacheCfg.HasParcel())
 	}
@@ -119,11 +125,11 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	return setup, nil
 }
 
-func (s *processorSetup) resolveCategory(category string) string {
-	if category == "" {
-		return s.CacheCfg.EnabledCategory
-	}
-	return category
+// resolveQueryParams fills Category and Pref from the flags, falling back to
+// the cache's enabled_category and enabled_pref when a flag was omitted.
+func (s *processorSetup) resolveQueryParams(opts processorOptions) {
+	s.Category = model.Category(cmp.Or(opts.Category, s.CacheCfg.EnabledCategory))
+	s.Pref = cmp.Or(opts.Pref, s.CacheCfg.EnabledPref)
 }
 
 // setResultInfo sets common result info fields.

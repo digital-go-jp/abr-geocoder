@@ -35,15 +35,13 @@ func runGeocode(ctx context.Context, opts processorOptions) error {
 	}
 	defer setup.Cleanup()
 
-	categoryVal := model.Category(setup.resolveCategory(opts.Category))
-
 	p := newDefaultProcessor(setup, func(ctx context.Context, address string) (*model.GeocodeResponse, error) {
 		start := time.Now()
 		result, err := matching.Geocode(ctx, setup.Matcher, setup.Repo, model.MatchQuery{
 			Address:  address,
-			Category: categoryVal,
+			Category: setup.Category,
 			Limit:    opts.Limit,
-			Pref:     opts.Pref,
+			Pref:     setup.Pref,
 		})
 		if result != nil {
 			result.ResultInfo.DurationMs = util.DurationMs(time.Since(start))
