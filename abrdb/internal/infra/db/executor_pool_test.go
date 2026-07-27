@@ -1,12 +1,21 @@
 package db
 
-import "testing"
+import (
+	"fmt"
+	"runtime"
+	"testing"
+)
 
-// TestDSNWithPoolSize pins that the pool grows with the configured worker
-// parallelism and that leaving both variables unset keeps the DSN (and thus
-// the pgxpool default) untouched.
+// TestDSNWithPoolSize pins the pool-sizing rule: the pool covers the larger of
+// the two effective worker counts, where a stage without a valid setting still
+// runs GOMAXPROCS workers. Without any valid setting the DSN (and thus the
+// pgxpool default) stays untouched.
 func TestDSNWithPoolSize(t *testing.T) {
 	const dsn = "postgres://u@h:5432/d?sslmode=disable"
+	gomaxprocs := runtime.GOMAXPROCS(0)
+	withPool := func(workers int) string {
+		return fmt.Sprintf("%s&pool_max_conns=%d", dsn, workers+4)
+	}
 
 	tests := []struct {
 		name     string
@@ -15,10 +24,10 @@ func TestDSNWithPoolSize(t *testing.T) {
 		want     string
 	}{
 		{name: "both unset keeps default", want: dsn},
-		{name: "import concurrency sizes the pool", imports: "8", want: dsn + "&pool_max_conns=12"},
-		{name: "download concurrency sizes the pool", download: "6", want: dsn + "&pool_max_conns=10"},
-		{name: "larger of the two wins", imports: "4", download: "9", want: dsn + "&pool_max_conns=13"},
-		{name: "clamped to the cap", imports: "100", want: dsn + "&pool_max_conns=36"},
+		{name: "small explicit value still covers the unset stage", imports: "1", want: withPool(max(gomaxprocs, 1))},
+		{name: "download setting alone", download: "6", want: withPool(max(gomaxprocs, 6))},
+		{name: "larger effective count wins", imports: "4", download: "9", want: withPool(max(gomaxprocs, 9))},
+		{name: "explicit value clamped to the cap", imports: "100", want: withPool(max(gomaxprocs, poolConcurrencyCap))},
 		{name: "invalid value keeps default", imports: "abc", want: dsn},
 		{name: "non-positive value keeps default", imports: "0", want: dsn},
 	}

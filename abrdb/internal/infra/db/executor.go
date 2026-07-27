@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -82,23 +83,28 @@ func NewQueryExecutorFromEnv(ctx context.Context) (*QueryExecutor, error) {
 // poolConcurrencyCap mirrors the worker-limit clamp in util.ConcurrencyLimit.
 const poolConcurrencyCap = 32
 
-// dsnWithPoolSize sizes the pgx pool to the configured worker parallelism:
+// dsnWithPoolSize sizes the pgx pool to the effective worker parallelism:
 // download and import workers update the catalog over this pool concurrently,
-// so the pool must not be smaller than the effective worker count (+4 covers
-// the lock session and ad-hoc queries). With neither variable set the pgxpool
-// default stays in effect.
+// so the pool must not be smaller than the larger of the two effective worker
+// counts (+4 covers the lock session and ad-hoc queries). A stage without a
+// valid setting still runs GOMAXPROCS workers, so it counts at that value.
+// With no valid setting at all the DSN stays untouched and the pgxpool
+// default applies.
 func dsnWithPoolSize(dsn string) string {
-	workers := 0
+	// Effective floor: stages without a valid setting use GOMAXPROCS workers.
+	workers := runtime.GOMAXPROCS(0)
+	anySet := false
 	for _, name := range []string{"ABRDB_IMPORT_CONCURRENCY", "ABRDB_DOWNLOAD_CONCURRENCY"} {
 		v, ok := os.LookupEnv(name)
 		if !ok || v == "" {
 			continue
 		}
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			anySet = true
 			workers = max(workers, min(n, poolConcurrencyCap))
 		}
 	}
-	if workers == 0 {
+	if !anySet {
 		return dsn
 	}
 	return dsn + "&pool_max_conns=" + strconv.Itoa(workers+4)
