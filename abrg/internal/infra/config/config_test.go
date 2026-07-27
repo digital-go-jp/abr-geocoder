@@ -97,8 +97,8 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-// TestLoad_HTTPTimeouts pins the timeout defaults (unchanged from the former
-// hardcoded values) and the duration-string override path.
+// TestLoad_HTTPTimeouts pins the timeout defaults and the duration-string
+// override path.
 func TestLoad_HTTPTimeouts(t *testing.T) {
 	envKeys := []string{"ABRG_HTTP_READ_TIMEOUT", "ABRG_HTTP_WRITE_TIMEOUT", "ABRG_HTTP_IDLE_TIMEOUT"}
 	saveEnvVars(t, envKeys)
@@ -111,7 +111,7 @@ func TestLoad_HTTPTimeouts(t *testing.T) {
 		wantIdle  time.Duration
 	}{
 		{
-			name:      "defaults match the former hardcoded values",
+			name:      "defaults are 10s, 30s, and 60s",
 			env:       map[string]string{},
 			wantRead:  10 * time.Second,
 			wantWrite: 30 * time.Second,
