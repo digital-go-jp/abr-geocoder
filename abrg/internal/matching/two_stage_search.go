@@ -75,7 +75,14 @@ func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiaza
 	// The base machiaza_id might be for the town without chome (e.g., "0043000" for 舞浜)
 	// We need to use the chome-specific machiaza_id (e.g., "0043002" for 舞浜2丁目)
 	if parsed.HasChome && parsed.Chome != "" {
-		machiazaID = adjustMachiazaIDForChome(machiazaID, parsed.Chome)
+		adjusted := adjustMachiazaIDForChome(machiazaID, parsed.Chome)
+		// This runs on every chome-bearing residential search; keep the
+		// disabled-logging cost to the level check alone.
+		if adjusted != machiazaID && debugEnabled(ctx) {
+			debugMatchPath(ctx, "chome_machiaza_adjust", parsed.Base,
+				"machiaza_id", machiazaID, "adjusted", adjusted)
+		}
+		machiazaID = adjusted
 	}
 
 	// Single query to find the best residential match across all specificity levels.

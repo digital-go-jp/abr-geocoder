@@ -129,6 +129,8 @@ func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContex
 	state.UsedLevenshtein = true
 	state.LgCode = derefString(levenResults[0].IDs.LgCode)
 	state.MachiazaID = derefString(levenResults[0].IDs.MachiazaID)
+	debugMatchPath(ctx, "levenshtein", nctx.Input.NormalizedAddr,
+		"results", len(levenResults), "score", levenResults[0].Score)
 	return state, true, nil
 }
 
