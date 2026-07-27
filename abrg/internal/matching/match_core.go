@@ -49,6 +49,10 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 		return nil, err
 	}
 
+	if !query.Category.Known() {
+		return nil, fmt.Errorf("%w: %s", ErrUnknownCategory, query.Category)
+	}
+
 	normalizedAddr := normalize.BasicNormalize(query.Address)
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
 	pref, searchAddr, basicResults, err := n.detectBasicResultsWithBasic(ctx, normalizedAddr, query.Pref)
@@ -126,7 +130,7 @@ func (n *Impl) normalizeByCategory(ctx context.Context, nctx *normalizeContext, 
 		}
 		return n.normalizeAll(ctx, nctx)
 	default:
-		return nil, fmt.Errorf("unknown category: %s", category)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownCategory, category)
 	}
 }
 

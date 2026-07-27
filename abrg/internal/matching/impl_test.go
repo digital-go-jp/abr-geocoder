@@ -1,6 +1,8 @@
 package matching
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"abrg/internal/cache"
@@ -325,5 +327,13 @@ func BenchmarkNormalize(b *testing.B) {
 		for _, query := range queries {
 			_, _ = normalizer.Match(ctx, query)
 		}
+	}
+}
+
+func TestNormalizeByCategoryUnknownCategory(t *testing.T) {
+	n := &Impl{}
+	_, err := n.normalizeByCategory(context.Background(), &normalizeContext{}, model.Category("bogus"))
+	if !errors.Is(err, ErrUnknownCategory) {
+		t.Errorf("normalizeByCategory(bogus) error = %v, want it to match ErrUnknownCategory", err)
 	}
 }
