@@ -264,6 +264,14 @@ func TestDownloadFile_BackoffAbortsOnCancel(t *testing.T) {
 	if elapsed := time.Since(start); elapsed > 5*time.Second {
 		t.Errorf("DownloadFile returned after %v; backoff wait did not abort on cancel", elapsed)
 	}
+	// The cancellation must be identifiable by the caller; the aborted
+	// attempt's error stays attached for diagnosis.
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("err = %v, want errors.Is(err, context.Canceled)", err)
+	}
+	if !strings.Contains(err.Error(), "unexpected status code: 500") {
+		t.Errorf("err = %v, want the last attempt error attached", err)
+	}
 }
 
 // TestFetchFeed_TimeoutSpansBackoff pins that the feed timeout covers the
@@ -290,6 +298,9 @@ func TestFetchFeed_TimeoutSpansBackoff(t *testing.T) {
 	}
 	if got := calls.Load(); got != 1 {
 		t.Errorf("HTTP calls = %d, want 1 (timeout hit during the first backoff)", got)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("err = %v, want errors.Is(err, context.DeadlineExceeded)", err)
 	}
 }
 

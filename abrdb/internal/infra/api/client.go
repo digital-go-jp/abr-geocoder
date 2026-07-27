@@ -121,8 +121,11 @@ func (c *Client) doWithRetry(ctx context.Context, attempt func() error) error {
 		delay := c.retryDelay(try, err)
 		slog.Warn("retrying request", "event", "http_retry",
 			"attempt", try+1, "max_retries", c.retry.maxRetries, "delay", delay, "error", err)
-		if c.sleep(ctx, delay) != nil {
-			return err
+		if serr := c.sleep(ctx, delay); serr != nil {
+			// The context error comes first so callers can identify
+			// cancellation with errors.Is; the aborted attempt's error is
+			// attached for diagnosis.
+			return fmt.Errorf("retry wait interrupted: %w (last attempt: %w)", serr, err)
 		}
 	}
 }
