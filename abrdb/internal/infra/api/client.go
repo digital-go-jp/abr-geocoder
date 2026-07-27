@@ -127,16 +127,32 @@ func (c *Client) doWithRetry(ctx context.Context, attempt func() error) error {
 	}
 }
 
-// isRetryable classifies an attempt failure. HTTP statuses follow the given
-// policy; every non-status error (dial failure, reset, truncated body) is
-// considered transient except context cancellation.
+// isRetryable classifies an attempt failure. Retryable are the policy HTTP
+// statuses (5xx, 429, 408) and transport-level failures: connection errors
+// and interrupted body reads. Local filesystem errors (temp create, write,
+// rename), malformed payloads and request construction fail immediately -
+// retrying cannot fix those and would only repeat a full download.
 func isRetryable(err error) bool {
 	if se, ok := errors.AsType[*httpStatusError](err); ok {
 		return se.status >= 500 ||
 			se.status == http.StatusTooManyRequests ||
 			se.status == http.StatusRequestTimeout
 	}
-	return !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded)
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	// Concrete transport error types rather than the net.Error interface:
+	// bare syscall.Errno also implements net.Error, which would drag local
+	// filesystem errors like ENOSPC inside *fs.PathError back in. A body cut
+	// short against Content-Length surfaces as io.ErrUnexpectedEOF from the
+	// copy or, via the JSON decoder, as a wrapped io.EOF.
+	var opErr *net.OpError
+	var urlErr *url.Error
+	var dnsErr *net.DNSError
+	if errors.As(err, &opErr) || errors.As(err, &urlErr) || errors.As(err, &dnsErr) {
+		return true
+	}
+	return errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF)
 }
 
 // retryDelay picks the wait before retry number try+1: the server-requested

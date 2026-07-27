@@ -2,15 +2,22 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -327,7 +334,17 @@ func TestIsRetryable(t *testing.T) {
 		{"400", &httpStatusError{status: 400}, false},
 		{"403", &httpStatusError{status: 403}, false},
 		{"404", &httpStatusError{status: 404}, false},
-		{"connection error", errors.New("connection reset by peer"), true},
+		// Transport-level failures are retryable.
+		{"connection reset during read", &net.OpError{Op: "read", Err: syscall.ECONNRESET}, true},
+		{"http.Client.Do failure", &url.Error{Op: "Get", URL: "https://x", Err: syscall.ECONNREFUSED}, true},
+		{"dns error", &net.DNSError{Name: "x", Err: "no such host"}, true},
+		{"body truncated against Content-Length", fmt.Errorf("write file: %w", io.ErrUnexpectedEOF), true},
+		{"decoder-wrapped EOF", fmt.Errorf("decode feed: %w", io.EOF), true},
+		// Local and permanent failures are not.
+		{"disk full during write", &fs.PathError{Op: "write", Path: "/f.tmp", Err: syscall.ENOSPC}, false},
+		{"rename failure", &os.LinkError{Op: "rename", Old: "/f.tmp", New: "/f", Err: syscall.EACCES}, false},
+		{"malformed json", &json.SyntaxError{}, false},
+		{"plain error", errors.New("something else"), false},
 		{"context canceled", context.Canceled, false},
 		{"deadline exceeded", context.DeadlineExceeded, false},
 	}
