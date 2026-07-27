@@ -115,7 +115,7 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 		taskName := fmt.Sprintf("Importing %s", cat)
 		if err := util.ExecuteConcurrently(ctx, pairs, func(ctx context.Context, pair catalog.FilePairing) error {
 			return s.importFilePair(ctx, pair, categoryInfo, !tableEmpty)
-		}, s.progress, taskName); err != nil {
+		}, s.progress, taskName, util.ConcurrencyLimit("ABRDB_IMPORT_CONCURRENCY")); err != nil {
 			return nil, fmt.Errorf("import files for %q: %w", cat, err)
 		}
 

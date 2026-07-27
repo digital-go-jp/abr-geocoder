@@ -4,6 +4,8 @@ package db
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -74,5 +76,30 @@ func (q *QueryExecutor) Close() error {
 // NewQueryExecutorFromEnv creates a new query executor using environment variables.
 func NewQueryExecutorFromEnv(ctx context.Context) (*QueryExecutor, error) {
 	cfg := commondb.LoadDBConfigFromEnv()
-	return NewQueryExecutor(ctx, cfg.DSN())
+	return NewQueryExecutor(ctx, dsnWithPoolSize(cfg.DSN()))
+}
+
+// poolConcurrencyCap mirrors the worker-limit clamp in util.ConcurrencyLimit.
+const poolConcurrencyCap = 32
+
+// dsnWithPoolSize sizes the pgx pool to the configured worker parallelism:
+// download and import workers update the catalog over this pool concurrently,
+// so the pool must not be smaller than the effective worker count (+4 covers
+// the lock session and ad-hoc queries). With neither variable set the pgxpool
+// default stays in effect.
+func dsnWithPoolSize(dsn string) string {
+	workers := 0
+	for _, name := range []string{"ABRDB_IMPORT_CONCURRENCY", "ABRDB_DOWNLOAD_CONCURRENCY"} {
+		v, ok := os.LookupEnv(name)
+		if !ok || v == "" {
+			continue
+		}
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			workers = max(workers, min(n, poolConcurrencyCap))
+		}
+	}
+	if workers == 0 {
+		return dsn
+	}
+	return dsn + "&pool_max_conns=" + strconv.Itoa(workers+4)
 }

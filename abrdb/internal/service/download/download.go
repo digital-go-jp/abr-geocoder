@@ -94,7 +94,7 @@ func (s *service) DownloadPendingFiles(ctx context.Context) error {
 		}
 
 		return nil
-	}, s.progress, "Downloading files")
+	}, s.progress, "Downloading files", util.ConcurrencyLimit("ABRDB_DOWNLOAD_CONCURRENCY"))
 }
 
 // findMissingPendingImports returns files flagged needs_import=true that are

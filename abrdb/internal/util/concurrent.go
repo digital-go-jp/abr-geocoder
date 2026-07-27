@@ -2,14 +2,38 @@ package util
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"runtime"
+	"strconv"
 
 	"abr.local/common/progress"
 	"golang.org/x/sync/errgroup"
 )
 
+// maxConcurrency caps operator-supplied worker limits so a typo cannot flood
+// the source feed or exhaust PostgreSQL connections.
+const maxConcurrency = 32
+
+// ConcurrencyLimit returns the worker limit configured in the named
+// environment variable. Unset, invalid, or non-positive values fall back to
+// GOMAXPROCS (container-aware); values above maxConcurrency are clamped.
+func ConcurrencyLimit(envName string) int {
+	v, ok := os.LookupEnv(envName)
+	if !ok || v == "" {
+		return runtime.GOMAXPROCS(0)
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		slog.Warn("ignoring invalid concurrency setting",
+			"event", "concurrency", "env", envName, "value", v)
+		return runtime.GOMAXPROCS(0)
+	}
+	return min(n, maxConcurrency)
+}
+
 // ExecuteConcurrently runs workers over items with bounded parallelism and integrated progress tracking.
-// Uses GOMAXPROCS for concurrency limit (container-aware in Go 1.21+).
+// A non-positive limit falls back to GOMAXPROCS (container-aware in Go 1.21+).
 // If monitor is nil, progress tracking is skipped.
 func ExecuteConcurrently[T any](
 	ctx context.Context,
@@ -17,6 +41,7 @@ func ExecuteConcurrently[T any](
 	worker func(context.Context, T) error,
 	monitor progress.Monitor,
 	taskName string,
+	limit int,
 ) error {
 	if len(items) == 0 {
 		return nil
@@ -27,11 +52,10 @@ func ExecuteConcurrently[T any](
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
-	limit := min(runtime.GOMAXPROCS(0), len(items))
 	if limit <= 0 {
-		limit = 1
+		limit = runtime.GOMAXPROCS(0)
 	}
-	g.SetLimit(limit)
+	g.SetLimit(min(limit, len(items)))
 
 	for _, item := range items {
 		g.Go(func() error {
