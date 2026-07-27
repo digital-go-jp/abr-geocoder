@@ -16,12 +16,15 @@ var (
 	chomeKanjiBlockGoPattern = regexp.MustCompile(`(丁目)([一-龥]+)(\d+)号\s*$`)
 
 	// chomeKanjiBlockNumPattern matches 丁目 + kanji block + number without 号 (e.g., "4丁目渡辺3")
-	// Excludes: 町 (town names), \d (digits), - (hyphen patterns handled elsewhere)
-	chomeKanjiBlockNumPattern = regexp.MustCompile(`(丁目)([一-龥]*[^町\d-])(\d+)\s*$`)
+	// Excludes: 町 (town names), \d (digits), \s and \pZ (separate token; \s alone
+	// misses U+3000), - (hyphen patterns handled elsewhere)
+	chomeKanjiBlockNumPattern = regexp.MustCompile(`(丁目)([一-龥]*[^町\d\s\pZ-])(\d+)\s*$`)
 
 	// textNumberBoundaryPattern matches typical address numbers at the end.
 	// Supports: numbers (123-4), alphabet (A-20), katakana (12-エ-46), kanji block + hyphen-number
-	textNumberBoundaryPattern = regexp.MustCompile(`([^\d\s-A-Zア-ン])((?:\d+|[A-Z]+|[ア-ン]+)(?:-[\dA-Zア-ン一-龥]+)*-?|(?:-\d+))\s*$`)
+	// Excludes \pZ alongside \s so an ideographic space separates the number the
+	// same way an ASCII space does.
+	textNumberBoundaryPattern = regexp.MustCompile(`([^\d\s\pZ-A-Zア-ン])((?:\d+|[A-Z]+|[ア-ン]+)(?:-[\dA-Zア-ン一-龥]+)*-?|(?:-\d+))\s*$`)
 
 	// atKanjiBlockPattern matches @ + single alphabetic/kanji/katakana character
 	atKanjiBlockPattern = regexp.MustCompile(`(@)([A-Zア-ン一-龥])`)

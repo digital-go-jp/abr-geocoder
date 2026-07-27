@@ -37,7 +37,7 @@ Example:
 }
 
 func runReverse(ctx context.Context, opts processorOptions) error {
-	setup, err := setupProcessor(ctx, opts, "Reverse geocoding", false)
+	setup, err := setupProcessor(ctx, opts, "Reverse geocoding", processorNeeds{Pos: true})
 	if err != nil {
 		return err
 	}
@@ -46,8 +46,6 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 	// Data availability follows the cache build configuration; the presence
 	// of the category tables themselves is verified at cache open.
 	reverser := reverse.NewReverseGeocoder(setup.Repo, setup.CacheCfg.HasResidential(), setup.CacheCfg.HasParcel())
-	categoryVal := model.Category(setup.resolveCategory(opts.Category))
-
 	p := newDefaultProcessor(setup, func(ctx context.Context, line string) (*model.ReverseResponse, error) {
 		lon, lat, err := parseCoordinates(line)
 		if err != nil {
@@ -58,8 +56,8 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 		result, err := reverser.Reverse(ctx, model.ReverseQuery{
 			Lon:      lon,
 			Lat:      lat,
-			Category: categoryVal,
-			Pref:     opts.Pref,
+			Category: setup.Category,
+			Pref:     setup.Pref,
 			Limit:    opts.Limit,
 		})
 		if result != nil {

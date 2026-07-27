@@ -54,6 +54,24 @@ func TestAddColon(t *testing.T) {
 			changed:  false,
 		},
 		{
+			name:     "space-separated number after chome",
+			input:    "名古屋市中区栄1丁目 3",
+			expected: "名古屋市中区栄1丁目 3",
+			changed:  false,
+		},
+		{
+			name:     "space-separated multi-digit number after chome",
+			input:    "中区栄1丁目 12",
+			expected: "中区栄1丁目 12",
+			changed:  false,
+		},
+		{
+			name:     "ideographic-space-separated number after chome",
+			input:    "名古屋市中区栄1丁目　3",
+			expected: "名古屋市中区栄1丁目　3",
+			changed:  false,
+		},
+		{
 			name:     "ends with hyphen and number",
 			input:    "東京都港区赤坂-123",
 			expected: "東京都港区赤坂:-123",
@@ -241,3 +259,4 @@ func BenchmarkAddColon(b *testing.B) {
 		})
 	}
 }
+

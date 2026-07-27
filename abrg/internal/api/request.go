@@ -16,7 +16,9 @@ import (
 	"abrg/internal/validate"
 )
 
-// baseRequest contains common fields for all requests.
+// baseRequest contains common fields for all requests. The category list and
+// the limit range restate model.Category and validate.MinLimit/MaxLimit,
+// because binding tags must be literals.
 type baseRequest struct {
 	Category string `form:"category" binding:"omitempty,oneof=all basic rsdtdsp parcel"`
 	Pref     string `form:"pref" binding:"omitempty"`

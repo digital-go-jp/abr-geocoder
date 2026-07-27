@@ -16,6 +16,10 @@ import (
 // guards direct matcher use.
 var ErrDataUnavailable = errors.New("data not available in current cache")
 
+// ErrUnknownCategory marks match queries naming a category the matcher does
+// not implement. The HTTP layer maps it to 400.
+var ErrUnknownCategory = errors.New("unknown category")
+
 // implQuerier is a consumer-defined interface for the matcher's data access needs.
 type implQuerier interface {
 	FindCityRecord(ctx context.Context, params repository.CityRecordParams) (*repository.CityResult, error)

@@ -1137,6 +1137,14 @@ func TestGeocodeHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusServiceUnavailable,
 			wantErrorField: true,
 		},
+		{
+			// A category the matcher does not recognize is a client error: 400.
+			name:           "unknown category maps to 400",
+			query:          "?address=東京都&category=all",
+			mockErr:        fmt.Errorf("%w: bogus", matching.ErrUnknownCategory),
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+		},
 	}
 
 	for _, tt := range tests {

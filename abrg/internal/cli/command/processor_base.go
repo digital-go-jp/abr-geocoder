@@ -2,8 +2,10 @@ package command
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -44,6 +46,9 @@ type processorSetup struct {
 	OutFile  *os.File
 	Monitor  progress.Monitor
 	CacheCfg *cache.Config
+	// Category and Pref are the query parameters resolved against CacheCfg.
+	Category model.Category
+	Pref     string
 	cleanup  []func()
 }
 
@@ -54,9 +59,17 @@ func (s *processorSetup) Cleanup() {
 	}
 }
 
+// processorNeeds declares what setupProcessor must build and what the cache
+// must provide for a command to run.
+type processorNeeds struct {
+	// Matcher requests a Matcher instance.
+	Matcher bool
+	// Pos requires the cache to hold position data.
+	Pos bool
+}
+
 // setupProcessor initializes common components for processing commands.
-// If initMatcher is true, the Matcher field is initialized.
-func setupProcessor(ctx context.Context, opts processorOptions, taskName string, initMatcher bool) (*processorSetup, error) {
+func setupProcessor(ctx context.Context, opts processorOptions, taskName string, needs processorNeeds) (*processorSetup, error) {
 	setup := &processorSetup{}
 
 	dbCache, err := cache.NewDuckDBCache(ctx)
@@ -84,7 +97,14 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 		return nil, err
 	}
 
-	if initMatcher {
+	if needs.Pos && !cacheCfg.PosEnabled() {
+		setup.Cleanup()
+		return nil, errors.New("this command requires enable_pos=true in the database")
+	}
+
+	setup.resolveQueryParams(opts)
+
+	if needs.Matcher {
 		setup.Matcher = matching.NewMatcher(setup.Repo, dbCache.Lookups(), cacheCfg.HasResidential(), cacheCfg.HasParcel())
 	}
 
@@ -119,11 +139,11 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	return setup, nil
 }
 
-func (s *processorSetup) resolveCategory(category string) string {
-	if category == "" {
-		return s.CacheCfg.EnabledCategory
-	}
-	return category
+// resolveQueryParams fills Category and Pref from the flags, falling back to
+// the cache's enabled_category and enabled_pref when a flag was omitted.
+func (s *processorSetup) resolveQueryParams(opts processorOptions) {
+	s.Category = model.Category(cmp.Or(opts.Category, s.CacheCfg.EnabledCategory))
+	s.Pref = cmp.Or(opts.Pref, s.CacheCfg.EnabledPref)
 }
 
 // setResultInfo sets common result info fields.
@@ -137,13 +157,15 @@ func registerCommonFlags(cmd *cobra.Command, opts *processorOptions) {
 	cmd.Flags().StringVarP(&opts.OutputFile, "output", "o", "", "Output file path (required)")
 	cmd.Flags().StringVarP(&opts.Category, "category", "c", "", "Category (all, basic, rsdtdsp, parcel)")
 	cmd.Flags().StringVarP(&opts.Pref, "pref", "p", "", "Prefecture filter (prefecture code or 'all')")
-	cmd.Flags().IntVarP(&opts.Limit, "limit", "l", 1, "Maximum results per address (1-5)")
+	cmd.Flags().IntVarP(&opts.Limit, "limit", "l", validate.MinLimit,
+		fmt.Sprintf("Maximum results per address (%d-%d)", validate.MinLimit, validate.MaxLimit))
 	cmd.Flags().BoolVarP(&opts.Quiet, "quiet", "q", false, "Suppress progress output")
 	_ = cmd.MarkFlagRequired("input")
 	_ = cmd.MarkFlagRequired("output")
 }
 
-// validateOptions validates category and pref options against the cache configuration.
+// validateOptions validates the category, pref and limit options against the
+// cache configuration.
 func validateOptions(opts processorOptions, enabledCategory, enabledPref string) error {
 	if opts.Category != "" {
 		if _, err := validate.ValidateCategory(opts.Category, enabledCategory); err != nil {
@@ -155,7 +177,7 @@ func validateOptions(opts processorOptions, enabledCategory, enabledPref string)
 			return err
 		}
 	}
-	return nil
+	return validate.ValidateLimit(opts.Limit)
 }
 
 // newDefaultProcessor creates a ParallelProcessor with standard settings.

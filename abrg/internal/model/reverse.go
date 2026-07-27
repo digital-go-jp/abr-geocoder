@@ -5,8 +5,11 @@ type ReverseQuery struct {
 	Lon      float64  `json:"lon"`
 	Lat      float64  `json:"lat"`
 	Category Category `json:"category"`
-	Pref     string   `json:"pref"`
-	Limit    int      `json:"limit"`
+	// Pref restricts results to one prefecture code. "all" disables the
+	// filter; an empty string is not equivalent and leaves prefecture
+	// detection off in the matching engine.
+	Pref  string `json:"pref"`
+	Limit int    `json:"limit"`
 }
 
 // ReverseProperties represents the properties of a reverse geocoded feature

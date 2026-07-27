@@ -77,6 +77,17 @@ const (
 	CategoryParcel      Category = "parcel"
 )
 
+// Known reports whether c names a category the engines implement. The empty
+// string is known: callers treat it as CategoryAll.
+func (c Category) Known() bool {
+	switch c {
+	case "", CategoryAll, CategoryBasic, CategoryResidential, CategoryParcel:
+		return true
+	default:
+		return false
+	}
+}
+
 type NormalizeCategory string
 
 const (

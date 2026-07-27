@@ -28,15 +28,18 @@ func queryLogParams(q model.MatchQuery) []any {
 }
 
 // sendMatchQueryError maps a match/geocode pipeline error to its response:
-// data missing from the cache is 503, anything else is logged and answered
-// with 500.
+// an unknown category is 400, data missing from the cache is 503, anything
+// else is logged and answered with 500.
 func sendMatchQueryError(c *gin.Context, msg, event string, err error, query model.MatchQuery) {
-	if errors.Is(err, matching.ErrDataUnavailable) {
+	switch {
+	case errors.Is(err, matching.ErrUnknownCategory):
+		sendBadRequest(c, err.Error())
+	case errors.Is(err, matching.ErrDataUnavailable):
 		c.JSON(http.StatusServiceUnavailable, errorResponse(err.Error()))
-		return
+	default:
+		logHandlerError(msg, event, err, queryLogParams(query)...)
+		sendInternalServerError(c)
 	}
-	logHandlerError(msg, event, err, queryLogParams(query)...)
-	sendInternalServerError(c)
 }
 
 // setMatchLevelLog records the top feature's match level for access logging.

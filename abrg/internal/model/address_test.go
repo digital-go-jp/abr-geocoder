@@ -261,3 +261,26 @@ func TestMergePtr(t *testing.T) {
 		})
 	}
 }
+
+func TestCategoryKnown(t *testing.T) {
+	tests := []struct {
+		category Category
+		want     bool
+	}{
+		{CategoryAll, true},
+		{CategoryBasic, true},
+		{CategoryResidential, true},
+		{CategoryParcel, true},
+		{"", true},
+		{"bogus", false},
+		{"ALL", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.category), func(t *testing.T) {
+			if got := tt.category.Known(); got != tt.want {
+				t.Errorf("Category(%q).Known() = %v, want %v", tt.category, got, tt.want)
+			}
+		})
+	}
+}
