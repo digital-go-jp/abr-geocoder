@@ -11,10 +11,11 @@ import (
 )
 
 type Info struct {
-	Path      string
-	Size      int64
-	BuildTime string // Build time from cache_config
-	Tables    map[string]int
+	Path          string
+	Size          int64
+	BuildTime     string // Build time from cache_config
+	SchemaVersion string // Schema version from cache_config; empty if absent
+	Tables        map[string]int
 }
 
 const bytesPerMB = 1024 * 1024
@@ -54,8 +55,9 @@ func LoadInfo(ctx context.Context, cachePath string) (*Info, error) {
 
 	info.Tables = make(map[string]int, len(duckdb.AllTables))
 
-	// BuildTime is optional; zero value on failure.
+	// BuildTime and SchemaVersion are optional; zero value on failure.
 	_ = conn.QueryRowContext(ctx, "SELECT config_value FROM cache_config WHERE config_key = 'build_time'").Scan(&info.BuildTime)
+	_ = conn.QueryRowContext(ctx, "SELECT config_value FROM cache_config WHERE config_key = ?", KeySchemaVersion).Scan(&info.SchemaVersion)
 
 	// Table names are trusted constants from duckdb.AllTables.
 	// Negative count means the row count is unavailable.

@@ -27,6 +27,7 @@ func printCacheInfo(info *cache.Info) {
 	fmt.Printf("Cache file: %s\n", info.Path)
 	fmt.Printf("File size: %.2f MB\n", info.SizeMB())
 	fmt.Printf("Build time: %s\n", info.BuildTime)
+	fmt.Printf("Schema version: %s\n", info.SchemaVersion)
 	fmt.Println("Table records:")
 
 	for _, table := range duckdb.AllTables {
