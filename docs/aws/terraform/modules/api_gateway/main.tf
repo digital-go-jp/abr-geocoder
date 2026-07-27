@@ -193,6 +193,31 @@ resource "aws_api_gateway_integration_response" "root_options" {
 }
 
 # Deployment
+# --- CORS: API Gateway's own error responses ---
+#
+# A rejected API key or a throttled request never reaches the service, so the
+# response carries no CORS header and a browser cannot read why it failed. The
+# error then surfaces as a CORS problem rather than as the 403 or 429 it is.
+# Only the origin is needed: these answer the actual request, not a preflight.
+
+resource "aws_api_gateway_gateway_response" "default_4xx" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  response_type = "DEFAULT_4XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin" = "'${var.cors_allow_origin}'"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "default_5xx" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  response_type = "DEFAULT_5XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin" = "'${var.cors_allow_origin}'"
+  }
+}
+
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.main.id
 
@@ -209,6 +234,8 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.root_options.id,
       aws_api_gateway_integration_response.proxy_options.response_parameters,
       aws_api_gateway_integration_response.root_options.response_parameters,
+      aws_api_gateway_gateway_response.default_4xx.response_parameters,
+      aws_api_gateway_gateway_response.default_5xx.response_parameters,
     ]))
   }
 
@@ -223,6 +250,8 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_method.root,
     aws_api_gateway_integration.root,
     aws_api_gateway_integration_response.root_options,
+    aws_api_gateway_gateway_response.default_4xx,
+    aws_api_gateway_gateway_response.default_5xx,
   ]
 }
 
