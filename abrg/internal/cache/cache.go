@@ -8,10 +8,12 @@ import (
 	"log/slog"
 	"strconv"
 
+	"abr.local/common/db"
 	"abr.local/common/duck"
 
 	"abrg/internal/infra/config"
 	"abrg/internal/infra/duckdb"
+	"abrg/internal/model"
 	"abrg/internal/schema"
 	"abrg/internal/util"
 )
@@ -81,6 +83,12 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 		return nil, err
 	}
 
+	// Reject caches whose category tables are missing despite the build
+	// configuration claiming them.
+	if err := checkCategoryTables(ctx, conn); err != nil {
+		return nil, err
+	}
+
 	// Load spatial extension (works in read-only mode)
 	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
 		return nil, fmt.Errorf("failed to initialize spatial extension: %w", err)
@@ -132,6 +140,66 @@ func checkSchemaVersion(ctx context.Context, conn *sql.DB) error {
 		return fmt.Errorf("cache schema version %s, binary requires %d: run 'abrg cache build' to rebuild", got, required)
 	}
 	return nil
+}
+
+// requiredCategoryTables returns the tables a cache built with the given
+// enabled_category must contain. The basic tables are created for every
+// category and are not listed here.
+func requiredCategoryTables(category string) []string {
+	switch category {
+	case string(model.CategoryResidential):
+		return []string{duckdb.TableRsdtdsp}
+	case string(model.CategoryParcel):
+		return []string{duckdb.TableParcel}
+	case model.All:
+		return []string{duckdb.TableRsdtdsp, duckdb.TableParcel}
+	default:
+		return nil
+	}
+}
+
+// checkCategoryTables verifies at open time that every category table claimed
+// by enabled_category exists, so a corrupted or incomplete cache fails at
+// startup instead of surfacing as SQL errors at query time. Data availability
+// itself is derived from enabled_category (Config.HasResidential/HasParcel),
+// not from table presence.
+func checkCategoryTables(ctx context.Context, conn *sql.DB) error {
+	var category string
+	err := conn.QueryRowContext(ctx,
+		"SELECT config_value FROM cache_config WHERE config_key = ?", db.KeyEnabledCategory).Scan(&category)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to read enabled_category: %w", err)
+	}
+
+	for _, table := range requiredCategoryTables(category) {
+		exists, err := tableExists(ctx, conn, table)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("cache is corrupted or incomplete: table %s missing while enabled_category=%s: run 'abrg cache build' to rebuild", table, category)
+		}
+	}
+	return nil
+}
+
+// tableExists checks whether a table exists using DuckDB's information
+// schema. A query failure is returned to the caller so that a transient
+// error (e.g. a cancelled context) cannot be mistaken for a permanently
+// missing table.
+func tableExists(ctx context.Context, conn *sql.DB, tableName string) (bool, error) {
+	var exists bool
+	err := conn.QueryRowContext(ctx,
+		"SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = ?)",
+		tableName,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check table %s existence: %w", tableName, err)
+	}
+	return exists, nil
 }
 
 // applyThreadLimit caps DuckDB's intra-query parallelism. The workload is

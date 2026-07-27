@@ -13,10 +13,10 @@ import (
 	"abrg/internal/schema"
 )
 
-// newTestCacheFile creates a DuckDB file with the full cache schema (empty
-// tables) and the given cache_config rows, then closes it so it can be
-// reopened read-only.
-func newTestCacheFile(t *testing.T, configRows map[string]string) string {
+// newTestCacheFile creates a DuckDB file with the YAML cache schema (empty
+// tables) and the given cache_config rows, executes any extra DDL (e.g. stub
+// category tables), then closes it so it can be reopened read-only.
+func newTestCacheFile(t *testing.T, configRows map[string]string, extraSQL ...string) string {
 	t.Helper()
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "test.duckdb")
@@ -38,6 +38,11 @@ func newTestCacheFile(t *testing.T, configRows map[string]string) string {
 		if _, err := conn.ExecContext(ctx,
 			"INSERT INTO cache_config (config_key, config_value) VALUES (?, ?)", key, value); err != nil {
 			t.Fatalf("insert config row %s: %v", key, err)
+		}
+	}
+	for _, stmt := range extraSQL {
+		if _, err := conn.ExecContext(ctx, stmt); err != nil {
+			t.Fatalf("execute extra SQL: %v", err)
 		}
 	}
 	if err := conn.Close(); err != nil {

@@ -3,7 +3,6 @@ package reverse
 import (
 	"cmp"
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -49,23 +48,6 @@ func NewReverseGeocoder(repo spatialQuerier, hasResidential, hasParcel bool) *Re
 		hasResidential: hasResidential,
 		hasParcel:      hasParcel,
 	}
-}
-
-// TableExists checks if a table exists in the database using DuckDB's
-// information schema. A query failure is returned to the caller so that a
-// transient error (e.g. a cancelled context) cannot be mistaken for a
-// permanently missing table.
-func TableExists(ctx context.Context, db *sql.DB, tableName string) (bool, error) {
-	var exists bool
-	// Use parameterized query to avoid SQL injection
-	err := db.QueryRowContext(ctx,
-		"SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = ?)",
-		tableName,
-	).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("check table %s existence: %w", tableName, err)
-	}
-	return exists, nil
 }
 
 // Reverse performs reverse geocoding on coordinates.
