@@ -39,12 +39,18 @@ func (f *fakeCatalog) ScanAndUpdate(_ context.Context, _ []string, _ bool) (*cat
 
 // fakeSummaryStore is a pendingSummaryStore stub.
 type fakeSummaryStore struct {
-	summary []postgres.PendingSummary
-	err     error
+	summary        []postgres.PendingSummary
+	err            error
+	pendingAnalyze []string
+	analyzeErr     error
 }
 
 func (f *fakeSummaryStore) GetPendingSummary(context.Context) ([]postgres.PendingSummary, error) {
 	return f.summary, f.err
+}
+
+func (f *fakeSummaryStore) PendingAnalyzeTables(context.Context) ([]string, error) {
+	return f.pendingAnalyze, f.analyzeErr
 }
 
 // TestRunImportDryRun_ExitCodes pins the dry-run exit code contract through
@@ -79,8 +85,23 @@ func TestRunImportDryRun_ExitCodes(t *testing.T) {
 			wantExit1: true,
 		},
 		{
+			// A failed ANALYZE leaves files imported but statistics stale;
+			// reporting it as exit 1 makes the daily workflow re-run the
+			// import, which then performs the ANALYZE alone.
+			name:      "pending analyze alone exits 1",
+			store:     &fakeSummaryStore{pendingAnalyze: []string{"mt_town_unified"}},
+			scan:      &catalog.ScanResult{},
+			wantExit1: true,
+		},
+		{
 			name:    "summary failure exits 2",
 			store:   &fakeSummaryStore{err: summaryErr},
+			scan:    &catalog.ScanResult{},
+			wantErr: summaryErr,
+		},
+		{
+			name:    "pending analyze query failure exits 2",
+			store:   &fakeSummaryStore{analyzeErr: summaryErr},
 			scan:    &catalog.ScanResult{},
 			wantErr: summaryErr,
 		},
@@ -167,10 +188,11 @@ func TestExecuteImportPipeline_ScanError(t *testing.T) {
 
 func TestReportDryRunSummary(t *testing.T) {
 	tests := []struct {
-		name      string
-		pending   []postgres.PendingSummary
-		updated   []*model.File
-		wantExit1 bool
+		name           string
+		pending        []postgres.PendingSummary
+		updated        []*model.File
+		pendingAnalyze []string
+		wantExit1      bool
 	}{
 		{
 			name: "no changes returns nil (exit 0)",
@@ -185,11 +207,16 @@ func TestReportDryRunSummary(t *testing.T) {
 			pending:   []postgres.PendingSummary{{Category: model.FileCategory("town"), ImportCount: 2}},
 			wantExit1: true,
 		},
+		{
+			name:           "pending analyze alone returns ChangesPendingError (exit 1)",
+			pendingAnalyze: []string{"mt_town_unified", "mt_parcel_unified"},
+			wantExit1:      true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := reportDryRunSummary(tt.pending, &catalog.ScanResult{UpdatedFiles: tt.updated}, false)
+			err := reportDryRunSummary(tt.pending, &catalog.ScanResult{UpdatedFiles: tt.updated}, tt.pendingAnalyze, false)
 			var pendingErr ChangesPendingError
 			gotExit1 := errors.As(err, &pendingErr)
 			if gotExit1 != tt.wantExit1 {

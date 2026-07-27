@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -166,9 +167,11 @@ type importServices struct {
 	importer importerAPI
 }
 
-// pendingSummaryStore reports pending download/import counts per category.
+// pendingSummaryStore reports pending download/import counts per category and
+// the tables still awaiting their post-import ANALYZE.
 type pendingSummaryStore interface {
 	GetPendingSummary(ctx context.Context) ([]postgres.PendingSummary, error)
+	PendingAnalyzeTables(ctx context.Context) ([]string, error)
 }
 
 // initImportServices initializes DuckDB ETL, download, and import services.
@@ -250,23 +253,37 @@ func runImportWithChangeDetection(
 		return fmt.Errorf("get pending summary: %w", err)
 	}
 
-	// Determine if there's anything to do
+	pendingAnalyze, err := store.PendingAnalyzeTables(ctx)
+	if err != nil {
+		return fmt.Errorf("get pending analyze tables: %w", err)
+	}
+
+	// Determine if there's anything to do. A non-empty analyze backlog counts
+	// as pending work even without file changes, so a failed ANALYZE is
+	// retried by the next scheduled run instead of being dropped.
 	hasS3Changes := len(scanResult.UpdatedFiles) > 0
 	hasPendingWork := len(pendingSummary) > 0
+	hasPendingAnalyze := len(pendingAnalyze) > 0
 
-	if !hasS3Changes && !hasPendingWork {
+	if !hasS3Changes && !hasPendingWork && !hasPendingAnalyze {
 		slog.Info("no changes detected", "event", "import")
 		fmt.Println("No changes detected.")
 		return nil
 	}
 
 	// Log what we're doing
-	if hasPendingWork && !hasS3Changes {
+	switch {
+	case !hasS3Changes && !hasPendingWork:
+		slog.Info("resuming pending analyze",
+			"event", "import",
+			"tables", pendingAnalyze,
+		)
+	case hasPendingWork && !hasS3Changes:
 		slog.Info("resuming pending imports",
 			"event", "import",
 			"category_pending", len(pendingSummary),
 		)
-	} else {
+	default:
 		slog.Info("changes detected, starting import",
 			"event", "import",
 			"updated_files", len(scanResult.UpdatedFiles),
@@ -289,13 +306,16 @@ func runImportWithChangeDetection(
 	}
 	defer func() { _ = services.etl.Close() }()
 
-	return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork, false)
+	return executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork || hasPendingAnalyze, false)
 }
 
 // executeImportPipeline runs the full import pipeline: scan → download → import.
-// hasPendingWork indicates whether there are existing pending imports in the database,
-// which affects the early-return behavior when no new S3 changes are detected.
-// force re-imports every in-scope file regardless of change detection.
+// hasPendingWork indicates whether the database holds pending imports or a
+// pending analyze backlog; it disables the early return when no new S3
+// changes are detected, so the run can finish the leftover work. With only an
+// analyze backlog, ImportCategoryBatch finds no pending files and runs the
+// ANALYZE step alone. force re-imports every in-scope file regardless of
+// change detection.
 func executeImportPipeline(
 	ctx context.Context,
 	catalogService catalogAPI,
@@ -350,12 +370,19 @@ func printDryRunSummary(ctx context.Context, store pendingSummaryStore, scanResu
 	if err != nil {
 		return fmt.Errorf("get pending summary: %w", err)
 	}
-	return reportDryRunSummary(pendingSummary, scanResult, verbose)
+	pendingAnalyze, err := store.PendingAnalyzeTables(ctx)
+	if err != nil {
+		return fmt.Errorf("get pending analyze tables: %w", err)
+	}
+	return reportDryRunSummary(pendingSummary, scanResult, pendingAnalyze, verbose)
 }
 
 // reportDryRunSummary prints the dry-run summary and returns
-// ChangesPendingError (exit 1) when there is anything to download or import.
-func reportDryRunSummary(pendingSummary []postgres.PendingSummary, scanResult *catalog.ScanResult, verbose bool) error {
+// ChangesPendingError (exit 1) when there is anything to download or import,
+// or when a previous run left tables awaiting ANALYZE. The exit code meaning
+// is unchanged - 1 still means "the next import run has work to do" - which
+// lets the daily workflow re-run the import and self-heal a failed ANALYZE.
+func reportDryRunSummary(pendingSummary []postgres.PendingSummary, scanResult *catalog.ScanResult, pendingAnalyze []string, verbose bool) error {
 	pendingImports := make(map[model.FileCategory]int)
 	for _, s := range pendingSummary {
 		pendingImports[s.Category] = s.ImportCount
@@ -369,7 +396,7 @@ func reportDryRunSummary(pendingSummary []postgres.PendingSummary, scanResult *c
 
 	// Collect all category (from both sources)
 	category := collectCategory(pendingImports, updatedByCategory)
-	if len(category) == 0 {
+	if len(category) == 0 && len(pendingAnalyze) == 0 {
 		fmt.Println("No changes detected.")
 		return nil
 	}
@@ -397,8 +424,12 @@ func reportDryRunSummary(pendingSummary []postgres.PendingSummary, scanResult *c
 		}
 	}
 
+	if len(pendingAnalyze) > 0 {
+		fmt.Printf("  analyze pending: %s\n", strings.Join(pendingAnalyze, ", "))
+	}
+
 	fmt.Printf("Total: %d files to download, %d pairs to import\n", totalDownload, totalImport)
-	if totalDownload > 0 || totalImport > 0 {
+	if totalDownload > 0 || totalImport > 0 || len(pendingAnalyze) > 0 {
 		return ChangesPendingError{Message: "changes pending"}
 	}
 	return nil

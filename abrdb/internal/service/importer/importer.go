@@ -30,6 +30,9 @@ type catalogStore interface {
 	EnsureLgCodeIndex(ctx context.Context, tableName string) error
 	MarkAsImported(ctx context.Context, filenames ...string) error
 	AnalyzeTables(ctx context.Context, tableNames []string) error
+	PendingAnalyzeTables(ctx context.Context) ([]string, error)
+	AddPendingAnalyzeTable(ctx context.Context, tableName string) error
+	ClearPendingAnalyze(ctx context.Context) error
 }
 
 type service struct {
@@ -118,22 +121,53 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 			seenTables[categoryInfo.TableName] = struct{}{}
 			updatedTables = append(updatedTables, categoryInfo.TableName)
 		}
+		// Persist the ANALYZE obligation as soon as the table is written: the
+		// files are already marked imported, so only this marker lets a later
+		// run redo an ANALYZE that fails or never runs.
+		if err := s.store.AddPendingAnalyzeTable(ctx, categoryInfo.TableName); err != nil {
+			return nil, fmt.Errorf("record pending analyze for %q: %w", categoryInfo.TableName, err)
+		}
 	}
 
-	// Refresh statistics once every category has imported successfully, while
-	// the caller still holds the import lock. Stale statistics after a bulk
-	// import derail the subsequent `abrg cache build` (see Catalog.AnalyzeTables),
-	// so an ANALYZE failure fails the import.
-	if len(updatedTables) > 0 {
-		start := time.Now()
-		if err := s.store.AnalyzeTables(ctx, updatedTables); err != nil {
-			return nil, fmt.Errorf("analyze imported tables: %w", err)
-		}
-		slog.Info("post-import analyze completed", "event", "analyze",
-			"tables", updatedTables, "total_sec", time.Since(start).Seconds())
+	if err := s.analyzePending(ctx, updatedTables, seenTables); err != nil {
+		return nil, err
 	}
 
 	return phaseTimes, nil
+}
+
+// analyzePending refreshes statistics once every category has imported
+// successfully, while the caller still holds the import lock. The target is
+// this run's tables plus the persisted backlog left by earlier runs whose
+// ANALYZE failed. Stale statistics after a bulk import derail the subsequent
+// `abrg cache build` (see Catalog.AnalyzeTables), so an ANALYZE failure fails
+// the import; the persisted marker is only cleared after success.
+func (s *service) analyzePending(ctx context.Context, updatedTables []string, seenTables map[string]struct{}) error {
+	persisted, err := s.store.PendingAnalyzeTables(ctx)
+	if err != nil {
+		return fmt.Errorf("load pending analyze tables: %w", err)
+	}
+	analyzeTables := updatedTables
+	for _, table := range persisted {
+		if _, seen := seenTables[table]; !seen {
+			seenTables[table] = struct{}{}
+			analyzeTables = append(analyzeTables, table)
+		}
+	}
+	if len(analyzeTables) == 0 {
+		return nil
+	}
+
+	start := time.Now()
+	if err := s.store.AnalyzeTables(ctx, analyzeTables); err != nil {
+		return fmt.Errorf("analyze imported tables: %w", err)
+	}
+	if err := s.store.ClearPendingAnalyze(ctx); err != nil {
+		return fmt.Errorf("clear pending analyze marker: %w", err)
+	}
+	slog.Info("post-import analyze completed", "event", "analyze",
+		"tables", analyzeTables, "total_sec", time.Since(start).Seconds())
+	return nil
 }
 
 func (s *service) importFilePair(ctx context.Context, pair catalog.FilePairing, categoryInfo *schema.CategoryInfo, deleteFirst bool) error {

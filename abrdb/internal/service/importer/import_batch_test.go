@@ -46,15 +46,17 @@ func (f *fakeLoader) textPaths() []string {
 }
 
 type fakeStore struct {
-	mu         sync.Mutex
-	pending    map[model.FileCategory][]*model.File
-	pendErr    error
-	marked     [][]string
-	deleted    []string
-	empty      bool
-	indexed    []string
-	analyzed   [][]string
-	analyzeErr error
+	mu             sync.Mutex
+	pending        map[model.FileCategory][]*model.File
+	pendErr        error
+	marked         [][]string
+	deleted        []string
+	empty          bool
+	indexed        []string
+	analyzed       [][]string
+	analyzeErr     error
+	pendingAnalyze []string // persisted analyze backlog, mutated like the real store
+	cleared        int
 }
 
 func (f *fakeStore) AnalyzeTables(_ context.Context, tableNames []string) error {
@@ -62,6 +64,29 @@ func (f *fakeStore) AnalyzeTables(_ context.Context, tableNames []string) error 
 	defer f.mu.Unlock()
 	f.analyzed = append(f.analyzed, slices.Clone(tableNames))
 	return f.analyzeErr
+}
+
+func (f *fakeStore) PendingAnalyzeTables(context.Context) ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.pendingAnalyze), nil
+}
+
+func (f *fakeStore) AddPendingAnalyzeTable(_ context.Context, tableName string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if !slices.Contains(f.pendingAnalyze, tableName) {
+		f.pendingAnalyze = append(f.pendingAnalyze, tableName)
+	}
+	return nil
+}
+
+func (f *fakeStore) ClearPendingAnalyze(context.Context) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.pendingAnalyze = nil
+	f.cleared++
+	return nil
 }
 
 func (f *fakeStore) DeleteFileScope(_ context.Context, tableName, filename string) error {
@@ -377,5 +402,103 @@ func TestImportCategoryBatch_LoadFailureSkipsAnalyze(t *testing.T) {
 	}
 	if len(store.analyzed) != 0 {
 		t.Errorf("AnalyzeTables calls = %v, want none after a failed import", store.analyzed)
+	}
+}
+
+// --- Codex review: analyze_pending persistence ---
+
+// TestImportCategoryBatch_PersistsAnalyzeBacklog pins the recovery contract:
+// each imported table is recorded in the persisted backlog before ANALYZE
+// runs, and the backlog is cleared exactly once after a successful ANALYZE.
+func TestImportCategoryBatch_PersistsAnalyzeBacklog(t *testing.T) {
+	cat := model.FileCategory("a")
+	store := &fakeStore{pending: map[model.FileCategory][]*model.File{
+		cat: {textFile(cat, "a/1", "a1.zip")},
+	}}
+	svc := New(&fakeLoader{}, store, noopMonitor{}, downloadDir, map[string]*schema.CategoryInfo{
+		"a": {TableName: "mt_shared"},
+	})
+
+	if _, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{cat}); err != nil {
+		t.Fatalf("ImportCategoryBatch: %v", err)
+	}
+	if len(store.pendingAnalyze) != 0 {
+		t.Errorf("pendingAnalyze = %v, want cleared after successful ANALYZE", store.pendingAnalyze)
+	}
+	if store.cleared != 1 {
+		t.Errorf("ClearPendingAnalyze calls = %d, want 1", store.cleared)
+	}
+	if len(store.analyzed) != 1 || !slices.Equal(store.analyzed[0], []string{"mt_shared"}) {
+		t.Errorf("AnalyzeTables calls = %v, want [[mt_shared]]", store.analyzed)
+	}
+}
+
+// TestImportCategoryBatch_AnalyzeFailureKeepsBacklog: when ANALYZE fails the
+// import fails and the persisted backlog survives for the next run.
+func TestImportCategoryBatch_AnalyzeFailureKeepsBacklog(t *testing.T) {
+	analyzeErr := errors.New("analyze boom")
+	cat := model.FileCategory("a")
+	store := &fakeStore{
+		pending:    map[model.FileCategory][]*model.File{cat: {textFile(cat, "a/1", "a1.zip")}},
+		analyzeErr: analyzeErr,
+	}
+	svc := New(&fakeLoader{}, store, noopMonitor{}, downloadDir, map[string]*schema.CategoryInfo{
+		"a": {TableName: "mt_shared"},
+	})
+
+	if _, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{cat}); !errors.Is(err, analyzeErr) {
+		t.Fatalf("err = %v, want wrapped %v", err, analyzeErr)
+	}
+	if !slices.Equal(store.pendingAnalyze, []string{"mt_shared"}) {
+		t.Errorf("pendingAnalyze = %v, want [mt_shared] kept for the next run", store.pendingAnalyze)
+	}
+	if store.cleared != 0 {
+		t.Errorf("ClearPendingAnalyze calls = %d, want 0 after a failed ANALYZE", store.cleared)
+	}
+}
+
+// TestImportCategoryBatch_AnalyzeOnlyRun: no pending files but a persisted
+// backlog from an earlier failed run - ANALYZE runs alone and clears it.
+func TestImportCategoryBatch_AnalyzeOnlyRun(t *testing.T) {
+	loader := &fakeLoader{}
+	store := &fakeStore{
+		pending:        map[model.FileCategory][]*model.File{},
+		pendingAnalyze: []string{"mt_town_unified", "mt_parcel_unified"},
+	}
+	svc := newService(loader, store, model.CategoryTown)
+
+	if _, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{model.CategoryTown}); err != nil {
+		t.Fatalf("ImportCategoryBatch: %v", err)
+	}
+	if len(loader.calls) != 0 {
+		t.Errorf("LoadData calls = %d, want 0 in an analyze-only run", len(loader.calls))
+	}
+	want := [][]string{{"mt_town_unified", "mt_parcel_unified"}}
+	if len(store.analyzed) != 1 || !slices.Equal(store.analyzed[0], want[0]) {
+		t.Errorf("AnalyzeTables calls = %v, want %v", store.analyzed, want)
+	}
+	if store.cleared != 1 || len(store.pendingAnalyze) != 0 {
+		t.Errorf("backlog not cleared: cleared=%d pendingAnalyze=%v", store.cleared, store.pendingAnalyze)
+	}
+}
+
+// TestImportCategoryBatch_MergesBacklogWithCurrentRun: the ANALYZE target is
+// this run's tables plus the persisted backlog, deduplicated.
+func TestImportCategoryBatch_MergesBacklogWithCurrentRun(t *testing.T) {
+	cat := model.FileCategory("a")
+	store := &fakeStore{
+		pending:        map[model.FileCategory][]*model.File{cat: {textFile(cat, "a/1", "a1.zip")}},
+		pendingAnalyze: []string{"mt_leftover", "mt_shared"}, // mt_shared also updated this run
+	}
+	svc := New(&fakeLoader{}, store, noopMonitor{}, downloadDir, map[string]*schema.CategoryInfo{
+		"a": {TableName: "mt_shared"},
+	})
+
+	if _, err := svc.ImportCategoryBatch(t.Context(), []model.FileCategory{cat}); err != nil {
+		t.Fatalf("ImportCategoryBatch: %v", err)
+	}
+	want := []string{"mt_shared", "mt_leftover"}
+	if len(store.analyzed) != 1 || !slices.Equal(store.analyzed[0], want) {
+		t.Errorf("AnalyzeTables calls = %v, want [%v]", store.analyzed, want)
 	}
 }
