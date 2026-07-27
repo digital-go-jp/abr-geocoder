@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"os"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -112,6 +114,28 @@ func buildCategoryTable(ctx context.Context, conn *sql.DB, phaseSec map[string]f
 	return nil
 }
 
+// memoryLimitFormat accepts DuckDB memory-limit literals such as "8GB",
+// "512MiB", or "1.5GB". The value is interpolated into a SET statement, so
+// anything else is rejected.
+var memoryLimitFormat = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?\s*(B|KB|MB|GB|TB|KiB|MiB|GiB|TiB)$`)
+
+// cacheMemoryLimit returns the DuckDB memory limit for cache build, tunable
+// via ABRG_CACHE_MEMORY_LIMIT to match the build host. Unset or malformed
+// values fall back to the 8GB default.
+func cacheMemoryLimit() string {
+	const def = "8GB"
+	v, ok := os.LookupEnv("ABRG_CACHE_MEMORY_LIMIT")
+	if !ok || v == "" {
+		return def
+	}
+	if !memoryLimitFormat.MatchString(v) {
+		slog.Warn("ignoring invalid memory limit setting",
+			"event", "set_memory_limit", "env", "ABRG_CACHE_MEMORY_LIMIT", "value", v)
+		return def
+	}
+	return v
+}
+
 // Category-specific tables must load before basic tables (cache_machiaza has CTEs
 // that aggregate counts from category tables).
 func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, error) {
@@ -120,7 +144,7 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 	ctx, cancel := context.WithTimeout(ctx, 900*time.Second) // Large datasets need 10+ min
 	defer cancel()
 
-	if _, err := conn.ExecContext(ctx, "SET memory_limit='8GB'"); err != nil {
+	if _, err := conn.ExecContext(ctx, "SET memory_limit='"+cacheMemoryLimit()+"'"); err != nil {
 		slog.Warn("failed to set memory limit", "event", "set_memory_limit", "error", err)
 	}
 
