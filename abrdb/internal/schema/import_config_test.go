@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -274,5 +275,29 @@ func TestParseImportConfig_Errors(t *testing.T) {
 		"    join_columns: [x]\n"
 	if _, err := ParseImportConfig([]byte(yaml)); err == nil {
 		t.Error("ParseImportConfig(version 2) = nil error, want validate error")
+	}
+}
+
+// TestTableColumns pins that the drift check sees exactly the merged text+pos
+// column set per table, including pos-only columns and join-column dedup.
+func TestTableColumns(t *testing.T) {
+	cfg := validConfig()
+	cfg.Category[string(model.CategoryPref)].PosColumns = []ColumnDef{
+		{Name: "lg_code", Type: "CHAR(6)"},
+		{Name: "rep_lon", Type: "REAL", Nullable: true},
+		{Name: "rep_lat", Type: "REAL", Nullable: true},
+	}
+
+	got := cfg.TableColumns()
+	want := map[string][]string{
+		"mt_pref_unified": {"lg_code", "rep_lon", "rep_lat"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("TableColumns() has %d tables, want %d", len(got), len(want))
+	}
+	for table, cols := range want {
+		if !slices.Equal(got[table], cols) {
+			t.Errorf("TableColumns()[%q] = %v, want %v", table, got[table], cols)
+		}
 	}
 }

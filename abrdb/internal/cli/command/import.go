@@ -85,6 +85,15 @@ Use --force to skip change detection and import immediately.`,
 			if err != nil {
 				return fmt.Errorf("resolve import config profile: %w: run 'abrdb init' to reinitialize", err)
 			}
+
+			// The tables were created at init time, possibly by a different
+			// binary. Verify they provide every column the embedded profile
+			// expects, so a profile/table mismatch stops here instead of
+			// failing mid-import.
+			if err := postgres.VerifyTableColumns(ctx, sc.QueryExecutor, importCfg.TableColumns()); err != nil {
+				return err
+			}
+
 			categoryInfoMap := importCfg.ToCategoryInfoMap()
 
 			s3Prefixes, err := buildS3Prefixes(importConfig, categoryInfoMap)

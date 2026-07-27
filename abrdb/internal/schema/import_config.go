@@ -234,6 +234,22 @@ type CategoryInfo struct {
 	FullwidthColumns map[string]bool   // columns that need full-width to half-width conversion
 }
 
+// TableColumns returns, per table name, the column names the config defines
+// (merged text+pos columns). This is the column set `abrdb init` creates for
+// each table.
+func (c *ImportConfig) TableColumns() map[string][]string {
+	result := make(map[string][]string, len(c.Category))
+	for _, cat := range c.Category {
+		merged := cat.mergeColumns()
+		names := make([]string, len(merged))
+		for i, col := range merged {
+			names[i] = col.Name
+		}
+		result[cat.TableName] = names
+	}
+	return result
+}
+
 func (c *ImportConfig) GenerateDDL() string {
 	var sb strings.Builder
 	names := slices.Sorted(maps.Keys(c.Category))
