@@ -64,10 +64,10 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		"pos", cacheCfg.PosEnabled())
 
 	server := api.NewGinServer(api.ServerConfig{
-		APIVersion:      version.Version,
-		CORSAllowOrigin: cfg.Server.CORSAllowOrigin,
-		Cache:           dbCache,
-		CacheConfig:     *cacheCfg,
+		APIVersion:       version.Version,
+		CORSAllowOrigins: cfg.Server.CORSAllowOrigins,
+		Cache:            dbCache,
+		CacheConfig:      *cacheCfg,
 	})
 	defer func() {
 		if err := server.Close(); err != nil {

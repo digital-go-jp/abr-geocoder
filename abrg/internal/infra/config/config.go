@@ -4,12 +4,35 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"abr.local/common/env"
 
 	"abrg/internal/infra/duckdb"
 )
+
+// DefaultCORSAllowOrigin allows every origin, which suits a public read-only
+// API that uses no credentials.
+const DefaultCORSAllowOrigin = "*"
+
+// splitOrigins turns the configured value into the origins the CORS middleware
+// matches against. Commas separate them, so more than one frontend can be
+// allowed; surrounding spaces and empty entries are ignored. A value that
+// leaves nothing behind falls back to the default rather than disabling every
+// origin, which the middleware rejects outright.
+func splitOrigins(value string) []string {
+	var origins []string
+	for _, origin := range strings.Split(value, ",") {
+		if origin = strings.TrimSpace(origin); origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	if len(origins) == 0 {
+		return []string{DefaultCORSAllowOrigin}
+	}
+	return origins
+}
 
 func defaultCachePath() string {
 	home, err := os.UserHomeDir()
@@ -25,8 +48,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port            string
-	CORSAllowOrigin string
+	Port             string
+	CORSAllowOrigins []string
 	// HTTP server timeouts, tunable to match the idle settings of a fronting
 	// ALB or API Gateway. ReadTimeout also serves as the header read timeout.
 	ReadTimeout  time.Duration
@@ -44,11 +67,11 @@ type cacheConfig struct {
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port:            env.GetEnv("PORT", "3000"),
-			CORSAllowOrigin: env.GetEnv("CORS_ALLOW_ORIGIN", ""),
-			ReadTimeout:     durationEnv("ABRG_HTTP_READ_TIMEOUT", 10*time.Second),
-			WriteTimeout:    durationEnv("ABRG_HTTP_WRITE_TIMEOUT", 30*time.Second),
-			IdleTimeout:     durationEnv("ABRG_HTTP_IDLE_TIMEOUT", 60*time.Second),
+			Port:             env.GetEnv("PORT", "3000"),
+			CORSAllowOrigins: splitOrigins(env.GetEnv("CORS_ALLOW_ORIGIN", DefaultCORSAllowOrigin)),
+			ReadTimeout:      durationEnv("ABRG_HTTP_READ_TIMEOUT", 10*time.Second),
+			WriteTimeout:     durationEnv("ABRG_HTTP_WRITE_TIMEOUT", 30*time.Second),
+			IdleTimeout:      durationEnv("ABRG_HTTP_IDLE_TIMEOUT", 60*time.Second),
 		},
 		Cache: cacheConfig{
 			Path:          env.GetEnv(duckdb.EnvCachePath, defaultCachePath()),
