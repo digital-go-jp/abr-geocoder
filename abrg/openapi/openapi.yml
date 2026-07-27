@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ジオコーダーAPI
-  version: 3.0.16
+  version: 3.0.17
   description: |
     ジオコーダーAPIは、アドレス・ベース・レジストリを利用し、住所の正規化およびジオコーディングを行うことが可能です。
 servers:
@@ -142,11 +142,11 @@ paths:
                   version:
                     type: string
                     description: APIバージョン
-                    example: "3.0.16"
+                    example: "3.0.17"
                   db_version:
                     type: string
                     description: データベースバージョン
-                    example: "3.0.13"
+                    example: "3.0.14"
                   enabled_category:
                     type: string
                     description: 有効なカテゴリ
@@ -268,11 +268,11 @@ components:
         api_version:
           type: string
           description: APIバージョン
-          example: "3.0.16"
+          example: "3.0.17"
         db_version:
           type: string
           description: DBバージョン
-          example: "3.0.13"
+          example: "3.0.14"
         enabled_category:
           type: string
           description: 有効なカテゴリ
@@ -546,8 +546,8 @@ components:
                 result_info:
                   count: 2
                   limit: 2
-                  api_version: "3.0.16"
-                  db_version: "3.0.13"
+                  api_version: "3.0.17"
+                  db_version: "3.0.14"
                   enabled_category: "all"
                   enabled_pref: "all"
                   duration_ms: 30.45
@@ -713,8 +713,8 @@ components:
                 result_info:
                   count: 2
                   limit: 2
-                  api_version: "3.0.16"
-                  db_version: "3.0.13"
+                  api_version: "3.0.17"
+                  db_version: "3.0.14"
                   enabled_category: "all"
                   enabled_pref: "all"
                   duration_ms: 683.35
@@ -858,8 +858,8 @@ components:
                 result_info:
                   count: 2
                   limit: 2
-                  api_version: "3.0.16"
-                  db_version: "3.0.13"
+                  api_version: "3.0.17"
+                  db_version: "3.0.14"
                   enabled_category: "all"
                   enabled_pref: "all"
                   duration_ms: 35.69
