@@ -111,6 +111,18 @@ func TestRemoveOazaAza(t *testing.T) {
 			expected: "後静村姉別原野1字",
 			changed:  true,
 		},
+		{
+			name:     "preserve koaza 七字 (kanji numeral+字)",
+			input:    "能登町字天坂乙七字",
+			expected: "能登町天坂乙七字",
+			changed:  true,
+		},
+		{
+			name:     "preserve koaza 弐字 (formal kanji numeral+字)",
+			input:    "能登町字天坂甲弐字",
+			expected: "能登町天坂甲弐字",
+			changed:  true,
+		},
 	}
 
 	for _, tt := range tests {

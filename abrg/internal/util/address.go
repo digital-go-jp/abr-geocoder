@@ -3,7 +3,6 @@ package util
 
 import (
 	"strings"
-	"unicode"
 
 	"abrg/internal/char"
 )
@@ -44,7 +43,8 @@ func MaxEditDistance(byteLen int) int {
 var oazaAzaReplacer = strings.NewReplacer("大字", "", "小字", "")
 
 // RemoveOazaAza removes 大字, 小字, and standalone 字 from address strings.
-// Preserves "字" when preceded by a digit (e.g., "1字", "10字") as these are koaza names.
+// Preserves "字" when preceded by a numeral (e.g., "1字", "10字", "七字", "弐字")
+// as these are koaza names.
 func RemoveOazaAza(s string) (string, bool) {
 	if !strings.Contains(s, "字") {
 		return s, false
@@ -53,13 +53,13 @@ func RemoveOazaAza(s string) (string, bool) {
 	orig := s
 	s = oazaAzaReplacer.Replace(s)
 
-	// Remove standalone 字, but preserve digit+字 patterns (koaza names)
+	// Remove standalone 字, but preserve numeral+字 patterns (koaza names)
 	runes := []rune(s)
 	var b strings.Builder
 	b.Grow(len(s))
 
 	for i, r := range runes {
-		if r == '字' && (i == 0 || !unicode.IsDigit(runes[i-1])) {
+		if r == '字' && (i == 0 || !IsAddressNumberRune(runes[i-1])) {
 			continue // Remove standalone 字
 		}
 		b.WriteRune(r)

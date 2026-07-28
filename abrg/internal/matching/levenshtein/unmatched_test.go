@@ -101,6 +101,11 @@ func TestNormalizeUnmatchedNumbers(t *testing.T) {
 			want:  "1926-1",
 		},
 		{
+			name:  "番 followed by a formal kanji numeral to hyphen",
+			input: "1926番壱",
+			want:  "1926-壱",
+		},
+		{
 			name:  "trailing 号 removed",
 			input: "1号",
 			want:  "1",
