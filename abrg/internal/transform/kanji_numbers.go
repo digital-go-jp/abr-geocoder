@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"abrg/internal/util"
 )
 
 var (
@@ -211,20 +213,16 @@ func KanjiToArabic(s string) (string, bool) {
 }
 
 // containsKanjiNumbers checks if the string contains any kanji numbers.
-// The set is kanjiNumeralChars plus the formal digits (壱弐…拾), but minus
-// the multipliers 万/億: a convertible number always contains a digit or
-// 十/百/千, while a lone 万/億 usually belongs to an ordinary place name
-// (e.g. 万代町) and must not trigger conversion.
+// The multipliers 万/億 are excluded: a convertible number always contains a
+// digit or 十/百/千, while a lone 万/億 usually belongs to an ordinary place
+// name (e.g. 万代町) and must not trigger conversion.
 func containsKanjiNumbers(s string) bool {
 	// Fast path: check if string is ASCII-only (common case)
 	for i := 0; i < len(s); i++ {
 		if s[i] >= 0x80 {
 			// Found non-ASCII, check for kanji numbers
 			for _, r := range s[i:] {
-				switch r {
-				case '一', '二', '三', '四', '五', '六', '七', '八', '九', '十',
-					'零', '〇', '百', '千',
-					'壱', '弐', '参', '肆', '伍', '陸', '漆', '捌', '玖', '拾':
+				if util.IsKanjiNumeral(r) {
 					return true
 				}
 			}
