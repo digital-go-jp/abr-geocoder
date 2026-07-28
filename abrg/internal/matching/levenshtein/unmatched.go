@@ -163,7 +163,8 @@ func extractUnmatchedSegments(originalAddr, matchedAddr string) []string {
 			suffix := string(matchedNormalizedRunes[len(matchedNormalizedRunes)-suffixLen:])
 			idx := strings.LastIndex(addrPartNormalized, suffix)
 			if idx >= 0 {
-				suffixEndInNorm := idx + len([]rune(suffix))
+				// LastIndex returns a byte offset; mapNormPosToOriginal takes a rune position.
+				suffixEndInNorm := len([]rune(addrPartNormalized[:idx])) + suffixLen
 				unmatchedSuffix = mapNormPosToOriginal(addrPart, suffixEndInNorm)
 				break
 			}

@@ -279,6 +279,26 @@ func TestExtractUnmatchedFromStandardized(t *testing.T) {
 			matchedAddr:  "香川県丸亀市原田町東三分一",
 			want:         []string{"1926-1"},
 		},
+		{
+			// matchedAddr is not a prefix, so the suffix search locates 原田町東三分一
+			// partway into the address and the lot number is what remains.
+			name:         "suffix match past the head keeps the lot number",
+			originalAddr: "香川県丸亀市原田町東三分一1926-1",
+			matchedAddr:  "XX原田町東三分一",
+			want:         []string{"1926-1"},
+		},
+		{
+			name:         "suffix match past the head with 字 in originalAddr",
+			originalAddr: "秋田県大館市雪沢字山滝沢",
+			matchedAddr:  "秋田県大館市雪沢字小雪沢",
+			want:         []string{"字山滝沢"},
+		},
+		{
+			name:         "suffix match past the head on a different oaza",
+			originalAddr: "青森県平川市小国浅井石山",
+			matchedAddr:  "青森県平川市尾崎浅井",
+			want:         []string{"石山"},
+		},
 	}
 
 	for _, tt := range tests {
