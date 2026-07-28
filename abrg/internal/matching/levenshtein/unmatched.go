@@ -173,12 +173,16 @@ func extractUnmatchedSegments(originalAddr, matchedAddr string) []string {
 
 	// Post-process unmatchedSuffix
 	if unmatchedSuffix != "" {
-		// Strip "字" only when the unmatched suffix contains digits (aza + house/lot number).
-		// Preserve "字" when it's a standalone place name part with no numbers (sub-koaza name).
-		// e.g., "字東三分一1926-1" → "東三分一1926-1" (has digits, strip aza marker)
-		// e.g., "字堤下" → "字堤下" (no digits, preserve as place name)
-		// Note: Additional context-based stripping (e.g., when 大字 is present and koaza is unmatched)
-		// is handled by callers like extractUnmatchedAddress that have structured address info.
+		// unmatchedSuffix is a slice of the user input, so any lot number is still
+		// attached. A digit therefore means a lot number follows the koaza name,
+		// which makes the leading "字" a marker rather than part of the name.
+		// e.g., "字東三分一1926-1" → "東三分一1926-1"
+		// e.g., "字堤下" → "字堤下"
+		// unmatched.stripAzaMarker is the sibling rule for input without the lot number.
+		//
+		// Context-based stripping (e.g. when 大字 is present and koaza is unmatched)
+		// is handled by callers like extractUnmatchedAddress that have structured
+		// address info.
 		if strings.HasPrefix(unmatchedSuffix, "字") && strings.ContainsAny(unmatchedSuffix, "0123456789") {
 			unmatchedSuffix = strings.TrimPrefix(unmatchedSuffix, "字")
 		}

@@ -120,9 +120,6 @@ func extractUnmatchedWithColon(originalAddr, standardizedAddrPart, matchedAddr, 
 	if after, found := strings.CutPrefix(standardizedAddrPart, matchedAddr); found && afterColon != "" {
 		trimmed := strings.TrimSuffix(after, afterColon)
 		if trimmed != "" && trimmed != after {
-			// Strip "字" when it's just a marker (字 alone) or when the koaza name
-			// ends with a kanji numeral (e.g., "字家六" → "家六", "字東三分一" → "東三分一").
-			// Preserve "字" when followed by a place name (e.g., "字上ノ原" stays).
 			trimmed = stripAzaMarker(trimmed)
 			if trimmed != "" {
 				unmatchedPrefix = trimmed
@@ -374,14 +371,21 @@ func extractUnmatchedFromStandardized(normalizedAddr, matchedAddr string) string
 	return ""
 }
 
-// stripAzaMarker strips the "字" (aza) prefix from unmatched address components
-// when it's just a marker rather than part of a meaningful place name.
+// stripAzaMarker strips the "字" (aza) prefix from an unmatched address component
+// when it is a marker rather than part of the place name.
+//
+// s is the koaza with the lot number already split off by the caller, so the
+// decision rests on the name alone.
 //
 // Strips "字" when:
-//   - s is exactly "字" (standalone marker)
-//   - the text after "字" ends with a kanji numeral (numbered koaza like "家六", "東三分一")
+//   - s is exactly "字", leaving nothing
+//   - the text after "字" ends with a kanji numeral, marking a numbered koaza
+//     where "字" introduces the number (e.g. "字家六" → "家六")
 //
-// Preserves "字" when the remaining text is a place name (e.g., "字上ノ原", "字堤下").
+// Preserves "字" when the remaining text is a place name (e.g. "字上ノ原", "字堤下").
+//
+// levenshtein.extractUnmatchedSegments is the sibling rule for input that still
+// carries the lot number, which is why it keys on digits instead.
 func stripAzaMarker(s string) string {
 	if !strings.HasPrefix(s, "字") {
 		return s
