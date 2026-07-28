@@ -400,6 +400,25 @@ func TestExtractUnmatchedFromStandardized(t *testing.T) {
 	}
 }
 
+func TestStripAzaMarker(t *testing.T) {
+	tests := []struct {
+		s    string
+		want string
+	}{
+		{"字", ""},
+		{"字家六", "家六"},
+		{"字家陸", "家陸"},
+		{"字上ノ原", "字上ノ原"},
+		{"上ノ原", "上ノ原"},
+	}
+
+	for _, tt := range tests {
+		if got := stripAzaMarker(tt.s); got != tt.want {
+			t.Errorf("stripAzaMarker(%q) = %q, want %q", tt.s, got, tt.want)
+		}
+	}
+}
+
 func TestExtractOriginalGoNumber(t *testing.T) {
 	tests := []struct {
 		originalAddr string
