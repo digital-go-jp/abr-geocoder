@@ -56,7 +56,7 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 	normalizedAddr := normalize.BasicNormalize(query.Address)
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
 
-	results, err := n.matchNormalized(ctx, query, normalizedAddr, addressType)
+	results, err := n.matchNormalized(ctx, query, normalizedAddr, addressType, false)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 
 // matchNormalized runs the matching pipeline over an address already processed
 // by normalize.NormalizeBasicNormalized.
-func (n *Impl) matchNormalized(ctx context.Context, query model.MatchQuery, normalizedAddr string, addressType model.NormalizeCategory) ([]model.MatchedResult, error) {
+func (n *Impl) matchNormalized(ctx context.Context, query model.MatchQuery, normalizedAddr string, addressType model.NormalizeCategory, skipLevenshtein bool) ([]model.MatchedResult, error) {
 	pref, searchAddr, basicResults, err := n.detectBasicResultsWithBasic(ctx, normalizedAddr, query.Pref)
 	if err != nil {
 		return nil, fmt.Errorf("detect basic results: %w", err)
@@ -98,9 +98,10 @@ func (n *Impl) matchNormalized(ctx context.Context, query model.MatchQuery, norm
 			AddressType:    addressType,
 		},
 		State: normalizeState{
-			LgCode:       lgCode,
-			MachiazaID:   machiazaID,
-			BasicResults: basicResults,
+			LgCode:          lgCode,
+			MachiazaID:      machiazaID,
+			BasicResults:    basicResults,
+			SkipLevenshtein: skipLevenshtein,
 		},
 	}
 
