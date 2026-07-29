@@ -46,6 +46,15 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 			want:           []string{"3-5"},
 		},
 		{
+			// The koaza name ends in a kanji numeral, so searchAddr ends in a
+			// digit that belongs to the name rather than to a lot number.
+			name:           "no colon nor at and matched in full leaves nothing unmatched",
+			normalizedAddr: "宮城県石巻市広渕字女形二",
+			matchedAddr:    "宮城県石巻市広渕字女形二",
+			searchAddr:     "石巻市広渕女形2",
+			want:           nil,
+		},
+		{
 			name:           "koaza prefix before colon is prepended to unmatched numbers",
 			normalizedAddr: "佐賀県嬉野市嬉野町下野長波須ハ丙1234",
 			matchedAddr:    "佐賀県嬉野市嬉野町大字下野",
@@ -376,26 +385,6 @@ func TestExtractUnmatchedWithAt(t *testing.T) {
 	for _, tt := range tests {
 		if got := extractUnmatchedWithAt(tt.searchAddr); got != tt.want {
 			t.Errorf("extractUnmatchedWithAt(%q) = %q, want %q", tt.searchAddr, got, tt.want)
-		}
-	}
-}
-
-func TestExtractUnmatchedFromStandardized(t *testing.T) {
-	tests := []struct {
-		normalizedAddr string
-		matchedAddr    string
-		want           string
-	}{
-		{"愛知県清須市助七一", "愛知県清須市助七", "一"},
-		{"愛知県清須市助七", "愛知県清須市助七", ""},
-		{"東京都文京区大塚", "愛知県清須市助七", ""},
-		{"", "愛知県清須市助七", ""},
-	}
-
-	for _, tt := range tests {
-		if got := extractUnmatchedFromStandardized(tt.normalizedAddr, tt.matchedAddr); got != tt.want {
-			t.Errorf("extractUnmatchedFromStandardized(%q, %q) = %q, want %q",
-				tt.normalizedAddr, tt.matchedAddr, got, tt.want)
 		}
 	}
 }
