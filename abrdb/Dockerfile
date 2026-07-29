@@ -23,6 +23,8 @@ RUN VERSION=$(cat VERSION) && \
     CGO_ENABLED=1 \
     go build -ldflags="-w -s -X abr.local/common/version.Version=${VERSION} -X abr.local/common/version.Commit=${COMMIT}" -o abrdb ./cmd/abrdb
 
+RUN mkdir /empty
+
 # Final stage - distroless for minimal image size and security
 FROM gcr.io/distroless/cc-debian13:nonroot
 
@@ -30,8 +32,10 @@ WORKDIR /app
 
 COPY --from=builder /build/abrdb/abrdb /app/abrdb
 
-# Set environment variables
-ENV ABRDB_DOWNLOAD_DIR=/tmp/abrdb
+# A named volume mounts here. Docker initialises an empty one from the image's
+# mount point, ownership included, so the directory is created as the nonroot
+# user (65532) this runtime image runs as.
+COPY --from=builder --chown=65532:65532 /empty /tmp/abrdb/data
 
 ENTRYPOINT ["/app/abrdb"]
 CMD ["--help"]
