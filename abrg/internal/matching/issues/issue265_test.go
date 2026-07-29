@@ -10,9 +10,9 @@ import (
 // https://github.com/digital-go-jp/abr-geocoder/issues/265
 //
 // 問題:
-// - 「七尾市大田町111-11」(category=rsdtdsp) → match_level=parcel が返る
-// - 数字小字フォールバック（#259）がカテゴリを見ずに地番解決まで進むため。
-//   小字マッチ（machiaza_detail）で止まるべき
+//   - 「七尾市大田町111-11」(category=rsdtdsp) → match_level=parcel が返る
+//   - 数字小字フォールバック（#259）がカテゴリを見ずに地番解決まで進むため。
+//     小字マッチ（machiaza_detail）で止まるべき
 func TestIssue265(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		// rsdtdsp 指定: 小字止まり、残りの数字は unmatched

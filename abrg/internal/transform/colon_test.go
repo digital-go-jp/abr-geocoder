@@ -259,4 +259,3 @@ func BenchmarkAddColon(b *testing.B) {
 		})
 	}
 }
-
