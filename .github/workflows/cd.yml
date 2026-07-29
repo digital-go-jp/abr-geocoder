@@ -1,5 +1,5 @@
-## This workflow has been disabled for now, because the CKAN API is blocking our requests.
-## Re-enable when we can package test data inside this repository.
+## npm への公開は手動実行のみ。ワークフローの実体はファイルパスで同一視されるため、
+## workflow_run で "tests" を待つと v3-beta の Go CI からも発火してしまう。
 
 name: "publish"
 
@@ -8,15 +8,10 @@ permissions:
   packages: read
 
 on:
-  workflow_run:
-    workflows: ["tests"]
-    types:
-      - completed
   workflow_dispatch:
 
 jobs:
   publish:
-    if: ${{ github.event.pull_request == null || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
 
     steps:
