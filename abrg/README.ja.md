@@ -117,30 +117,13 @@ echo "139.7369,35.6812" | ./abrg reverse -i /dev/stdin -o /dev/stdout -c all -q
 
 ## Docker
 
-abrg は HTTP サーバー (`serve`) として常駐するが、起動には DuckDB キャッシュが必要。先に `cache build` してから `up -d` する。
+リポジトリ直下の [docker-compose.yml](../docker-compose.yml) に PostgreSQL と一緒に定義してある。import から serve までの一連の手順は [ルート README](../README.ja.md) を参照。
 
-CLI 系コマンド (`cache build`, `cache info`, `match`, `geocode`, `reverse`) は `docker compose run --rm` で都度実行。`serve` は `docker compose up -d` で常駐起動。キャッシュは named volume (`abrg_cache`) で永続化されるので、`run` で作って `up` で利用できる。
-
-`.env.example` をコピーして `.env` を作成し、`DB_PASSWORD` を abrdb と同じ値に設定する。
+CLI 系コマンド `cache build`, `cache info`, `match`, `geocode`, `reverse` は、リポジトリ直下で `run --rm` を使って都度実行する。
 
 ```bash
-cp .env.example .env
-# .env を編集して DB_PASSWORD を設定
-
-docker compose build
-```
-
-### ワークフロー
-
-事前に [abrdb](../abrdb/README.ja.md) で PostgreSQL に ABR データを import 済みにしておくこと。
-
-```bash
-# 1. キャッシュを構築（named volume に保存）
 docker compose run --rm abrg_app cache build
-
-# 2. キャッシュを検証
 docker compose run --rm abrg_app cache info
-
-# 3. サーバー起動
-docker compose up -d
 ```
+
+`serve` は `docker compose up -d abrg_app` で常駐起動する。キャッシュは named volume `abrg_cache` に残るので、`run` で作ったものを `up` がそのまま読む。abrg は `profiles: ["server"]` を付けてあり、キャッシュを作る前に起動して失敗しないよう、サービス名を指定したときだけ起動する。

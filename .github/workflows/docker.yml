@@ -1,0 +1,66 @@
+name: docker
+
+on:
+  push:
+    branches: [main, v3-beta]
+    paths: &docker_paths
+      - 'abrg/**'
+      - 'abrdb/**'
+      - 'common/**'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - '.dockerignore'
+      - '.github/workflows/docker.yml'
+  pull_request:
+    paths: *docker_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+# `abrdb import` is left out because it calls the ABR API. An empty database is
+# enough to exercise the wiring.
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Write .env
+        run: sed 's/^DB_PASSWORD=$/DB_PASSWORD=postgres/' .env.example > .env
+
+      - name: Validate the compose file
+        run: docker compose config -q
+
+      - name: Build images
+        run: docker compose --profile cli --profile server build
+
+      - name: Start PostgreSQL
+        run: docker compose up -d postgres
+
+      - name: Initialise the database
+        run: docker compose run --rm abrdb_app init --pref 13 --category basic --force
+
+      # abrdb runs as a nonroot user, so a named volume over its download
+      # directory is only writable when the image creates that directory first.
+      - name: Download directory is writable by the runtime user
+        run: |
+          owner=$(docker run --rm -v abr_abrdb_data:/v busybox stat -c '%u' /v)
+          test "$owner" = 65532 || { echo "::error::download volume is owned by uid $owner"; exit 1; }
+
+      - name: Build the cache
+        run: |
+          docker compose run --rm abrg_app cache build
+          docker compose run --rm abrg_app cache info
+
+      - name: Serve
+        run: |
+          docker compose up -d abrg_app
+          curl -sf --retry 15 --retry-delay 2 --retry-all-errors http://localhost:3000/health
+
+      - name: Server logs
+        if: failure()
+        run: docker compose logs

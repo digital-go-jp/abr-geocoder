@@ -63,7 +63,7 @@ abrdb import [options]
 - `-v, --verbose` - 詳細なファイル一覧を表示（--dry-run時）
 
 環境変数:
-- `ABRDB_DOWNLOAD_DIR` - ダウンロード先ディレクトリ（default: `/tmp/abrdb/data`。Docker イメージは `/tmp/abrdb`、docker-compose は `~/.abrdb/data` を設定済み）
+- `ABRDB_DOWNLOAD_DIR` - ダウンロード先ディレクトリ。default は `/tmp/abrdb/data` で、docker compose ではここに named volume `abrdb_data` が載る
 - `ABRDB_FEED_URL` - ABR データフィードの URL（通常は変更不要）
 - `ABRDB_DOWNLOAD_CONCURRENCY` - ダウンロードの並列数（default: CPU コア数。明示指定時の上限 32）
 - `ABRDB_IMPORT_CONCURRENCY` - インポート（ETL）の並列数（default: CPU コア数。明示指定時の上限 32）
@@ -101,28 +101,17 @@ abrdb show config
 
 ## Docker
 
-abrdb は CLI ツールなので、PostgreSQL のみを常駐させ、abrdb 本体は `docker compose run --rm` で都度実行する構成。
+リポジトリ直下の [docker-compose.yml](../docker-compose.yml) に PostgreSQL と一緒に定義してある。import から serve までの一連の手順は [ルート README](../README.ja.md) を参照。
+
+abrdb は CLI ツールなので `profiles: ["cli"]` を付けてあり、`up` では起動しない。リポジトリ直下で `run --rm` を使って都度実行する。PostgreSQL は依存関係で起動する。
 
 ```bash
-cp .env.example .env
-# .env を編集して DB_PASSWORD を設定
-
-docker compose build
-docker compose up -d        # postgres のみが起動 (abrdb は profile=cli で除外)
-```
-
-### ワークフロー
-
-```bash
-# 1. 初期化
 docker compose run --rm abrdb_app init --pref 13 --category basic
-
-# 2. 設定確認
 docker compose run --rm abrdb_app show config
-
-# 3. インポート
 docker compose run --rm abrdb_app import
 ```
+
+ダウンロードしたアーカイブは named volume `abrdb_data` に残る。
 
 ## 都道府県コード
 
