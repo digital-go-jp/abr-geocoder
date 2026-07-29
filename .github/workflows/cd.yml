@@ -18,51 +18,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      #
-      # package.json に変化がなければ、node_modulesのキャッシュをrestoreする。
-      # jobが終了すると自動的にキャッシュされる
-      #
-      - uses: actions/cache@v4
-        name: Setup npm cache
-        id: node_modules
-        with:
-          path: |
-            node_modules/
-          key: ${{ github.head_ref }}-npm-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            ${{ github.head_ref }}-npm-${{ hashFiles('**/package.json') }}
-
-      #
-      # node_modules のキャッシュキーがヒットしていなければ
-      # package.json に従ってインストールする
-      #
       - name: Install dependencies
-        if: steps.node_modules.outputs.cache-hit != 'true'
         run: |
           npm install --global yarn
           yarn install
 
-      #
-      # src以下のファイルが変化していなければ、buildをrestoreする
-      #
-      - uses: actions/cache@v4
-        name: build_cache
-        id: build_cache
-        with:
-          path: |
-            build/
-          key: ${{ github.head_ref }}-build-${{ hashFiles('src/**/*.ts') }}
-          restore-keys: |
-            ${{ github.head_ref }}-build-${{ hashFiles('src/**/*.ts') }}
-
-      #
-      # ビルドのキャッシュがなければビルド
-      #
-      - name: Install dependencies
-        if: steps.build_cache.outputs.cache-hit != 'true'
-        run: |
-          npm run build
-
+      - name: Build
+        run: npm run build
 
       - name: Get the latest commit ID
         id: commit
