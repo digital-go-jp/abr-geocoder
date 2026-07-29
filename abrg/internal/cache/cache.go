@@ -353,13 +353,16 @@ func (c *DuckDBCache) buildCityWardLgCodes(ctx context.Context) error {
 }
 
 // This enables ward-only address resolution (e.g., "中区本町" → try "横浜市中区本町", "名古屋市中区本町", etc.)
+// Candidates are ordered by prefecture code and then by city name, because
+// equally strong matches are returned in candidate order (e.g. 大阪市北区 and
+// 堺市北区 both answer "北区").
 func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	query := `
 		SELECT ward, city || ward AS city_ward, printf('%02d', pref_code) AS pref_code
 		FROM cache_city
 		WHERE ward IS NOT NULL AND ward != ''
 		GROUP BY ward, city_ward, pref_code
-		ORDER BY ward, pref_code
+		ORDER BY ward, pref_code, city_ward
 	`
 
 	rows, err := c.db.QueryContext(ctx, query)
