@@ -77,8 +77,7 @@ func TestIssue221(t *testing.T) {
 			},
 		},
 		{
-			// 「麻生区」のみ - 区名だけではマッチしない
-			// 「川崎市麻生区」のように市名を含める必要がある
+			// 「麻生区」のみ - 麻生区を持つ市は川崎市だけなので市区町村レベルで確定する
 			name: "issue221-3 [麻生区]",
 			query: model.MatchQuery{
 				Address:  "麻生区",
@@ -86,14 +85,14 @@ func TestIssue221(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelUnknown,
-			wantMatchedAddress:   "",
-			wantUnmatchedAddress: []string{"麻生区"},
+			wantMatchLevel:       model.MatchLevelCity,
+			wantMatchedAddress:   "神奈川県川崎市麻生区",
+			wantUnmatchedAddress: nil,
 			wantStructured: map[string]any{
-				FieldPref:         nil,
+				FieldPref:         "神奈川県",
 				FieldCounty:       nil,
-				FieldCity:         nil,
-				FieldWard:         nil,
+				FieldCity:         "川崎市",
+				FieldWard:         "麻生区",
 				FieldMachiazaDist: nil,
 				FieldKyotoSt:      nil,
 				FieldOazaCho:      nil,

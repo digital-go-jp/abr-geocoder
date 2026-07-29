@@ -134,30 +134,41 @@ func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContex
 	return state, true, nil
 }
 
-// sortAndLimitResults sorts results by score (descending) and match level, then limits to n.
+// compareResultStrength orders results from strongest to weakest: a higher
+// score first, then a more detailed match level. Score comes first because a
+// fuzzy match that reaches a deeper level still matches a different address.
+// Scores within scoreEpsilon count as equal.
+func compareResultStrength(a, b model.MatchedResult) int {
+	scoreDiff := a.Score - b.Score
+	if scoreDiff > scoreEpsilon {
+		return -1 // a comes before b (descending order)
+	}
+	if scoreDiff < -scoreEpsilon {
+		return 1 // b comes before a
+	}
+	return cmp.Compare(matchlevel.Detail(b.MatchLevel), matchlevel.Detail(a.MatchLevel))
+}
+
+// sortAndLimitResults sorts results from strongest to weakest, then limits to n.
 func sortAndLimitResults(results []model.MatchedResult, limit int) []model.MatchedResult {
 	if len(results) == 0 {
 		return results
 	}
 
-	slices.SortFunc(results, func(a, b model.MatchedResult) int {
-		// Compare scores with tolerance
-		scoreDiff := a.Score - b.Score
-		if scoreDiff > scoreEpsilon {
-			return -1 // a comes before b (descending order)
-		}
-		if scoreDiff < -scoreEpsilon {
-			return 1 // b comes before a
-		}
-
-		// Scores are equal or very close, compare by match level detail
-		return cmp.Compare(matchlevel.Detail(b.MatchLevel), matchlevel.Detail(a.MatchLevel))
-	})
+	slices.SortStableFunc(results, compareResultStrength)
 
 	if len(results) > limit {
 		results = results[:limit]
 	}
 	return results
+}
+
+// strongestResult returns the strongest result and whether there was one.
+func strongestResult(results []model.MatchedResult) (model.MatchedResult, bool) {
+	if len(results) == 0 {
+		return model.MatchedResult{}, false
+	}
+	return slices.MinFunc(results, compareResultStrength), true
 }
 
 // buildLevenshteinParams constructs SearchParams from the normalize context.

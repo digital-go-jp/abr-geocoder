@@ -2,72 +2,76 @@ package matching
 
 import (
 	"context"
+	"slices"
 	"strings"
 
+	"abrg/internal/matchlevel"
 	"abrg/internal/model"
 )
 
-// tryWardExpansion attempts to resolve a ward-only address by prepending candidate city names.
-// For example, "中区本町" is expanded to "横浜市中区本町", "名古屋市中区本町", etc.
-// Returns all matching results from all candidate cities, allowing downstream limit to control output.
-func (n *Impl) tryWardExpansion(ctx context.Context, searchAddrBase, searchAddrWithColon, originalAddr string) ([]model.MatchedResult, string, string, error) {
-	if n.wardCandidates == nil {
-		return nil, "", "", nil
+// tryWardExpansion retries a ward-only address with each candidate city name
+// prepended, so that "中区本町" is also matched as "横浜市中区本町",
+// "名古屋市中区本町" and so on. The prefix is added to the normalized address
+// before text transformation, so the expanded address is transformed the same
+// way as the column it is matched against, and each candidate runs through the
+// whole matching path rather than an exact machiaza lookup alone.
+//
+// It returns nil unless a candidate matches more strongly than baseResults, so
+// an address that already resolves on its own keeps its result.
+func (n *Impl) tryWardExpansion(
+	ctx context.Context,
+	query model.MatchQuery,
+	normalizedAddr string,
+	addressType model.NormalizeCategory,
+	baseResults []model.MatchedResult,
+) ([]model.MatchedResult, error) {
+	// A caller-pinned prefecture would filter out every candidate city anyway.
+	if query.Pref != model.All && query.Pref != "" {
+		return nil, nil
+	}
+	// Every candidate runs the whole matching path, so a ward shared by a dozen
+	// cities costs a dozen times a normal match. An exact match down to the
+	// machiaza leaves nothing for another city to improve on, so stop there.
+	base, hasBase := strongestResult(baseResults)
+	if hasBase && base.Score >= 1 &&
+		matchlevel.Detail(base.MatchLevel) >= matchlevel.Detail(model.MatchLevelMachiaza) {
+		return nil, nil
 	}
 
-	ward := extractWardPrefix(searchAddrBase)
-	if ward == "" {
-		return nil, "", "", nil
-	}
-
+	ward := extractWardPrefix(normalizedAddr)
 	candidates := n.wardCandidates[ward]
 	if len(candidates) == 0 {
-		return nil, "", "", nil
+		return nil, nil
 	}
 
-	remainder := searchAddrBase[len(ward):]
-	_, afterColon, hasColon := strings.Cut(searchAddrWithColon, ":")
-
-	var allResults []model.MatchedResult
-	var firstAddr, firstPref string
-
+	remainder := normalizedAddr[len(ward):]
+	var results []model.MatchedResult
 	for _, c := range candidates {
-		expanded := c.CityWard + remainder
-		results, modAddr, err := detectMachiaza(ctx, n.repo, expanded, model.All, originalAddr)
+		r, err := n.matchNormalized(ctx, query, c.CityWard+remainder, addressType)
 		if err != nil {
-			return nil, "", "", err
+			return nil, err
 		}
-		if len(results) == 0 {
-			continue
-		}
-		allResults = append(allResults, results...)
-		if firstAddr == "" {
-			// When DetectMachiaza returns empty modAddr (normal base match without colon/hyphen),
-			// use the expanded address as the base for search address construction.
-			base := modAddr
-			if base == "" {
-				base = expanded
-			}
-			if hasColon && afterColon != "" {
-				firstAddr = base + ":" + afterColon
-			} else {
-				firstAddr = base
-			}
-			firstPref = c.PrefCode
-		}
+		results = append(results, r...)
 	}
-	if len(allResults) == 0 {
-		return nil, "", "", nil
+
+	best, ok := strongestResult(results)
+	if !ok || (hasBase && compareResultStrength(best, base) >= 0) {
+		return nil, nil
 	}
-	return allResults, firstAddr, firstPref, nil
+
+	// Weaker candidates are other cities that happen to share the ward name,
+	// not alternative readings of the input, so they are dropped.
+	results = slices.DeleteFunc(results, func(r model.MatchedResult) bool {
+		return compareResultStrength(r, best) > 0
+	})
+	return sortAndLimitResults(results, query.Limit), nil
 }
 
+// extractWardPrefix returns the leading part of addr up to and including the
+// first "区", which is empty when addr contains none.
 func extractWardPrefix(addr string) string {
-	runes := []rune(addr)
-	for i, r := range runes {
-		if r == '区' && i > 0 {
-			return string(runes[:i+1])
-		}
+	if i := strings.Index(addr, "区"); i > 0 {
+		return addr[:i+len("区")]
 	}
 	return ""
 }
