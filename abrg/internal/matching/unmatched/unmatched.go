@@ -66,12 +66,15 @@ func ExtractUnmatchedParts(normalizedAddr, matchedAddr, searchAddr string) []str
 
 		unmatchedAddr = extractUnmatchedWithAt(searchAddr)
 	} else if !hasColon && searchAddr != "" {
-		// No ":" or "@" in searchAddr
-		// Try to extract unmatched from normalizedAddr by comparing with matchedAddr
-		// This preserves original form (e.g., kanji numerals)
-		unmatchedAddr = extractUnmatchedFromStandardized(standardizedAddrPart, matchedAddr)
-		if unmatchedAddr == "" {
-			// Fallback to extracting trailing numbers from searchAddr
+		// No ":" or "@" in searchAddr. What follows matchedAddr in the input is
+		// the unmatched part, and it preserves the original form (e.g. kanji
+		// numerals). An empty remainder means the input matched in full.
+		after, isPrefix := strings.CutPrefix(standardizedAddrPart, matchedAddr)
+		if isPrefix {
+			unmatchedAddr = after
+		} else {
+			// The input and matchedAddr are spelled differently, so the remainder
+			// cannot be located by position. Take the trailing numbers instead.
 			unmatchedAddr = util.ExtractTrailingAddressNumbers(searchAddr)
 		}
 	}
@@ -355,18 +358,6 @@ func extractOriginalGoNumber(originalAddr string) (string, bool) {
 func extractUnmatchedWithAt(searchAddr string) string {
 	if _, afterAt, found := strings.Cut(searchAddr, "@"); found && afterAt != "" {
 		return afterAt
-	}
-	return ""
-}
-
-// extractUnmatchedFromStandardized extracts unmatched portion by comparing
-// normalizedAddr with matchedAddr using prefix matching.
-//
-// Example: normalizedAddr="愛知県清須市助七一", matchedAddr="愛知県清須市助七"
-// returns "一".
-func extractUnmatchedFromStandardized(normalizedAddr, matchedAddr string) string {
-	if strings.HasPrefix(normalizedAddr, matchedAddr) {
-		return normalizedAddr[len(matchedAddr):]
 	}
 	return ""
 }
