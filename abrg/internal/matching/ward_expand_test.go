@@ -7,6 +7,7 @@ import (
 
 	"abrg/internal/cache"
 	"abrg/internal/model"
+	"abrg/internal/normalize"
 	"abrg/internal/repository"
 )
 
@@ -65,6 +66,65 @@ func TestTryWardExpansion_PropagatesQueryError(t *testing.T) {
 	_, err := n.tryWardExpansion(t.Context(), query, "中区本町", model.NormalizeCategoryUndetermined, nil)
 	if !errors.Is(err, errQueryFailed) {
 		t.Fatalf("tryWardExpansion() error = %v, want %v", err, errQueryFailed)
+	}
+}
+
+// Ward expansion runs every candidate city without the Levenshtein search
+// first, and repeats the whole set with it only when no candidate reached a
+// machiaza. These cases pin which side of that split each input falls on.
+func TestMatchNormalizedSkipLevenshtein(t *testing.T) {
+	n := setupTestMatcher(t)
+
+	tests := []struct {
+		name                string
+		addr                string
+		wantSkipLevenshtein model.MatchLevel
+		wantWithLevenshtein model.MatchLevel
+	}{
+		{
+			name:                "machiaza present in the data",
+			addr:                "福岡市南区大橋1丁目",
+			wantSkipLevenshtein: model.MatchLevelMachiazaDetail,
+			wantWithLevenshtein: model.MatchLevelMachiazaDetail,
+		},
+		{
+			// A numeric koaza resolves in handleBasicFallback, not the Levenshtein search.
+			name:                "numeric koaza",
+			addr:                "福岡市南区折立町98300",
+			wantSkipLevenshtein: model.MatchLevelMachiazaDetail,
+			wantWithLevenshtein: model.MatchLevelMachiazaDetail,
+		},
+		{
+			// 大倉 is not a machiaza on its own; 大倉字南 is, and only the
+			// Levenshtein search reaches it.
+			name:                "koaza completion",
+			addr:                "仙台市青葉区大倉",
+			wantSkipLevenshtein: model.MatchLevelCity,
+			wantWithLevenshtein: model.MatchLevelMachiazaDetail,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			query := model.MatchQuery{Address: tt.addr, Category: model.CategoryAll, Pref: model.All, Limit: 1}
+			normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalize.BasicNormalize(tt.addr))
+
+			check := func(skipLevenshtein bool, want model.MatchLevel) {
+				t.Helper()
+				results, err := n.matchNormalized(t.Context(), query, normalizedAddr, addressType, skipLevenshtein)
+				if err != nil {
+					t.Fatalf("matchNormalized(skipLevenshtein=%v) error: %v", skipLevenshtein, err)
+				}
+				if len(results) == 0 {
+					t.Fatalf("matchNormalized(skipLevenshtein=%v) returned no results", skipLevenshtein)
+				}
+				if got := results[0].MatchLevel; got != want {
+					t.Errorf("matchNormalized(skipLevenshtein=%v) match level = %v, want %v", skipLevenshtein, got, want)
+				}
+			}
+			check(true, tt.wantSkipLevenshtein)
+			check(false, tt.wantWithLevenshtein)
+		})
 	}
 }
 

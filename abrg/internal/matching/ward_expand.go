@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"abrg/internal/cache"
 	"abrg/internal/matchlevel"
 	"abrg/internal/model"
 )
@@ -29,9 +30,8 @@ func (n *Impl) tryWardExpansion(
 	if query.Pref != model.All && query.Pref != "" {
 		return nil, nil
 	}
-	// Every candidate runs the whole matching path, so a ward shared by a dozen
-	// cities costs a dozen times a normal match. An exact match down to the
-	// machiaza leaves nothing for another city to improve on, so stop there.
+	// An exact match down to the machiaza leaves nothing for another city to
+	// improve on, and every candidate costs a further pass over the matching path.
 	base, hasBase := strongestResult(baseResults)
 	if hasBase && base.Score >= 1 &&
 		matchlevel.Detail(base.MatchLevel) >= matchlevel.Detail(model.MatchLevelMachiaza) {
@@ -45,13 +45,19 @@ func (n *Impl) tryWardExpansion(
 	}
 
 	remainder := normalizedAddr[len(ward):]
-	var results []model.MatchedResult
-	for _, c := range candidates {
-		r, err := n.matchNormalized(ctx, query, c.CityWard+remainder, addressType)
+
+	// Only a candidate whose machiaza is absent reaches the Levenshtein search,
+	// which costs several times an exact lookup. Run every candidate without it
+	// first; when one resolves a machiaza, the others cannot do better.
+	results, err := n.runWardCandidates(ctx, query, candidates, remainder, addressType, true)
+	if err != nil {
+		return nil, err
+	}
+	if !slices.ContainsFunc(results, reachedMachiaza) {
+		results, err = n.runWardCandidates(ctx, query, candidates, remainder, addressType, false)
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, r...)
 	}
 
 	best, ok := strongestResult(results)
@@ -65,6 +71,32 @@ func (n *Impl) tryWardExpansion(
 		return compareResultStrength(r, best) > 0
 	})
 	return sortAndLimitResults(results, query.Limit), nil
+}
+
+// runWardCandidates matches the address once per candidate city and returns
+// every result. skipLevenshtein leaves out the Levenshtein search.
+func (n *Impl) runWardCandidates(
+	ctx context.Context,
+	query model.MatchQuery,
+	candidates []cache.WardCandidate,
+	remainder string,
+	addressType model.NormalizeCategory,
+	skipLevenshtein bool,
+) ([]model.MatchedResult, error) {
+	var results []model.MatchedResult
+	for _, c := range candidates {
+		r, err := n.matchNormalized(ctx, query, c.CityWard+remainder, addressType, skipLevenshtein)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, r...)
+	}
+	return results, nil
+}
+
+// reachedMachiaza reports whether a result resolved a machiaza or deeper.
+func reachedMachiaza(r model.MatchedResult) bool {
+	return matchlevel.Detail(r.MatchLevel) >= matchlevel.Detail(model.MatchLevelMachiaza)
 }
 
 // extractWardPrefix returns the leading part of addr up to and including the

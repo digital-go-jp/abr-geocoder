@@ -16,11 +16,15 @@ type normalizeInput struct {
 // normalizeState holds mutable state during normalization.
 // These values may be updated as processing progresses.
 type normalizeState struct {
-	LgCode               string                // Local government code (may be detected/updated)
-	MachiazaID           string                // Machiaza ID (may be detected/updated)
-	BasicResults         []model.MatchedResult // Pre-detected or Levenshtein-matched results
-	UsedLevenshtein      bool                  // True if BasicResults came from Levenshtein search
-	LevenshteinAttempted bool                  // True if Levenshtein search was already attempted
+	LgCode          string                // Local government code (may be detected/updated)
+	MachiazaID      string                // Machiaza ID (may be detected/updated)
+	BasicResults    []model.MatchedResult // Pre-detected or Levenshtein-matched results
+	UsedLevenshtein bool                  // True if BasicResults came from Levenshtein search
+	// SkipLevenshtein withholds the Levenshtein search from the remaining
+	// steps, either because it has already run or because the caller wants the
+	// address resolved without it. The search reads far more rows than an exact
+	// lookup, so leaving it out is what makes an address that misses cheap.
+	SkipLevenshtein bool
 }
 
 // normalizeContext combines input and state for normalization functions.

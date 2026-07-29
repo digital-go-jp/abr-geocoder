@@ -97,7 +97,7 @@ func (n *Impl) tryDetailedSearch(ctx context.Context, nctx *normalizeContext) ([
 func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContext) (normalizeState, bool, error) {
 	state := nctx.State
 
-	if len(state.BasicResults) > 0 || n.repo == nil {
+	if len(state.BasicResults) > 0 || n.repo == nil || state.SkipLevenshtein {
 		return state, false, nil
 	}
 
@@ -116,7 +116,7 @@ func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContex
 	}
 
 	levenResults, err := levenshtein.Search(ctx, n.repo, n.buildLevenshteinParams(nctx, state.LgCode, state.MachiazaID))
-	state.LevenshteinAttempted = true
+	state.SkipLevenshtein = true
 	if err != nil {
 		return state, false, err
 	}
