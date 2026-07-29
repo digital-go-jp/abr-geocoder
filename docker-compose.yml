@@ -1,0 +1,73 @@
+name: abr
+
+# Containers connect to PostgreSQL on 5432. ${DB_PORT} is the host port.
+x-db-env: &db-env
+  DB_HOST: ${DB_HOST}
+  DB_PORT: 5432
+  DB_USER: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+  DB_NAME: ${DB_NAME}
+  DB_SSLMODE: ${DB_SSLMODE}
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h 127.0.0.1"]
+      interval: 2s
+      retries: 15
+      start_period: 30s
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # abrg cannot start until a cache exists and abrdb is a one-shot CLI, so
+  # neither belongs in a bare `up`.
+  abrdb_app:
+    profiles: ["cli"]
+    build:
+      context: .
+      dockerfile: abrdb/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *db-env
+      ABRDB_PREF: ${ABRDB_PREF}
+      ABRDB_CATEGORY: ${ABRDB_CATEGORY}
+      ABRDB_POS: ${ABRDB_POS}
+      LOG_LEVEL: ${LOG_LEVEL}
+    volumes:
+      - abrdb_data:/tmp/abrdb/data
+
+  # `serve` reads only the cache, but `cache build` runs on this service too
+  # and that reads PostgreSQL.
+  abrg_app:
+    profiles: ["server"]
+    build:
+      context: .
+      dockerfile: abrg/Dockerfile
+      target: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *db-env
+      PORT: 3000
+      GIN_MODE: ${GIN_MODE}
+      LOG_LEVEL: ${LOG_LEVEL}
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
+    ports:
+      - "${PORT}:3000"
+    volumes:
+      - abrg_cache:/root/.abrg/cache
+
+volumes:
+  postgres_data:
+  abrdb_data:
+  abrg_cache:
