@@ -60,7 +60,7 @@ lint:
 fmt:
 	go mod tidy
 	go fix ./...
-	goimports -w .
+	golangci-lint fmt ./...
 	golangci-lint run --fix
 
 # Security vulnerability scan (version pinned via the go.mod tool directive,
