@@ -14,14 +14,45 @@ curl -s "http://localhost:3001/geocode?address=東京都千代田区紀尾井町
 
 Includes test data (Tokyo prefecture/city/town). See [quickstart/README.md](quickstart/README.md) for details.
 
-## Next Steps
+## Full Dataset
 
-For nationwide data or residential/parcel data:
+Nationwide data, and residential/parcel data, need PostgreSQL. The
+[docker-compose.yml](docker-compose.yml) at the repository root runs PostgreSQL,
+abrdb and abrg together.
 
-1. Import ABR data to PostgreSQL with **abrdb**
-2. Build cache and start server with **abrg**
+```bash
+cp .env.example .env
+# edit .env and set DB_PASSWORD
 
-See each README for details:
+docker compose up -d postgres
+
+# choose what to import
+docker compose run --rm abrdb_app init --pref all --category all --pos
+
+# download from ABR and load into PostgreSQL
+docker compose run --rm abrdb_app import
+
+# build the DuckDB cache from PostgreSQL
+docker compose run --rm abrg_app cache build
+
+# start the API server
+docker compose up -d abrg_app
+curl -s "http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3"
+```
+
+The first command that needs an image builds it.
+
+Data persists in three named volumes.
+
+| Volume | Contents |
+|--------|----------|
+| `postgres_data` | the PostgreSQL database |
+| `abrdb_data` | ABR archives as downloaded |
+| `abrg_cache` | the DuckDB cache abrg reads |
+
+`docker compose down` keeps them. Use `down -v` to start over.
+
+See each README for per-command options:
 - [abrdb/README.ja.md](abrdb/README.ja.md)
 - [abrg/README.ja.md](abrg/README.ja.md)
 
