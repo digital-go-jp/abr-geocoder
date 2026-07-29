@@ -35,7 +35,6 @@ func setupQuickstartCache(t *testing.T) *cache.DuckDBCache {
 	return c
 }
 
-
 func registeredPaths(s *GinServer) []string {
 	var paths []string
 	for _, route := range s.router.Routes() {

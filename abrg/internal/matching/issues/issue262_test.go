@@ -11,9 +11,9 @@ import (
 // https://github.com/digital-go-jp/abr-geocoder/issues/262
 //
 // 問題:
-// - 「千葉県浦安市舞浜2-11」(category=rsdtdsp) → rsdt_addr_flg="0"
-// - マッチした町字（舞浜2丁目 0018002）の rsdt_addr_flg は 1。基底町字（0018000、
-//   混在地域のため flg 0/1 の2行）からフラグをマージしているのが原因。
+//   - 「千葉県浦安市舞浜2-11」(category=rsdtdsp) → rsdt_addr_flg="0"
+//   - マッチした町字（舞浜2丁目 0018002）の rsdt_addr_flg は 1。基底町字（0018000、
+//     混在地域のため flg 0/1 の2行）からフラグをマージしているのが原因。
 func TestIssue262(t *testing.T) {
 	normalizer := setupTestNormalizer(t)
 
