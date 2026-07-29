@@ -5,24 +5,25 @@ import (
 	"testing"
 )
 
-// TestIssue363 tests ward-only address resolution when prefecture and city are omitted.
-// Issue #363: 都道府県省略+同名区で正規化が完全マッチ失敗する
+// TestIssue297 tests ward-only address resolution when prefecture and city are omitted.
+// Issue #297: 都道府県と市名を省略した区名のみの住所が完全マッチしない
+// https://github.com/digital-go-jp/abr-geocoder/issues/297
 //
 // 問題:
 //   - 「中区本町1-1」のように都道府県と市名を省略し、区名のみで入力するとscore=-1で完全マッチ失敗
-//   - DB上のstandardized_addressは「横浜市中区本町」のようにcity+ward形式だが、
+//   - 照合列 normalized_address は「横浜市中区本町」のようにcity+ward形式だが、
 //     ユーザー入力は「中区本町」でward+oazaのみのため一致しない
-//   - cityPrefixMapは同名区(中区=4県)を除外するため、都道府県推定もできない
+//   - cityPrefixMapは複数県にまたがる区名を除外するため、都道府県推定もできない
 //
 // 解決:
 // - Ward展開フォールバック: 区名のみの入力を検出し、全候補市名を前置して再検索
 // - 「中区」→ [横浜市中区, 名古屋市中区, 広島市中区, 浜松市中区] で展開
-func TestIssue363(t *testing.T) {
+func TestIssue297(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		// === Ward展開フォールバック ===
 		// 同名区「中区」: 横浜市/名古屋市/広島市/浜松市に存在
 		{
-			name: "issue363-1 [中区本町1-1] ward-only with ambiguous ward",
+			name: "issue297-1 [中区本町1-1] ward-only with ambiguous ward",
 			query: model.MatchQuery{
 				Address:  "中区本町1-1",
 				Category: model.CategoryBasic,
@@ -39,7 +40,7 @@ func TestIssue363(t *testing.T) {
 
 		// 同名区「南区」
 		{
-			name: "issue363-2 [南区白妙町1-1] ward-only",
+			name: "issue297-2 [南区白妙町1-1] ward-only",
 			query: model.MatchQuery{
 				Address:  "南区白妙町1-1",
 				Category: model.CategoryBasic,
@@ -56,7 +57,7 @@ func TestIssue363(t *testing.T) {
 		// 都道府県+市+区がすべて指定されている場合は既存フローで処理
 		{
 			// 本町1丁目が実在するため「1」を丁目として正しく解析
-			name: "issue363-3 [横浜市中区本町1-1] city+ward should still work",
+			name: "issue297-3 [横浜市中区本町1-1] city+ward should still work",
 			query: model.MatchQuery{
 				Address:  "横浜市中区本町1-1",
 				Category: model.CategoryBasic,
@@ -76,7 +77,7 @@ func TestIssue363(t *testing.T) {
 		},
 		{
 			// 本町1丁目が実在するため「1」を丁目として正しく解析
-			name: "issue363-4 [神奈川県横浜市中区本町1-1] full address",
+			name: "issue297-4 [神奈川県横浜市中区本町1-1] full address",
 			query: model.MatchQuery{
 				Address:  "神奈川県横浜市中区本町1-1",
 				Category: model.CategoryBasic,
@@ -97,7 +98,7 @@ func TestIssue363(t *testing.T) {
 
 		// 東京特別区は ward=NULL なので wardCandidates に含まれず既存フローで処理
 		{
-			name: "issue363-5 [中央区銀座1-1] Tokyo special ward unchanged",
+			name: "issue297-5 [中央区銀座1-1] Tokyo special ward unchanged",
 			query: model.MatchQuery{
 				Address:  "中央区銀座1-1",
 				Category: model.CategoryBasic,
