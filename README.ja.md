@@ -38,8 +38,6 @@ docker compose up -d abrg_app
 curl -s "http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3"
 ```
 
-イメージは必要になった時点でビルドされる。
-
 データは3つの named volume に残る。
 
 | Volume | 内容 |
