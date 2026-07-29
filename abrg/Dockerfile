@@ -10,7 +10,6 @@ COPY abrg/go.mod abrg/go.sum ./abrg/
 WORKDIR /build/abrg
 RUN go mod download
 
-# Copy source code
 WORKDIR /build
 COPY common/ ./common/
 COPY abrg/ ./abrg/

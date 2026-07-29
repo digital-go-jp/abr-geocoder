@@ -10,7 +10,6 @@ COPY abrdb/go.mod abrdb/go.sum ./abrdb/
 WORKDIR /build/abrdb
 RUN go mod download
 
-# Copy source code
 WORKDIR /build
 COPY common/ ./common/
 COPY abrdb/ ./abrdb/
@@ -29,12 +28,10 @@ FROM gcr.io/distroless/cc-debian13:nonroot
 
 WORKDIR /app
 
-# Copy binary from builder
 COPY --from=builder /build/abrdb/abrdb /app/abrdb
 
 # Set environment variables
 ENV ABRDB_DOWNLOAD_DIR=/tmp/abrdb
 
-# CLI tool
 ENTRYPOINT ["/app/abrdb"]
 CMD ["--help"]
