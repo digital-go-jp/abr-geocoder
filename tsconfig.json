@@ -7,6 +7,9 @@
     "target": "es2022",
     "module": "NodeNext",
     "strict": true,
+    // proj4 の型定義は optional peer の geotiff を参照する。geotiff を使わないので
+    // 依存の .d.ts は型検査の対象から外す。
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "sourceMap": true,
     "typeRoots": [

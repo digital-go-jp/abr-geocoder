@@ -1,5 +1,5 @@
-## This workflow has been disabled for now, because the CKAN API is blocking our requests.
-## Re-enable when we can package test data inside this repository.
+## E2E テストは CKAN API がリクエストをブロックするため無効。
+## テストデータをリポジトリ内に同梱できるようになったら戻す。
 
 name: "tests"
 
