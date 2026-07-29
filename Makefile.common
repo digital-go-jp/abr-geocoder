@@ -52,6 +52,7 @@ test-coverage:
 
 # Run lint checks without modifying files (CI-friendly)
 lint:
+	go mod tidy -diff
 	go mod verify
 	go vet ./...
 	golangci-lint run
