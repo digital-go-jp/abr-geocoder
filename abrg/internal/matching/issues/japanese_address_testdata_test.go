@@ -2600,8 +2600,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 			},
 		},
 		{
-			// 複数の候補が存在する（千葉県千葉市中央区）
-			// 都道府県・市区町村省略時は最初にマッチした候補（東京都中央区、特別区）
+			// 千葉市・相模原市・浜松市の中央区に中央1丁目1があり、
+			// 市名がないので最も番号の小さい都道府県コードの候補を返す
 			name: "jat064 [中央区中央１－１]",
 			query: model.MatchQuery{
 				Address:  "中央区中央１－１",
@@ -2609,20 +2609,20 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelCity,
-			wantMatchedAddress:   "東京都中央区",
-			wantUnmatchedAddress: []string{"中央1-1"},
+			wantMatchLevel:       model.MatchLevelResidentialBlock,
+			wantMatchedAddress:   "千葉県千葉市中央区中央1丁目1",
+			wantUnmatchedAddress: nil,
 			wantStructured: map[string]any{
-				"pref":          "東京都",
+				"pref":          "千葉県",
 				"county":        nil,
-				"city":          "中央区",
-				"ward":          nil,
+				"city":          "千葉市",
+				"ward":          "中央区",
 				"machiaza_dist": nil,
 				"kyoto_st":      nil,
-				"oaza_cho":      nil,
-				"chome":         nil,
+				"oaza_cho":      "中央",
+				"chome":         "1丁目",
 				"koaza":         nil,
-				"blk_num":       nil,
+				"blk_num":       "1",
 				"rsdt_num":      nil,
 				"rsdt_num2":     nil,
 				"prc_num1":      nil,
@@ -2662,8 +2662,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 			},
 		},
 		{
-			// 複数の候補が存在する（神奈川県相模原市中央区）
-			// 注意：jat064と同じ入力だが期待する結果は神奈川県。現実装では東京都中央区にマッチ
+			// jat064と同じ入力で、テストデータ側が期待するのは神奈川県相模原市中央区。
+			// 入力だけでは候補を絞れないため千葉県千葉市中央区を返す
 			name: "jat065 [中央区中央１－１]",
 			query: model.MatchQuery{
 				Address:  "中央区中央１－１",
@@ -2671,20 +2671,20 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelCity,
-			wantMatchedAddress:   "東京都中央区",
-			wantUnmatchedAddress: []string{"中央1-1"},
+			wantMatchLevel:       model.MatchLevelResidentialBlock,
+			wantMatchedAddress:   "千葉県千葉市中央区中央1丁目1",
+			wantUnmatchedAddress: nil,
 			wantStructured: map[string]any{
-				"pref":          "東京都",
+				"pref":          "千葉県",
 				"county":        nil,
-				"city":          "中央区",
-				"ward":          nil,
+				"city":          "千葉市",
+				"ward":          "中央区",
 				"machiaza_dist": nil,
 				"kyoto_st":      nil,
-				"oaza_cho":      nil,
-				"chome":         nil,
+				"oaza_cho":      "中央",
+				"chome":         "1丁目",
 				"koaza":         nil,
-				"blk_num":       nil,
+				"blk_num":       "1",
 				"rsdt_num":      nil,
 				"rsdt_num2":     nil,
 				"prc_num1":      nil,

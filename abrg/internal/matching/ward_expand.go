@@ -1,67 +1,97 @@
 package matching
 
 import (
+	"cmp"
 	"context"
-	"strings"
+	"slices"
 
+	"abrg/internal/matchlevel"
 	"abrg/internal/model"
 )
 
-// tryWardExpansion attempts to resolve a ward-only address by prepending candidate city names.
-// For example, "中区本町" is expanded to "横浜市中区本町", "名古屋市中区本町", etc.
-// Returns all matching results from all candidate cities, allowing downstream limit to control output.
-func (n *Impl) tryWardExpansion(ctx context.Context, searchAddrBase, searchAddrWithColon, originalAddr string) ([]model.MatchedResult, string, string, error) {
-	if n.wardCandidates == nil {
-		return nil, "", "", nil
+// tryWardExpansion retries a ward-only address with each candidate city name
+// prepended, so that "中区本町" is also matched as "横浜市中区本町",
+// "名古屋市中区本町" and so on. The prefix is added to the normalized address
+// before text transformation, so the expanded address is transformed the same
+// way as the column it is matched against, and each candidate runs through the
+// whole matching path rather than an exact machiaza lookup alone.
+//
+// It returns nil unless a candidate matches more strongly than baseResults, so
+// an address that already resolves on its own keeps its result.
+func (n *Impl) tryWardExpansion(
+	ctx context.Context,
+	query model.MatchQuery,
+	normalizedAddr string,
+	addressType model.NormalizeCategory,
+	baseResults []model.MatchedResult,
+) ([]model.MatchedResult, error) {
+	// A caller-pinned prefecture would filter out every candidate city anyway.
+	if n.wardCandidates == nil || (query.Pref != model.All && query.Pref != "") {
+		return nil, nil
 	}
-
-	ward := extractWardPrefix(searchAddrBase)
-	if ward == "" {
-		return nil, "", "", nil
-	}
-
+	ward := extractWardPrefix(normalizedAddr)
 	candidates := n.wardCandidates[ward]
 	if len(candidates) == 0 {
-		return nil, "", "", nil
+		return nil, nil
 	}
 
-	remainder := searchAddrBase[len(ward):]
-	_, afterColon, hasColon := strings.Cut(searchAddrWithColon, ":")
+	base := strongestResult(baseResults)
+	if base != nil && base.Score >= 1 &&
+		matchlevel.Detail(base.MatchLevel) >= matchlevel.Detail(model.MatchLevelMachiaza) {
+		return nil, nil
+	}
 
-	var allResults []model.MatchedResult
-	var firstAddr, firstPref string
-
+	remainder := normalizedAddr[len(ward):]
+	var results []model.MatchedResult
 	for _, c := range candidates {
-		expanded := c.CityWard + remainder
-		results, modAddr, err := detectMachiaza(ctx, n.repo, expanded, model.All, originalAddr)
+		r, err := n.matchNormalized(ctx, query, c.CityWard+remainder, addressType)
 		if err != nil {
-			return nil, "", "", err
+			return nil, err
 		}
-		if len(results) == 0 {
-			continue
-		}
-		allResults = append(allResults, results...)
-		if firstAddr == "" {
-			// When DetectMachiaza returns empty modAddr (normal base match without colon/hyphen),
-			// use the expanded address as the base for search address construction.
-			base := modAddr
-			if base == "" {
-				base = expanded
-			}
-			if hasColon && afterColon != "" {
-				firstAddr = base + ":" + afterColon
-			} else {
-				firstAddr = base
-			}
-			firstPref = c.PrefCode
-		}
+		results = append(results, r...)
 	}
-	if len(allResults) == 0 {
-		return nil, "", "", nil
+
+	best := strongestResult(results)
+	if best == nil || (base != nil && compareStrength(*best, *base) >= 0) {
+		return nil, nil
 	}
-	return allResults, firstAddr, firstPref, nil
+
+	// Weaker candidates are other cities that happen to share the ward name,
+	// not alternative readings of the input, so they are dropped.
+	strongest := *best
+	results = slices.DeleteFunc(results, func(r model.MatchedResult) bool {
+		return compareStrength(r, strongest) > 0
+	})
+	slices.SortStableFunc(results, compareStrength)
+	if len(results) > query.Limit {
+		results = results[:query.Limit]
+	}
+	return results, nil
 }
 
+// compareStrength orders results from strongest to weakest: a higher score
+// first, then a more detailed match level. Score comes first because a fuzzy
+// match that reaches a deeper level is still a match on a different address.
+func compareStrength(a, b model.MatchedResult) int {
+	if c := cmp.Compare(b.Score, a.Score); c != 0 {
+		return c
+	}
+	return cmp.Compare(matchlevel.Detail(b.MatchLevel), matchlevel.Detail(a.MatchLevel))
+}
+
+// strongestResult returns the strongest result, or nil when there is none.
+func strongestResult(results []model.MatchedResult) *model.MatchedResult {
+	var best *model.MatchedResult
+	for i := range results {
+		if best == nil || compareStrength(results[i], *best) < 0 {
+			best = &results[i]
+		}
+	}
+	return best
+}
+
+// extractWardPrefix returns the leading part of addr up to and including the
+// first "区", which is empty when addr contains none.
 func extractWardPrefix(addr string) string {
 	runes := []rune(addr)
 	for i, r := range runes {

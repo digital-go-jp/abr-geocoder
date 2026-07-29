@@ -55,6 +55,27 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 
 	normalizedAddr := normalize.BasicNormalize(query.Address)
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
+
+	results, err := n.matchNormalized(ctx, query, normalizedAddr, addressType)
+	if err != nil {
+		return nil, err
+	}
+
+	// A ward-only address (e.g. "中区本町") names no city, so retry it with each
+	// city that has such a ward before settling for the result above.
+	expanded, err := n.tryWardExpansion(ctx, query, normalizedAddr, addressType, results)
+	if err != nil {
+		return nil, err
+	}
+	if expanded != nil {
+		return expanded, nil
+	}
+	return results, nil
+}
+
+// matchNormalized runs the matching pipeline over an address already processed
+// by normalize.NormalizeBasicNormalized.
+func (n *Impl) matchNormalized(ctx context.Context, query model.MatchQuery, normalizedAddr string, addressType model.NormalizeCategory) ([]model.MatchedResult, error) {
 	pref, searchAddr, basicResults, err := n.detectBasicResultsWithBasic(ctx, normalizedAddr, query.Pref)
 	if err != nil {
 		return nil, fmt.Errorf("detect basic results: %w", err)

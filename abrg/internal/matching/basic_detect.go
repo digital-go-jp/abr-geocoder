@@ -49,20 +49,6 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 		}
 	}
 
-	// Third try: expand ward-only address with candidate city prefixes
-	// (e.g., "中区本町" → try "横浜市中区本町", "名古屋市中区本町", etc.)
-	if pref == model.All {
-		results, addr, expandedPref, err := n.tryWardExpansion(
-			ctx, searchAddrBase, searchAddrWithColon, normalizedAddr,
-		)
-		if err != nil {
-			return pref, searchAddrWithColon, nil, err
-		}
-		if len(results) > 0 {
-			return expandedPref, addr, results, nil
-		}
-	}
-
 	// No match found
 	return pref, searchAddrWithColon, nil, nil
 }
