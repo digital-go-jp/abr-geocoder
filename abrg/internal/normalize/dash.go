@@ -37,16 +37,24 @@ var katakanaDash = regexp.MustCompile(`([\d０-９])ー([\d０-９])`)
 func NormalizeDashes(s string) (string, bool) {
 	original := s
 
-	// Fast check: if string is ASCII-only, likely no special dashes
+	// Single scan for what the two conversions below need. Every character
+	// dashReplacer knows starts with E2 or EF, or with E3 80; the katakana
+	// prolonged sound mark ー (U+30FC) is E3 83 BC.
 	isASCII := true
+	hasDashVariant := false
 	hasKatakanaDash := false
 	for i := 0; i < len(s); i++ {
-		if s[i] >= 0x80 {
-			isASCII = false
-			// Check for katakana prolonged sound mark (ー is U+30FC, UTF-8: E3 83 BC)
-			if i+2 < len(s) && s[i] == 0xE3 && s[i+1] == 0x83 && s[i+2] == 0xBC {
-				hasKatakanaDash = true
-			}
+		if s[i] < 0x80 {
+			continue
+		}
+		isASCII = false
+		switch {
+		case s[i] == 0xE2 || s[i] == 0xEF:
+			hasDashVariant = true
+		case s[i] == 0xE3 && i+1 < len(s) && s[i+1] == 0x80:
+			hasDashVariant = true
+		case s[i] == 0xE3 && i+2 < len(s) && s[i+1] == 0x83 && s[i+2] == 0xBC:
+			hasKatakanaDash = true
 		}
 	}
 
@@ -55,7 +63,9 @@ func NormalizeDashes(s string) (string, bool) {
 	}
 
 	// Use pre-compiled replacer for all dash variants (single pass)
-	s = dashReplacer.Replace(s)
+	if hasDashVariant {
+		s = dashReplacer.Replace(s)
+	}
 
 	// Handle katakana prolonged sound marks between numbers (e.g., 1ー2 → 1-2).
 	// Need to apply repeatedly for cases like 1ー2ー3.

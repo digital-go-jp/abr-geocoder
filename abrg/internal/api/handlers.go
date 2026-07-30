@@ -27,19 +27,36 @@ func queryLogParams(q model.MatchQuery) []any {
 	return []any{"address", q.Address, "pref", q.Pref, "category", q.Category, "limit", q.Limit}
 }
 
-// sendMatchQueryError maps a match/geocode pipeline error to its response:
-// an unknown category is 400, data missing from the cache is 503, anything
-// else is logged and answered with 500.
-func sendMatchQueryError(c *gin.Context, msg, event string, err error, query model.MatchQuery) {
+// queryErrors are the sentinels a query pipeline reports for client-visible
+// failures. Each pipeline declares its own pair.
+type queryErrors struct {
+	unknownCategory error
+	dataUnavailable error
+}
+
+var (
+	matchErrors   = queryErrors{matching.ErrUnknownCategory, matching.ErrDataUnavailable}
+	reverseErrors = queryErrors{reverse.ErrUnknownCategory, reverse.ErrDataUnavailable}
+)
+
+// sendQueryError maps a pipeline error to its response: an unknown category is
+// 400, data missing from the cache is 503, anything else is logged and
+// answered with 500.
+func sendQueryError(c *gin.Context, sentinels queryErrors, msg, event string, err error, params ...any) {
 	switch {
-	case errors.Is(err, matching.ErrUnknownCategory):
+	case errors.Is(err, sentinels.unknownCategory):
 		sendBadRequest(c, err.Error())
-	case errors.Is(err, matching.ErrDataUnavailable):
-		c.JSON(http.StatusServiceUnavailable, errorResponse(err.Error()))
+	case errors.Is(err, sentinels.dataUnavailable):
+		sendServiceUnavailable(c, err.Error())
 	default:
-		logHandlerError(msg, event, err, queryLogParams(query)...)
+		logHandlerError(msg, event, err, params...)
 		sendInternalServerError(c)
 	}
+}
+
+// sendMatchQueryError reports a match/geocode pipeline error.
+func sendMatchQueryError(c *gin.Context, msg, event string, err error, query model.MatchQuery) {
+	sendQueryError(c, matchErrors, msg, event, err, queryLogParams(query)...)
 }
 
 // setMatchLevelLog records the top feature's match level for access logging.
@@ -104,16 +121,8 @@ func (s *GinServer) ReverseHandler(c *gin.Context) {
 		Pref:     pref,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, reverse.ErrUnknownCategory):
-			sendBadRequest(c, err.Error())
-		case errors.Is(err, reverse.ErrDataUnavailable):
-			c.JSON(http.StatusServiceUnavailable, errorResponse(err.Error()))
-		default:
-			logHandlerError("reverse geocode request failed", "reverse", err,
-				"lon", req.Lon, "lat", req.Lat, "pref", pref, "category", category, "limit", req.Limit)
-			sendInternalServerError(c)
-		}
+		sendQueryError(c, reverseErrors, "reverse geocode request failed", "reverse", err,
+			"lon", req.Lon, "lat", req.Lat, "pref", pref, "category", category, "limit", req.Limit)
 		return
 	}
 
@@ -199,5 +208,5 @@ func (s *GinServer) RootHandler(c *gin.Context) {
 }
 
 func (s *GinServer) PositionDataDisabledHandler(c *gin.Context) {
-	c.JSON(http.StatusServiceUnavailable, errorResponse("This endpoint requires enable_pos=true in the database."))
+	sendServiceUnavailable(c, "This endpoint requires enable_pos=true in the database.")
 }

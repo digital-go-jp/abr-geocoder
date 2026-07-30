@@ -1,4 +1,4 @@
-package transform
+package matching
 
 import (
 	"testing"
@@ -75,9 +75,9 @@ func TestBuildSearchAddrWithoutKyotoSt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := BuildSearchAddrWithoutKyotoSt(tt.sa, tt.afterColon)
+			got := buildSearchAddrWithoutKyotoSt(tt.sa, tt.afterColon)
 			if got != tt.want {
-				t.Errorf("BuildSearchAddrWithoutKyotoSt() = %q, want %q", got, tt.want)
+				t.Errorf("buildSearchAddrWithoutKyotoSt() = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -115,7 +115,7 @@ func TestMergeKyotoStToResults(t *testing.T) {
 			},
 		}
 
-		MergeKyotoStToResults(destResults, basicResults)
+		mergeKyotoStToResults(destResults, basicResults)
 
 		if destResults[0].StructuredAddress.KyotoSt == nil {
 			t.Error("KyotoSt should be merged")
@@ -149,7 +149,7 @@ func TestMergeKyotoStToResults(t *testing.T) {
 			},
 		}
 
-		MergeKyotoStToResults(destResults, basicResults)
+		mergeKyotoStToResults(destResults, basicResults)
 
 		if destResults[0].StructuredAddress.KyotoSt != nil {
 			t.Error("KyotoSt should remain nil")
@@ -169,7 +169,7 @@ func TestMergeKyotoStToResults(t *testing.T) {
 			},
 		}
 
-		MergeKyotoStToResults(destResults, basicResults)
+		mergeKyotoStToResults(destResults, basicResults)
 
 		if destResults[0].StructuredAddress.KyotoSt != nil {
 			t.Error("KyotoSt should remain nil")
@@ -191,7 +191,7 @@ func TestMergeKyotoStToResults(t *testing.T) {
 		destResults := []model.MatchedResult{}
 
 		// Should not panic
-		MergeKyotoStToResults(destResults, basicResults)
+		mergeKyotoStToResults(destResults, basicResults)
 
 		if len(destResults) != 0 {
 			t.Error("destResults should remain empty")
@@ -227,7 +227,7 @@ func TestMergeKyotoStToResults(t *testing.T) {
 			},
 		}
 
-		MergeKyotoStToResults(destResults, basicResults)
+		mergeKyotoStToResults(destResults, basicResults)
 
 		// Should keep original kyoto_st
 		if *destResults[0].StructuredAddress.KyotoSt != "大宮通元誓願寺下る" {

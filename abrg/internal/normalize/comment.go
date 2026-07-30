@@ -16,6 +16,12 @@ var (
 func removeComments(s string) (string, bool) {
 	result := s
 
+	// Both comment forms start with a slash; without one there is nothing to
+	// remove and nothing to trim after it.
+	if !strings.Contains(s, "/") {
+		return s, false
+	}
+
 	// Remove block comments first: /* some comment */
 	result = blockComment.ReplaceAllString(result, "")
 

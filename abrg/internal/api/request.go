@@ -114,6 +114,11 @@ func sendBadRequest(c *gin.Context, message string) {
 	c.JSON(http.StatusBadRequest, errorResponse(message))
 }
 
+// sendServiceUnavailable responds with 503 Service Unavailable.
+func sendServiceUnavailable(c *gin.Context, message string) {
+	c.JSON(http.StatusServiceUnavailable, errorResponse(message))
+}
+
 // sendInternalServerError responds with 500 Internal Server Error.
 func sendInternalServerError(c *gin.Context) {
 	c.JSON(http.StatusInternalServerError, errorResponse("Internal Server Error"))

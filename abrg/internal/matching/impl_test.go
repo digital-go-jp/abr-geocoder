@@ -276,8 +276,8 @@ func TestBuildParcelSearchAddr(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := transform.BuildSearchAddrWithoutKyotoSt(tt.sa, tt.afterColon); got != tt.expected {
-				t.Errorf("BuildSearchAddrWithoutKyotoSt() = %q, want %q", got, tt.expected)
+			if got := buildSearchAddrWithoutKyotoSt(tt.sa, tt.afterColon); got != tt.expected {
+				t.Errorf("buildSearchAddrWithoutKyotoSt() = %q, want %q", got, tt.expected)
 			}
 		})
 	}

@@ -15,11 +15,19 @@ var sapporoJouPattern = regexp.MustCompile(`([北南])(\d+)([西東])(\d+)`)
 // Example: "北3西1-7" -> "北3条西1丁目-7".
 // Only expands if both 条 and 丁目 are missing (abbreviated form).
 func ExpandSapporoJou(s string) (string, bool) {
-	// Skip if already contains 条 (not abbreviated)
-	if strings.Contains(s, "条") {
+	if !hasSapporoJouLead(s) {
 		return s, false
 	}
 
 	result := sapporoJouPattern.ReplaceAllString(s, "${1}${2}条${3}${4}丁目")
 	return result, result != s
+}
+
+// hasSapporoJouLead reports whether the string can hold an abbreviated form:
+// it must start a 北/南 run and must not already carry 条.
+func hasSapporoJouLead(s string) bool {
+	if strings.Contains(s, "条") {
+		return false
+	}
+	return strings.Contains(s, "北") || strings.Contains(s, "南")
 }

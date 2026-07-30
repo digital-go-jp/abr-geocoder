@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"abrg/internal/model"
-	"abrg/internal/transform"
 )
 
 // tryTwoStageResidential attempts residential normalization using TwoStageSearch.
@@ -70,7 +69,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	searchAddr := nctx.Input.SearchAddr.String()
 	if basic.StructuredAddress.KyotoSt != nil {
 		afterColon := strings.Join(nctx.Input.SearchAddr.Numbers, "-")
-		searchAddr = transform.BuildSearchAddrWithoutKyotoSt(&basic.StructuredAddress, afterColon)
+		searchAddr = buildSearchAddrWithoutKyotoSt(&basic.StructuredAddress, afterColon)
 	}
 
 	// Skip parcel search if this machiaza has no parcel data and machiaza_id ends with "000"
@@ -90,7 +89,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 		for i := range results {
 			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, usedSearchAddr)
 		}
-		transform.MergeKyotoStToResults(results, nctx.State.BasicResults)
+		mergeKyotoStToResults(results, nctx.State.BasicResults)
 		return results
 	}
 

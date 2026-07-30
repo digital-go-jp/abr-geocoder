@@ -251,7 +251,21 @@ var (
 	// Handles fully-converted chained patterns like "2ノ8ノ1" and intermediate states
 	// like "1-2ノ3-4" where both sides are already Arabic.
 	arabicNoArabicPattern = regexp.MustCompile(`(\d+)[のノ](\d+)`)
+
+	// noPatterns cover every mix of kanji and arabic around の/ノ. All three
+	// take the same replacement because kanjiPartToArabic passes an
+	// already-arabic part through unchanged.
+	noPatterns = []*regexp.Regexp{kanjiNoKanjiPattern, arabicNoKanjiPattern, arabicNoArabicPattern}
 )
+
+// noPairToHyphen converts one "number の/ノ number" match to arabic-hyphen form.
+func noPairToHyphen(match string) string {
+	left, right := splitByNo(match)
+	if right == "" {
+		return match
+	}
+	return kanjiPartToArabic(left) + "-" + kanjiPartToArabic(right)
+}
 
 // kanjiNoToHyphen converts kanji number + ノ/の + kanji number patterns to arabic-hyphen format.
 // For example: "二ノ八ノ一" → "2-8-1", "十二ノ三" → "12-3"
@@ -273,31 +287,13 @@ func kanjiNoToHyphen(s string) (string, bool) {
 	// First normalize formal kanji to regular kanji
 	s = formalKanjiReplacer.Replace(s)
 
-	// Repeatedly apply patterns to handle chained patterns like "二ノ八ノ一"
-	// First pass: "二ノ八ノ一" → "2-8ノ一"
-	// Second pass: "2-8ノ一" → "2-8-1" (using arabicNoKanjiPattern)
+	// Repeat until stable: each pass converts one link of a chain, so
+	// "二ノ八ノ一" becomes "2-8ノ一" and then "2-8-1".
 	for {
-		newS := kanjiNoKanjiPattern.ReplaceAllStringFunc(s, func(match string) string {
-			left, right := splitByNo(match)
-			if right == "" {
-				return match
-			}
-			return kanjiPartToArabic(left) + "-" + kanjiPartToArabic(right)
-		})
-
-		// Also apply arabicNoKanjiPattern for chained patterns
-		newS = arabicNoKanjiPattern.ReplaceAllStringFunc(newS, func(match string) string {
-			left, right := splitByNo(match)
-			if right == "" {
-				return match
-			}
-			// Left is already arabic, convert right kanji to arabic
-			return left + "-" + kanjiPartToArabic(right)
-		})
-
-		// Apply arabicNoArabicPattern for fully-converted chained patterns (e.g., "2ノ3")
-		newS = arabicNoArabicPattern.ReplaceAllString(newS, "$1-$2")
-
+		newS := s
+		for _, re := range noPatterns {
+			newS = re.ReplaceAllStringFunc(newS, noPairToHyphen)
+		}
 		if newS == s {
 			break
 		}
