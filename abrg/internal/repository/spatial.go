@@ -24,15 +24,15 @@ func prefFilter(alias, pref string) (string, error) {
 
 // Every reverse query orders by distance and then by lg_code and machiaza_id.
 // The tie-break is what makes the result reproducible: several machiaza can sit
-// on one coordinate (Kyoto street names, for one), and ordering by distance
-// alone leaves the parallel scan to decide which of the tied rows LIMIT keeps,
-// so the same query returned different rows from run to run.
+// on one coordinate (Kyoto street names, for one), and with distance as the only
+// key the parallel scan decides which of the tied rows LIMIT keeps, so the same
+// coordinate can answer with a different address on each run.
 //
 // For cache_machiaza that pair is the primary key, so the order is total. For
 // the detail tables it orders down to the machiaza only; adding the rows' own
 // ids would make it total there too, but sorting the candidate set on those
-// high-cardinality columns costs several times the query time, and the ties
-// left unresolved are between detail rows of a single machiaza.
+// high-cardinality columns costs several times the query time, and the ties it
+// would resolve are between detail rows of a single machiaza.
 
 // reverseAddrColumns are the address columns every reverse result carries, in
 // the order reverseBaseScan.appendAddrPtrs scans them. They always come from
