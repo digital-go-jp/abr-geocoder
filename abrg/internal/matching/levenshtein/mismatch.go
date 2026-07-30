@@ -48,14 +48,13 @@ func hasTownNameMismatch(boundary *util.CityBoundary, searchAddr string, result 
 	}
 
 	// Extract town name part from searchAddr (after city/ward boundary)
-	inputTownName := extractTownNameFromSearch(boundary, searchAddr)
+	inputTownName, cityEnd := extractTownNameFromSearch(boundary, searchAddr)
 	if inputTownName == "" {
 		// No town name extracted - check if the content after city is purely numeric.
 		// Purely numeric content (e.g., "南関町73") means the digits are being wrongly
 		// matched to a place name (e.g., "大字今"), so flag as mismatch.
 		// Non-numeric content (e.g., "8条寺ノ内町:10" from kanji conversion of "八条...")
 		// may contain a valid place name that just starts with a digit.
-		cityEnd := boundary.Find(searchAddr)
 		if cityEnd > 0 && cityEnd < len(searchAddr) {
 			afterCity := searchAddr[cityEnd:]
 			if isPureNumericContent(afterCity) {
@@ -98,14 +97,15 @@ func hasTownNameMismatch(boundary *util.CityBoundary, searchAddr string, result 
 	return true
 }
 
-// extractTownNameFromSearch extracts the town name portion from searchAddr.
+// extractTownNameFromSearch extracts the town name portion from searchAddr,
+// along with the city boundary index it was cut at so callers can reuse it.
 //
 //	e.g., "天王寺区烏ヶ辻町74" -> "烏ヶ辻町"
 //	e.g., "千代田区紀尾井町1@:3" -> "紀尾井町"
-func extractTownNameFromSearch(boundary *util.CityBoundary, searchAddr string) string {
+func extractTownNameFromSearch(boundary *util.CityBoundary, searchAddr string) (string, int) {
 	cityEndIdx := boundary.Find(searchAddr)
 	if cityEndIdx <= 0 || cityEndIdx >= len(searchAddr) {
-		return ""
+		return "", cityEndIdx
 	}
 
 	afterCity := searchAddr[cityEndIdx:]
@@ -114,9 +114,9 @@ func extractTownNameFromSearch(boundary *util.CityBoundary, searchAddr string) s
 	// e.g., "烏ヶ辻町74" -> "烏ヶ辻町"
 	// e.g., "紀尾井町1@:3" -> "紀尾井町"
 	if idx := strings.IndexAny(afterCity, "0123456789@:-"); idx >= 0 {
-		return afterCity[:idx]
+		return afterCity[:idx], cityEndIdx
 	}
-	return afterCity
+	return afterCity, cityEndIdx
 }
 
 // Used to distinguish purely numeric content (e.g., "73") from content with place name

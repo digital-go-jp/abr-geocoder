@@ -173,7 +173,7 @@ func TestExtractTownNameFromSearch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := extractTownNameFromSearch(nil, tt.searchAddr); got != tt.want {
+			if got, _ := extractTownNameFromSearch(nil, tt.searchAddr); got != tt.want {
 				t.Errorf("extractTownNameFromSearch(%q) = %q, want %q", tt.searchAddr, got, tt.want)
 			}
 		})
