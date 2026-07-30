@@ -672,24 +672,26 @@ func startsWithAddressComponent(after string) bool {
 // ("本町6の1丁目") or a trailing Nの/Nノ koaza as used in Ishikawa
 // ("金沢市天池町1ノ").
 func isNoParticleBlock(after string) bool {
-	runes := []rune(after)
-	if len(runes) == 0 || (runes[0] != 'の' && runes[0] != 'ノ') {
+	first, size := utf8.DecodeRuneInString(after)
+	if first != 'の' && first != 'ノ' {
 		return false
 	}
-	return len(runes) == 1 || char.IsASCIIDigit(runes[1])
+	if len(after) == size {
+		return true
+	}
+	second, _ := utf8.DecodeRuneInString(after[size:])
+	return char.IsASCIIDigit(second)
 }
 
 // isKanjiDigitChome matches kanji+digit sequences that lead into 丁目, as in
 // Hokkaido Nakashibetsu-style addresses ("中標津町東1北2丁目"), where
 // digit+kanji+digit+丁目 forms a single location identifier.
 func isKanjiDigitChome(after string) bool {
-	runes := []rune(after)
-	if len(runes) < 2 {
-		return false
-	}
+	first, size := utf8.DecodeRuneInString(after)
 	// CJK Unified Ideographs range
-	if runes[0] < 0x4E00 || runes[0] > 0x9FFF {
+	if first < 0x4E00 || first > 0x9FFF {
 		return false
 	}
-	return char.IsASCIIDigit(runes[1]) && strings.Contains(after, "丁目")
+	second, _ := utf8.DecodeRuneInString(after[size:])
+	return char.IsASCIIDigit(second) && strings.Contains(after, "丁目")
 }

@@ -16,11 +16,14 @@ func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []m
 		return results
 	}
 
+	// originalAddr is the same for every candidate, so its bigrams are built once.
+	origBigrams := buildBigrams([]rune(originalAddr))
+
 	bestIdx := 0
-	bestSim := jaccardSimilarity(originalAddr, buildMatchedAddress(&results[0]))
+	bestSim := jaccardAgainst(originalAddr, origBigrams, buildMatchedAddress(&results[0]))
 
 	for i := 1; i < len(results); i++ {
-		sim := jaccardSimilarity(originalAddr, buildMatchedAddress(&results[i]))
+		sim := jaccardAgainst(originalAddr, origBigrams, buildMatchedAddress(&results[i]))
 		if sim > bestSim {
 			bestSim = sim
 			bestIdx = i
@@ -45,10 +48,15 @@ func buildMatchedAddress(r *model.MatchedResult) string {
 
 // jaccardSimilarity calculates bigram-based Jaccard similarity between two strings.
 func jaccardSimilarity(s1, s2 string) float64 {
+	return jaccardAgainst(s1, buildBigrams([]rune(s1)), s2)
+}
+
+// jaccardAgainst is jaccardSimilarity with s1's bigrams supplied by the caller,
+// so comparing many candidates against one string builds them only once.
+func jaccardAgainst(s1 string, bigrams1 map[string]struct{}, s2 string) float64 {
 	if s1 == s2 {
 		return 1.0
 	}
-	bigrams1 := buildBigrams([]rune(s1))
 	bigrams2 := buildBigrams([]rune(s2))
 	if len(bigrams1) == 0 || len(bigrams2) == 0 {
 		return 0.0
