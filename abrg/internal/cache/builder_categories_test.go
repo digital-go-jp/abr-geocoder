@@ -77,7 +77,7 @@ func newCategoryBuildCache(t *testing.T, category string) (string, *sql.DB) {
 	}
 
 	cfg := &Config{DBVersion: "test", EnabledPref: "13", EnabledCategory: category, EnabledPos: "true"}
-	if _, err := buildCacheTables(ctx, conn, cfg); err != nil {
+	if err := buildCacheTables(ctx, conn, cfg, make(map[string]float64)); err != nil {
 		t.Fatalf("buildCacheTables(%s): %v", category, err)
 	}
 	if _, err := conn.ExecContext(ctx, "DETACH pg"); err != nil {

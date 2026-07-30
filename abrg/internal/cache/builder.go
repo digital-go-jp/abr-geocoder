@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"maps"
 	"os"
 	"regexp"
 	"strconv"
@@ -51,11 +50,9 @@ func Build(ctx context.Context, cachePath string) error {
 	}
 	phaseSec["schema"] = time.Since(schemaStart).Seconds()
 
-	loadPhaseSec, err := loadFromPostgres(ctx, conn)
-	if err != nil {
+	if err := loadFromPostgres(ctx, conn, phaseSec); err != nil {
 		return fmt.Errorf("load from PostgreSQL: %w", err)
 	}
-	maps.Copy(phaseSec, loadPhaseSec)
 
 	totalSec := time.Since(startTime).Seconds()
 	slog.Debug("cache build timing",
@@ -138,9 +135,7 @@ func cacheMemoryLimit() string {
 
 // Category-specific tables must load before basic tables (cache_machiaza has CTEs
 // that aggregate counts from category tables).
-func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, error) {
-	phaseSec := make(map[string]float64)
-
+func loadFromPostgres(ctx context.Context, conn *sql.DB, phaseSec map[string]float64) error {
 	ctx, cancel := context.WithTimeout(ctx, 900*time.Second) // Large datasets need 10+ min
 	defer cancel()
 
@@ -150,115 +145,97 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB) (map[string]float64, er
 
 	pgExtStart := time.Now()
 	if err := duck.LoadExtension(ctx, conn, "postgres"); err != nil {
-		return nil, fmt.Errorf("failed to load postgres extension: %w", err)
+		return fmt.Errorf("failed to load postgres extension: %w", err)
 	}
 	phaseSec["pg_extension"] = time.Since(pgExtStart).Seconds()
 
 	dbCfg := db.LoadDBConfigFromEnv()
 	secretSQL := db.BuildPostgresSecretSQL(dbCfg, "pg_secret")
 	if _, err := conn.ExecContext(ctx, secretSQL); err != nil {
-		return nil, fmt.Errorf("create postgres secret: %w", err)
+		return fmt.Errorf("create postgres secret: %w", err)
 	}
 
 	attachStart := time.Now()
 	attachSQL := db.BuildPostgresAttachSQL(dbCfg.SSLMode, "pg_secret", true)
 	if _, err := conn.ExecContext(ctx, attachSQL); err != nil {
-		return nil, fmt.Errorf("failed to attach PostgreSQL database: %w", err)
+		return fmt.Errorf("failed to attach PostgreSQL database: %w", err)
 	}
 	phaseSec["attach"] = time.Since(attachStart).Seconds()
 
 	cfg, err := loadConfigFromTable(ctx, conn, "pg."+db.TableABRDBConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config from PostgreSQL: %w", err)
+		return fmt.Errorf("failed to load config from PostgreSQL: %w", err)
 	}
 	category := cfg.EnabledCategory
 	if category == "" {
-		return nil, fmt.Errorf("enabled_category not configured in PostgreSQL: run 'abrdb init' first")
+		return fmt.Errorf("enabled_category not configured in PostgreSQL: run 'abrdb init' first")
 	}
 
 	defer func() {
 		_, _ = conn.ExecContext(context.Background(), "DETACH pg;")
 	}()
 
-	buildSec, err := buildCacheTables(ctx, conn, cfg)
-	if err != nil {
-		return nil, err
-	}
-	maps.Copy(phaseSec, buildSec)
-
-	return phaseSec, nil
+	return buildCacheTables(ctx, conn, cfg, phaseSec)
 }
 
 // buildCacheTables creates and populates every cache table for the configured
 // category, creates the indexes, and saves the configuration. The source
 // PostgreSQL database must already be attached as pg.
-func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config) (map[string]float64, error) {
-	phaseSec := make(map[string]float64)
-
+func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec map[string]float64) error {
 	category := cfg.EnabledCategory
 	switch category {
 	case "basic", "rsdtdsp", "parcel", "all":
 	default:
-		return nil, fmt.Errorf("unknown category: %q", category)
+		return fmt.Errorf("unknown category: %q", category)
 	}
 	if category == "rsdtdsp" || category == "all" {
 		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	if category == "parcel" || category == "all" {
 		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	basicSec, err := insertBasicTables(ctx, conn, cfg)
-	if err != nil {
-		return nil, err
+	if err := insertBasicTables(ctx, conn, cfg, phaseSec); err != nil {
+		return err
 	}
-	maps.Copy(phaseSec, basicSec)
 
 	indexStart := time.Now()
 	if err := execSchemaSQL(ctx, conn, "indexes", schema.GetCreateIndexesSQL); err != nil {
-		return nil, err
+		return err
 	}
 	phaseSec["indexes"] = time.Since(indexStart).Seconds()
 
 	spatialStart := time.Now()
 	if err := execSchemaSQL(ctx, conn, "spatial indexes", schema.GetCreateSpatialIndexesSQL); err != nil {
-		return nil, err
+		return err
 	}
 	phaseSec["spatial_indexes"] = time.Since(spatialStart).Seconds()
 
 	if err := saveConfigToCache(ctx, conn, cfg); err != nil {
-		return nil, fmt.Errorf("failed to save config: %w", err)
+		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	return phaseSec, nil
+	return nil
 }
 
-func insertBasicTables(ctx context.Context, conn *sql.DB, cfg *Config) (map[string]float64, error) {
-	phaseSec := make(map[string]float64)
-
-	sec, err := execTimed(ctx, conn, "insert", "machiaza", buildInsertMachiazaSQL(cfg.HasResidential(), cfg.HasParcel()))
-	if err != nil {
-		return nil, err
+func insertBasicTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec map[string]float64) error {
+	inserts := []struct{ name, stmt string }{
+		{"machiaza", buildInsertMachiazaSQL(cfg.HasResidential(), cfg.HasParcel())},
+		{"city", insertCitySQL},
+		{"pref", insertPrefSQL},
 	}
-	phaseSec["machiaza"] = sec
-
-	sec, err = execTimed(ctx, conn, "insert", "city", insertCitySQL)
-	if err != nil {
-		return nil, err
+	for _, in := range inserts {
+		sec, err := execTimed(ctx, conn, "insert", in.name, in.stmt)
+		if err != nil {
+			return err
+		}
+		phaseSec[in.name] = sec
 	}
-	phaseSec["city"] = sec
-
-	sec, err = execTimed(ctx, conn, "insert", "pref", insertPrefSQL)
-	if err != nil {
-		return nil, err
-	}
-	phaseSec["pref"] = sec
-
-	return phaseSec, nil
+	return nil
 }
 
 func saveConfigToCache(ctx context.Context, conn *sql.DB, cfg *Config) error {
