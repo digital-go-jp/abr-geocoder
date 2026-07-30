@@ -1,4 +1,4 @@
-package transform
+package matching
 
 // Kyoto-specific address pattern handling.
 // Kyoto uses unique street name patterns (通り名) like "寺町通御池上る".
@@ -9,10 +9,10 @@ import (
 	"abrg/internal/model"
 )
 
-// MergeKyotoStToResults adds kyoto_st from basicResults to dest results.
+// mergeKyotoStToResults adds kyoto_st from basicResults to dest results.
 // Parcel/rsdtdsp data doesn't include kyoto_st, so we need to merge it from basic results.
 // Also updates machiaza_id and rsdt_addr_flg to use basic's values (with kyoto_st detail).
-func MergeKyotoStToResults(destResults []model.MatchedResult, basicResults []model.MatchedResult) {
+func mergeKyotoStToResults(destResults []model.MatchedResult, basicResults []model.MatchedResult) {
 	if len(basicResults) == 0 || basicResults[0].StructuredAddress.KyotoSt == nil {
 		return
 	}
@@ -40,10 +40,10 @@ func MergeKyotoStToResults(destResults []model.MatchedResult, basicResults []mod
 	}
 }
 
-// BuildSearchAddrWithoutKyotoSt builds searchAddr for parcel/rsdtdsp searches from structured_address.
+// buildSearchAddrWithoutKyotoSt builds searchAddr for parcel/rsdtdsp searches from structured_address.
 // Excludes kyoto_st since parcel/rsdtdsp data doesn't include it.
 // e.g., structured_address with kyoto_st="寺町通御池上る" -> "京都市中京区上本能寺前町:488"
-func BuildSearchAddrWithoutKyotoSt(sa *model.StructuredAddress, afterColon string) string {
+func buildSearchAddrWithoutKyotoSt(sa *model.StructuredAddress, afterColon string) string {
 	var b strings.Builder
 	if sa.City != nil {
 		b.WriteString(*sa.City)
