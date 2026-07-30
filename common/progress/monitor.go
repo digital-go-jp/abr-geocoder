@@ -7,4 +7,7 @@ type Monitor interface {
 	UpdateProgress(delta int64)
 	CompleteTask()
 	Cancel()
+	// StartStage displays a step that cannot be tracked by count, and returns
+	// the function that ends the display.
+	StartStage(name string) func()
 }

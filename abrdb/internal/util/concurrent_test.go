@@ -148,6 +148,8 @@ func (m *mockMonitor) CompleteTask() {
 	m.completeCalled = true
 }
 
+func (m *mockMonitor) StartStage(string) func() { return func() {} }
+
 func (m *mockMonitor) Cancel() {
 	m.cancelCalled = true
 }

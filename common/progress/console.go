@@ -2,26 +2,20 @@ package progress
 
 import (
 	"fmt"
-	"os"
-	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 )
 
-// It shows: [percentage] current/total | Rate: X/sec | Avg: Y/sec | ETA: Zs
+// Console tracks a task of known size on one terminal line:
+// [percentage] current/total | Rate: X/sec | Avg: Y/sec | ETA: Zs
 type Console struct {
-	mu        sync.Mutex
+	line      line
 	startTime time.Time
 	taskName  string
 	total     int64
 	current   atomic.Int64
 	isActive  bool
-	lastWidth int
 	lastCount int64
-
-	stop chan struct{} // signals ticker to stop
-	done chan struct{} // signals ticker has stopped
 }
 
 func NewConsole() *Console {
@@ -30,28 +24,17 @@ func NewConsole() *Console {
 
 // StartTask begins tracking a new task
 func (m *Console) StartTask(name string, total int64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	termMu.Lock()
+	defer termMu.Unlock()
 
 	m.taskName = name
 	m.total = total
 	m.current.Store(0)
 	m.startTime = time.Now()
 	m.isActive = true
-	m.lastWidth = 0
 	m.lastCount = 0
 
-	m.stop = make(chan struct{})
-	m.done = make(chan struct{})
-
-	// Print initial progress
-	m.printProgress()
-
-	// Start background ticker for periodic updates
-	// Capture channels for goroutine to avoid race with stopTicker setting them to nil
-	stop := m.stop
-	done := m.done
-	go m.tickerLoop(stop, done)
+	m.line.start(m.render)
 }
 
 // UpdateProgress updates the current progress
@@ -64,80 +47,47 @@ func (m *Console) UpdateProgress(delta int64) {
 
 // CompleteTask marks the current task as complete
 func (m *Console) CompleteTask() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	termMu.Lock()
+	defer termMu.Unlock()
 
 	if !m.isActive {
 		return
 	}
-
-	m.stopTicker()
+	// Marked finished before the teardown, which releases termMu while it waits
+	// for the refresh goroutine: a Cancel arriving in that window has to see a
+	// task that is already over instead of tearing it down a second time.
+	m.isActive = false
 
 	// Set to 100% and print final progress
 	m.current.Store(m.total)
-	m.printProgress()
-	fmt.Fprintf(os.Stderr, "\n")
-	m.isActive = false
-	m.lastWidth = 0
+	m.line.complete(m.render())
 }
 
 // Cancel cancels the current task
 func (m *Console) Cancel() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	termMu.Lock()
+	defer termMu.Unlock()
 
 	if !m.isActive {
 		return
 	}
-
-	m.stopTicker()
-
-	// Clear the progress bar
-	fmt.Fprintf(os.Stderr, "\r%s\r", strings.Repeat(" ", max(m.lastWidth, 1)))
 	m.isActive = false
-	m.lastWidth = 0
+
+	m.line.remove()
 }
 
-// stopTicker stops the background ticker goroutine.
-// Must be called with m.mu held. Temporarily releases lock to avoid deadlock.
-func (m *Console) stopTicker() {
-	if m.stop == nil {
-		return
-	}
-	stop := m.stop
-	done := m.done
-	m.stop = nil
-	m.done = nil
-
-	m.mu.Unlock()
-	close(stop)
-	<-done
-	m.mu.Lock()
+// StartStage shows how long a step with no countable items has been running,
+// and returns the function that takes the line off the screen. The stage line
+// replaces the task line, so it belongs between tasks rather than inside one.
+func (m *Console) StartStage(name string) func() {
+	return startStage(name).complete
 }
 
-func (m *Console) tickerLoop(stop, done chan struct{}) {
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-	defer close(done)
-
-	for {
-		select {
-		case <-stop:
-			return
-		case <-ticker.C:
-			m.mu.Lock()
-			if m.isActive {
-				m.printProgress()
-			}
-			m.mu.Unlock()
-		}
-	}
-}
-
-func (m *Console) printProgress() {
+// render builds the progress line and advances the per-second rate baseline.
+// Must be called with termMu held.
+func (m *Console) render() string {
 	if m.total == 0 {
-		m.lastWidth = 0
-		return
+		return ""
 	}
 
 	current := m.current.Load()
@@ -157,24 +107,12 @@ func (m *Console) printProgress() {
 		eta = time.Duration(float64(m.total-current)/avgRate) * time.Second
 	}
 
-	prevWidth := m.lastWidth
-	var content string
 	if m.taskName != "" {
-		content = fmt.Sprintf("%s: [%6.2f%%] %d/%d | Rate: %.0f/sec | Avg: %.0f/sec | ETA: %-10s",
+		return fmt.Sprintf("%s: [%6.2f%%] %d/%d | Rate: %.0f/sec | Avg: %.0f/sec | ETA: %-10s",
 			m.taskName, percentage, current, m.total, rate, avgRate, formatDuration(eta))
-	} else {
-		content = fmt.Sprintf("[%6.2f%%] %d/%d | Rate: %.0f/sec | Avg: %.0f/sec | ETA: %-10s",
-			percentage, current, m.total, rate, avgRate, formatDuration(eta))
 	}
-
-	displayWidth := len(content)
-	padding := max(prevWidth-displayWidth, 0)
-	if padding > 0 {
-		content += strings.Repeat(" ", padding)
-	}
-
-	fmt.Fprintf(os.Stderr, "\r%s", content)
-	m.lastWidth = max(prevWidth, displayWidth)
+	return fmt.Sprintf("[%6.2f%%] %d/%d | Rate: %.0f/sec | Avg: %.0f/sec | ETA: %-10s",
+		percentage, current, m.total, rate, avgRate, formatDuration(eta))
 }
 
 func formatDuration(d time.Duration) string {
