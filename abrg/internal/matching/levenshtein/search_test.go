@@ -23,6 +23,10 @@ func (s *stubCityQuerier) FindBasicByPrefix(_ context.Context, _ repository.Pref
 	return nil, nil
 }
 
+func (s *stubCityQuerier) FindCandidateLgCodes(_ context.Context, _ repository.CityFuzzyParams) ([]string, error) {
+	return nil, nil
+}
+
 func (s *stubCityQuerier) FindCityByAddress(_ context.Context, params repository.CitySearchParams) (*repository.CityResult, error) {
 	s.gotParams = params
 	return s.city, nil
@@ -37,6 +41,10 @@ func (failingPrefixQuerier) FindBasicByLevenshtein(context.Context, repository.L
 
 func (failingPrefixQuerier) FindBasicByPrefix(context.Context, repository.PrefixParams) ([]repository.BasicResult, error) {
 	return nil, errors.New("prefix query failed")
+}
+
+func (failingPrefixQuerier) FindCandidateLgCodes(context.Context, repository.CityFuzzyParams) ([]string, error) {
+	return nil, nil
 }
 
 func (failingPrefixQuerier) FindCityByAddress(context.Context, repository.CitySearchParams) (*repository.CityResult, error) {

@@ -30,3 +30,21 @@ type SearchParams struct {
 
 	CityBoundary *util.CityBoundary // City-boundary matcher for longest-prefix city resolution
 }
+
+// hasRegionAnchor reports whether the params carry a code that scopes the
+// machiaza search. It mirrors the filters FindBasicByLevenshtein applies: a
+// machiaza ID alone is not one, since it only narrows within an lg_code.
+func (p SearchParams) hasRegionAnchor() bool {
+	return p.LgCode != "" || (p.Pref != "" && p.Pref != model.All)
+}
+
+// cityPart returns the leading city name of the search address, or "" when the
+// address names no city. A misspelled city name still yields one, which is what
+// the search scopes on when no code was detected.
+func (p SearchParams) cityPart() string {
+	end := p.CityBoundary.Find(p.SearchAddr)
+	if end <= 0 {
+		return ""
+	}
+	return p.SearchAddr[:end]
+}

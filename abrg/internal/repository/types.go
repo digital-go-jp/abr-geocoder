@@ -33,11 +33,12 @@ type BasicResult struct {
 
 // LevenshteinParams holds parameters for fuzzy Levenshtein search.
 type LevenshteinParams struct {
-	SearchAddr string // Address to search for (used for editdist3 and location filter extraction)
-	PrefCode   string // Prefecture code filter
-	LgCode     string // Local government code filter
-	MachiazaID string // Machiaza ID filter (first 4 chars used for prefix match)
-	Limit      int    // Desired result limit (internally multiplied for candidate pool)
+	SearchAddr string   // Address to search for (used for editdist3 and location filter extraction)
+	PrefCode   string   // Prefecture code filter
+	LgCode     string   // Local government code filter
+	MachiazaID string   // Machiaza ID filter (first 4 chars used for prefix match)
+	LgCodes    []string // Candidate city codes, used as the filter when no single code is known
+	Limit      int      // Desired result limit (internally multiplied for candidate pool)
 }
 
 // PrefixParams holds parameters for prefix-based address matching.

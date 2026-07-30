@@ -293,6 +293,41 @@ func TestFindCityRecordFuzzy(t *testing.T) {
 	})
 }
 
+func TestFindCandidateLgCodes(t *testing.T) {
+	repo := setupRepo(t)
+	ctx := context.Background()
+
+	t.Run("misspelled city name without a prefecture", func(t *testing.T) {
+		codes, err := repo.FindCandidateLgCodes(ctx, CityFuzzyParams{CityPart: "1000代田区", MaxEditDistance: 3})
+		if err != nil {
+			t.Fatalf("FindCandidateLgCodes() error = %v", err)
+		}
+		if len(codes) == 0 || codes[0] != chiyodaLgCode {
+			t.Errorf("FindCandidateLgCodes() = %v, want %q first", codes, chiyodaLgCode)
+		}
+	})
+
+	t.Run("name matching no city returns nothing", func(t *testing.T) {
+		codes, err := repo.FindCandidateLgCodes(ctx, CityFuzzyParams{CityPart: "ヨクワカラナイ市", MaxEditDistance: 3})
+		if err != nil {
+			t.Fatalf("FindCandidateLgCodes() error = %v", err)
+		}
+		if len(codes) != 0 {
+			t.Errorf("FindCandidateLgCodes() = %v, want none", codes)
+		}
+	})
+
+	t.Run("candidates stay within the cap", func(t *testing.T) {
+		codes, err := repo.FindCandidateLgCodes(ctx, CityFuzzyParams{CityPart: "区", MaxEditDistance: 30})
+		if err != nil {
+			t.Fatalf("FindCandidateLgCodes() error = %v", err)
+		}
+		if len(codes) > maxCandidateLgCodes {
+			t.Errorf("FindCandidateLgCodes() returned %d codes, want at most %d", len(codes), maxCandidateLgCodes)
+		}
+	})
+}
+
 func TestFindPrefecture(t *testing.T) {
 	repo := setupRepo(t)
 	ctx := context.Background()

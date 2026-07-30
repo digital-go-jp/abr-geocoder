@@ -122,6 +122,17 @@ func (s *stubRepo) FindCityRecordFuzzy(_ context.Context, params repository.City
 	return s.fuzzyByPart[params.CityPart], nil
 }
 
+func (s *stubRepo) FindCandidateLgCodes(_ context.Context, params repository.CityFuzzyParams) ([]string, error) {
+	s.record("FindCandidateLgCodes(%q, pref=%q, dist=%d)", params.CityPart, params.PrefCode, params.MaxEditDistance)
+	if err := s.injected("FindCandidateLgCodes"); err != nil {
+		return nil, err
+	}
+	if cr := s.fuzzyByPart[params.CityPart]; cr != nil {
+		return []string{cr.LgCode}, nil
+	}
+	return nil, nil
+}
+
 func (s *stubRepo) FindPrefecture(_ context.Context, prefCode string) (*repository.PrefectureResult, error) {
 	s.record("FindPrefecture(%q)", prefCode)
 	if err := s.injected("FindPrefecture"); err != nil {

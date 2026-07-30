@@ -19,6 +19,7 @@ type levenshteinQuerier interface {
 	FindBasicByLevenshtein(ctx context.Context, params repository.LevenshteinParams) ([]repository.BasicResult, error)
 	FindBasicByPrefix(ctx context.Context, params repository.PrefixParams) ([]repository.BasicResult, error)
 	FindCityByAddress(ctx context.Context, params repository.CitySearchParams) (*repository.CityResult, error)
+	FindCandidateLgCodes(ctx context.Context, params repository.CityFuzzyParams) ([]string, error)
 }
 
 // Search performs fuzzy address matching using Levenshtein distance.
@@ -74,6 +75,18 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		return nil, fmt.Errorf("unsupported category for Levenshtein search: %s", p.Category)
 	}
 
+	// Every machiaza query needs a region filter: without one editdist3 runs
+	// over every machiaza in the country, seconds of CPU for a guess spanning
+	// all of Japan. An address carrying no code is scoped by the cities its
+	// city name is closest to, and one naming no city at all is not searched.
+	var lgCodes []string
+	if !p.hasRegionAnchor() {
+		var err error
+		if lgCodes, err = candidateLgCodes(ctx, repo, p); err != nil || len(lgCodes) == 0 {
+			return nil, err
+		}
+	}
+
 	searchNumbers := ExtractSearchNumbers(p.SearchAddr)
 
 	queryCtx, cancel := context.WithTimeout(ctx, queryTimeout)
@@ -84,6 +97,7 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		PrefCode:   p.Pref,
 		LgCode:     p.LgCode,
 		MachiazaID: p.MachiazaID,
+		LgCodes:    lgCodes,
 		Limit:      p.Limit,
 	})
 	if err != nil {
@@ -94,6 +108,25 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 	}
 
 	return processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Category, p.Limit), nil
+}
+
+// candidateLgCodes resolves the city name in the address to the codes of the
+// cities closest to it. The lookup runs over cache_city, one row per city and
+// ward, so an address that resolves to nothing costs one cheap query.
+func candidateLgCodes(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]string, error) {
+	cityPart := p.cityPart()
+	if cityPart == "" {
+		return nil, nil
+	}
+
+	queryCtx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	return repo.FindCandidateLgCodes(queryCtx, repository.CityFuzzyParams{
+		CityPart:        cityPart,
+		PrefCode:        p.Pref,
+		MaxEditDistance: util.MaxEditDistance(len(cityPart)),
+	})
 }
 
 // searchWithPrefixMatch searches for addresses where the DB's normalized_address is a prefix of searchAddr.
