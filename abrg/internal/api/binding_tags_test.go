@@ -14,7 +14,7 @@ import (
 // bindingTag returns the binding tag of a baseRequest field.
 func bindingTag(t *testing.T, field string) string {
 	t.Helper()
-	f, ok := reflect.TypeOf(baseRequest{}).FieldByName(field)
+	f, ok := reflect.TypeFor[baseRequest]().FieldByName(field)
 	if !ok {
 		t.Fatalf("baseRequest has no field %s", field)
 	}
@@ -24,7 +24,7 @@ func bindingTag(t *testing.T, field string) string {
 // rule returns the value of a "name=value" rule inside a binding tag.
 func rule(t *testing.T, tag, name string) string {
 	t.Helper()
-	for _, part := range strings.Split(tag, ",") {
+	for part := range strings.SplitSeq(tag, ",") {
 		if v, ok := strings.CutPrefix(part, name+"="); ok {
 			return v
 		}
