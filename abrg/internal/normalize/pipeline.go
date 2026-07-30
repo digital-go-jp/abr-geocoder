@@ -6,8 +6,44 @@
 // in the correct order and returns a reusable result for downstream processing.
 package normalize
 
+import "regexp"
+
 // TransformStep is a function that transforms a string and reports whether it changed.
 type TransformStep func(string) (string, bool)
+
+// Adapt wraps a func(string) string as a TransformStep by comparing input and output.
+func Adapt(fn func(string) string) TransformStep {
+	return func(s string) (string, bool) {
+		result := fn(s)
+		return result, result != s
+	}
+}
+
+// ReplaceRule pairs a pattern with its replacement. Rules in a table apply
+// in declaration order; the order is part of the normalization spec.
+type ReplaceRule struct {
+	Re   *regexp.Regexp
+	Repl string
+}
+
+// applyRules applies every rule to s in order.
+func applyRules(s string, rules []ReplaceRule) string {
+	for _, r := range rules {
+		s = r.Re.ReplaceAllString(s, r.Repl)
+	}
+	return s
+}
+
+// ApplyFirstMatch applies the first rule that changes s and reports whether
+// any rule matched.
+func ApplyFirstMatch(s string, rules []ReplaceRule) (string, bool) {
+	for _, r := range rules {
+		if next := r.Re.ReplaceAllString(s, r.Repl); next != s {
+			return next, true
+		}
+	}
+	return s, false
+}
 
 func ApplySteps(s string, steps []TransformStep) (string, bool) {
 	var changed bool
@@ -18,14 +54,6 @@ func ApplySteps(s string, steps []TransformStep) (string, bool) {
 		}
 	}
 	return s, changed
-}
-
-// Adapt wraps a func(string) string as a TransformStep by comparing input and output.
-func Adapt(fn func(string) string) TransformStep {
-	return func(s string) (string, bool) {
-		result := fn(s)
-		return result, result != s
-	}
 }
 
 var basicNormalizeSteps = []TransformStep{
