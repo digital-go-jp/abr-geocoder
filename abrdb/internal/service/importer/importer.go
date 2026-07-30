@@ -98,8 +98,8 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 	var updatedTables []string
 	seenTables := make(map[string]struct{})
 
-	// Read once: the setting cannot change between categories, and re-reading it
-	// per category would repeat the warning an invalid value logs.
+	// One read for the whole run: the limit is a process setting, and reading it
+	// is what reports an invalid value to the operator.
 	limit, _ := util.ConcurrencyLimit("ABRDB_IMPORT_CONCURRENCY")
 
 	// Process each category with timing
