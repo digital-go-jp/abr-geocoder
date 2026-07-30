@@ -86,7 +86,7 @@ func TestExtractUnmatchedParts_CaseTable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExtractUnmatchedParts(tt.normalizedAddr, tt.matchedAddr, tt.searchAddr)
+			got := ExtractUnmatchedParts(Addresses{Normalized: tt.normalizedAddr, Matched: tt.matchedAddr, Search: tt.searchAddr})
 			if !slices.Equal(got, tt.want) {
 				t.Errorf("ExtractUnmatchedParts(%q, %q, %q) = %v, want %v",
 					tt.normalizedAddr, tt.matchedAddr, tt.searchAddr, got, tt.want)

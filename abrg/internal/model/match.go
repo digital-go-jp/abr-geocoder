@@ -26,6 +26,9 @@ type MatchedResult struct {
 	StructuredAddress StructuredAddress `json:"structured_address"`
 	// Coordinates for geocoding (lon, lat) - internal use only, not exposed in normalize API response
 	Coordinates []float64 `json:"-"`
+	// Machiaza is set only for basic results, which are the ones the matcher
+	// can run a second-stage search from.
+	Machiaza MachiazaData `json:"-"`
 }
 
 // MatchResponse represents the match response

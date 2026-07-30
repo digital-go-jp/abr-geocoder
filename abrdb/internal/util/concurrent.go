@@ -17,16 +17,36 @@ import (
 // the source feed or exhaust PostgreSQL connections.
 const MaxConcurrency = 32
 
-// ConcurrencyLimit returns the worker limit configured in the named
+// Concurrency reports the worker limit of each stage that runs in parallel.
+// Configured is true when an operator set at least one of them; pool sizing
+// needs it, because with nothing configured the connection pool keeps the
+// driver default.
+type Concurrency struct {
+	Download   int
+	Import     int
+	Configured bool
+}
+
+// LoadConcurrency reads the per-stage worker limits from the environment.
+// These two variable names are the only place the stages are named.
+func LoadConcurrency() Concurrency {
+	download, downloadSet := concurrencyLimit("ABRDB_DOWNLOAD_CONCURRENCY")
+	imported, importSet := concurrencyLimit("ABRDB_IMPORT_CONCURRENCY")
+	return Concurrency{
+		Download:   download,
+		Import:     imported,
+		Configured: downloadSet || importSet,
+	}
+}
+
+// concurrencyLimit returns the worker limit configured in the named
 // environment variable, and whether that variable held a usable value. Unset,
 // invalid, or non-positive values fall back to GOMAXPROCS (container-aware)
 // and report false; values above MaxConcurrency are clamped.
 //
-// Callers that only size a worker pool ignore the second value. Pool sizing
-// needs it: a stage configured to a value that happens to equal GOMAXPROCS
-// still counts as configured, while a stage with no setting at all leaves the
-// connection pool at the driver default.
-func ConcurrencyLimit(envName string) (int, bool) {
+// A stage configured to a value that happens to equal GOMAXPROCS still counts
+// as configured.
+func concurrencyLimit(envName string) (int, bool) {
 	v, ok := os.LookupEnv(envName)
 	if !ok || v == "" {
 		return runtime.GOMAXPROCS(0), false

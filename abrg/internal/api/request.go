@@ -17,8 +17,9 @@ import (
 )
 
 // baseRequest contains common fields for all requests. The category list and
-// the limit range restate model.Category and validate.MinLimit/MaxLimit,
-// because binding tags must be literals.
+// the limit range restate model.Categories and validate.MinLimit/MaxLimit,
+// because binding tags must be literals; binding_tags_test.go fails if they
+// drift apart.
 type baseRequest struct {
 	Category string `form:"category" binding:"omitempty,oneof=all basic rsdtdsp parcel"`
 	Pref     string `form:"pref" binding:"omitempty"`

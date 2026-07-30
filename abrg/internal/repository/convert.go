@@ -7,20 +7,10 @@ import (
 	"abrg/internal/model"
 )
 
-// buildIDs constructs model.IDs from already-converted fields.
+// BuildIDs constructs model.IDs from already-converted fields.
 // Invalid-length LgCode or MachiazaID values are treated as nil with a warning log.
-func buildIDs(
-	lgCode, machiazaID string,
-	rsdtAddrFlg *string,
-	hasChome bool,
-	parcelCount, rsdtdspCount int,
-) model.IDs {
-	ids := model.IDs{
-		RsdtAddrFlg:  rsdtAddrFlg,
-		HasChome:     hasChome,
-		ParcelCount:  parcelCount,
-		RsdtdspCount: rsdtdspCount,
-	}
+func BuildIDs(lgCode, machiazaID string, rsdtAddrFlg *string) model.IDs {
+	ids := model.IDs{RsdtAddrFlg: rsdtAddrFlg}
 	if lgCode != "" {
 		if len(lgCode) == model.LgCodeLength {
 			ids.LgCode = &lgCode
@@ -70,7 +60,16 @@ func basicSA(br *BasicResult) model.StructuredAddress {
 
 // basicIDs builds IDs from BasicResult's ID fields.
 func basicIDs(br *BasicResult) model.IDs {
-	return buildIDs(br.LgCode, br.MachiazaID, br.RsdtAddrFlg, br.HasChome, br.ParcelCount, br.RsdtdspCount)
+	return BuildIDs(br.LgCode, br.MachiazaID, br.RsdtAddrFlg)
+}
+
+// basicMachiaza builds the matcher's view of what the cache holds under a machiaza.
+func basicMachiaza(br *BasicResult) model.MachiazaData {
+	return model.MachiazaData{
+		HasChome:     br.HasChome,
+		ParcelCount:  br.ParcelCount,
+		RsdtdspCount: br.RsdtdspCount,
+	}
 }
 
 // BasicResultToPartialNormalized converts a BasicResult to a partial MatchedResult.
@@ -81,12 +80,15 @@ func BasicResultToPartialNormalized(br *BasicResult) model.MatchedResult {
 		IDs:               basicIDs(br),
 		StructuredAddress: basicSA(br),
 		Coordinates:       coordsFromOpt(br.Lon, br.Lat),
+		Machiaza:          basicMachiaza(br),
 	}
 }
 
 // BasicResultToNormalized converts a BasicResult to model.MatchedResult.
 func BasicResultToNormalized(br *BasicResult) model.MatchedResult {
-	return toNormalizedResult(basicSA(br), basicIDs(br), br.Lon, br.Lat)
+	result := toNormalizedResult(basicSA(br), basicIDs(br), br.Lon, br.Lat)
+	result.Machiaza = basicMachiaza(br)
+	return result
 }
 
 // ResidentialResultToNormalized converts a ResidentialResult to model.MatchedResult.
@@ -119,9 +121,4 @@ func ParcelResultToNormalized(pr *ParcelResult) model.MatchedResult {
 		PrcID:      pr.PrcID,
 	}
 	return toNormalizedResult(sa, ids, pr.Lon, pr.Lat)
-}
-
-// BuildBaseIDs builds common IDs (lg_code, machiaza_id, rsdt_addr_flg) for reverse geocoding.
-func BuildBaseIDs(lgCode, machiazaID string, rsdtAddrFlg *string) model.IDs {
-	return buildIDs(lgCode, machiazaID, rsdtAddrFlg, false, 0, 0)
 }

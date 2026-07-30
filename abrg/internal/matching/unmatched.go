@@ -19,7 +19,7 @@ func setUnmatchedAddress(result *model.MatchedResult, normalizedAddr, adjustedSe
 		}
 	}
 
-	unmatchedParts := unmatched.ExtractUnmatchedParts(normalizedAddr, result.MatchedAddress, adjustedSearchAddr)
+	unmatchedParts := unmatched.ExtractUnmatchedParts(unmatched.Addresses{Normalized: normalizedAddr, Matched: result.MatchedAddress, Search: adjustedSearchAddr})
 	if len(unmatchedParts) > 0 {
 		result.UnmatchedAddress = unmatchedParts
 		return

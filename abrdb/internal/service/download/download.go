@@ -76,7 +76,7 @@ func (s *service) DownloadPendingFiles(ctx context.Context) error {
 		return nil
 	}
 
-	limit, _ := util.ConcurrencyLimit("ABRDB_DOWNLOAD_CONCURRENCY")
+	limit := util.LoadConcurrency().Download
 
 	slog.Debug("starting file downloads",
 		"event", "download_files",

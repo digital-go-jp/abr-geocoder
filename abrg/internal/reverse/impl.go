@@ -224,7 +224,7 @@ func buildReverseFeature(sa model.StructuredAddress, ids model.IDs, lon, lat, di
 
 // buildBasicFeature builds a ReverseFeature for basic (town-level) data.
 func buildBasicFeature(b repository.ReverseBaseFields) model.ReverseFeature {
-	ids := repository.BuildBaseIDs(b.LgCode, b.MachiazaID, b.RsdtAddrFlg)
+	ids := repository.BuildIDs(b.LgCode, b.MachiazaID, b.RsdtAddrFlg)
 	return buildReverseFeature(b.BaseSA(), ids, b.Lon, b.Lat, b.Distance)
 }
 
@@ -235,7 +235,7 @@ func buildResidentialFeature(r repository.ReverseResidentialResult) model.Revers
 	sa.RsdtNum = r.RsdtNum
 	sa.RsdtNum2 = r.RsdtNum2
 
-	ids := repository.BuildBaseIDs(r.LgCode, r.MachiazaID, r.RsdtAddrFlg)
+	ids := repository.BuildIDs(r.LgCode, r.MachiazaID, r.RsdtAddrFlg)
 	ids.BlkID = r.BlkID
 	ids.RsdtID = r.RsdtID
 	ids.Rsdt2ID = r.Rsdt2ID
@@ -250,7 +250,7 @@ func buildParcelFeature(r repository.ReverseParcelResult) model.ReverseFeature {
 	sa.PrcNum2 = r.PrcNum2
 	sa.PrcNum3 = r.PrcNum3
 
-	ids := repository.BuildBaseIDs(r.LgCode, r.MachiazaID, r.RsdtAddrFlg)
+	ids := repository.BuildIDs(r.LgCode, r.MachiazaID, r.RsdtAddrFlg)
 	ids.PrcID = r.PrcID
 
 	return buildReverseFeature(sa, ids, r.Lon, r.Lat, r.Distance)

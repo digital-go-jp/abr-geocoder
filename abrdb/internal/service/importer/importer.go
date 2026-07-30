@@ -100,7 +100,7 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 
 	// One read for the whole run: the limit is a process setting, and reading it
 	// is what reports an invalid value to the operator.
-	limit, _ := util.ConcurrencyLimit("ABRDB_IMPORT_CONCURRENCY")
+	limit := util.LoadConcurrency().Import
 
 	// Process each category with timing
 	for _, cat := range category {

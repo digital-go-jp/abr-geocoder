@@ -88,15 +88,9 @@ func NewQueryExecutorFromEnv(ctx context.Context) (*QueryExecutor, error) {
 // GOMAXPROCS workers and counts at that. With no valid setting at all the
 // DSN stays untouched and the pgxpool default applies.
 func dsnWithPoolSize(dsn string) string {
-	workers := 0
-	anySet := false
-	for _, name := range []string{"ABRDB_IMPORT_CONCURRENCY", "ABRDB_DOWNLOAD_CONCURRENCY"} {
-		limit, set := util.ConcurrencyLimit(name)
-		anySet = anySet || set
-		workers = max(workers, limit)
-	}
-	if !anySet {
+	c := util.LoadConcurrency()
+	if !c.Configured {
 		return dsn
 	}
-	return dsn + "&pool_max_conns=" + strconv.Itoa(workers+4)
+	return dsn + "&pool_max_conns=" + strconv.Itoa(max(c.Download, c.Import)+4)
 }

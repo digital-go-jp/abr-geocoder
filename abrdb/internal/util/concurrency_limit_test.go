@@ -29,8 +29,8 @@ func TestConcurrencyLimit(t *testing.T) {
 			if tt.set {
 				t.Setenv(envName, tt.value)
 			}
-			if got, _ := ConcurrencyLimit(envName); got != tt.want {
-				t.Errorf("ConcurrencyLimit(%q=%q) = %d, want %d", envName, tt.value, got, tt.want)
+			if got, _ := concurrencyLimit(envName); got != tt.want {
+				t.Errorf("concurrencyLimit(%q=%q) = %d, want %d", envName, tt.value, got, tt.want)
 			}
 		})
 	}

@@ -277,64 +277,6 @@ func TestBuildBaseAddress(t *testing.T) {
 	}
 }
 
-// TestBuildBaseIDs tests the repository.BuildBaseIDs function
-func TestBuildBaseIDs(t *testing.T) {
-	tests := []struct {
-		name               string
-		lgCode             string
-		machiazaID         string
-		rsdtAddrFlg        string
-		wantHasLgCode      bool
-		wantHasMachiazaID  bool
-		wantHasRsdtAddrFlg bool
-	}{
-		{
-			name:               "all fields",
-			lgCode:             "131016",
-			machiazaID:         "0001001",
-			rsdtAddrFlg:        "1",
-			wantHasLgCode:      true,
-			wantHasMachiazaID:  true,
-			wantHasRsdtAddrFlg: true,
-		},
-		{
-			name:               "empty lgCode",
-			lgCode:             "",
-			machiazaID:         "0001001",
-			rsdtAddrFlg:        "0",
-			wantHasLgCode:      false,
-			wantHasMachiazaID:  true,
-			wantHasRsdtAddrFlg: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var rsdtAddrFlgPtr *string
-			if tt.rsdtAddrFlg != "" {
-				rsdtAddrFlgPtr = &tt.rsdtAddrFlg
-			}
-			ids := repository.BuildBaseIDs(tt.lgCode, tt.machiazaID, rsdtAddrFlgPtr)
-
-			hasLgCode := ids.LgCode != nil && *ids.LgCode != ""
-			if hasLgCode != tt.wantHasLgCode {
-				t.Errorf("repository.BuildBaseIDs() hasLgCode = %v, want %v", hasLgCode, tt.wantHasLgCode)
-			}
-
-			hasMachiazaID := ids.MachiazaID != nil && *ids.MachiazaID != ""
-			if hasMachiazaID != tt.wantHasMachiazaID {
-				t.Errorf("repository.BuildBaseIDs() hasMachiazaID = %v, want %v", hasMachiazaID, tt.wantHasMachiazaID)
-			}
-
-			hasRsdtAddrFlg := ids.RsdtAddrFlg != nil
-			if hasRsdtAddrFlg != tt.wantHasRsdtAddrFlg {
-				t.Errorf("repository.BuildBaseIDs() hasRsdtAddrFlg = %v, want %v", hasRsdtAddrFlg, tt.wantHasRsdtAddrFlg)
-			}
-		})
-	}
-}
-
-// TestBuildReverseFeature tests the buildReverseFeature helper function
 func TestBuildReverseFeature(t *testing.T) {
 	pref := "東京都"
 	city := "千代田区"

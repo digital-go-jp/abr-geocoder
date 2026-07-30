@@ -50,8 +50,7 @@ var (
 	// banOnly handles: N番 (at end) -> N
 	banOnly = regexp.MustCompile(`(\d+)番$`)
 	// banBuilding handles: N番+non-address-char -> N
-	// Excludes: 街館先屋戸町地耕ケ川通丁内
-	banBuilding = regexp.MustCompile(`(\d+)番([^\d街館先屋戸町地耕ケ川通丁内])`)
+	banBuilding = regexp.MustCompile(`(\d+)番([^\d` + banKeepChars + `])`)
 	// banHyphenGo handles: N番-M号 -> N-M
 	banHyphenGo = regexp.MustCompile(`(\d+)番-(\d+)号`)
 	// banHyphen handles: N番-M -> N-M (without 号)
@@ -97,8 +96,7 @@ var (
 
 var (
 	// bancho handles: 番町N+building -> 番町N building
-	// Excludes: 号, F, 街, 階, 丁
-	bancho = regexp.MustCompile(`(番町)(\d+)([^\d\s-号F街階丁])`)
+	bancho = regexp.MustCompile(`(番町)(\d+)([^\d\s-` + banchoKeepChars + `])`)
 	// banchoHyphenBuilding handles: 番町N-M+building -> 番町N-M building
 	banchoHyphenBuilding = regexp.MustCompile(`(番町\d+-\d+)([^\d\s-号])`)
 	// banchoBanchi handles: N番町M番地O -> N番町M-O
@@ -121,8 +119,7 @@ var (
 	// chome handles: 丁目N番 (at end) -> 丁目N
 	chome = regexp.MustCompile(`(丁目)(\d+)番$`)
 	// chomeNotEnd handles: 丁目N番+non-address-char -> 丁目N
-	// Excludes: の街先屋戸地
-	chomeNotEnd = regexp.MustCompile(`(丁目)(\d+)番([^\dの街先屋戸地])`)
+	chomeNotEnd = regexp.MustCompile(`(丁目)(\d+)番([^\d` + chomeBanKeepChars + `])`)
 )
 
 // -----------------------------------------------------------------------------
@@ -165,17 +162,27 @@ var (
 	// Groups: $1=digit, $2=の/ノ, $3=digits, $4=space/end
 	digitNoDigitGoEnd = regexp.MustCompile(`(\d)([のノ])(\d+)号([\s]|$)`)
 	// digitNoDigit handles: digit+の/ノ+digit+non-digit
-	// Excludes 町 and 丁 to preserve special address formats
 	// Groups: $1=digit, $2=の/ノ, $3=digits, $4=non-digit
-	digitNoDigit = regexp.MustCompile(`(\d)([のノ])(\d+)([^\d\s号町丁])`)
+	digitNoDigit = regexp.MustCompile(`(\d)([のノ])(\d+)([^\d\s` + noDigitKeepChars + `])`)
 	// digitNoDigitEnd handles: digit+の/ノ+digit (at end or space)
 	// Groups: $1=digit, $2=の/ノ, $3=digits, $4=space/end
 	digitNoDigitEnd = regexp.MustCompile(`(\d)([のノ])(\d+)([\s]|$)`)
 )
 
 // -----------------------------------------------------------------------------
-// String lists for validation
+// Address token vocabulary
 // -----------------------------------------------------------------------------
+//
+// Six sets answer variants of "does this character or word continue the
+// address, or start a building name?". They are deliberately not the same set,
+// so adding a suffix means picking the right one:
+//
+//   - noSpaceComponents / addressComponents — whole words, consulted after a
+//     number has already been recognized, to decide whether to split.
+//   - addressMarkers — whole words, consulted before any conversion, to decide
+//     whether hyphen conversion is worth attempting at all.
+//   - the four *KeepChars below — single characters, spliced into a negated
+//     regex class, to decide where one specific rule stops.
 
 // noSpaceComponents lists strings that should not have space separation after numbers.
 var noSpaceComponents = []string{
@@ -188,6 +195,18 @@ var addressComponents = []string{
 	"基線", "分区", "基北", "基南", "の通", "番通", "町内会", "林班", "字", "丁", "ノ町", "の町",
 	"部", "本通", "本松", "本杉", "本柳", "本木", "の坪", "ノ坪", "ケ村", "ヶ村", "か村", "カ村",
 }
+
+const (
+	// banKeepChars follow N番 without starting a building name, so 番 stays.
+	banKeepChars = "街館先屋戸町地耕ケ川通丁内"
+	// banchoKeepChars follow 番町N without starting a building name.
+	banchoKeepChars = "号F街階丁"
+	// chomeBanKeepChars follow 丁目N番 without starting a building name.
+	chomeBanKeepChars = "の街先屋戸地"
+	// noDigitKeepChars follow Nの/ノM as part of the same token, so no space
+	// is inserted and the の/ノ is left alone.
+	noDigitKeepChars = "号町丁"
+)
 
 // =============================================================================
 // Functions

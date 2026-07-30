@@ -2,6 +2,7 @@
 package model
 
 import (
+	"slices"
 	"strings"
 
 	"abrg/internal/char"
@@ -77,15 +78,13 @@ const (
 	CategoryParcel      Category = "parcel"
 )
 
+// Categories lists every category the engines implement.
+var Categories = []Category{CategoryAll, CategoryBasic, CategoryResidential, CategoryParcel}
+
 // Known reports whether c names a category the engines implement. The empty
 // string is known: callers treat it as CategoryAll.
 func (c Category) Known() bool {
-	switch c {
-	case "", CategoryAll, CategoryBasic, CategoryResidential, CategoryParcel:
-		return true
-	default:
-		return false
-	}
+	return c == "" || slices.Contains(Categories, c)
 }
 
 type NormalizeCategory string
@@ -105,10 +104,14 @@ type IDs struct {
 	RsdtID      *string `json:"rsdt_id"`
 	Rsdt2ID     *string `json:"rsdt2_id"`
 	PrcID       *string `json:"prc_id"`
-	// Internal metadata (not included in JSON output)
-	HasChome     bool `json:"-"` // True if this oaza has chome variations
-	ParcelCount  int  `json:"-"` // Number of parcel records for this machiaza
-	RsdtdspCount int  `json:"-"` // Number of rsdtdsp records for this machiaza
+}
+
+// MachiazaData describes what the cache holds under a machiaza. The matcher
+// reads it to pick the second-stage search; it is not part of any response.
+type MachiazaData struct {
+	HasChome     bool // The oaza has chome variations
+	ParcelCount  int  // Parcel records under this machiaza
+	RsdtdspCount int  // Residential records under this machiaza
 }
 
 type StructuredAddress struct {
