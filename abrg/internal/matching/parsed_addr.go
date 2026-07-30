@@ -139,10 +139,7 @@ func (p parsedAddress) String() string {
 func (p parsedAddress) numericParts() []string {
 	var numbers []string
 	for _, part := range p.Numbers {
-		numEnd := 0
-		for numEnd < len(part) && char.IsASCIIDigit(part[numEnd]) {
-			numEnd++
-		}
+		numEnd := skipDigits(part, 0)
 		if numEnd > 0 {
 			numbers = append(numbers, part[:numEnd])
 		} else {

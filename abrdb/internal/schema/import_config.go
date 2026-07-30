@@ -125,12 +125,10 @@ func columnNameSet(columns []ColumnDef) map[string]struct{} {
 	return set
 }
 
-// isKnownPGType mirrors the type coverage of pgTypeToDuckDB.
+// isKnownPGType reports whether pgType has an explicit DuckDB mapping rather
+// than falling back to VARCHAR.
 func isKnownPGType(pgType string) bool {
-	if strings.HasPrefix(pgType, "CHAR") {
-		return true
-	}
-	_, ok := pgTypeToDuckDBMap[pgType]
+	_, ok := pgTypeToDuckDB(pgType)
 	return ok
 }
 
@@ -158,7 +156,7 @@ func (cat *CategoryConfig) toCategoryInfo() *CategoryInfo {
 		TextColumns:      textCols,
 		PosColumns:       posCols,
 		JoinColumns:      cat.JoinColumns,
-		OutputColumns:    dedupColumns(textCols, posCols),
+		OutputColumns:    columnNames(cat.mergeColumns()),
 		Filters:          filters,
 		TextColumnTypes:  textColTypes,
 		PosColumnTypes:   posColTypes,
@@ -166,20 +164,13 @@ func (cat *CategoryConfig) toCategoryInfo() *CategoryInfo {
 	}
 }
 
-// dedupColumns returns text columns followed by the pos-only columns, keeping
-// first-seen order. This is the column order of both the transformed temp
-// table and the PostgreSQL table DDL (see mergeColumns).
-func dedupColumns(textCols, posCols []string) []string {
-	seen := make(map[string]struct{}, len(textCols)+len(posCols))
-	out := make([]string, 0, len(textCols)+len(posCols))
-	for _, c := range slices.Concat(textCols, posCols) {
-		if _, ok := seen[c]; ok {
-			continue
-		}
-		seen[c] = struct{}{}
-		out = append(out, c)
+// columnNames projects column definitions to their names, preserving order.
+func columnNames(columns []ColumnDef) []string {
+	names := make([]string, len(columns))
+	for i, col := range columns {
+		names[i] = col.Name
 	}
-	return out
+	return names
 }
 
 func extractColumnInfo(columns []ColumnDef, trackFullwidth bool) ([]string, map[string]string, map[string]bool) {
@@ -192,7 +183,7 @@ func extractColumnInfo(columns []ColumnDef, trackFullwidth bool) ([]string, map[
 
 	for i, col := range columns {
 		names[i] = col.Name
-		types[col.Name] = pgTypeToDuckDB(col.Type)
+		types[col.Name], _ = pgTypeToDuckDB(col.Type)
 		if trackFullwidth && col.ConvertFullwidth {
 			fullwidth[col.Name] = true
 		}
@@ -209,14 +200,16 @@ var pgTypeToDuckDBMap = map[string]string{
 	"DATE":             "DATE",
 }
 
-func pgTypeToDuckDB(pgType string) string {
+// pgTypeToDuckDB maps a PostgreSQL type to its DuckDB equivalent. The bool
+// reports whether the mapping was explicit; unmapped types fall back to VARCHAR.
+func pgTypeToDuckDB(pgType string) (string, bool) {
 	if strings.HasPrefix(pgType, "CHAR") {
-		return "VARCHAR"
+		return "VARCHAR", true
 	}
 	if t, ok := pgTypeToDuckDBMap[pgType]; ok {
-		return t
+		return t, true
 	}
-	return "VARCHAR"
+	return "VARCHAR", false
 }
 
 // CategoryInfo holds all metadata for a category used by ETL processing.
@@ -240,12 +233,7 @@ type CategoryInfo struct {
 func (c *ImportConfig) TableColumns() map[string][]string {
 	result := make(map[string][]string, len(c.Category))
 	for _, cat := range c.Category {
-		merged := cat.mergeColumns()
-		names := make([]string, len(merged))
-		for i, col := range merged {
-			names[i] = col.Name
-		}
-		result[cat.TableName] = names
+		result[cat.TableName] = columnNames(cat.mergeColumns())
 	}
 	return result
 }

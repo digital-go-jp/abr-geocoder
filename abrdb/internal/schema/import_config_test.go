@@ -28,7 +28,7 @@ func TestPgTypeToDuckDB(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := pgTypeToDuckDB(tt.pgType); got != tt.want {
+			if got, _ := pgTypeToDuckDB(tt.pgType); got != tt.want {
 				t.Errorf("pgTypeToDuckDB(%q) = %q, want %q", tt.pgType, got, tt.want)
 			}
 		})

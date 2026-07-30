@@ -65,9 +65,15 @@ func buildPrefectureByCode() map[string]string {
 }
 
 // detectPrefectureCode detects prefecture code from address string.
+// Every prefecture name is either 3 runes (9 bytes) or 4 runes (12 bytes) and
+// no short name is a prefix of a long one, so probing those two lengths
+// longest-first is equivalent to scanning all 47 entries.
 func detectPrefectureCode(address string) string {
-	for pref, code := range prefecturePrefixes {
-		if strings.HasPrefix(address, pref) {
+	for _, n := range [2]int{12, 9} {
+		if len(address) < n {
+			continue
+		}
+		if code, ok := prefecturePrefixes[address[:n]]; ok {
 			return code
 		}
 	}

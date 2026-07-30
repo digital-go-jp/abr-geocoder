@@ -217,19 +217,11 @@ func KanjiToArabic(s string) (string, bool) {
 // digit or 十/百/千, while a lone 万/億 usually belongs to an ordinary place
 // name (e.g. 万代町) and must not trigger conversion.
 func containsKanjiNumbers(s string) bool {
-	// Fast path: check if string is ASCII-only (common case)
-	for i := 0; i < len(s); i++ {
-		if s[i] >= 0x80 {
-			// Found non-ASCII, check for kanji numbers
-			for _, r := range s[i:] {
-				if util.IsKanjiNumeral(r) {
-					return true
-				}
-			}
-			return false
+	for _, r := range s {
+		if util.IsKanjiNumeral(r) {
+			return true
 		}
 	}
-	// ASCII-only string, no kanji numbers
 	return false
 }
 

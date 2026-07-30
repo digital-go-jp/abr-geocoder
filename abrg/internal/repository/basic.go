@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"abrg/internal/char"
 	"abrg/internal/model"
 	"abrg/internal/util"
 )
@@ -152,16 +151,11 @@ func extractChomeFilter(searchAddr string) (string, string) {
 	if idx <= 0 {
 		return "", ""
 	}
-	// Extract trailing digits before "@:"
-	end := idx
-	start := end
-	for start > 0 && char.IsASCIIDigit(searchAddr[start-1]) {
-		start--
-	}
-	if start == end {
+	digits := util.ExtractChomeDigits(searchAddr[:idx])
+	if digits == "" {
 		return "", ""
 	}
-	chomeNum, err := strconv.Atoi(searchAddr[start:end])
+	chomeNum, err := strconv.Atoi(digits)
 	if err != nil || chomeNum <= 0 || chomeNum > model.MaxChomeNumber {
 		return "", ""
 	}

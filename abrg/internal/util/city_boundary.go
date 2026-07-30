@@ -36,13 +36,22 @@ func NewCityBoundary(cityStrings []string) *CityBoundary {
 // heuristic, preserving behavior for ward-only and prefecture-prefixed inputs.
 func (b *CityBoundary) Find(addr string) int {
 	if b != nil && len(b.set) > 0 {
-		runes := []rune(addr)
-		limit := min(b.maxRunes, len(runes))
-		for l := limit; l > 0; l-- {
-			prefix := string(runes[:l])
-			if _, ok := b.set[prefix]; ok {
-				return len(prefix)
+		// Probe by byte offset rather than slicing a []rune: substrings of addr
+		// share its backing array, so no candidate prefix is allocated.
+		end := len(addr)
+		if utf8.RuneCountInString(addr) > b.maxRunes {
+			end = 0
+			for range b.maxRunes {
+				_, size := utf8.DecodeRuneInString(addr[end:])
+				end += size
 			}
+		}
+		for end > 0 {
+			if _, ok := b.set[addr[:end]]; ok {
+				return end
+			}
+			_, size := utf8.DecodeLastRuneInString(addr[:end])
+			end -= size
 		}
 	}
 	return findCityBoundary(addr)

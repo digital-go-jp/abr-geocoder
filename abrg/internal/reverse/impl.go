@@ -92,24 +92,46 @@ func (g *ReverseGeocoder) Reverse(ctx context.Context, query model.ReverseQuery)
 func (g *ReverseGeocoder) findNearestAddresses(ctx context.Context, query model.ReverseQuery) ([]model.ReverseFeature, error) {
 	params := spatialParams(query)
 
-	switch query.Category {
-	case model.CategoryAll:
+	if query.Category == model.CategoryAll {
 		// Partial success is acceptable (returns data from available tables)
 		return g.findNearestAll(ctx, params)
-	case model.CategoryBasic:
-		return findAndBuild(ctx, g.repo.FindNearestBasic, params, buildBasicFeature)
-	case model.CategoryResidential:
-		if !g.hasResidential {
-			return nil, fmt.Errorf("residential %w", ErrDataUnavailable)
+	}
+
+	for _, src := range g.sources() {
+		if src.category != query.Category {
+			continue
 		}
-		return findAndBuild(ctx, g.repo.FindNearestResidential, params, buildResidentialFeature)
-	case model.CategoryParcel:
-		if !g.hasParcel {
-			return nil, fmt.Errorf("parcel %w", ErrDataUnavailable)
+		if !src.available {
+			return nil, fmt.Errorf("%s %w", src.name, ErrDataUnavailable)
 		}
-		return findAndBuild(ctx, g.repo.FindNearestParcel, params, buildParcelFeature)
-	default:
-		return nil, fmt.Errorf("%w: %s", ErrUnknownCategory, query.Category)
+		return src.find(ctx, params)
+	}
+	return nil, fmt.Errorf("%w: %s", ErrUnknownCategory, query.Category)
+}
+
+// reverseSource ties a category to whether its table is loaded and to the
+// find+build pair that produces its features. It is the single enumeration of
+// the reverse categories: both the single-category path and findNearestAll
+// read it, so a new category is added in one place.
+type reverseSource struct {
+	category  model.Category
+	name      string // log/error label, which differs from the category string for rsdtdsp
+	available bool
+	find      func(context.Context, repository.SpatialParams) ([]model.ReverseFeature, error)
+}
+
+// sources returns the reverse sources in the order findNearestAll combines them.
+func (g *ReverseGeocoder) sources() []reverseSource {
+	return []reverseSource{
+		{model.CategoryResidential, "residential", g.hasResidential, func(ctx context.Context, p repository.SpatialParams) ([]model.ReverseFeature, error) {
+			return findAndBuild(ctx, g.repo.FindNearestResidential, p, buildResidentialFeature)
+		}},
+		{model.CategoryParcel, "parcel", g.hasParcel, func(ctx context.Context, p repository.SpatialParams) ([]model.ReverseFeature, error) {
+			return findAndBuild(ctx, g.repo.FindNearestParcel, p, buildParcelFeature)
+		}},
+		{model.CategoryBasic, "basic", true, func(ctx context.Context, p repository.SpatialParams) ([]model.ReverseFeature, error) {
+			return findAndBuild(ctx, g.repo.FindNearestBasic, p, buildBasicFeature)
+		}},
 	}
 }
 
@@ -140,21 +162,7 @@ func findAndBuild[T any](ctx context.Context, findFn func(context.Context, repos
 // findNearestAll finds addresses from all levels.
 // Returns partial results if some queries fail (errors are logged).
 func (g *ReverseGeocoder) findNearestAll(ctx context.Context, params repository.SpatialParams) ([]model.ReverseFeature, error) {
-	sources := []struct {
-		name      string
-		available bool
-		find      func(context.Context, repository.SpatialParams) ([]model.ReverseFeature, error)
-	}{
-		{"residential", g.hasResidential, func(ctx context.Context, p repository.SpatialParams) ([]model.ReverseFeature, error) {
-			return findAndBuild(ctx, g.repo.FindNearestResidential, p, buildResidentialFeature)
-		}},
-		{"parcel", g.hasParcel, func(ctx context.Context, p repository.SpatialParams) ([]model.ReverseFeature, error) {
-			return findAndBuild(ctx, g.repo.FindNearestParcel, p, buildParcelFeature)
-		}},
-		{"basic", true, func(ctx context.Context, p repository.SpatialParams) ([]model.ReverseFeature, error) {
-			return findAndBuild(ctx, g.repo.FindNearestBasic, p, buildBasicFeature)
-		}},
-	}
+	sources := g.sources()
 
 	results := make([][]model.ReverseFeature, len(sources))
 	errs := make([]error, len(sources))

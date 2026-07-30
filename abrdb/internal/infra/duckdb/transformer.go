@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 
+	"abr.local/common/db"
+
 	"abrdb/internal/schema"
 )
 
@@ -144,6 +146,5 @@ const (
 
 // escapeSQLLiteral escapes quotes and backslashes for embedding into SQL string literals.
 func escapeSQLLiteral(s string) string {
-	escaped := strings.ReplaceAll(s, "\\", "\\\\")
-	return strings.ReplaceAll(escaped, "'", "''")
+	return db.SqlEscape(strings.ReplaceAll(s, "\\", "\\\\"))
 }

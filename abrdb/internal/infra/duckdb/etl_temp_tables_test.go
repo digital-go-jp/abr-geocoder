@@ -68,7 +68,7 @@ func TestCleanupTempTables_DropsOnSameConnection(t *testing.T) {
 		}
 	}
 
-	cleanupTempTables(ctx, conn, suffix)
+	cleanupTempTables(ctx, conn, tn)
 
 	for _, table := range []string{tn.Text, tn.Pos, tn.Transformed} {
 		var n int
