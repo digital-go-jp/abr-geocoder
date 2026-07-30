@@ -4,8 +4,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"os"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -93,14 +91,9 @@ func dsnWithPoolSize(dsn string) string {
 	workers := 0
 	anySet := false
 	for _, name := range []string{"ABRDB_IMPORT_CONCURRENCY", "ABRDB_DOWNLOAD_CONCURRENCY"} {
-		effective := runtime.GOMAXPROCS(0)
-		if v, ok := os.LookupEnv(name); ok && v != "" {
-			if n, err := strconv.Atoi(v); err == nil && n > 0 {
-				anySet = true
-				effective = min(n, util.MaxConcurrency)
-			}
-		}
-		workers = max(workers, effective)
+		limit, set := util.ConfiguredConcurrencyLimit(name)
+		anySet = anySet || set
+		workers = max(workers, limit)
 	}
 	if !anySet {
 		return dsn
