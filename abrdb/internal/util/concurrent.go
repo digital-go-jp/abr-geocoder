@@ -23,6 +23,12 @@ type Concurrency struct {
 	Import   int
 }
 
+// Max returns the largest per-stage limit, which is how many workers may hold
+// a database connection at the same time.
+func (c Concurrency) Max() int {
+	return max(c.Download, c.Import)
+}
+
 // LoadConcurrency reads the per-stage worker limits from the environment.
 // These two variable names are the only place the stages are named.
 func LoadConcurrency() Concurrency {
