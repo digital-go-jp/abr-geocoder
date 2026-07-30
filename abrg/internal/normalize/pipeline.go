@@ -11,14 +11,6 @@ import "regexp"
 // TransformStep is a function that transforms a string and reports whether it changed.
 type TransformStep func(string) (string, bool)
 
-// Adapt wraps a func(string) string as a TransformStep by comparing input and output.
-func Adapt(fn func(string) string) TransformStep {
-	return func(s string) (string, bool) {
-		result := fn(s)
-		return result, result != s
-	}
-}
-
 // ReplaceRule pairs a pattern with its replacement. Rules in a table apply
 // in declaration order; the order is part of the normalization spec.
 type ReplaceRule struct {

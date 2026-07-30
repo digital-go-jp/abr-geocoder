@@ -11,12 +11,13 @@ var chomePattern = regexp.MustCompile(`(\d+)丁目`)
 
 // ChomeToSymbol converts chome patterns to @ symbol notation.
 // Example: "栄町1丁目" -> "栄町1@".
-func ChomeToSymbol(s string) string {
+func ChomeToSymbol(s string) (string, bool) {
 	// Fast check: if string doesn't contain "丁目", no need to process
 	if !strings.Contains(s, "丁目") {
-		return s
+		return s, false
 	}
 
 	// Handle chome patterns: アラビア数字丁目 → 数字@
-	return chomePattern.ReplaceAllString(s, "$1@")
+	result := chomePattern.ReplaceAllString(s, "$1@")
+	return result, result != s
 }

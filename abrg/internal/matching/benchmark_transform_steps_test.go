@@ -42,7 +42,7 @@ func BenchmarkTransformSteps(b *testing.B) {
 	b.Run("chome_to_symbol", func(b *testing.B) {
 		b.ReportAllocs()
 		for b.Loop() {
-			_ = transform.ChomeToSymbol(input)
+			_, _ = transform.ChomeToSymbol(input)
 		}
 	})
 
