@@ -107,12 +107,12 @@ func (m *Console) render() string {
 		eta = time.Duration(float64(m.total-current)/avgRate) * time.Second
 	}
 
+	prefix := ""
 	if m.taskName != "" {
-		return fmt.Sprintf("%s: [%6.2f%%] %d/%d | Rate: %.0f/sec | Avg: %.0f/sec | ETA: %-10s",
-			m.taskName, percentage, current, m.total, rate, avgRate, formatDuration(eta))
+		prefix = m.taskName + ": "
 	}
-	return fmt.Sprintf("[%6.2f%%] %d/%d | Rate: %.0f/sec | Avg: %.0f/sec | ETA: %-10s",
-		percentage, current, m.total, rate, avgRate, formatDuration(eta))
+	return fmt.Sprintf("%s[%6.2f%%] %d/%d | Rate: %.0f/sec | Avg: %.0f/sec | ETA: %-10s",
+		prefix, percentage, current, m.total, rate, avgRate, formatDuration(eta))
 }
 
 func formatDuration(d time.Duration) string {
