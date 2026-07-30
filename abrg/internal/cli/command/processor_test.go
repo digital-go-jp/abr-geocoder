@@ -230,6 +230,8 @@ func (m *mockMonitor) Cancel() {
 	m.cancelled = true
 }
 
+func (m *mockMonitor) StartStage(string) func() { return func() {} }
+
 func TestParallelProcessor_Run_WithMonitor(t *testing.T) {
 	input := "a\nb\nc\n"
 	r := strings.NewReader(input)

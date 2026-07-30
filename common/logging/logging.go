@@ -3,10 +3,10 @@ package logging
 
 import (
 	"log/slog"
-	"os"
 	"strings"
 
 	"abr.local/common/env"
+	"abr.local/common/progress"
 )
 
 // NewFromEnv builds a slog.Logger from environment variables.
@@ -44,12 +44,13 @@ func parseLevel(s string) slog.Level {
 	}
 }
 
-// newHandler creates a slog.Handler according to format.
+// newHandler creates a slog.Handler according to format. Records go to
+// progress.Stderr so that they do not land inside a running progress line.
 func newHandler(level slog.Leveler, format string) slog.Handler {
 	opts := &slog.HandlerOptions{Level: level}
 	normalized := strings.ToLower(strings.TrimSpace(format))
 	if normalized == "json" {
-		return slog.NewJSONHandler(os.Stderr, opts)
+		return slog.NewJSONHandler(progress.Stderr, opts)
 	}
-	return slog.NewTextHandler(os.Stderr, opts)
+	return slog.NewTextHandler(progress.Stderr, opts)
 }

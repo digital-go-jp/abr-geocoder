@@ -279,6 +279,7 @@ func runImportWithChangeDetection(
 	opts *ImportOptions,
 ) error {
 	slog.Info("checking for updates", "event", "import")
+	printStatus("Checking for updates.")
 
 	scanResult, err := catalogService.ScanAndCompare(ctx, s3Prefixes)
 	if err != nil {
@@ -305,7 +306,7 @@ func runImportWithChangeDetection(
 	if !hasS3Changes && !hasPendingWork && !hasPendingAnalyze {
 		warnOrphanPosFiles(ctx, store)
 		slog.Info("no changes detected", "event", "import")
-		fmt.Println("No changes detected.")
+		printStatus("No changes detected.")
 		return nil
 	}
 
@@ -372,6 +373,7 @@ func executeImportPipeline(
 ) error {
 	totalStart := time.Now()
 	slog.Info("starting import", "event", "import")
+	printStatus("Starting import.")
 
 	// 1. Scan and update catalog
 	updateResult, err := catalogService.ScanAndUpdate(ctx, s3Prefixes, force)
@@ -381,7 +383,7 @@ func executeImportPipeline(
 
 	// Early return if no changes and no pending work (force always re-imports)
 	if !force && updateResult.UpdatedCount == 0 && !hasPendingWork {
-		fmt.Println("No changes detected.")
+		printStatus("No changes detected.")
 		return nil
 	}
 
@@ -405,7 +407,7 @@ func executeImportPipeline(
 		"download_sec", downloadSec,
 		"category_sec", categoryTimings,
 	)
-	fmt.Println("Import completed.")
+	printStatus("Import completed.")
 	return nil
 }
 
@@ -441,11 +443,11 @@ func reportDryRunSummary(pendingSummary []postgres.PendingSummary, scanResult *c
 	// Collect all category (from both sources)
 	category := collectCategory(pendingImports, updatedByCategory)
 	if len(category) == 0 && len(pendingAnalyze) == 0 {
-		fmt.Println("No changes detected.")
+		printStatus("No changes detected.")
 		return nil
 	}
 
-	fmt.Println("Pending changes:")
+	printStatus("Pending changes:")
 	var totalDownload, totalImport int
 
 	for _, cat := range category {
@@ -457,22 +459,22 @@ func reportDryRunSummary(pendingSummary []postgres.PendingSummary, scanResult *c
 			continue
 		}
 
-		fmt.Printf("  %s: %d files to download, %d pairs to import\n", cat, downloadCount, importCount)
+		printStatus("  %s: %d files to download, %d pairs to import", cat, downloadCount, importCount)
 		totalDownload += downloadCount
 		totalImport += importCount
 
 		if verbose {
 			for _, f := range updated {
-				fmt.Printf("    - %s (updated)\n", f.Filename)
+				printStatus("    - %s (updated)", f.Filename)
 			}
 		}
 	}
 
 	if len(pendingAnalyze) > 0 {
-		fmt.Printf("  analyze pending: %s\n", strings.Join(pendingAnalyze, ", "))
+		printStatus("  analyze pending: %s", strings.Join(pendingAnalyze, ", "))
 	}
 
-	fmt.Printf("Total: %d files to download, %d pairs to import\n", totalDownload, totalImport)
+	printStatus("Total: %d files to download, %d pairs to import", totalDownload, totalImport)
 	if totalDownload > 0 || totalImport > 0 || len(pendingAnalyze) > 0 {
 		return ChangesPendingError{Message: "changes pending"}
 	}

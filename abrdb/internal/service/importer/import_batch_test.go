@@ -134,10 +134,11 @@ func (f *fakeStore) markedContains(want ...string) bool {
 
 type noopMonitor struct{}
 
-func (noopMonitor) StartTask(string, int64) {}
-func (noopMonitor) UpdateProgress(int64)    {}
-func (noopMonitor) CompleteTask()           {}
-func (noopMonitor) Cancel()                 {}
+func (noopMonitor) StartTask(string, int64)  {}
+func (noopMonitor) UpdateProgress(int64)     {}
+func (noopMonitor) CompleteTask()            {}
+func (noopMonitor) Cancel()                  {}
+func (noopMonitor) StartStage(string) func() { return func() {} }
 
 func textFile(cat model.FileCategory, key, filename string) *model.File {
 	return &model.File{FileCategory: cat, FileKey: key, Filename: filename, FileType: model.FileTypeText}
