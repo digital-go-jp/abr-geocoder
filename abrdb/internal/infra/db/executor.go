@@ -83,14 +83,13 @@ func NewQueryExecutorFromEnv(ctx context.Context) (*QueryExecutor, error) {
 // dsnWithPoolSize sizes the pgx pool to the effective worker parallelism:
 // download and import workers update the catalog over this pool concurrently,
 // so the pool must not be smaller than the larger of the two effective worker
-// counts (+4 covers the lock session and ad-hoc queries). A stage with a
-// valid setting counts at that clamped value; a stage without one runs
-// GOMAXPROCS workers and counts at that. With no valid setting at all the
-// DSN stays untouched and the pgxpool default applies.
+// counts. The +4 covers the import lock, which holds one connection for the
+// whole run, and the ad-hoc queries alongside it.
+//
+// The pgxpool default of max(4, NumCPU) is not enough, because an unconfigured
+// stage runs GOMAXPROCS workers and would leave the lock and every ad-hoc
+// query queueing behind them.
 func dsnWithPoolSize(dsn string) string {
 	c := util.LoadConcurrency()
-	if !c.Configured {
-		return dsn
-	}
 	return dsn + "&pool_max_conns=" + strconv.Itoa(max(c.Download, c.Import)+4)
 }
