@@ -4,7 +4,12 @@ package levenshtein
 // using Unicode code points (runes), not bytes. This gives correct edit
 // distances for multibyte characters like Japanese kanji.
 func runeLevenshtein(a, b string) int {
-	ra := []rune(a)
+	return runeLevenshteinFrom([]rune(a), b)
+}
+
+// runeLevenshteinFrom is runeLevenshtein with the first operand already decoded,
+// so a caller comparing one string against many candidates decodes it only once.
+func runeLevenshteinFrom(ra []rune, b string) int {
 	rb := []rune(b)
 	la, lb := len(ra), len(rb)
 

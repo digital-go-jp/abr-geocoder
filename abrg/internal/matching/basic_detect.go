@@ -78,7 +78,7 @@ func (n *Impl) detectAndRemovePrefecture(searchAddr, pref string) (string, strin
 		}
 	} else if needsPrefDetection {
 		// Try to detect from city name (e.g., "京都市下京区..." -> "26")
-		if cityPrefCode := n.detectCityPrefectureCode(searchAddr); cityPrefCode != "" {
+		if cityPrefCode := n.cityPrefixMap.lookup(searchAddr); cityPrefCode != "" {
 			pref = cityPrefCode
 		}
 	}
@@ -103,9 +103,4 @@ func (n *Impl) detectLgCode(searchAddr string) string {
 	}
 
 	return ""
-}
-
-// detectCityPrefectureCode detects prefecture code from city name using prefix map lookup.
-func (n *Impl) detectCityPrefectureCode(address string) string {
-	return n.cityPrefixMap.lookup(address)
 }
