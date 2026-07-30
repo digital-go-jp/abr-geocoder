@@ -22,6 +22,18 @@ func prefFilter(alias, pref string) (string, error) {
 	return fmt.Sprintf("AND %s.pref_code = %d", alias, code), nil
 }
 
+// Every reverse query orders by distance and then by lg_code and machiaza_id.
+// The tie-break is what makes the result reproducible: several machiaza can sit
+// on one coordinate (Kyoto street names, for one), and ordering by distance
+// alone leaves the parallel scan to decide which of the tied rows LIMIT keeps,
+// so the same query returned different rows from run to run.
+//
+// For cache_machiaza that pair is the primary key, so the order is total. For
+// the detail tables it orders down to the machiaza only; adding the rows' own
+// ids would make it total there too, but sorting the candidate set on those
+// high-cardinality columns costs several times the query time, and the ties
+// left unresolved are between detail rows of a single machiaza.
+
 // reverseAddrColumns are the address columns every reverse result carries, in
 // the order reverseBaseScan.appendAddrPtrs scans them. They always come from
 // cache_machiaza, aliased b.
@@ -57,7 +69,7 @@ func (r *DB) FindNearestBasic(ctx context.Context, params SpatialParams) ([]Reve
 		WHERE 1=1
 			%s
 			AND ST_Intersects(b.geom, ST_Buffer(ST_Point(%f, %f), %f))
-		ORDER BY distance
+		ORDER BY distance, b.lg_code, b.machiaza_id
 		LIMIT %d
 	`, params.Lon, params.Lat, pf, params.Lon, params.Lat, params.Radius, params.Limit)
 
@@ -82,7 +94,7 @@ func nearestDetailQuery(table, alias string, detailCols []string, prefClause str
 			WHERE 1=1
 				%[7]s
 				AND ST_Intersects(%[2]s.geom, ST_Buffer(ST_Point(%[5]f, %[6]f), %[8]f))
-			ORDER BY distance
+			ORDER BY distance, %[2]s.lg_code, %[2]s.machiaza_id
 			LIMIT %[9]d
 		)
 		SELECT
@@ -96,7 +108,7 @@ func nearestDetailQuery(table, alias string, detailCols []string, prefClause str
 			n.distance
 		FROM nearest n
 		LEFT JOIN cache_machiaza b ON n.lg_code = b.lg_code AND n.machiaza_id = b.machiaza_id
-		ORDER BY n.distance
+		ORDER BY n.distance, n.lg_code, n.machiaza_id
 	`,
 		table,
 		alias,
