@@ -2,6 +2,7 @@
 package model
 
 import (
+	"slices"
 	"strings"
 
 	"abrg/internal/char"
@@ -77,15 +78,13 @@ const (
 	CategoryParcel      Category = "parcel"
 )
 
+// Categories lists every category the engines implement.
+var Categories = []Category{CategoryAll, CategoryBasic, CategoryResidential, CategoryParcel}
+
 // Known reports whether c names a category the engines implement. The empty
 // string is known: callers treat it as CategoryAll.
 func (c Category) Known() bool {
-	switch c {
-	case "", CategoryAll, CategoryBasic, CategoryResidential, CategoryParcel:
-		return true
-	default:
-		return false
-	}
+	return c == "" || slices.Contains(Categories, c)
 }
 
 type NormalizeCategory string
