@@ -10,15 +10,24 @@ func TestExpandSapporoJou(t *testing.T) {
 		changed  bool
 	}{
 		{
+			// The hyphen stands in for the chome boundary, so the expansion
+			// takes it and AddColon marks the boundary the same way it does
+			// for a spelled-out chome.
 			name:     "basic abbreviation - 北3西1",
 			input:    "札幌市中央区北3西1-7",
-			expected: "札幌市中央区北3条西1丁目-7",
+			expected: "札幌市中央区北3条西1丁目:7",
 			changed:  true,
 		},
 		{
 			name:     "南東 pattern",
 			input:    "札幌市東区南10東5-3",
-			expected: "札幌市東区南10条東5丁目-3",
+			expected: "札幌市東区南10条東5丁目:3",
+			changed:  true,
+		},
+		{
+			name:     "chome kept by the writer is not doubled",
+			input:    "札幌市中央区北3西1丁目7",
+			expected: "札幌市中央区北3条西1丁目:7",
 			changed:  true,
 		},
 		{
