@@ -39,9 +39,7 @@ func hasBanchiPattern(s string) bool {
 // setTwoStageUnmatchedAddress appends unmatched parts to results from TwoStageSearch.
 // Unlike setUnmatchedAddress which replaces the unmatched address, this uses append
 // because TwoStageSearch may have already set partial unmatched addresses (e.g., "-205").
-func setTwoStageUnmatchedAddress(result *model.MatchedResult, normalizedAddr, searchAddr string) {
-	parsed := parseSearchAddr(searchAddr)
-
+func setTwoStageUnmatchedAddress(result *model.MatchedResult, normalizedAddr string, parsed parsedAddress) {
 	if len(parsed.Numbers) > 0 {
 		afterColon := strings.Join(parsed.Numbers, "-")
 		if remaining := extractUnmatchedAfterParcel(afterColon, result); remaining != "" {

@@ -39,16 +39,15 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 		return nil, nil
 	}
 
-	searchAddrStr := searchAddr.String()
 	results, err := n.twoStageSearch.normalizeWithBasic(
-		ctx, model.CategoryResidential, nctx.State.BasicResults, searchAddrStr,
+		ctx, model.CategoryResidential, nctx.State.BasicResults, searchAddr,
 	)
 	if err != nil {
 		return nil, err
 	}
 	if results != nil {
 		for i := range results {
-			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, searchAddrStr)
+			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, searchAddr)
 		}
 		return results, nil
 	}
@@ -87,7 +86,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	}
 
 	// finalize sets unmatched address and applies parcel-specific post-processing.
-	finalize := func(results []model.MatchedResult, usedSearchAddr string) []model.MatchedResult {
+	finalize := func(results []model.MatchedResult, usedSearchAddr parsedAddress) []model.MatchedResult {
 		for i := range results {
 			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, usedSearchAddr)
 		}
@@ -104,25 +103,25 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 		adjustedSearchAddr := adjusted.String()
 		if adjustedSearchAddr != searchAddr {
 			results, err := n.twoStageSearch.normalizeWithBasic(
-				ctx, model.CategoryParcel, nctx.State.BasicResults, adjustedSearchAddr,
+				ctx, model.CategoryParcel, nctx.State.BasicResults, adjusted,
 			)
 			if err != nil {
 				return nil, err
 			}
 			if results != nil {
-				return finalize(results, adjustedSearchAddr), nil
+				return finalize(results, adjusted), nil
 			}
 		}
 	}
 
 	results, err := n.twoStageSearch.normalizeWithBasic(
-		ctx, model.CategoryParcel, nctx.State.BasicResults, searchAddr,
+		ctx, model.CategoryParcel, nctx.State.BasicResults, parsedSearchAddr,
 	)
 	if err != nil {
 		return nil, err
 	}
 	if results != nil {
-		return finalize(results, searchAddr), nil
+		return finalize(results, parsedSearchAddr), nil
 	}
 
 	return nil, nil

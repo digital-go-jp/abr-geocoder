@@ -184,7 +184,7 @@ func Test_normalizeWithBasic(t *testing.T) {
 			t.Context(),
 			model.CategoryResidential,
 			basicResults,
-			"港区虎ノ門1@:6",
+			parseSearchAddr("港区虎ノ門1@:6"),
 		)
 		if err != nil {
 			t.Fatalf("normalizeWithBasic() error = %v", err)
@@ -209,7 +209,7 @@ func Test_normalizeWithBasic(t *testing.T) {
 			t.Context(),
 			model.CategoryResidential,
 			basicResults,
-			"港区虎ノ門1@:999",
+			parseSearchAddr("港区虎ノ門1@:999"),
 		)
 		if err != nil {
 			t.Fatalf("normalizeWithBasic() error = %v", err)

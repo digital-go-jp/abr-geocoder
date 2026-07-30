@@ -170,11 +170,13 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 }
 
 // normalizeWithBasic performs normalization when basicResults are already available.
+// The search address arrives parsed: match_core parses the input once and that
+// value is threaded down to searchResidential and searchParcel.
 func (s *twoStageSearch) normalizeWithBasic(
 	ctx context.Context,
 	category model.Category,
 	basicResults []model.MatchedResult,
-	searchAddr string,
+	parsed parsedAddress,
 ) ([]model.MatchedResult, error) {
 	if len(basicResults) == 0 {
 		return nil, nil
@@ -191,7 +193,6 @@ func (s *twoStageSearch) normalizeWithBasic(
 		return nil, nil
 	}
 
-	parsed := parseSearchAddr(searchAddr)
 	var result *model.MatchedResult
 	var err error
 	switch category {
