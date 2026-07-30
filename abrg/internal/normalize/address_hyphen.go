@@ -364,8 +364,8 @@ var banGoRules = []ReplaceRule{
 	{banGoSpace, "${1}-${2} "},            // N番M号+スペース → N-M (スペース保持)
 }
 
-// replaceBanGoEnd replaces "N番M号" at end of string with "N-M" without regex.
-// This is an optimization for banGoEndPattern which was the most expensive regex.
+// replaceBanGoEnd replaces "N番M号" at end of string with "N-M". It scans by
+// hand because the equivalent regex is the most expensive one in this file.
 func replaceBanGoEnd(s string) string {
 	// Must end with 号
 	if !strings.HasSuffix(s, "号") {
@@ -439,7 +439,7 @@ func processBan(s string, plainBan bool) string {
 	// N番N号 patterns with 号
 	if strings.Contains(s, "号") {
 		s = applyRules(s, banGoRules)
-		s = replaceBanGoEnd(s) // N番M号 (末尾) → N-M (optimized)
+		s = replaceBanGoEnd(s) // N番M号 (末尾) → N-M
 	}
 
 	// N番の/ノN patterns

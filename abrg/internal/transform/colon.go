@@ -9,8 +9,8 @@ import (
 )
 
 // Character ranges an address may end with. They are the single source for
-// every regex character class in this file; isAddressEndChar tests the union
-// of the two as runes.
+// every regex character class in this file; isAddressEndChar tests
+// addressEndChars as runes.
 const (
 	kanjiBlockChars  = "一-龥"
 	nonDigitEndChars = "A-Zア-ン" + kanjiBlockChars

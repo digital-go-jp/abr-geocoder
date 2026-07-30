@@ -20,21 +20,19 @@ func mergeKyotoStToResults(destResults []model.MatchedResult, basicResults []mod
 	basic := &basicResults[0]
 	for i := range destResults {
 		if destResults[i].StructuredAddress.KyotoSt == nil {
-			// Merge kyoto_st
 			destResults[i].StructuredAddress.KyotoSt = basic.StructuredAddress.KyotoSt
 
-			// Use basic's machiaza_id (e.g., 0098104 instead of parcel's 0098000)
-			// This preserves the kyoto_st detail in the ID
+			// Within the same lg_code, basic's machiaza_id identifies the
+			// street-level entry while the parcel row only reaches the town,
+			// so basic's is the more specific of the two.
 			if basic.IDs.MachiazaID != nil {
 				destResults[i].IDs.MachiazaID = basic.IDs.MachiazaID
 			}
 
-			// Use basic's rsdt_addr_flg
 			if basic.IDs.RsdtAddrFlg != nil {
 				destResults[i].IDs.RsdtAddrFlg = basic.IDs.RsdtAddrFlg
 			}
 
-			// Update matched_address to include kyoto_st
 			destResults[i].MatchedAddress = model.FormatAddress(&destResults[i].StructuredAddress)
 		}
 	}
