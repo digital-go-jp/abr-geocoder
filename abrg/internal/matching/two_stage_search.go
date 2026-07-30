@@ -71,9 +71,9 @@ func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiaza
 		rsdtNum2 = numbers[2]
 	}
 
-	// If searchAddr contains chome notation (e.g., "舞浜2@:11"), adjust machiaza_id
-	// The base machiaza_id might be for the town without chome (e.g., "0043000" for 舞浜)
-	// We need to use the chome-specific machiaza_id (e.g., "0043002" for 舞浜2丁目)
+	// If searchAddr carries chome notation (e.g. "舞浜2@:11"), the machiaza_id
+	// in hand may be the town without chome; the chome-specific one carries the
+	// chome number in its last three digits.
 	if parsed.HasChome && parsed.Chome != "" {
 		adjusted := adjustMachiazaIDForChome(machiazaID, parsed.Chome)
 		if adjusted != machiazaID {
@@ -147,11 +147,9 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 		}
 	}
 
-	// For parcel_count == 0, try base machiaza_id (last 3 digits = "000")
-	// This handles Kyoto street names and koaza addresses where parcel data
-	// is stored under the base machiaza_id instead of the detailed one
-	// e.g., 0098104 (寺町通御池上る上本能寺前町) -> try 0098000 (上本能寺前町)
-	// e.g., 0231136 (大字南長野県町) -> try 0231000 (大字南長野)
+	// With no parcel rows under this machiaza, retry under the base machiaza
+	// (last 3 digits "000"). Kyoto street names and koaza addresses keep their
+	// parcel data there rather than under the detailed machiaza.
 	if parcelCount == 0 && !model.IsBaseMachiazaID(machiazaID) {
 		baseMachiazaID := machiazaID[:model.MachiazaBaseLength] + model.BaseMachiazaSuffix
 		pr, err := s.repo.FindParcelExact(ctx, lgCode, baseMachiazaID, filter)
@@ -160,7 +158,8 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 		}
 		if pr != nil {
 			result := repository.ParcelResultToNormalized(pr)
-			// Keep original machiaza_id (e.g., 0231136 for 県町) instead of base (0231000)
+			// Report the detailed machiaza the address matched, not the base
+			// one the parcel row was found under.
 			result.IDs.MachiazaID = &machiazaID
 			return &result, nil
 		}

@@ -29,7 +29,7 @@ func CreateUnmatchedResult(originalAddr string) model.MatchedResult {
 }
 
 // Addresses holds the three forms of one address that unmatched-part
-// extraction compares. They are easy to swap when passed as bare strings.
+// extraction compares. Naming them keeps a caller from swapping two.
 type Addresses struct {
 	// Normalized is the basic-normalized input, building name included
 	// (e.g. "東京都中央区八丁堀四丁目12-7 サニービル").
@@ -44,7 +44,7 @@ type Addresses struct {
 // ExtractUnmatchedParts extracts unmatched parts from a normalized address.
 // Returns user-friendly unmatched parts with building names as separate elements.
 //
-// Note: Currently uses addr.Search for the address portion, which may contain
+// The address portion comes from addr.Search, so it may still hold
 // transformed forms like "8丁" and "@".
 func ExtractUnmatchedParts(addr Addresses) []string {
 	normalizedAddr, matchedAddr, searchAddr := addr.Normalized, addr.Matched, addr.Search
