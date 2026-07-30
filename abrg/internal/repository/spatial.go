@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"abrg/internal/model"
 )
@@ -21,6 +22,20 @@ func prefFilter(alias, pref string) (string, error) {
 	return fmt.Sprintf("AND %s.pref_code = %d", alias, code), nil
 }
 
+// reverseAddrColumns are the address columns every reverse result carries, in
+// the order reverseBaseScan.appendAddrPtrs scans them. They always come from
+// cache_machiaza, aliased b.
+const reverseAddrColumns = "b.pref, b.county, b.city, b.ward, b.kyoto_st, b.oaza_cho, b.chome, b.koaza, b.machiaza_dist"
+
+// qualifyColumns prefixes each column with a table alias.
+func qualifyColumns(alias string, cols []string) string {
+	out := make([]string, len(cols))
+	for i, c := range cols {
+		out[i] = alias + "." + c
+	}
+	return strings.Join(out, ", ")
+}
+
 // FindNearestBasic finds the nearest basic (town-level) addresses using spatial queries.
 // Note: Values are embedded directly in SQL because DuckDB R-Tree requires constants
 // known at query planning time for index optimization.
@@ -31,15 +46,7 @@ func (r *DB) FindNearestBasic(ctx context.Context, params SpatialParams) ([]Reve
 	}
 	query := fmt.Sprintf(`
 		SELECT
-			b.pref,
-			b.county,
-			b.city,
-			b.ward,
-			b.kyoto_st,
-			b.oaza_cho,
-			b.chome,
-			b.koaza,
-			b.machiaza_dist,
+			`+reverseAddrColumns+`,
 			b.rsdt_addr_flg,
 			b.lg_code,
 			b.machiaza_id,
@@ -57,114 +64,72 @@ func (r *DB) FindNearestBasic(ctx context.Context, params SpatialParams) ([]Reve
 	return queryRows(ctx, r.db, query, nil, params.Limit, scanBasicResult)
 }
 
+// nearestDetailQuery builds the spatial query for a detail table (rsdtdsp or
+// parcel). The CTE applies LIMIT before the JOIN so only the matched rows are
+// joined back to cache_machiaza. detailCols are the table's own id and number
+// columns, selected in the order the row scanner expects.
+func nearestDetailQuery(table, alias string, detailCols []string, prefClause string, params SpatialParams) string {
+	return fmt.Sprintf(`
+		WITH nearest AS (
+			SELECT
+				%[2]s.lg_code,
+				%[2]s.machiaza_id,
+				%[3]s,
+				ST_X(%[2]s.geom) AS lon,
+				ST_Y(%[2]s.geom) AS lat,
+				ST_Distance_Sphere(%[2]s.geom, ST_Point(%[5]f, %[6]f)) AS distance
+			FROM %[1]s %[2]s
+			WHERE 1=1
+				%[7]s
+				AND ST_Intersects(%[2]s.geom, ST_Buffer(ST_Point(%[5]f, %[6]f), %[8]f))
+			ORDER BY distance
+			LIMIT %[9]d
+		)
+		SELECT
+			`+reverseAddrColumns+`,
+			%[4]s,
+			b.rsdt_addr_flg,
+			n.lg_code,
+			n.machiaza_id,
+			n.lon,
+			n.lat,
+			n.distance
+		FROM nearest n
+		LEFT JOIN cache_machiaza b ON n.lg_code = b.lg_code AND n.machiaza_id = b.machiaza_id
+		ORDER BY n.distance
+	`,
+		table,
+		alias,
+		qualifyColumns(alias, detailCols),
+		qualifyColumns("n", detailCols),
+		params.Lon,
+		params.Lat,
+		prefClause,
+		params.Radius,
+		params.Limit,
+	)
+}
+
 // FindNearestResidential finds the nearest residential addresses using spatial queries.
-// Uses CTE to apply LIMIT before JOIN for performance optimization.
 func (r *DB) FindNearestResidential(ctx context.Context, params SpatialParams) ([]ReverseResidentialResult, error) {
 	pf, err := prefFilter("r", params.Pref)
 	if err != nil {
 		return nil, err
 	}
-	query := fmt.Sprintf(`
-		WITH nearest AS (
-			SELECT
-				r.lg_code,
-				r.machiaza_id,
-				r.blk_id,
-				r.rsdt_id,
-				r.rsdt2_id,
-				r.blk_num,
-				r.rsdt_num,
-				r.rsdt_num2,
-				ST_X(r.geom) AS lon,
-				ST_Y(r.geom) AS lat,
-				ST_Distance_Sphere(r.geom, ST_Point(%f, %f)) AS distance
-			FROM cache_rsdtdsp r
-			WHERE 1=1
-				%s
-				AND ST_Intersects(r.geom, ST_Buffer(ST_Point(%f, %f), %f))
-			ORDER BY distance
-			LIMIT %d
-		)
-		SELECT
-			b.pref,
-			b.county,
-			b.city,
-			b.ward,
-			b.kyoto_st,
-			b.oaza_cho,
-			b.chome,
-			b.koaza,
-			b.machiaza_dist,
-			n.blk_id,
-			n.rsdt_id,
-			n.rsdt2_id,
-			n.blk_num,
-			n.rsdt_num,
-			n.rsdt_num2,
-			b.rsdt_addr_flg,
-			n.lg_code,
-			n.machiaza_id,
-			n.lon,
-			n.lat,
-			n.distance
-		FROM nearest n
-		LEFT JOIN cache_machiaza b ON n.lg_code = b.lg_code AND n.machiaza_id = b.machiaza_id
-		ORDER BY n.distance
-	`, params.Lon, params.Lat, pf, params.Lon, params.Lat, params.Radius, params.Limit)
+	query := nearestDetailQuery("cache_rsdtdsp", "r",
+		[]string{"blk_id", "rsdt_id", "rsdt2_id", "blk_num", "rsdt_num", "rsdt_num2"}, pf, params)
 
 	return queryRows(ctx, r.db, query, nil, params.Limit, scanResidentialResult)
 }
 
 // FindNearestParcel finds the nearest parcel addresses using spatial queries.
-// Uses CTE to apply LIMIT before JOIN for performance optimization.
 func (r *DB) FindNearestParcel(ctx context.Context, params SpatialParams) ([]ReverseParcelResult, error) {
 	pf, err := prefFilter("p", params.Pref)
 	if err != nil {
 		return nil, err
 	}
-	query := fmt.Sprintf(`
-		WITH nearest AS (
-			SELECT
-				p.lg_code,
-				p.machiaza_id,
-				p.prc_id,
-				p.prc_num1,
-				p.prc_num2,
-				p.prc_num3,
-				ST_X(p.geom) AS lon,
-				ST_Y(p.geom) AS lat,
-				ST_Distance_Sphere(p.geom, ST_Point(%f, %f)) AS distance
-			FROM cache_parcel p
-			WHERE 1=1
-				%s
-				AND ST_Intersects(p.geom, ST_Buffer(ST_Point(%f, %f), %f))
-			ORDER BY distance
-			LIMIT %d
-		)
-		SELECT
-			b.pref,
-			b.county,
-			b.city,
-			b.ward,
-			b.kyoto_st,
-			b.oaza_cho,
-			b.chome,
-			b.koaza,
-			b.machiaza_dist,
-			n.prc_id,
-			n.prc_num1,
-			n.prc_num2,
-			n.prc_num3,
-			b.rsdt_addr_flg,
-			n.lg_code,
-			n.machiaza_id,
-			n.lon,
-			n.lat,
-			n.distance
-		FROM nearest n
-		LEFT JOIN cache_machiaza b ON n.lg_code = b.lg_code AND n.machiaza_id = b.machiaza_id
-		ORDER BY n.distance
-	`, params.Lon, params.Lat, pf, params.Lon, params.Lat, params.Radius, params.Limit)
+	query := nearestDetailQuery("cache_parcel", "p",
+		[]string{"prc_id", "prc_num1", "prc_num2", "prc_num3"}, pf, params)
 
 	return queryRows(ctx, r.db, query, nil, params.Limit, scanParcelResult)
 }
