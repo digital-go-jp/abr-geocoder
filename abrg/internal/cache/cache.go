@@ -27,11 +27,8 @@ type WardCandidate struct {
 // DuckDBCache manages a read-only DuckDB instance for caching ABR data.
 // It maintains in-memory mappings for address resolution optimization.
 type DuckDBCache struct {
-	db                  *sql.DB                    // DuckDB connection via database/sql interface
-	cityPrefectureCodes map[string]string          // Maps unique city names to prefecture codes (e.g., "京都市" -> "26")
-	cityWardLgCodes     map[string]string          // Maps city+ward names to lg_code (e.g., "京都市中京区" -> "261041")
-	wardCandidates      map[string][]WardCandidate // Maps ward names to all candidate cities (e.g., "中区" -> [{横浜市中区, ...}, ...])
-	cityBoundary        *util.CityBoundary         // Longest-prefix city-boundary matcher over all city names
+	db      *sql.DB // DuckDB connection via database/sql interface
+	lookups Lookups // In-memory lookup tables, filled by the build* methods
 }
 
 // The cache file must already exist and be valid (created by `abrg cache build`).
@@ -230,20 +227,15 @@ func (c *DuckDBCache) DB() *sql.DB {
 }
 
 type Lookups struct {
-	CityPrefCodes   map[string]string          // Maps unique city names to prefecture codes
-	CityWardLgCodes map[string]string          // Maps city+ward names to lg_code
-	WardCandidates  map[string][]WardCandidate // Maps ward names to candidate cities
-	CityBoundary    *util.CityBoundary         // Longest-prefix city-boundary matcher
+	CityPrefCodes   map[string]string          // Maps unique city names to prefecture codes (e.g., "京都市" -> "26")
+	CityWardLgCodes map[string]string          // Maps city+ward names to lg_code (e.g., "京都市中京区" -> "261041")
+	WardCandidates  map[string][]WardCandidate // Maps ward names to all candidate cities (e.g., "中区" -> [{横浜市中区, ...}, ...])
+	CityBoundary    *util.CityBoundary         // Longest-prefix city-boundary matcher over all city names
 }
 
 // Lookups returns all in-memory lookup maps as a single struct.
 func (c *DuckDBCache) Lookups() Lookups {
-	return Lookups{
-		CityPrefCodes:   c.cityPrefectureCodes,
-		CityWardLgCodes: c.cityWardLgCodes,
-		WardCandidates:  c.wardCandidates,
-		CityBoundary:    c.cityBoundary,
-	}
+	return c.lookups
 }
 
 // buildCityBoundary loads every city-boundary string (city+ward and
@@ -276,7 +268,7 @@ func (c *DuckDBCache) buildCityBoundary(ctx context.Context) error {
 		return err
 	}
 
-	c.cityBoundary = util.NewCityBoundary(cityStrings)
+	c.lookups.CityBoundary = util.NewCityBoundary(cityStrings)
 	return nil
 }
 
@@ -295,13 +287,13 @@ func (c *DuckDBCache) buildCityPrefectureCodes(ctx context.Context) error {
 	}
 	defer func() { _ = rows.Close() }()
 
-	c.cityPrefectureCodes = make(map[string]string)
+	c.lookups.CityPrefCodes = make(map[string]string)
 	for rows.Next() {
 		var city, prefCode string
 		if err := rows.Scan(&city, &prefCode); err != nil {
 			return fmt.Errorf("failed to scan city-prefecture row: %w", err)
 		}
-		c.cityPrefectureCodes[city] = prefCode
+		c.lookups.CityPrefCodes[city] = prefCode
 	}
 
 	return rows.Err()
@@ -336,16 +328,16 @@ func (c *DuckDBCache) buildCityWardLgCodes(ctx context.Context) error {
 	}
 	defer func() { _ = rows.Close() }()
 
-	c.cityWardLgCodes = make(map[string]string)
+	c.lookups.CityWardLgCodes = make(map[string]string)
 	for rows.Next() {
 		var cityWard, countyCityWard, lgCode string
 		if err := rows.Scan(&cityWard, &countyCityWard, &lgCode); err != nil {
 			return fmt.Errorf("failed to scan city-ward lg_code row: %w", err)
 		}
-		c.cityWardLgCodes[cityWard] = lgCode
+		c.lookups.CityWardLgCodes[cityWard] = lgCode
 		// Also add county+city key for towns (e.g., "遠田郡涌谷町")
 		if countyCityWard != cityWard {
-			c.cityWardLgCodes[countyCityWard] = lgCode
+			c.lookups.CityWardLgCodes[countyCityWard] = lgCode
 		}
 	}
 
@@ -371,13 +363,13 @@ func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	}
 	defer func() { _ = rows.Close() }()
 
-	c.wardCandidates = make(map[string][]WardCandidate)
+	c.lookups.WardCandidates = make(map[string][]WardCandidate)
 	for rows.Next() {
 		var ward, cityWard, prefCode string
 		if err := rows.Scan(&ward, &cityWard, &prefCode); err != nil {
 			return fmt.Errorf("failed to scan ward candidate row: %w", err)
 		}
-		c.wardCandidates[ward] = append(c.wardCandidates[ward], WardCandidate{
+		c.lookups.WardCandidates[ward] = append(c.lookups.WardCandidates[ward], WardCandidate{
 			CityWard: cityWard,
 			PrefCode: prefCode,
 		})
