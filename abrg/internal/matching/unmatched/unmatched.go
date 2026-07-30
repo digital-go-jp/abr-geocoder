@@ -144,14 +144,11 @@ func extractUnmatchedWithColon(originalAddr, standardizedAddrPart, matchedAddr, 
 func extractUnmatchedWithColonAt(originalAddr, standardizedAddrPart, matchedAddr, beforeColon, afterColon string) string {
 	// Extract chome number that comes after @ but before :
 	// e.g., "千代田区紀尾井町1@" -> we need to extract "1"
-	atIndex := strings.LastIndex(beforeColon, "@")
-	if atIndex == -1 || atIndex <= 0 {
+	// A leading "@" leaves no room for a chome, so there is nothing to recover.
+	if atIndex := strings.LastIndex(beforeColon, "@"); atIndex <= 0 {
 		return afterColon
 	}
 
-	// Get everything after @ (e.g., "1@" -> "")
-	// We need to find the chome number before @
-	// Split by @ to find what's before it
 	parts := strings.Split(beforeColon, "@")
 	if len(parts) < 2 {
 		return afterColon
@@ -349,10 +346,7 @@ func extractOriginalGoNumber(originalAddr string) (string, bool) {
 		}
 	}
 	start++ // Move back to the first character of the number
-	if start <= goIdx {
-		return string(runes[start : goIdx+1]), true
-	}
-	return "", false
+	return string(runes[start : goIdx+1]), true
 }
 
 func extractUnmatchedWithAt(searchAddr string) string {

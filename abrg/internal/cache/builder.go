@@ -219,14 +219,14 @@ func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config) (map[strin
 	maps.Copy(phaseSec, basicSec)
 
 	indexStart := time.Now()
-	if err := createIndexes(ctx, conn); err != nil {
-		return nil, fmt.Errorf("failed to create indexes: %w", err)
+	if err := execSchemaSQL(ctx, conn, "indexes", schema.GetCreateIndexesSQL); err != nil {
+		return nil, err
 	}
 	phaseSec["indexes"] = time.Since(indexStart).Seconds()
 
 	spatialStart := time.Now()
-	if err := createSpatialIndexes(ctx, conn); err != nil {
-		return nil, fmt.Errorf("failed to create spatial indexes: %w", err)
+	if err := execSchemaSQL(ctx, conn, "spatial indexes", schema.GetCreateSpatialIndexesSQL); err != nil {
+		return nil, err
 	}
 	phaseSec["spatial_indexes"] = time.Since(spatialStart).Seconds()
 
@@ -305,12 +305,4 @@ func execSchemaSQL(ctx context.Context, conn *sql.DB, name string, getSQL func()
 		return fmt.Errorf("failed to create %s: %w", name, err)
 	}
 	return nil
-}
-
-func createIndexes(ctx context.Context, conn *sql.DB) error {
-	return execSchemaSQL(ctx, conn, "indexes", schema.GetCreateIndexesSQL)
-}
-
-func createSpatialIndexes(ctx context.Context, conn *sql.DB) error {
-	return execSchemaSQL(ctx, conn, "spatial indexes", schema.GetCreateSpatialIndexesSQL)
 }
