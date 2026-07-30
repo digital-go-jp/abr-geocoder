@@ -59,6 +59,23 @@ func New(
 	}
 }
 
+// startStage shows an elapsed-time line while a step that prints nothing of its
+// own runs, and returns the function that takes the line off the screen. A nil
+// s.progress means the progress display is off, so nothing is shown.
+func (s *service) startStage(name string) func() {
+	if s.progress == nil {
+		return func() {}
+	}
+	return s.progress.StartStage(name)
+}
+
+// ensureLgCodeIndex builds the index the delete conditions need, showing how
+// long it takes: on a freshly loaded table it runs without output of its own.
+func (s *service) ensureLgCodeIndex(ctx context.Context, tableName string) error {
+	defer s.startStage("Indexing " + tableName)()
+	return s.store.EnsureLgCodeIndex(ctx, tableName)
+}
+
 // ImportCategoryBatch imports downloaded data for multiple category values into the database.
 // Uses a single query to fetch all pending imports, eliminating N+1 queries.
 // File pairs within each category are processed concurrently.
@@ -119,7 +136,7 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 			return nil, fmt.Errorf("import files for %q: %w", cat, err)
 		}
 
-		if err := s.store.EnsureLgCodeIndex(ctx, categoryInfo.TableName); err != nil {
+		if err := s.ensureLgCodeIndex(ctx, categoryInfo.TableName); err != nil {
 			return nil, fmt.Errorf("ensure lg_code index on %q: %w", categoryInfo.TableName, err)
 		}
 		phaseTimes[string(cat)] = time.Since(categoryStart).Seconds()
@@ -164,6 +181,8 @@ func (s *service) analyzePending(ctx context.Context, updatedTables []string, se
 	if len(analyzeTables) == 0 {
 		return nil
 	}
+
+	defer s.startStage("Analyzing tables")()
 
 	start := time.Now()
 	if err := s.store.AnalyzeTables(ctx, analyzeTables); err != nil {
