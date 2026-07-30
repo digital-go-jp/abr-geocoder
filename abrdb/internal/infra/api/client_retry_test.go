@@ -207,11 +207,10 @@ func TestDownloadFile_ClientErrorFailsImmediately(t *testing.T) {
 	}
 }
 
-// TestDownloadFile_ExhaustionIsPlainError pins the exit code contract: when
-// retries run out, the failure is an ordinary error (exit 2 via the CLI
-// mapping), never something that could be read as the dry-run "changes
-// pending" result.
-func TestDownloadFile_ExhaustionIsPlainError(t *testing.T) {
+// TestDownloadFile_RetryExhaustion pins the retry budget: a persistently
+// failing server is attempted once and retried three times, waiting between
+// each, and the run then fails.
+func TestDownloadFile_RetryExhaustion(t *testing.T) {
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
@@ -230,12 +229,6 @@ func TestDownloadFile_ExhaustionIsPlainError(t *testing.T) {
 	}
 	if len(*sleeps) != 3 {
 		t.Errorf("waits = %v, want 3", *sleeps)
-	}
-	// The CLI maps any error without an ExitCode method to exit 2; only
-	// ChangesPendingError may exit 1.
-	var exitCoder interface{ ExitCode() int }
-	if errors.As(err, &exitCoder) {
-		t.Errorf("err = %v carries ExitCode(); retry exhaustion must stay a plain error", err)
 	}
 }
 

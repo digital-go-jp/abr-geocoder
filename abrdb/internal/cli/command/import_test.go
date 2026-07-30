@@ -154,16 +154,14 @@ func TestRunImportDryRun_ExitCodes(t *testing.T) {
 	}
 }
 
-// TestChangesPendingError pins the properties main relies on for the exit
-// code contract: it is an error whose dedicated exit code is 1.
+// TestChangesPendingError pins what this package owns: the error carries its
+// message. The exit code it maps to, including through a wrap, is pinned
+// against main's own mapper by TestExitCode in cmd/abrdb.
 func TestChangesPendingError(t *testing.T) {
 	err := ChangesPendingError{Message: "changes pending"}
 
 	if got := err.Error(); got != "changes pending" {
 		t.Errorf("Error() = %q, want %q", got, "changes pending")
-	}
-	if got := err.ExitCode(); got != 1 {
-		t.Errorf("ExitCode() = %d, want 1", got)
 	}
 }
 
