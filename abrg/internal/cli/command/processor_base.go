@@ -124,16 +124,15 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	setup.OutFile = outFile
 	setup.cleanup = append(setup.cleanup, func() { _ = outFile.Close() })
 
-	if progress.ShouldShowProgress(opts.Quiet) {
+	if monitor := progress.NewConsoleIfEnabled(opts.Quiet); monitor != nil {
 		totalLines, err := countLines(opts.InputFile)
 		if err != nil {
 			setup.Cleanup()
 			return nil, fmt.Errorf("failed to count input lines: %w", err)
 		}
-		console := progress.NewConsole()
-		console.StartTask(taskName, int64(totalLines))
-		setup.Monitor = console
-		setup.cleanup = append(setup.cleanup, func() { console.Cancel() })
+		monitor.StartTask(taskName, int64(totalLines))
+		setup.Monitor = monitor
+		setup.cleanup = append(setup.cleanup, func() { monitor.Cancel() })
 	}
 
 	return setup, nil
@@ -200,7 +199,7 @@ func countLines(filename string) (int, error) {
 	scanner := bufio.NewScanner(file)
 	count := 0
 	for scanner.Scan() {
-		if scanner.Text() != "" {
+		if len(scanner.Bytes()) != 0 {
 			count++
 		}
 	}
