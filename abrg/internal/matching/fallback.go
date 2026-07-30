@@ -195,7 +195,7 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 		}
 		if len(parcelResults) > 0 {
 			debugMatchPath(ctx, "numeric_koaza", nctx.Input.NormalizedAddr, "parcel", true)
-			setTwoStageUnmatchedAddress(&parcelResults[0], nctx.Input.NormalizedAddr, parcelAddr.String())
+			setTwoStageUnmatchedAddress(&parcelResults[0], nctx.Input.NormalizedAddr, parcelAddr)
 			return parcelResults, nil
 		}
 	}
@@ -205,7 +205,9 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 		koaza.UnmatchedAddress = append(koaza.UnmatchedAddress, "-"+strings.Join(rest, "-"))
 	}
 	debugMatchPath(ctx, "numeric_koaza", nctx.Input.NormalizedAddr, "parcel", false)
-	setTwoStageUnmatchedAddress(koaza, nctx.Input.NormalizedAddr, base)
+	// The koaza consumed the numbers, so only the building name and any extra
+	// tokens the normalized address carries are still unmatched.
+	setTwoStageUnmatchedAddress(koaza, nctx.Input.NormalizedAddr, parsedAddress{Base: base})
 	return results, nil
 }
 

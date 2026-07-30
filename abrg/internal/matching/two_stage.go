@@ -39,7 +39,6 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 		return nil, nil
 	}
 
-	searchAddrStr := searchAddr.String()
 	results, err := n.twoStageSearch.normalizeWithBasic(
 		ctx, model.CategoryResidential, nctx.State.BasicResults, searchAddr,
 	)
@@ -48,7 +47,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 	}
 	if results != nil {
 		for i := range results {
-			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, searchAddrStr)
+			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, searchAddr)
 		}
 		return results, nil
 	}
@@ -87,7 +86,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	}
 
 	// finalize sets unmatched address and applies parcel-specific post-processing.
-	finalize := func(results []model.MatchedResult, usedSearchAddr string) []model.MatchedResult {
+	finalize := func(results []model.MatchedResult, usedSearchAddr parsedAddress) []model.MatchedResult {
 		for i := range results {
 			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, usedSearchAddr)
 		}
@@ -110,7 +109,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 				return nil, err
 			}
 			if results != nil {
-				return finalize(results, adjustedSearchAddr), nil
+				return finalize(results, adjusted), nil
 			}
 		}
 	}
@@ -122,7 +121,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 		return nil, err
 	}
 	if results != nil {
-		return finalize(results, searchAddr), nil
+		return finalize(results, parsedSearchAddr), nil
 	}
 
 	return nil, nil
