@@ -62,7 +62,7 @@ func TestBuildIDs_ValidatesLengths(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ids := buildIDs(tt.lgCode, tt.machiazaID, strPtr("1"), false, 0, 0)
+			ids := BuildIDs(tt.lgCode, tt.machiazaID, strPtr("1"))
 			if (ids.LgCode != nil) != tt.wantLg {
 				t.Errorf("LgCode: got nil=%v, want nil=%v", ids.LgCode == nil, !tt.wantLg)
 			}
@@ -79,21 +79,25 @@ func TestBuildIDs_ValidatesLengths(t *testing.T) {
 	}
 }
 
-func TestBuildIDs_PassesThroughFields(t *testing.T) {
+func TestBuildIDs_PassesThroughRsdtAddrFlg(t *testing.T) {
 	rsdtFlg := "1"
-	ids := buildIDs("131016", "0001001", &rsdtFlg, true, 5, 3)
+	ids := BuildIDs("131016", "0001001", &rsdtFlg)
 
 	if ids.RsdtAddrFlg == nil || *ids.RsdtAddrFlg != "1" {
 		t.Errorf("RsdtAddrFlg: got %v, want %q", ids.RsdtAddrFlg, "1")
 	}
-	if !ids.HasChome {
-		t.Error("HasChome: got false, want true")
+}
+
+func TestBasicResultToNormalized_CarriesMachiazaData(t *testing.T) {
+	br := BasicResult{
+		LgCode: "131016", MachiazaID: "0001001", Pref: "東京都", City: "千代田区",
+		HasChome: true, ParcelCount: 5, RsdtdspCount: 3,
 	}
-	if ids.ParcelCount != 5 {
-		t.Errorf("ParcelCount: got %d, want 5", ids.ParcelCount)
-	}
-	if ids.RsdtdspCount != 3 {
-		t.Errorf("RsdtdspCount: got %d, want 3", ids.RsdtdspCount)
+	got := BasicResultToNormalized(&br).Machiaza
+
+	want := model.MachiazaData{HasChome: true, ParcelCount: 5, RsdtdspCount: 3}
+	if got != want {
+		t.Errorf("Machiaza: got %+v, want %+v", got, want)
 	}
 }
 
@@ -130,24 +134,6 @@ func TestCoordsFromOpt(t *testing.T) {
 				t.Errorf("got [%f, %f], want [%f, %f]", got[0], got[1], tt.wantLon, tt.wantLat)
 			}
 		})
-	}
-}
-
-func TestBuildBaseIDs(t *testing.T) {
-	rsdtFlg := "0"
-	ids := BuildBaseIDs("131016", "0001001", &rsdtFlg)
-
-	if ids.LgCode == nil || *ids.LgCode != "131016" {
-		t.Errorf("LgCode: got %v, want %q", ids.LgCode, "131016")
-	}
-	if ids.MachiazaID == nil || *ids.MachiazaID != "0001001" {
-		t.Errorf("MachiazaID: got %v, want %q", ids.MachiazaID, "0001001")
-	}
-	if ids.HasChome != false {
-		t.Error("HasChome should be false")
-	}
-	if ids.ParcelCount != 0 {
-		t.Errorf("ParcelCount: got %d, want 0", ids.ParcelCount)
 	}
 }
 

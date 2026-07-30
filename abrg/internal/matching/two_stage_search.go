@@ -199,7 +199,7 @@ func (s *twoStageSearch) normalizeWithBasic(
 	case model.CategoryResidential:
 		result, err = s.searchResidential(ctx, lgCode, machiazaID, parsed)
 	case model.CategoryParcel:
-		result, err = s.searchParcel(ctx, lgCode, machiazaID, parsed, basic.IDs.ParcelCount)
+		result, err = s.searchParcel(ctx, lgCode, machiazaID, parsed, basic.Machiaza.ParcelCount)
 	default:
 		return nil, nil
 	}

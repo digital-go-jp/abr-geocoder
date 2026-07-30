@@ -22,7 +22,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 	// Prepare search address: use HasChome to determine if chome adjustment is needed
 	searchAddr := nctx.Input.SearchAddr
 	chomeConverted := false
-	if basic.IDs.HasChome {
+	if basic.Machiaza.HasChome {
 		converted := convertColonToChome(nctx.Input.SearchAddr)
 		if converted.HasChome != nctx.Input.SearchAddr.HasChome {
 			searchAddr = converted
@@ -34,7 +34,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 	// IMPORTANT: If has_chome is true and we converted to chome notation (e.g., "舞浜2@:11"),
 	// we should NOT skip because rsdtdsp data may exist under the chome-specific machiaza_id
 	// (e.g., 舞浜 base=0018000 has rsdtdsp_count=0, but 舞浜2丁目=0018002 has rsdtdsp data)
-	if basic.IDs.RsdtdspCount == 0 && !chomeConverted {
+	if basic.Machiaza.RsdtdspCount == 0 && !chomeConverted {
 		return nil, nil
 	}
 
@@ -74,12 +74,12 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 
 	// Skip parcel search if this machiaza has no parcel data and machiaza_id ends with "000"
 	// (no base record to fallback to)
-	parcelCount := basic.IDs.ParcelCount
+	parcelCount := basic.Machiaza.ParcelCount
 	machiazaID := *basic.IDs.MachiazaID
 	if parcelCount == 0 && model.IsBaseMachiazaID(machiazaID) {
 		// For has_chome=true, parcel data may exist under the chome-specific machiaza_id
 		// so we continue to search with chome adjustment
-		if !basic.IDs.HasChome {
+		if !basic.Machiaza.HasChome {
 			return nil, nil
 		}
 	}
@@ -97,7 +97,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	// First try with chome adjustment (handles "南2条西1-5-2F" -> chome=1, parcel=5)
 	// Then fall back to no adjustment (handles "舞浜2-11" -> parcel=2-11)
 	parsedSearchAddr := parseSearchAddr(searchAddr)
-	if basic.IDs.HasChome && !parsedSearchAddr.HasChome {
+	if basic.Machiaza.HasChome && !parsedSearchAddr.HasChome {
 		adjusted := convertColonToChome(parsedSearchAddr)
 		adjustedSearchAddr := adjusted.String()
 		if adjustedSearchAddr != searchAddr {

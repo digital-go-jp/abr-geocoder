@@ -92,7 +92,7 @@ func (n *Impl) handleBasicFallback(ctx context.Context, nctx *normalizeContext) 
 
 	// When chome is not yet matched, try to find a more specific record
 	if basic.StructuredAddress.Chome == nil {
-		if basic.IDs.HasChome {
+		if basic.Machiaza.HasChome {
 			// has_chome=true but no chome in result - try to find chome-specific record
 			results, err := n.tryChomeSearch(ctx, nctx)
 			if err != nil {

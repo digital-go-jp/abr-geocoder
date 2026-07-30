@@ -105,10 +105,14 @@ type IDs struct {
 	RsdtID      *string `json:"rsdt_id"`
 	Rsdt2ID     *string `json:"rsdt2_id"`
 	PrcID       *string `json:"prc_id"`
-	// Internal metadata (not included in JSON output)
-	HasChome     bool `json:"-"` // True if this oaza has chome variations
-	ParcelCount  int  `json:"-"` // Number of parcel records for this machiaza
-	RsdtdspCount int  `json:"-"` // Number of rsdtdsp records for this machiaza
+}
+
+// MachiazaData describes what the cache holds under a machiaza. The matcher
+// reads it to pick the second-stage search; it is not part of any response.
+type MachiazaData struct {
+	HasChome     bool // The oaza has chome variations
+	ParcelCount  int  // Parcel records under this machiaza
+	RsdtdspCount int  // Residential records under this machiaza
 }
 
 type StructuredAddress struct {

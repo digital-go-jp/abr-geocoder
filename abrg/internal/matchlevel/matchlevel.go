@@ -4,7 +4,7 @@ package matchlevel
 import "abrg/internal/model"
 
 // DetermineMatchLevel determines the match level using ID fields.
-// Invariant: MachiazaID and LgCode are either nil or valid length (enforced by repository.buildIDs).
+// Invariant: MachiazaID and LgCode are either nil or valid length (enforced by repository.BuildIDs).
 func DetermineMatchLevel(ids *model.IDs) model.MatchLevel {
 	if ids == nil {
 		return model.MatchLevelUnknown
