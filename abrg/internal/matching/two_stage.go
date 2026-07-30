@@ -41,7 +41,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 
 	searchAddrStr := searchAddr.String()
 	results, err := n.twoStageSearch.normalizeWithBasic(
-		ctx, model.CategoryResidential, nctx.State.BasicResults, searchAddrStr,
+		ctx, model.CategoryResidential, nctx.State.BasicResults, searchAddr,
 	)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 		adjustedSearchAddr := adjusted.String()
 		if adjustedSearchAddr != searchAddr {
 			results, err := n.twoStageSearch.normalizeWithBasic(
-				ctx, model.CategoryParcel, nctx.State.BasicResults, adjustedSearchAddr,
+				ctx, model.CategoryParcel, nctx.State.BasicResults, adjusted,
 			)
 			if err != nil {
 				return nil, err
@@ -116,7 +116,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	}
 
 	results, err := n.twoStageSearch.normalizeWithBasic(
-		ctx, model.CategoryParcel, nctx.State.BasicResults, searchAddr,
+		ctx, model.CategoryParcel, nctx.State.BasicResults, parsedSearchAddr,
 	)
 	if err != nil {
 		return nil, err

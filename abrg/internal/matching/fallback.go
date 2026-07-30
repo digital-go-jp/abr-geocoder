@@ -188,14 +188,14 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 		nctx.Input.Category == model.CategoryAll || nctx.Input.Category == ""
 
 	if parcelAllowed && len(rest) > 0 && n.twoStageSearch != nil {
-		parcelAddr := base + ":" + strings.Join(rest, "-")
+		parcelAddr := parsedAddress{Base: base, Numbers: rest}
 		parcelResults, err := n.twoStageSearch.normalizeWithBasic(ctx, model.CategoryParcel, results, parcelAddr)
 		if err != nil {
 			return nil, err
 		}
 		if len(parcelResults) > 0 {
 			debugMatchPath(ctx, "numeric_koaza", nctx.Input.NormalizedAddr, "parcel", true)
-			setTwoStageUnmatchedAddress(&parcelResults[0], nctx.Input.NormalizedAddr, parcelAddr)
+			setTwoStageUnmatchedAddress(&parcelResults[0], nctx.Input.NormalizedAddr, parcelAddr.String())
 			return parcelResults, nil
 		}
 	}
