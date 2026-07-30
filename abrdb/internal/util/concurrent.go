@@ -17,6 +17,13 @@ import (
 // the source feed or exhaust PostgreSQL connections.
 const MaxConcurrency = 32
 
+// defaultLimit is the worker limit of a stage the operator did not configure.
+// It is read once at startup rather than per call: the connection pool is
+// sized from it and lives for the whole process, and Go raises GOMAXPROCS
+// when a container's CPU allowance grows. Reading it again later would let
+// the stages ask for more workers than the pool can serve.
+var defaultLimit = runtime.GOMAXPROCS(0)
+
 // Concurrency reports the worker limit of each stage that runs in parallel.
 type Concurrency struct {
 	Download int
@@ -40,23 +47,23 @@ func LoadConcurrency() Concurrency {
 
 // concurrencyLimit returns the worker limit configured in the named
 // environment variable. Unset, invalid, or non-positive values fall back to
-// GOMAXPROCS (container-aware); values above MaxConcurrency are clamped.
+// defaultLimit; values above MaxConcurrency are clamped.
 func concurrencyLimit(envName string) int {
 	v, ok := os.LookupEnv(envName)
 	if !ok || v == "" {
-		return runtime.GOMAXPROCS(0)
+		return defaultLimit
 	}
 	n, err := strconv.Atoi(v)
 	if err != nil || n <= 0 {
 		slog.Warn("ignoring invalid concurrency setting",
 			"event", "concurrency", "env", envName, "value", v)
-		return runtime.GOMAXPROCS(0)
+		return defaultLimit
 	}
 	return min(n, MaxConcurrency)
 }
 
 // ExecuteConcurrently runs workers over items with bounded parallelism and integrated progress tracking.
-// A non-positive limit falls back to GOMAXPROCS (container-aware in Go 1.21+).
+// A non-positive limit falls back to defaultLimit.
 // If monitor is nil, progress tracking is skipped.
 func ExecuteConcurrently[T any](
 	ctx context.Context,
@@ -76,7 +83,7 @@ func ExecuteConcurrently[T any](
 
 	g, ctx := errgroup.WithContext(ctx)
 	if limit <= 0 {
-		limit = runtime.GOMAXPROCS(0)
+		limit = defaultLimit
 	}
 	g.SetLimit(min(limit, len(items)))
 
