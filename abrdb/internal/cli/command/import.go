@@ -32,8 +32,6 @@ type ChangesPendingError struct{ Message string }
 
 func (e ChangesPendingError) Error() string { return e.Message }
 
-func (ChangesPendingError) ExitCode() int { return 1 }
-
 // ImportOptions holds the import command options.
 type ImportOptions struct {
 	DryRun  bool

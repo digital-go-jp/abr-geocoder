@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -154,16 +155,19 @@ func TestRunImportDryRun_ExitCodes(t *testing.T) {
 	}
 }
 
-// TestChangesPendingError pins the properties main relies on for the exit
-// code contract: it is an error whose dedicated exit code is 1.
+// TestChangesPendingError pins the properties main relies on for the exit code
+// contract: it carries its message, and it is still matched by type after
+// wrapping, which is how main picks exit 1 (see TestExitCode in cmd/abrdb).
 func TestChangesPendingError(t *testing.T) {
 	err := ChangesPendingError{Message: "changes pending"}
 
 	if got := err.Error(); got != "changes pending" {
 		t.Errorf("Error() = %q, want %q", got, "changes pending")
 	}
-	if got := err.ExitCode(); got != 1 {
-		t.Errorf("ExitCode() = %d, want 1", got)
+
+	var target ChangesPendingError
+	if !errors.As(fmt.Errorf("dry-run: %w", err), &target) {
+		t.Error("ChangesPendingError is not matched through a wrap; main would exit 2 instead of 1")
 	}
 }
 

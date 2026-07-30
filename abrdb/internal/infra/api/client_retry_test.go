@@ -231,12 +231,6 @@ func TestDownloadFile_ExhaustionIsPlainError(t *testing.T) {
 	if len(*sleeps) != 3 {
 		t.Errorf("waits = %v, want 3", *sleeps)
 	}
-	// The CLI maps any error without an ExitCode method to exit 2; only
-	// ChangesPendingError may exit 1.
-	var exitCoder interface{ ExitCode() int }
-	if errors.As(err, &exitCoder) {
-		t.Errorf("err = %v carries ExitCode(); retry exhaustion must stay a plain error", err)
-	}
 }
 
 // TestDownloadFile_BackoffAbortsOnCancel uses the real sleeper to pin that a
