@@ -24,6 +24,10 @@ func (failingQuerier) FindCityRecordFuzzy(context.Context, repository.CityFuzzyP
 	return nil, errQueryFailed
 }
 
+func (failingQuerier) FindCandidateLgCodes(context.Context, repository.CityFuzzyParams) ([]string, error) {
+	return nil, errQueryFailed
+}
+
 func (failingQuerier) FindPrefecture(context.Context, string) (*repository.PrefectureResult, error) {
 	return nil, errQueryFailed
 }

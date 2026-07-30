@@ -83,8 +83,10 @@ func (n *Impl) matchNormalized(ctx context.Context, query model.MatchQuery, norm
 
 	lgCode, machiazaID := extractIDs(basicResults)
 
-	// If location detection failed, return unmatched result
-	if pref == model.All && lgCode == "" && machiazaID == "" {
+	// An address naming no prefecture and no city has nothing to match against,
+	// so give up before the pipeline. A misspelled city name still names a city
+	// and goes on to the fuzzy search, which scopes itself on that name.
+	if pref == model.All && lgCode == "" && machiazaID == "" && n.cityBoundary.Find(searchAddr) <= 0 {
 		return []model.MatchedResult{unmatched.CreateUnmatchedResult(normalizedAddr)}, nil
 	}
 

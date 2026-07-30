@@ -118,6 +118,21 @@ func (r *DB) FindBasicByLevenshtein(ctx context.Context, p LevenshteinParams) ([
 	} else if p.PrefCode != "" && p.PrefCode != model.All {
 		query += " AND pref_code = ?"
 		args = append(args, p.PrefCode)
+	} else if len(p.LgCodes) > 0 {
+		// No single code was detected, so the search is bounded by the cities
+		// whose name is closest to the one in the address. The distance over the
+		// whole address still decides which row wins, so a city name that is
+		// nearer in isolation does not take the result.
+		//
+		// The codes go through cache_city rather than a bare IN list: only then
+		// does DuckDB build the semi-join and narrow the scan before evaluating
+		// editdist3. A bare list becomes another filter on the scan, computing
+		// the distance for every machiaza in the country first (15x slower).
+		query += " AND lg_code IN (SELECT lg_code FROM cache_city WHERE lg_code IN (?" +
+			strings.Repeat(", ?", len(p.LgCodes)-1) + "))"
+		for _, lgCode := range p.LgCodes {
+			args = append(args, lgCode)
+		}
 	}
 
 	sqlLimit := max(p.Limit*sqlLimitMultiplier, minSQLLimit)

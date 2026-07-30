@@ -24,6 +24,7 @@ var ErrUnknownCategory = errors.New("unknown category")
 type implQuerier interface {
 	FindCityRecord(ctx context.Context, params repository.CityRecordParams) (*repository.CityResult, error)
 	FindCityRecordFuzzy(ctx context.Context, params repository.CityFuzzyParams) (*repository.CityResult, error)
+	FindCandidateLgCodes(ctx context.Context, params repository.CityFuzzyParams) ([]string, error)
 	FindPrefecture(ctx context.Context, prefCode string) (*repository.PrefectureResult, error)
 	FindBasicByAddress(ctx context.Context, params repository.BasicSearchParams) ([]repository.BasicResult, error)
 	FindBasicByLevenshtein(ctx context.Context, params repository.LevenshteinParams) ([]repository.BasicResult, error)

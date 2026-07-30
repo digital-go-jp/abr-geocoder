@@ -1248,9 +1248,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 		},
 		{
 			// 大字名の「町」が省略
-			// 入力「茨城県龍ケ崎市薄倉」→ DB「茨城県龍ケ崎市薄倉薄倉町」にマッチ
-			// 都道府県省略時は「町」が省略されているとマッチできずunknown
-			// TODO: 都道府県省略時の市名認識改善
+			// 入力「薄倉」→ DB「薄倉町」にファジーマッチ
+			// 都道府県を省略しても、市名から候補市区町村に絞ってマッチする（jat038-1 と同じ結果）
 			name: "jat038 [龍ケ崎市薄倉２３６４]",
 			query: model.MatchQuery{
 				Address:  "龍ケ崎市薄倉２３６４",
@@ -1258,17 +1257,17 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelUnknown,
-			wantMatchedAddress:   "",
-			wantUnmatchedAddress: []string{"龍ケ崎市薄倉2364"},
+			wantMatchLevel:       model.MatchLevelMachiaza,
+			wantMatchedAddress:   "茨城県龍ケ崎市薄倉町",
+			wantUnmatchedAddress: []string{"2364"},
 			wantStructured: map[string]any{
-				"pref":          nil,
+				"pref":          "茨城県",
 				"county":        nil,
-				"city":          nil,
+				"city":          "龍ケ崎市",
 				"ward":          nil,
 				"machiaza_dist": nil,
 				"kyoto_st":      nil,
-				"oaza_cho":      nil,
+				"oaza_cho":      "薄倉町",
 				"chome":         nil,
 				"koaza":         nil,
 				"blk_num":       nil,
@@ -2570,7 +2569,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 		},
 		{
 			// 異体字
-			// 都道府県省略時、「竜ヶ崎市」を「龍ケ崎市」として認識できずunknown
+			// 「竜ヶ崎市」は正規化表にない異体字だが、市名のファジーマッチで「龍ケ崎市」に届く
+			// 「字米町」に対応する町字はDBになく市区レベル止まり
 			name: "jat063 [竜ヶ崎市字米町3903]",
 			query: model.MatchQuery{
 				Address:  "竜ヶ崎市字米町3903",
@@ -2578,13 +2578,13 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelUnknown,
-			wantMatchedAddress:   "",
-			wantUnmatchedAddress: []string{"竜ヶ崎市字米町3903"},
+			wantMatchLevel:       model.MatchLevelCity,
+			wantMatchedAddress:   "茨城県龍ケ崎市",
+			wantUnmatchedAddress: []string{"字米町3903"},
 			wantStructured: map[string]any{
-				"pref":          nil,
+				"pref":          "茨城県",
 				"county":        nil,
-				"city":          nil,
+				"city":          "龍ケ崎市",
 				"ward":          nil,
 				"machiaza_dist": nil,
 				"kyoto_st":      nil,
