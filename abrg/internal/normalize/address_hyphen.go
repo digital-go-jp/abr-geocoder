@@ -322,17 +322,23 @@ func AddressNumbersToHyphen(s string) (string, bool) {
 	plainBan := !hasBanGoPattern(s) && !hasBanTouPattern(s)
 
 	// Phase 1: Preprocess room/floor patterns
-	s = applyRules(s, roomFloorRules)
+	if strings.Contains(s, "室") || strings.Contains(s, "F") || strings.Contains(s, "階") {
+		s = applyRules(s, roomFloorRules)
+	}
 
 	// Phase 2: Handle illegal banchi patterns (early return)
-	if result, done := ApplyFirstMatch(s, illegalBanchiRules); done {
-		return result, result != original
+	if strings.Contains(s, "番地") {
+		if result, done := ApplyFirstMatch(s, illegalBanchiRules); done {
+			return result, result != original
+		}
 	}
 
 	// Phase 3-5: Process banchi/bancho/ban patterns (only if 番 exists)
 	if strings.Contains(s, "番") {
 		s = processBanchi(s)
-		s = applyRules(s, banchoRules)
+		if strings.Contains(s, "番町") {
+			s = applyRules(s, banchoRules)
+		}
 		s = processBan(s, plainBan)
 	}
 
@@ -340,7 +346,9 @@ func AddressNumbersToHyphen(s string) (string, bool) {
 	s = processNoPatterns(s)
 
 	// Phase 7: Process go patterns and postfix
-	s = applyRules(s, goAndPostfixRules)
+	if strings.Contains(s, "号") || strings.Contains(s, "番町") {
+		s = applyRules(s, goAndPostfixRules)
+	}
 
 	return s, s != original
 }
@@ -464,8 +472,8 @@ func processBan(s string, plainBan bool) string {
 }
 
 func processNoPatterns(s string) string {
-	// Skip if no の or ノ in string
-	if !strings.ContainsAny(s, "のノ") {
+	// Every rule below needs の or ノ immediately followed by a digit.
+	if !hasNoBeforeDigit(s) {
 		return s
 	}
 
@@ -482,6 +490,20 @@ func processNoPatterns(s string) string {
 	// Convert のN号/ノN号 and のN/ノN only when preceded by a digit
 	// This handles cases like "7の2" → "7-2" but avoids "アケボノ1" → "アケボ-1"
 	return applyRules(s, noAfterDigitRules)
+}
+
+// hasNoBeforeDigit reports whether the string contains の or ノ directly
+// followed by an ASCII digit. Both are 3 bytes in UTF-8.
+func hasNoBeforeDigit(s string) bool {
+	for i := 0; i+3 < len(s); i++ {
+		if !char.IsASCIIDigit(s[i+3]) {
+			continue
+		}
+		if strings.HasPrefix(s[i:], "の") || strings.HasPrefix(s[i:], "ノ") {
+			return true
+		}
+	}
+	return false
 }
 
 // noAfterDigitRules convert のN/ノN patterns preceded by a digit.

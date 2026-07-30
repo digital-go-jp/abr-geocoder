@@ -87,7 +87,7 @@ func isGaikuPattern(s string) bool {
 // (e.g., "北3西1-7") that should not have a colon inserted.
 // These patterns will later be expanded by ExpandSapporoJou (e.g., "北3条西1丁目-7").
 func isSapporoAbbreviation(s string) bool {
-	if strings.Contains(s, "条") {
+	if !hasSapporoJouLead(s) {
 		return false
 	}
 	return sapporoJouPattern.MatchString(s)
@@ -131,8 +131,10 @@ func AddColon(s string) (string, bool) {
 		}
 	}
 
-	if result, ok := normalize.ApplyFirstMatch(s, chomeRules); ok {
-		return result, true
+	if strings.Contains(s, "丁目") {
+		if result, ok := normalize.ApplyFirstMatch(s, chomeRules); ok {
+			return result, true
+		}
 	}
 
 	// Try standard number/alphabet/katakana pattern
