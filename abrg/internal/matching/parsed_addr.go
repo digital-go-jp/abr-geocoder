@@ -62,8 +62,8 @@ func parseSearchAddr(searchAddr string) parsedAddress {
 			afterColon := after
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterColon)
 		} else if len(afterAt) > 1 && afterAt[0] == '-' && char.IsASCIIDigit(afterAt[1]) {
-			// Sapporo pattern: "@-N" where N is address number after chome
-			// e.g., "北3条西1@-7" from expanded "北3西1-7" (ExpandSapporoJou + ChomeToSymbol)
+			// "@-N": the numbers follow the chome marker directly, as they do
+			// when the input wrote the chome out and then a hyphen.
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterAt)
 		}
 	} else {

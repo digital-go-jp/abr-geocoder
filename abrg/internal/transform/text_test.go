@@ -60,7 +60,7 @@ func TestTextForBasicNormalized(t *testing.T) {
 		{
 			name:    "sapporo kanji abbreviation",
 			input:   "北三西一-7",
-			want:    "北3条西1@:-7", // KanjiToArabic → ExpandSapporoJou → AddColon → ChomeToSymbol
+			want:    "北3条西1@:-7", // KanjiToArabic → expandSapporoJou → AddColon → ChomeToSymbol
 			changed: true,
 		},
 	}

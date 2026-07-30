@@ -52,12 +52,12 @@ func TestExpandSapporoJou(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, changed := ExpandSapporoJou(tt.input)
+			got, changed := expandSapporoJou(tt.input)
 			if got != tt.expected {
-				t.Errorf("ExpandSapporoJou(%q) = %q, want %q", tt.input, got, tt.expected)
+				t.Errorf("expandSapporoJou(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 			if changed != tt.changed {
-				t.Errorf("ExpandSapporoJou(%q) changed = %v, want %v", tt.input, changed, tt.changed)
+				t.Errorf("expandSapporoJou(%q) changed = %v, want %v", tt.input, changed, tt.changed)
 			}
 		})
 	}

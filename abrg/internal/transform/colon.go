@@ -85,7 +85,8 @@ func isGaikuPattern(s string) bool {
 
 // isSapporoAbbreviation checks if the string contains an abbreviated Sapporo address pattern
 // (e.g., "北3西1-7") that should not have a colon inserted.
-// These patterns will later be expanded by ExpandSapporoJou (e.g., "北3条西1丁目-7").
+// expandSapporoJou expands these later (e.g. "北3西1-7") and inserts the
+// colon itself, once the chome is spelled out.
 func isSapporoAbbreviation(s string) bool {
 	if !hasSapporoJouLead(s) {
 		return false

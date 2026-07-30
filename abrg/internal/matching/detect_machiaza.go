@@ -128,10 +128,9 @@ func detectMachiaza(ctx context.Context, repo basicFinder, address string, prefC
 		}
 	}
 
-	// Handle Sapporo expanded pattern: "@-N" (chome marker followed by address numbers)
-	// e.g., "中央区北3条西1@-7" -> base="中央区北3条西1@", after="7"
-	// This pattern occurs when ExpandSapporoJou + ChomeToSymbol produce "@-N"
-	// but AddColon was skipped (isSapporoAbbreviation).
+	// Handle "@-N": a chome marker followed directly by the address numbers,
+	// which is what a written-out chome plus a hyphen leaves behind
+	// (e.g. "銀座1丁目-5" -> "銀座1@-5").
 	if !found {
 		if atHyphenIdx := strings.Index(address, "@-"); atHyphenIdx >= 0 {
 			rest := address[atHyphenIdx+2:]

@@ -210,7 +210,7 @@ func TestAddColon(t *testing.T) {
 			changed:  false,
 		},
 		{
-			// Sapporo abbreviation (北3西1...) is left for ExpandSapporoJou.
+			// Sapporo abbreviation (北3西1...) is left for expandSapporoJou.
 			name:     "sapporo abbreviation suppresses colon",
 			input:    "北3西1-7",
 			expected: "北3西1-7",

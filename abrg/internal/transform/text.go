@@ -19,7 +19,7 @@ var (
 		// ExpandSapporoJou must run after KanjiToArabic because its regex
 		// matches Arabic digits only (e.g. 北3西1), so kanji input like
 		// 北三西一 needs to be converted to 北3西1 first.
-		ExpandSapporoJou,
+		expandSapporoJou,
 		ChomeToSymbol,
 		normalize.NormalizeSpaces,
 	}
