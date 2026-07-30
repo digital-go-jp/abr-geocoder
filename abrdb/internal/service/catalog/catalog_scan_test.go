@@ -45,14 +45,14 @@ func (f *fakeStore) SyncPairImportStatus(context.Context) error {
 
 func newScanTestService(t *testing.T, lister *fakeLister, store *fakeStore) *service {
 	t.Helper()
-	return &service{
-		apiClient:   lister,
-		store:       store,
-		downloadDir: t.TempDir(),
-		categoryInfoMap: map[string]*schema.CategoryInfo{
+	return &service{ServiceConfig{
+		APIClient:   lister,
+		Store:       store,
+		DownloadDir: t.TempDir(),
+		CategoryInfoMap: map[string]*schema.CategoryInfo{
 			"town": {S3TextPath: "mt_town/", S3PosPath: "mt_town_pos/"},
 		},
-	}
+	}}
 }
 
 func TestScanAndCompare_ReportsNewFiles(t *testing.T) {

@@ -79,7 +79,7 @@ func (e *ETL) Close() error {
 }
 
 func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath string, posPath string) error {
-	suffix := "_" + strings.TrimSuffix(filepath.Base(textPath), ".csv.zip")
+	tn := generateTableNames("_" + strings.TrimSuffix(filepath.Base(textPath), ".csv.zip"))
 
 	// TEMP tables are connection-local in DuckDB and survive the commit, so
 	// the whole load runs on one pinned connection and the deferred DROP uses
@@ -91,7 +91,7 @@ func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, t
 	}
 	defer func() { _ = conn.Close() }()
 	// WithoutCancel keeps the cleanup working after a mid-import cancellation.
-	defer cleanupTempTables(context.WithoutCancel(ctx), conn, suffix)
+	defer cleanupTempTables(context.WithoutCancel(ctx), conn, tn)
 
 	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
@@ -104,14 +104,14 @@ func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, t
 	}()
 
 	start := time.Now()
-	err = e.loadTextDataWithSuffixTx(ctx, tx, categoryInfo, textPath, suffix)
+	err = e.loadTextDataTx(ctx, tx, categoryInfo, textPath, tn)
 	if err != nil {
 		return fmt.Errorf("load text data from %q: %w", filepath.Base(textPath), err)
 	}
 	textSec := time.Since(start).Seconds()
 
 	start = time.Now()
-	hasPosData, err := e.loadPositionDataWithSuffixTx(ctx, tx, categoryInfo, posPath, suffix)
+	hasPosData, err := e.loadPositionDataTx(ctx, tx, categoryInfo, posPath, tn)
 	if err != nil {
 		return fmt.Errorf("load position data from %q: %w", filepath.Base(posPath), err)
 	}
@@ -119,7 +119,7 @@ func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, t
 
 	filename := filepath.Base(textPath)
 	start = time.Now()
-	err = e.transformAndLoadWithSuffixTx(ctx, tx, categoryInfo, hasPosData, suffix, filename)
+	err = e.transformAndLoadTx(ctx, tx, categoryInfo, hasPosData, tn, filename)
 	if err != nil {
 		return fmt.Errorf("transform and load %q: %w", filename, err)
 	}
@@ -133,8 +133,7 @@ func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, t
 	return err
 }
 
-func cleanupTempTables(ctx context.Context, conn *sql.Conn, suffix string) {
-	tn := generateTableNames(suffix)
+func cleanupTempTables(ctx context.Context, conn *sql.Conn, tn tableNames) {
 	for _, table := range []string{tn.Text, tn.Pos, tn.Transformed} {
 		_, _ = conn.ExecContext(ctx, "DROP TABLE IF EXISTS "+table)
 	}
@@ -175,20 +174,19 @@ func buildWhereClause(filters map[string][]string) string {
 		}
 		quoted := make([]string, len(values))
 		for i, v := range values {
-			quoted[i] = "'" + strings.ReplaceAll(v, "'", "''") + "'"
+			quoted[i] = "'" + db.SqlEscape(v) + "'"
 		}
 		clauses = append(clauses, column+" IN ("+strings.Join(quoted, ", ")+")")
 	}
 	return strings.Join(clauses, " AND ")
 }
 
-func (e *ETL) loadTextDataWithSuffixTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, textPath string, suffix string) error {
+func (e *ETL) loadTextDataTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, textPath string, tn tableNames) error {
 	if textPath == "" {
 		return errors.New("text file path is required")
 	}
 
 	csvName := csvNameFromZip(textPath)
-	tn := generateTableNames(suffix)
 
 	whereClause := buildWhereClause(categoryInfo.Filters)
 	createTextSQL := readZipSQL(tn.Text, textPath, csvName, categoryInfo.TextColumns, categoryInfo.TextColumnTypes, whereClause)
@@ -210,12 +208,11 @@ func (e *ETL) loadTextDataWithSuffixTx(ctx context.Context, tx *sql.Tx, category
 	return nil
 }
 
-func (e *ETL) loadPositionDataWithSuffixTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, posPath string, suffix string) (bool, error) {
+func (e *ETL) loadPositionDataTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, posPath string, tn tableNames) (bool, error) {
 	if posPath == "" {
 		return false, nil
 	}
 
-	tn := generateTableNames(suffix)
 	csvName := csvNameFromZip(posPath)
 
 	// Position data doesn't have status_flg, so no filtering needed
@@ -230,9 +227,8 @@ func (e *ETL) loadPositionDataWithSuffixTx(ctx context.Context, tx *sql.Tx, cate
 
 // Rows for this file's scope are deleted beforehand via a direct PostgreSQL
 // connection (see postgres.DeleteFileScope); here we only transform and insert.
-func (e *ETL) transformAndLoadWithSuffixTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, hasPosData bool, suffix string, filename string) error {
+func (e *ETL) transformAndLoadTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, hasPosData bool, tn tableNames, filename string) error {
 	transformer := newTransformer(categoryInfo)
-	tn := generateTableNames(suffix)
 
 	insertSQL, err := buildInsertSQL(categoryInfo, tn.Transformed)
 	if err != nil {

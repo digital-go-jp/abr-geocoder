@@ -37,7 +37,7 @@ func TestExtractCategoryFromPrefix(t *testing.T) {
 		},
 	}
 
-	s := &service{categoryInfoMap: categoryInfoMap}
+	s := &service{ServiceConfig{CategoryInfoMap: categoryInfoMap}}
 
 	tests := []struct {
 		name   string
@@ -271,11 +271,11 @@ func TestService_IsProcessable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &service{
-				enabledPref:     tt.enabledPref,
-				enabledCategory: tt.enabledCategory,
-				enabledPos:      tt.enabledPos,
-			}
+			s := &service{ServiceConfig{
+				EnabledPref:     tt.enabledPref,
+				EnabledCategory: tt.enabledCategory,
+				EnabledPos:      tt.enabledPos,
+			}}
 
 			got := s.isProcessable(tt.fileInfo)
 			if got != tt.want {
@@ -303,23 +303,23 @@ func TestNew(t *testing.T) {
 		t.Fatal("New() returned nil")
 	}
 
-	if svc.apiClient != cfg.APIClient {
+	if svc.APIClient != cfg.APIClient {
 		t.Errorf("apiClient not set correctly")
 	}
 
-	if svc.downloadDir != cfg.DownloadDir {
-		t.Errorf("downloadDir = %v, want %v", svc.downloadDir, cfg.DownloadDir)
+	if svc.DownloadDir != cfg.DownloadDir {
+		t.Errorf("downloadDir = %v, want %v", svc.DownloadDir, cfg.DownloadDir)
 	}
 
-	if len(svc.enabledPref) != len(cfg.EnabledPref) {
-		t.Errorf("enabledPref length = %v, want %v", len(svc.enabledPref), len(cfg.EnabledPref))
+	if len(svc.EnabledPref) != len(cfg.EnabledPref) {
+		t.Errorf("enabledPref length = %v, want %v", len(svc.EnabledPref), len(cfg.EnabledPref))
 	}
 
-	if len(svc.enabledCategory) != len(cfg.EnabledCategory) {
-		t.Errorf("enabledCategory length = %v, want %v", len(svc.enabledCategory), len(cfg.EnabledCategory))
+	if len(svc.EnabledCategory) != len(cfg.EnabledCategory) {
+		t.Errorf("enabledCategory length = %v, want %v", len(svc.EnabledCategory), len(cfg.EnabledCategory))
 	}
 
-	if svc.enabledPos != cfg.EnabledPos {
-		t.Errorf("enabledPos = %v, want %v", svc.enabledPos, cfg.EnabledPos)
+	if svc.EnabledPos != cfg.EnabledPos {
+		t.Errorf("enabledPos = %v, want %v", svc.EnabledPos, cfg.EnabledPos)
 	}
 }

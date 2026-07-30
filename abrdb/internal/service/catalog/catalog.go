@@ -39,25 +39,11 @@ type ServiceConfig struct {
 }
 
 type service struct {
-	apiClient       apiLister
-	store           catalogStore
-	downloadDir     string
-	enabledPref     []int
-	enabledCategory map[model.FileCategory]bool
-	enabledPos      bool
-	categoryInfoMap map[string]*schema.CategoryInfo
+	ServiceConfig
 }
 
 func New(cfg ServiceConfig) *service {
-	return &service{
-		apiClient:       cfg.APIClient,
-		store:           cfg.Store,
-		downloadDir:     cfg.DownloadDir,
-		enabledPref:     cfg.EnabledPref,
-		enabledCategory: cfg.EnabledCategory,
-		enabledPos:      cfg.EnabledPos,
-		categoryInfoMap: cfg.CategoryInfoMap,
-	}
+	return &service{ServiceConfig: cfg}
 }
 
 type ScanResult struct {
@@ -93,7 +79,7 @@ func (s *service) ScanAndUpdate(ctx context.Context, prefixes []string, force bo
 	}
 
 	// Sync text/pos pairs: if either needs import, both should be imported together
-	if err := s.store.SyncPairImportStatus(ctx); err != nil {
+	if err := s.Store.SyncPairImportStatus(ctx); err != nil {
 		return nil, fmt.Errorf("sync pair import status: %w", err)
 	}
 
@@ -108,14 +94,14 @@ type scanFilesResult struct {
 // scan is the unified scanning function used by both ScanAndCompare and ScanAndUpdate
 func (s *service) scan(ctx context.Context, prefixes []string, updateDB, force bool) (*scanFilesResult, error) {
 	// Read the download directory once; the set is shared across prefixes
-	localFileSet, err := buildLocalFileSet(s.downloadDir)
+	localFileSet, err := buildLocalFileSet(s.DownloadDir)
 	if err != nil {
 		return nil, fmt.Errorf("build local file set: %w", err)
 	}
 
 	result := &scanFilesResult{}
 	for _, prefix := range prefixes {
-		files, err := s.apiClient.ListFilesByPrefix(ctx, prefix)
+		files, err := s.APIClient.ListFilesByPrefix(ctx, prefix)
 		if err != nil {
 			return nil, fmt.Errorf("list files for prefix %q: %w", prefix, err)
 		}
@@ -139,7 +125,7 @@ func (s *service) scan(ctx context.Context, prefixes []string, updateDB, force b
 // If updateDB is true, upserts changed files to DB and returns count.
 // If updateDB is false, only returns the list of changed files (dry-run mode).
 func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category model.FileCategory, localFileSet map[string]struct{}, updateDB, force bool) (*scanFilesResult, error) {
-	existingFiles, err := s.store.FilesByCategory(ctx, category)
+	existingFiles, err := s.Store.FilesByCategory(ctx, category)
 	if err != nil {
 		return nil, fmt.Errorf("get existing files: %w", err)
 	}
@@ -166,7 +152,7 @@ func (s *service) scanFiles(ctx context.Context, files []api.FileInfo, category 
 			continue
 		}
 
-		if err := s.store.UpsertFile(ctx, record); err != nil {
+		if err := s.Store.UpsertFile(ctx, record); err != nil {
 			return nil, fmt.Errorf("upsert file %q: %w", file.URL, err)
 		}
 		if action.isNewOrModified {
@@ -250,17 +236,17 @@ func buildLocalFileSet(downloadDir string) (map[string]struct{}, error) {
 // isProcessable checks if the file should be processed based on filters
 func (s *service) isProcessable(info *model.File) bool {
 	// Category filter
-	if len(s.enabledCategory) > 0 && !s.enabledCategory[info.FileCategory] {
+	if len(s.EnabledCategory) > 0 && !s.EnabledCategory[info.FileCategory] {
 		return false
 	}
 
 	// Prefecture filter (skip for "all" files with prefCode = 0)
-	if len(s.enabledPref) > 0 && info.PrefCode != 0 && !slices.Contains(s.enabledPref, info.PrefCode) {
+	if len(s.EnabledPref) > 0 && info.PrefCode != 0 && !slices.Contains(s.EnabledPref, info.PrefCode) {
 		return false
 	}
 
 	// Position data filter
-	if !s.enabledPos && info.FileType == model.FileTypePos {
+	if !s.EnabledPos && info.FileType == model.FileTypePos {
 		return false
 	}
 
@@ -270,8 +256,8 @@ func (s *service) isProcessable(info *model.File) bool {
 // extractCategoryFromPrefix extracts category from S3 prefix using categoryInfoMap.
 // Names are checked in sorted order so the result is deterministic.
 func (s *service) extractCategoryFromPrefix(prefix string) model.FileCategory {
-	for _, name := range slices.Sorted(maps.Keys(s.categoryInfoMap)) {
-		info := s.categoryInfoMap[name]
+	for _, name := range slices.Sorted(maps.Keys(s.CategoryInfoMap)) {
+		info := s.CategoryInfoMap[name]
 		if strings.HasPrefix(prefix, info.S3TextPath) || strings.HasPrefix(prefix, info.S3PosPath) {
 			return model.FileCategory(name)
 		}
