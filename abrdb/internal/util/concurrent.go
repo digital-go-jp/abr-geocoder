@@ -18,18 +18,15 @@ import (
 const MaxConcurrency = 32
 
 // ConcurrencyLimit returns the worker limit configured in the named
-// environment variable. Unset, invalid, or non-positive values fall back to
-// GOMAXPROCS (container-aware); values above MaxConcurrency are clamped.
-func ConcurrencyLimit(envName string) int {
-	n, _ := ConfiguredConcurrencyLimit(envName)
-	return n
-}
-
-// ConfiguredConcurrencyLimit is ConcurrencyLimit plus whether the variable held
-// a usable value. Pool sizing needs the distinction: a stage configured to a
-// value that happens to equal GOMAXPROCS still counts as configured, while a
-// stage with no setting leaves the pool at the driver default.
-func ConfiguredConcurrencyLimit(envName string) (int, bool) {
+// environment variable, and whether that variable held a usable value. Unset,
+// invalid, or non-positive values fall back to GOMAXPROCS (container-aware)
+// and report false; values above MaxConcurrency are clamped.
+//
+// Callers that only size a worker pool ignore the second value. Pool sizing
+// needs it: a stage configured to a value that happens to equal GOMAXPROCS
+// still counts as configured, while a stage with no setting at all leaves the
+// connection pool at the driver default.
+func ConcurrencyLimit(envName string) (int, bool) {
 	v, ok := os.LookupEnv(envName)
 	if !ok || v == "" {
 		return runtime.GOMAXPROCS(0), false

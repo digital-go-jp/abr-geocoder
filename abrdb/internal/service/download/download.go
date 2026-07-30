@@ -76,6 +76,8 @@ func (s *service) DownloadPendingFiles(ctx context.Context) error {
 		return nil
 	}
 
+	limit, _ := util.ConcurrencyLimit("ABRDB_DOWNLOAD_CONCURRENCY")
+
 	slog.Debug("starting file downloads",
 		"event", "download_files",
 		"file_count", len(files),
@@ -94,7 +96,7 @@ func (s *service) DownloadPendingFiles(ctx context.Context) error {
 		}
 
 		return nil
-	}, s.progress, "Downloading files", util.ConcurrencyLimit("ABRDB_DOWNLOAD_CONCURRENCY"))
+	}, s.progress, "Downloading files", limit)
 }
 
 // findMissingPendingImports returns files flagged needs_import=true that are

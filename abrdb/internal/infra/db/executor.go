@@ -91,7 +91,7 @@ func dsnWithPoolSize(dsn string) string {
 	workers := 0
 	anySet := false
 	for _, name := range []string{"ABRDB_IMPORT_CONCURRENCY", "ABRDB_DOWNLOAD_CONCURRENCY"} {
-		limit, set := util.ConfiguredConcurrencyLimit(name)
+		limit, set := util.ConcurrencyLimit(name)
 		anySet = anySet || set
 		workers = max(workers, limit)
 	}

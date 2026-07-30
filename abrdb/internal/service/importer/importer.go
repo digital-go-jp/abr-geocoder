@@ -98,6 +98,10 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 	var updatedTables []string
 	seenTables := make(map[string]struct{})
 
+	// Read once: the setting cannot change between categories, and re-reading it
+	// per category would repeat the warning an invalid value logs.
+	limit, _ := util.ConcurrencyLimit("ABRDB_IMPORT_CONCURRENCY")
+
 	// Process each category with timing
 	for _, cat := range category {
 		pendingFiles := pendingByCategory[cat]
@@ -132,7 +136,7 @@ func (s *service) ImportCategoryBatch(ctx context.Context, category []model.File
 		taskName := fmt.Sprintf("Importing %s", cat)
 		if err := util.ExecuteConcurrently(ctx, pairs, func(ctx context.Context, pair catalog.FilePairing) error {
 			return s.importFilePair(ctx, pair, categoryInfo, !tableEmpty)
-		}, s.progress, taskName, util.ConcurrencyLimit("ABRDB_IMPORT_CONCURRENCY")); err != nil {
+		}, s.progress, taskName, limit); err != nil {
 			return nil, fmt.Errorf("import files for %q: %w", cat, err)
 		}
 
