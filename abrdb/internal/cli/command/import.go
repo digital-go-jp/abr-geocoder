@@ -129,23 +129,7 @@ Use --force to skip change detection and import immediately.`,
 
 			// Force mode: skip change detection and re-import every in-scope file
 			if opts.Force {
-				lock, err := sc.QueryExecutor.AcquireImportLock(ctx)
-				if err != nil {
-					return err
-				}
-				defer lock.Release(ctx)
-
-				services, err := initImportServices(sc, store, categoryInfoMap, opts.Quiet)
-				if err != nil {
-					return err
-				}
-				defer func() { _ = services.etl.Close() }()
-
-				if err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, importConfig.EnabledCategory, false, true); err != nil {
-					return err
-				}
-				warnOrphanPosFiles(context.WithoutCancel(ctx), store)
-				return nil
+				return runImportPipeline(ctx, sc, store, catalogService, s3Prefixes, importConfig.EnabledCategory, categoryInfoMap, opts, false)
 			}
 
 			// Default: check for changes first, import only if updates exist
@@ -333,6 +317,26 @@ func runImportWithChangeDetection(
 	// mutates the data tables, so it runs under the exclusive advisory lock,
 	// and the catalog is rescanned after the lock is taken (ScanAndUpdate in
 	// executeImportPipeline), closing the check-then-act window.
+	return runImportPipeline(ctx, sc, store, catalogService, s3Prefixes, enabledCategory, categoryInfoMap, opts, hasPendingWork || hasPendingAnalyze)
+}
+
+// runImportPipeline runs the import under the exclusive advisory lock: acquire
+// the lock, initialize the ETL and services, run the pipeline, then report
+// orphan pos files. The warning comes after the pipeline so orphans first
+// registered by this run's catalog scan are reported now rather than on the
+// next run. force is taken from opts, which the caller has already used to
+// choose between the force and change-detection paths.
+func runImportPipeline(
+	ctx context.Context,
+	sc *ServiceContainer,
+	store *postgres.Catalog,
+	catalogService catalogAPI,
+	s3Prefixes []string,
+	enabledCategory []model.FileCategory,
+	categoryInfoMap map[string]*schema.CategoryInfo,
+	opts *ImportOptions,
+	hasPendingWork bool,
+) error {
 	lock, err := sc.QueryExecutor.AcquireImportLock(ctx)
 	if err != nil {
 		return err
@@ -345,11 +349,9 @@ func runImportWithChangeDetection(
 	}
 	defer func() { _ = services.etl.Close() }()
 
-	if err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork || hasPendingAnalyze, false); err != nil {
+	if err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork, opts.Force); err != nil {
 		return err
 	}
-	// Warn after the pipeline so orphans first registered by this run's
-	// catalog scan are reported now instead of on the next run.
 	warnOrphanPosFiles(context.WithoutCancel(ctx), store)
 	return nil
 }
