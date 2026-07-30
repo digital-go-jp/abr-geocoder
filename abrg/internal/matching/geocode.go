@@ -44,6 +44,7 @@ func Geocode(ctx context.Context, matcher Matcher, repo CoordinatesGetter, query
 		}
 
 		if len(coordinates) > 0 {
+			util.RoundCoordinates(coordinates)
 			feature.Geometry = &model.Geometry{
 				Type:        "Point",
 				Coordinates: coordinates,
@@ -52,12 +53,6 @@ func Geocode(ctx context.Context, matcher Matcher, repo CoordinatesGetter, query
 		}
 
 		features = append(features, feature)
-	}
-
-	for i := range features {
-		if features[i].Geometry != nil {
-			util.RoundCoordinates(features[i].Geometry.Coordinates)
-		}
 	}
 
 	duration := util.DurationMs(time.Since(startTime))
