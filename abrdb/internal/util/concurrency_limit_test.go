@@ -50,11 +50,18 @@ func TestDefaultConcurrencyIsCapped(t *testing.T) {
 // the limit the connection pool was sized against. Go raises GOMAXPROCS on
 // its own when a container's CPU allowance grows, and the pool is sized once
 // at startup and lives for the whole process.
+//
+// GOMAXPROCS moves down rather than up, because on a host with MaxConcurrency
+// CPUs or more the cap would absorb an increase and a per-call read would look
+// identical to a startup read.
 func TestDefaultLimitIsReadOnce(t *testing.T) {
 	const envName = "ABRDB_TEST_UNSET_CONCURRENCY"
 	atStartup := concurrencyLimit(envName)
+	if atStartup < 2 {
+		t.Skip("a single-CPU host has no room to lower GOMAXPROCS")
+	}
 
-	previous := runtime.GOMAXPROCS(atStartup + 3)
+	previous := runtime.GOMAXPROCS(atStartup - 1)
 	t.Cleanup(func() { runtime.GOMAXPROCS(previous) })
 
 	if got := concurrencyLimit(envName); got != atStartup {
