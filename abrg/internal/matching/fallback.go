@@ -23,67 +23,104 @@ func debugMatchPath(ctx context.Context, path, address string, attrs ...any) {
 		append([]any{"event", "match_path", "path", path, "address", address}, attrs...)...)
 }
 
+// handleFallback resolves an address that produced no basic results by trying
+// progressively coarser sources: a city record, a Levenshtein city match, then
+// the prefecture record. Each stage returns nil results when it does not apply.
 func (n *Impl) handleFallback(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
 	if len(nctx.State.BasicResults) > 0 {
 		return n.handleBasicFallback(ctx, nctx)
 	}
 
-	// Try city-level match from cache_city before Levenshtein
-	// This handles city-only addresses (e.g., "鎌ガ谷市", "柴田郡大河原町")
-	if n.repo != nil {
-		searchAddrStr := nctx.Input.SearchAddr.String()
-		fuzzy := false
-		cityResult, err := n.queryCityRecord(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.NormalizedAddr)
-		if err != nil {
-			return nil, fmt.Errorf("city record query: %w", err)
-		}
-		if cityResult == nil {
-			// Fuzzy city match for addresses with mask/unknown characters (e.g., "●橋市")
-			cityResult, err = n.queryCityRecordFuzzy(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.NormalizedAddr)
-			if err != nil {
-				return nil, fmt.Errorf("fuzzy city record query: %w", err)
-			}
-			fuzzy = true
-		}
-		if cityResult != nil {
-			debugMatchPath(ctx, "city_fallback", nctx.Input.NormalizedAddr, "fuzzy", fuzzy)
-			return []model.MatchedResult{*cityResult}, nil
-		}
+	results, err := n.tryCityRecordSearch(ctx, nctx)
+	if err != nil || results != nil {
+		return results, err
 	}
 
-	// If no basic results, try searchWithLevenshtein to find city-level match
-	// This handles cases like "神田鍛冶町二丁目" where the specific chome doesn't exist
-	// Skip if already attempted in tryLevenshteinFallback (avoids duplicate search in CategoryAll)
-	if n.repo != nil && !nctx.State.SkipLevenshtein {
-		levenResults, err := levenshtein.Search(ctx, n.repo, n.buildLevenshteinParams(nctx, nctx.State.LgCode, nctx.State.MachiazaID))
-		if err != nil {
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
-			}
-			return nil, fmt.Errorf("levenshtein search: %w", err)
-		}
-		if len(levenResults) > 0 {
-			debugMatchPath(ctx, "levenshtein_city", nctx.Input.NormalizedAddr,
-				"results", len(levenResults), "score", levenResults[0].Score)
-			return levenResults, nil
-		}
+	results, err = n.tryLevenshteinCitySearch(ctx, nctx)
+	if err != nil || results != nil {
+		return results, err
 	}
 
-	// If still no results but we have prefecture info, search for prefecture record in DB
-	if nctx.Input.Pref != "" && nctx.Input.Pref != model.All && n.repo != nil {
-		prefResult, err := n.queryPrefectureRecord(ctx, nctx.Input.Pref, nctx.Input.NormalizedAddr)
-		if err != nil {
-			return nil, fmt.Errorf("prefecture record query: %w", err)
-		}
-		if prefResult != nil {
-			debugMatchPath(ctx, "prefecture_fallback", nctx.Input.NormalizedAddr)
-			return []model.MatchedResult{*prefResult}, nil
-		}
+	results, err = n.tryPrefectureRecordSearch(ctx, nctx)
+	if err != nil || results != nil {
+		return results, err
 	}
 
 	// Last resort: return completely unmatched
 	debugMatchPath(ctx, "unmatched", nctx.Input.NormalizedAddr)
 	return []model.MatchedResult{unmatched.CreateUnmatchedResult(nctx.Input.NormalizedAddr)}, nil
+}
+
+// tryCityRecordSearch looks for a city-level match in cache_city before
+// Levenshtein. This handles city-only addresses (e.g., "鎌ガ谷市", "柴田郡大河原町").
+func (n *Impl) tryCityRecordSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
+	if n.repo == nil {
+		return nil, nil
+	}
+
+	searchAddrStr := nctx.Input.SearchAddr.String()
+	fuzzy := false
+	cityResult, err := n.queryCityRecord(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.NormalizedAddr)
+	if err != nil {
+		return nil, fmt.Errorf("city record query: %w", err)
+	}
+	if cityResult == nil {
+		// Fuzzy city match for addresses with mask/unknown characters (e.g., "●橋市")
+		cityResult, err = n.queryCityRecordFuzzy(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.NormalizedAddr)
+		if err != nil {
+			return nil, fmt.Errorf("fuzzy city record query: %w", err)
+		}
+		fuzzy = true
+	}
+	if cityResult == nil {
+		return nil, nil
+	}
+
+	debugMatchPath(ctx, "city_fallback", nctx.Input.NormalizedAddr, "fuzzy", fuzzy)
+	return []model.MatchedResult{*cityResult}, nil
+}
+
+// tryLevenshteinCitySearch finds a city-level match for cases like
+// "神田鍛冶町二丁目" where the specific chome does not exist. Skipped when
+// tryLevenshteinFallback already searched (avoids a duplicate search in CategoryAll).
+func (n *Impl) tryLevenshteinCitySearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
+	if n.repo == nil || nctx.State.SkipLevenshtein {
+		return nil, nil
+	}
+
+	levenResults, err := levenshtein.Search(ctx, n.repo, n.buildLevenshteinParams(nctx, nctx.State.LgCode, nctx.State.MachiazaID))
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		return nil, fmt.Errorf("levenshtein search: %w", err)
+	}
+	if len(levenResults) == 0 {
+		return nil, nil
+	}
+
+	debugMatchPath(ctx, "levenshtein_city", nctx.Input.NormalizedAddr,
+		"results", len(levenResults), "score", levenResults[0].Score)
+	return levenResults, nil
+}
+
+// tryPrefectureRecordSearch falls back to the prefecture record when the
+// prefecture is known but nothing more specific matched.
+func (n *Impl) tryPrefectureRecordSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
+	if nctx.Input.Pref == "" || nctx.Input.Pref == model.All || n.repo == nil {
+		return nil, nil
+	}
+
+	prefResult, err := n.queryPrefectureRecord(ctx, nctx.Input.Pref, nctx.Input.NormalizedAddr)
+	if err != nil {
+		return nil, fmt.Errorf("prefecture record query: %w", err)
+	}
+	if prefResult == nil {
+		return nil, nil
+	}
+
+	debugMatchPath(ctx, "prefecture_fallback", nctx.Input.NormalizedAddr)
+	return []model.MatchedResult{*prefResult}, nil
 }
 
 // handleBasicFallback tries to find more specific matches (chome or oaza_cho) when applicable.
