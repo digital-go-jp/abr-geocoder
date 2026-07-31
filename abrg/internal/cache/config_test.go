@@ -1,6 +1,37 @@
 package cache
 
-import "testing"
+import (
+	"testing"
+
+	"abr.local/common/db"
+)
+
+func TestNewConfigCanonicalizesEnabledValues(t *testing.T) {
+	tests := []struct {
+		name         string
+		pref         string
+		category     string
+		wantPref     string
+		wantCategory string
+	}{
+		{"uppercase values stored verbatim by abrdb init", "ALL", "ALL", "all", "all"},
+		{"padded mixed-case values", " 13 ", " Basic ", "13", "basic"},
+		{"empty pref means all prefectures", "", "basic", "all", "basic"},
+		{"canonical values pass through", "all", "rsdtdsp", "all", "rsdtdsp"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := newConfig(&db.ABRDBConfig{EnabledPref: tt.pref, EnabledCategory: tt.category})
+			if cfg.EnabledPref != tt.wantPref {
+				t.Errorf("EnabledPref = %q, want %q", cfg.EnabledPref, tt.wantPref)
+			}
+			if cfg.EnabledCategory != tt.wantCategory {
+				t.Errorf("EnabledCategory = %q, want %q", cfg.EnabledCategory, tt.wantCategory)
+			}
+		})
+	}
+}
 
 func TestConfigPosEnabled(t *testing.T) {
 	tests := []struct {
