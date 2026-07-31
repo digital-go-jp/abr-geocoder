@@ -32,7 +32,10 @@ type addressRequest struct {
 	Address string `form:"address" binding:"required"`
 }
 
-// reverseRequest represents reverse geocoding request parameters.
+// reverseRequest represents reverse geocoding request parameters. The lat/lon
+// bounds restate util.MinLat/MaxLat/MinLon/MaxLon for the same reason as
+// baseRequest's binding tags: struct tags must be literals, and
+// binding_tags_test.go fails if they drift apart.
 type reverseRequest struct {
 	baseRequest
 	Lat float64 `form:"lat" binding:"required,min=-90,max=90"`
