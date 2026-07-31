@@ -134,6 +134,18 @@ func TestValidatePref(t *testing.T) {
 			wantPref:    "all",
 		},
 		{
+			name:        "uppercase ALL normalizes to all",
+			prefStr:     "ALL",
+			enabledPref: "all",
+			wantPref:    "all",
+		},
+		{
+			name:        "padded and mixed case all normalizes to all",
+			prefStr:     " All ",
+			enabledPref: "all",
+			wantPref:    "all",
+		},
+		{
 			name:        "specific pref with all enabled",
 			prefStr:     "13",
 			enabledPref: "all",

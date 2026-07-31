@@ -49,11 +49,12 @@ func ValidatePref(prefStr, enabledPref string) (string, error) {
 		prefStr = enabledPref
 	}
 
-	// Validate prefecture code range if numeric (skip validation for "all")
-	if strings.ToLower(strings.TrimSpace(prefStr)) != model.All {
-		if _, err := validate.ParsePrefectureCode(prefStr); err != nil {
-			return "", fmt.Errorf("invalid pref: %w", err)
-		}
+	// Normalize "all" variants (case, surrounding whitespace) so downstream
+	// comparisons against model.All work regardless of how the caller wrote it.
+	if strings.ToLower(strings.TrimSpace(prefStr)) == model.All {
+		prefStr = model.All
+	} else if _, err := validate.ParsePrefectureCode(prefStr); err != nil {
+		return "", fmt.Errorf("invalid pref: %w", err)
 	}
 
 	// Validate against enabled_pref
