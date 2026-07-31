@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -52,19 +51,15 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 			return nil, err
 		}
 
-		start := time.Now()
-		result, err := reverser.Reverse(ctx, model.ReverseQuery{
-			Lon:      lon,
-			Lat:      lat,
-			Category: setup.Category,
-			Pref:     setup.Pref,
-			Limit:    opts.Limit,
+		return runTimed(setup, func() (*model.ReverseResponse, error) {
+			return reverser.Reverse(ctx, model.ReverseQuery{
+				Lon:      lon,
+				Lat:      lat,
+				Category: setup.Category,
+				Pref:     setup.Pref,
+				Limit:    opts.Limit,
+			})
 		})
-		if result != nil {
-			result.ResultInfo.DurationMs = util.DurationMs(time.Since(start))
-			setup.setResultInfo(&result.ResultInfo)
-		}
-		return result, err
 	})
 	return p.Run(ctx, setup.InFile, setup.OutFile)
 }

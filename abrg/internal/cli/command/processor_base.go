@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"slices"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -20,6 +21,7 @@ import (
 	"abrg/internal/matching"
 	"abrg/internal/model"
 	"abrg/internal/repository"
+	"abrg/internal/util"
 	"abrg/internal/validate"
 )
 
@@ -203,4 +205,22 @@ func countLines(filename string) (int, error) {
 		}
 	}
 	return count, scanner.Err()
+}
+
+// resultInfoHaver is implemented by response types with a ResultInfo field,
+// so runTimed can fill in duration and server metadata generically.
+type resultInfoHaver interface {
+	ResultInfoPtr() *model.ResultInfo
+}
+
+// runTimed calls fn and, when it returns a non-nil result, records the
+// elapsed time and server metadata into the result's ResultInfo.
+func runTimed[R resultInfoHaver](setup *processorSetup, fn func() (R, error)) (R, error) {
+	start := time.Now()
+	result, err := fn()
+	if info := result.ResultInfoPtr(); info != nil {
+		info.DurationMs = util.DurationMs(time.Since(start))
+		setup.setResultInfo(info)
+	}
+	return result, err
 }

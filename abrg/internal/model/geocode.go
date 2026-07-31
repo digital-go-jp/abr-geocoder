@@ -23,6 +23,14 @@ type GeocodeResponse struct {
 	Features   []GeocodeFeature `json:"features"`
 }
 
+// ResultInfoPtr returns a pointer to r's ResultInfo, or nil if r is nil.
+func (r *GeocodeResponse) ResultInfoPtr() *ResultInfo {
+	if r == nil {
+		return nil
+	}
+	return &r.ResultInfo
+}
+
 type Geometry struct {
 	Type        string    `json:"type"`
 	Coordinates []float64 `json:"coordinates"`

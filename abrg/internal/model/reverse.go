@@ -35,3 +35,11 @@ type ReverseResponse struct {
 	ResultInfo ResultInfo       `json:"result_info"`
 	Features   []ReverseFeature `json:"features"`
 }
+
+// ResultInfoPtr returns a pointer to r's ResultInfo, or nil if r is nil.
+func (r *ReverseResponse) ResultInfoPtr() *ResultInfo {
+	if r == nil {
+		return nil
+	}
+	return &r.ResultInfo
+}
