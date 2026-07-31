@@ -5,56 +5,68 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
+)
+
+// Residential best-match queries, one per shape a ResidentialFilter can take.
+// The match clauses run from most specific to least specific; each appears
+// twice, once as a CASE arm carrying its match level and once in the WHERE
+// filter, so every placeholder value is bound on both sides of the three key
+// columns.
+const (
+	// Both rsdt_num and rsdt_num2 given: rsdt2, rsdt, then blk.
+	residentialBestMatchRsdt2Query = `
+		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
+			blk_num, rsdt_num, rsdt_num2,
+			ST_X(geom) AS lon, ST_Y(geom) AS lat,
+			CASE WHEN rsdt_num = ? AND rsdt_num2 = ? THEN 3 WHEN rsdt_num = ? AND rsdt_num2 IS NULL THEN 2 WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1 ELSE 0 END AS match_level
+		FROM cache_rsdtdsp
+		WHERE lg_code = ? AND machiaza_id = ? AND blk_num = ?
+			AND ((rsdt_num = ? AND rsdt_num2 = ?) OR (rsdt_num = ? AND rsdt_num2 IS NULL) OR (rsdt_num IS NULL AND rsdt_num2 IS NULL))
+		ORDER BY match_level DESC LIMIT 1`
+
+	// Only rsdt_num given: rsdt, then blk.
+	residentialBestMatchRsdtQuery = `
+		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
+			blk_num, rsdt_num, rsdt_num2,
+			ST_X(geom) AS lon, ST_Y(geom) AS lat,
+			CASE WHEN rsdt_num = ? AND rsdt_num2 IS NULL THEN 2 WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1 ELSE 0 END AS match_level
+		FROM cache_rsdtdsp
+		WHERE lg_code = ? AND machiaza_id = ? AND blk_num = ?
+			AND ((rsdt_num = ? AND rsdt_num2 IS NULL) OR (rsdt_num IS NULL AND rsdt_num2 IS NULL))
+		ORDER BY match_level DESC LIMIT 1`
+
+	// No rsdt_num: blk only.
+	residentialBestMatchBlkQuery = `
+		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
+			blk_num, rsdt_num, rsdt_num2,
+			ST_X(geom) AS lon, ST_Y(geom) AS lat,
+			CASE WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1 ELSE 0 END AS match_level
+		FROM cache_rsdtdsp
+		WHERE lg_code = ? AND machiaza_id = ? AND blk_num = ?
+			AND ((rsdt_num IS NULL AND rsdt_num2 IS NULL))
+		ORDER BY match_level DESC LIMIT 1`
 )
 
 // FindResidentialBestMatch finds the best residential match in a single query,
 // trying rsdt_num2, rsdt_num, then blk_num fallback, returning match level.
 func (r *DB) FindResidentialBestMatch(ctx context.Context, lgCode, machiazaID string, filter ResidentialFilter) (*ResidentialBestResult, error) {
-	// Build match clauses from most specific to least specific.
-	// Each clause defines a SQL condition and its corresponding match level.
-	type clause struct {
-		cond  string
-		args  []any
-		level ResidentialMatchLevel
-	}
-
-	var clauses []clause
-	if filter.RsdtNum != "" && filter.RsdtNum2 != "" {
-		clauses = append(clauses, clause{"rsdt_num = ? AND rsdt_num2 = ?", []any{filter.RsdtNum, filter.RsdtNum2}, MatchLevelRsdt2})
-	}
-	if filter.RsdtNum != "" {
-		clauses = append(clauses, clause{"rsdt_num = ? AND rsdt_num2 IS NULL", []any{filter.RsdtNum}, MatchLevelRsdt})
-	}
-	clauses = append(clauses, clause{"rsdt_num IS NULL AND rsdt_num2 IS NULL", nil, MatchLevelBlk})
-
-	// Generate CASE expression and OR filter from the same clause definitions.
-	var caseSB, orSB strings.Builder
-	var caseArgs, orArgs []any
-	for i, c := range clauses {
-		fmt.Fprintf(&caseSB, " WHEN %s THEN %d", c.cond, c.level)
-		caseArgs = append(caseArgs, c.args...)
-		if i > 0 {
-			orSB.WriteString(" OR ")
+	var query string
+	var args []any
+	switch {
+	case filter.RsdtNum != "" && filter.RsdtNum2 != "":
+		query = residentialBestMatchRsdt2Query
+		args = []any{
+			filter.RsdtNum, filter.RsdtNum2, filter.RsdtNum,
+			lgCode, machiazaID, filter.BlkNum,
+			filter.RsdtNum, filter.RsdtNum2, filter.RsdtNum,
 		}
-		fmt.Fprintf(&orSB, "(%s)", c.cond)
-		orArgs = append(orArgs, c.args...)
+	case filter.RsdtNum != "":
+		query = residentialBestMatchRsdtQuery
+		args = []any{filter.RsdtNum, lgCode, machiazaID, filter.BlkNum, filter.RsdtNum}
+	default:
+		query = residentialBestMatchBlkQuery
+		args = []any{lgCode, machiazaID, filter.BlkNum}
 	}
-
-	query := `
-		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
-			blk_num, rsdt_num, rsdt_num2,
-			ST_X(geom) AS lon, ST_Y(geom) AS lat,
-			CASE` + caseSB.String() + ` ELSE 0 END AS match_level
-		FROM cache_rsdtdsp
-		WHERE lg_code = ? AND machiaza_id = ? AND blk_num = ?
-			AND (` + orSB.String() + `)
-		ORDER BY match_level DESC LIMIT 1`
-
-	args := make([]any, 0, len(caseArgs)+3+len(orArgs))
-	args = append(args, caseArgs...)
-	args = append(args, lgCode, machiazaID, filter.BlkNum)
-	args = append(args, orArgs...)
 
 	return r.scanResidentialBestMatch(ctx, query, args)
 }
