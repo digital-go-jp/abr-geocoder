@@ -521,9 +521,11 @@ components:
                         score:
                           type: number
                           format: double
-                          minimum: 0
+                          minimum: -1
                           maximum: 1
-                          description: マッチスコア（参考値）
+                          description: |
+                            候補の並べ替えに使う参考値。match_level が unknown のときは -1。
+                            マッチの正しさは表さないため、採否の判断には使わないでください。
                           example: 1
                         match_level:
                           allOf:
@@ -564,7 +566,7 @@ components:
                     properties:
                       matched_address: "東京都千代田区紀尾井町1-3"
                       unmatched_address: ["東京ガーデンテラス紀尾井町", "19階、20階"]
-                      score: 0.8
+                      score: 1
                       match_level: "rsdtdsp_rsdt"
                       coordinates_level: "rsdtdsp_rsdt"
                       ids:
@@ -598,7 +600,7 @@ components:
                     properties:
                       matched_address: "東京都千代田区紀尾井町"
                       unmatched_address: null
-                      score: 0.6
+                      score: 1
                       match_level: "machiaza"
                       coordinates_level: "machiaza"
                       ids:
@@ -842,9 +844,11 @@ components:
                     score:
                       type: number
                       format: double
-                      minimum: 0
+                      minimum: -1
                       maximum: 1
-                      description: マッチスコア（参考値）
+                      description: |
+                        候補の並べ替えに使う参考値。match_level が unknown のときは -1。
+                        マッチの正しさは表さないため、採否の判断には使わないでください。
                       example: 1
                     ids:
                       $ref: "#/components/schemas/Ids"
@@ -874,7 +878,7 @@ components:
                       - "東京ガーデンテラス紀尾井町"
                       - "19階、20階"
                     match_level: "rsdtdsp_rsdt"
-                    score: 0.8
+                    score: 1
                     ids:
                       lg_code: "131016"
                       machiaza_id: "0056000"
@@ -902,7 +906,7 @@ components:
                   - matched_address: "東京都千代田区紀尾井町"
                     unmatched_address: null
                     match_level: "machiaza"
-                    score: 0.6
+                    score: 1
                     ids:
                       lg_code: "131016"
                       machiaza_id: "0056000"
