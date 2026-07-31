@@ -6,6 +6,7 @@ package transform
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"abrg/internal/char"
 )
@@ -17,11 +18,12 @@ var senGoPattern = regexp.MustCompile(`^(.*\d+線[東西南北]?)(\d+号)$`)
 // isHokkaidoSenPattern checks if the string ends with a Hokkaido line pattern (数字+線).
 // e.g., "7線" returns true, "上条" returns false.
 func isHokkaidoSenPattern(s string) bool {
-	if !strings.HasSuffix(s, "線") {
+	head, found := strings.CutSuffix(s, "線")
+	if !found {
 		return false
 	}
-	runes := []rune(s)
-	return len(runes) >= 2 && char.IsASCIIDigit(runes[len(runes)-2])
+	prev, size := utf8.DecodeLastRuneInString(head)
+	return size > 0 && char.IsASCIIDigit(prev)
 }
 
 // IsSenGoPattern checks if the address contains Hokkaido sen-go pattern (N線:M号).

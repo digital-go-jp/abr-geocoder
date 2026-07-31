@@ -168,6 +168,38 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 	return nil, nil
 }
 
+// machiazaKey returns the lg_code and machiaza_id a two-stage search keys on.
+// ok is false when either is absent, which leaves nothing to search under.
+func machiazaKey(basic *model.MatchedResult) (lgCode, machiazaID string, ok bool) {
+	if basic.IDs.LgCode == nil || basic.IDs.MachiazaID == nil {
+		return "", "", false
+	}
+	lgCode, machiazaID = *basic.IDs.LgCode, *basic.IDs.MachiazaID
+	if lgCode == "" || machiazaID == "" {
+		return "", "", false
+	}
+	return lgCode, machiazaID, true
+}
+
+// applyRsdtAddrFlg fills in rsdt_addr_flg, which is not in cache_parcel or
+// cache_rsdtdsp. A residential match is by definition in the 住居表示実施 part of
+// the machiaza, so the flag is always 1; inheriting it from basicResults would
+// report the base machiaza's flag, which in mixed rsdtdsp/parcel areas is 0 or
+// ambiguous (one row per flag) (issue #262).
+func applyRsdtAddrFlg(result, basic *model.MatchedResult, category model.Category) {
+	if result.IDs.RsdtAddrFlg != nil {
+		return
+	}
+	if category == model.CategoryResidential {
+		flg := model.RsdtAddrFlgResidential
+		result.IDs.RsdtAddrFlg = &flg
+		return
+	}
+	if basic.IDs.RsdtAddrFlg != nil {
+		result.IDs.RsdtAddrFlg = basic.IDs.RsdtAddrFlg
+	}
+}
+
 // normalizeWithBasic performs normalization when basicResults are already available.
 // The search address arrives parsed: match_core parses the input once and that
 // value is threaded down to searchResidential and searchParcel.
@@ -182,13 +214,8 @@ func (s *twoStageSearch) normalizeWithBasic(
 	}
 
 	basic := &basicResults[0]
-	if basic.IDs.LgCode == nil || basic.IDs.MachiazaID == nil {
-		return nil, nil
-	}
-
-	lgCode := *basic.IDs.LgCode
-	machiazaID := *basic.IDs.MachiazaID
-	if lgCode == "" || machiazaID == "" {
+	lgCode, machiazaID, ok := machiazaKey(basic)
+	if !ok {
 		return nil, nil
 	}
 
@@ -210,18 +237,7 @@ func (s *twoStageSearch) normalizeWithBasic(
 		return nil, nil
 	}
 
-	// rsdt_addr_flg is not in cache_parcel or cache_rsdtdsp. A residential match is
-	// by definition in the 住居表示実施 part of the machiaza, so the flag is always 1;
-	// inheriting it from basicResults would report the base machiaza's flag, which in
-	// mixed rsdtdsp/parcel areas is 0 or ambiguous (one row per flag) (issue #262).
-	if result.IDs.RsdtAddrFlg == nil {
-		if category == model.CategoryResidential {
-			flg := model.RsdtAddrFlgResidential
-			result.IDs.RsdtAddrFlg = &flg
-		} else if basic.IDs.RsdtAddrFlg != nil {
-			result.IDs.RsdtAddrFlg = basic.IDs.RsdtAddrFlg
-		}
-	}
+	applyRsdtAddrFlg(result, basic, category)
 
 	// Merge basic address info from basicResults (avoids redundant DB queries)
 	result.StructuredAddress.MergeFrom(&basic.StructuredAddress)
