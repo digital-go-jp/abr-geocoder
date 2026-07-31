@@ -6,8 +6,8 @@ import (
 	"abrg/internal/model"
 )
 
-// TestJaccardSimilarity tests the jaccardSimilarity function
-func TestJaccardSimilarity(t *testing.T) {
+// TestJaccardAgainst tests the jaccardAgainst function
+func TestJaccardAgainst(t *testing.T) {
 	tests := []struct {
 		name string
 		s1   string
@@ -60,10 +60,10 @@ func TestJaccardSimilarity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := jaccardSimilarity(tt.s1, tt.s2)
+			got := jaccardAgainst(tt.s1, buildBigrams([]rune(tt.s1)), tt.s2)
 			// Allow small floating point tolerance
 			if got < tt.want-0.01 || got > tt.want+0.01 {
-				t.Errorf("jaccardSimilarity(%q, %q) = %v, want %v", tt.s1, tt.s2, got, tt.want)
+				t.Errorf("jaccardAgainst(%q, %q) = %v, want %v", tt.s1, tt.s2, got, tt.want)
 			}
 		})
 	}

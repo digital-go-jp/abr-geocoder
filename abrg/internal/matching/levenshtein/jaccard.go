@@ -46,13 +46,9 @@ func buildMatchedAddress(r *model.MatchedResult) string {
 	return sb.String()
 }
 
-// jaccardSimilarity calculates bigram-based Jaccard similarity between two strings.
-func jaccardSimilarity(s1, s2 string) float64 {
-	return jaccardAgainst(s1, buildBigrams([]rune(s1)), s2)
-}
-
-// jaccardAgainst is jaccardSimilarity with s1's bigrams supplied by the caller,
-// so comparing many candidates against one string builds them only once.
+// jaccardAgainst calculates bigram-based Jaccard similarity between s1 and s2,
+// with s1's bigrams supplied by the caller so comparing many candidates
+// against one string builds them only once.
 func jaccardAgainst(s1 string, bigrams1 map[string]struct{}, s2 string) float64 {
 	if s1 == s2 {
 		return 1.0
