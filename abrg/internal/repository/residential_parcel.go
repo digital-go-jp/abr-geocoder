@@ -11,40 +11,41 @@ import (
 // The match clauses run from most specific to least specific; each appears
 // twice, once as a CASE arm carrying its match level and once in the WHERE
 // filter, so every placeholder value is bound on both sides of the three key
-// columns.
+// columns. The shared clauses are single-sourced below; Go folds the
+// concatenations into plain string constants at compile time.
 const (
-	// Both rsdt_num and rsdt_num2 given: rsdt2, rsdt, then blk.
-	residentialBestMatchRsdt2Query = `
+	residentialBestMatchSelect = `
 		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
 			blk_num, rsdt_num, rsdt_num2,
 			ST_X(geom) AS lon, ST_Y(geom) AS lat,
-			CASE WHEN rsdt_num = ? AND rsdt_num2 = ? THEN 3 WHEN rsdt_num = ? AND rsdt_num2 IS NULL THEN 2 WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1 ELSE 0 END AS match_level
+			CASE`
+	residentialBestMatchFrom = ` ELSE 0 END AS match_level
 		FROM cache_rsdtdsp
 		WHERE lg_code = ? AND machiaza_id = ? AND blk_num = ?
-			AND ((rsdt_num = ? AND rsdt_num2 = ?) OR (rsdt_num = ? AND rsdt_num2 IS NULL) OR (rsdt_num IS NULL AND rsdt_num2 IS NULL))
+			AND `
+	residentialBestMatchOrder = `
 		ORDER BY match_level DESC LIMIT 1`
+
+	// Both rsdt_num and rsdt_num2 given: rsdt2, rsdt, then blk.
+	residentialBestMatchRsdt2Query = residentialBestMatchSelect +
+		` WHEN rsdt_num = ? AND rsdt_num2 = ? THEN 3 WHEN rsdt_num = ? AND rsdt_num2 IS NULL THEN 2 WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1` +
+		residentialBestMatchFrom +
+		`((rsdt_num = ? AND rsdt_num2 = ?) OR (rsdt_num = ? AND rsdt_num2 IS NULL) OR (rsdt_num IS NULL AND rsdt_num2 IS NULL))` +
+		residentialBestMatchOrder
 
 	// Only rsdt_num given: rsdt, then blk.
-	residentialBestMatchRsdtQuery = `
-		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
-			blk_num, rsdt_num, rsdt_num2,
-			ST_X(geom) AS lon, ST_Y(geom) AS lat,
-			CASE WHEN rsdt_num = ? AND rsdt_num2 IS NULL THEN 2 WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1 ELSE 0 END AS match_level
-		FROM cache_rsdtdsp
-		WHERE lg_code = ? AND machiaza_id = ? AND blk_num = ?
-			AND ((rsdt_num = ? AND rsdt_num2 IS NULL) OR (rsdt_num IS NULL AND rsdt_num2 IS NULL))
-		ORDER BY match_level DESC LIMIT 1`
+	residentialBestMatchRsdtQuery = residentialBestMatchSelect +
+		` WHEN rsdt_num = ? AND rsdt_num2 IS NULL THEN 2 WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1` +
+		residentialBestMatchFrom +
+		`((rsdt_num = ? AND rsdt_num2 IS NULL) OR (rsdt_num IS NULL AND rsdt_num2 IS NULL))` +
+		residentialBestMatchOrder
 
 	// No rsdt_num: blk only.
-	residentialBestMatchBlkQuery = `
-		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
-			blk_num, rsdt_num, rsdt_num2,
-			ST_X(geom) AS lon, ST_Y(geom) AS lat,
-			CASE WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1 ELSE 0 END AS match_level
-		FROM cache_rsdtdsp
-		WHERE lg_code = ? AND machiaza_id = ? AND blk_num = ?
-			AND ((rsdt_num IS NULL AND rsdt_num2 IS NULL))
-		ORDER BY match_level DESC LIMIT 1`
+	residentialBestMatchBlkQuery = residentialBestMatchSelect +
+		` WHEN rsdt_num IS NULL AND rsdt_num2 IS NULL THEN 1` +
+		residentialBestMatchFrom +
+		`(rsdt_num IS NULL AND rsdt_num2 IS NULL)` +
+		residentialBestMatchOrder
 )
 
 // FindResidentialBestMatch finds the best residential match in a single query,
