@@ -3,6 +3,7 @@ package transform
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"abrg/internal/char"
 	"abrg/internal/normalize"
@@ -96,11 +97,11 @@ func isSapporoAbbreviation(s string) bool {
 
 // isSingleKatakanaColon checks if the result ends with ":<single-katakana>" (likely a koaza).
 func isSingleKatakanaColon(result string) bool {
-	runes := []rune(result)
-	if len(runes) < 2 {
+	last, size := utf8.DecodeLastRuneInString(result)
+	if size == 0 {
 		return false
 	}
-	last, secondLast := runes[len(runes)-1], runes[len(runes)-2]
+	secondLast, _ := utf8.DecodeLastRuneInString(result[:len(result)-size])
 	return secondLast == ':' && last >= 'ア' && last <= 'ン'
 }
 
@@ -113,9 +114,9 @@ func AddColon(s string) (string, bool) {
 
 	// Check if string ends with a valid address character
 	trimmed := strings.TrimRight(s, " ")
-	if len(trimmed) > 0 {
-		runes := []rune(trimmed)
-		if !isAddressEndChar(runes[len(runes)-1]) {
+	if trimmed != "" {
+		last, _ := utf8.DecodeLastRuneInString(trimmed)
+		if !isAddressEndChar(last) {
 			return s, false
 		}
 	}
