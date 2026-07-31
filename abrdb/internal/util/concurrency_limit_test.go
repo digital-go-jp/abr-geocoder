@@ -35,3 +35,19 @@ func TestConcurrencyLimit(t *testing.T) {
 		})
 	}
 }
+
+// TestDefaultLimitIsReadOnce pins that an unconfigured stage keeps reporting
+// the limit the connection pool was sized against. Go raises GOMAXPROCS on
+// its own when a container's CPU allowance grows, and the pool is sized once
+// at startup and lives for the whole process.
+func TestDefaultLimitIsReadOnce(t *testing.T) {
+	const envName = "ABRDB_TEST_UNSET_CONCURRENCY"
+	atStartup := concurrencyLimit(envName)
+
+	previous := runtime.GOMAXPROCS(atStartup + 3)
+	t.Cleanup(func() { runtime.GOMAXPROCS(previous) })
+
+	if got := concurrencyLimit(envName); got != atStartup {
+		t.Errorf("concurrencyLimit after a GOMAXPROCS change = %d, want %d", got, atStartup)
+	}
+}
