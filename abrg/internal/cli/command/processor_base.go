@@ -2,7 +2,6 @@ package command
 
 import (
 	"bufio"
-	"cmp"
 	"context"
 	"database/sql"
 	"errors"
@@ -92,17 +91,18 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 		"pref", cacheCfg.EnabledPref,
 		"category", cacheCfg.EnabledCategory)
 
-	if err := validateOptions(opts, cacheCfg.EnabledCategory, cacheCfg.EnabledPref); err != nil {
+	category, pref, err := validateOptions(opts, cacheCfg.EnabledCategory, cacheCfg.EnabledPref)
+	if err != nil {
 		setup.Cleanup()
 		return nil, err
 	}
+	setup.Category = category
+	setup.Pref = pref
 
 	if needs.Pos && !cacheCfg.PosEnabled() {
 		setup.Cleanup()
 		return nil, errors.New("this command requires enable_pos=true in the database")
 	}
-
-	setup.resolveQueryParams(opts)
 
 	if needs.Matcher {
 		setup.Matcher = matching.NewMatcher(setup.Repo, dbCache.Lookups(), cacheCfg.HasResidential(), cacheCfg.HasParcel())
@@ -138,13 +138,6 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	return setup, nil
 }
 
-// resolveQueryParams fills Category and Pref from the flags, falling back to
-// the cache's enabled_category and enabled_pref when a flag was omitted.
-func (s *processorSetup) resolveQueryParams(opts processorOptions) {
-	s.Category = model.Category(cmp.Or(opts.Category, s.CacheCfg.EnabledCategory))
-	s.Pref = cmp.Or(opts.Pref, s.CacheCfg.EnabledPref)
-}
-
 // setResultInfo sets common result info fields.
 func (s *processorSetup) setResultInfo(info *model.ResultInfo) {
 	info.SetMeta(version.Version, s.CacheCfg.DBVersion, s.CacheCfg.EnabledCategory, s.CacheCfg.EnabledPref)
@@ -164,19 +157,25 @@ func registerCommonFlags(cmd *cobra.Command, opts *processorOptions) {
 }
 
 // validateOptions validates the category, pref and limit options against the
-// cache configuration.
-func validateOptions(opts processorOptions, enabledCategory, enabledPref string) error {
-	if opts.Category != "" {
-		if _, err := validate.ValidateCategory(opts.Category, enabledCategory); err != nil {
-			return err
-		}
+// cache configuration, returning the resolved category and pref. Both
+// validate.ValidateCategory and validate.ValidatePref fall back to the
+// enabled value when the corresponding flag is empty.
+func validateOptions(opts processorOptions, enabledCategory, enabledPref string) (model.Category, string, error) {
+	category, err := validate.ValidateCategory(opts.Category, enabledCategory)
+	if err != nil {
+		return "", "", err
 	}
-	if opts.Pref != "" {
-		if _, err := validate.ValidatePref(opts.Pref, enabledPref); err != nil {
-			return err
-		}
+
+	pref, err := validate.ValidatePref(opts.Pref, enabledPref)
+	if err != nil {
+		return "", "", err
 	}
-	return validate.ValidateLimit(opts.Limit)
+
+	if err := validate.ValidateLimit(opts.Limit); err != nil {
+		return "", "", err
+	}
+
+	return category, pref, nil
 }
 
 // newDefaultProcessor creates a ParallelProcessor with standard settings.

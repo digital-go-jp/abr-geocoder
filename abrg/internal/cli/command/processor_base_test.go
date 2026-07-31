@@ -3,34 +3,14 @@ package command
 import (
 	"testing"
 
-	"abrg/internal/cache"
 	"abrg/internal/model"
 )
 
-// TestValidateOptionsLimit pins that validateOptions is wired to
-// validate.ValidateLimit. The bounds themselves are covered by
-// validate.TestValidateLimit.
-func TestValidateOptionsLimit(t *testing.T) {
-	tests := []struct {
-		name    string
-		limit   int
-		wantErr bool
-	}{
-		{"in-range limit is accepted", 1, false},
-		{"out-of-range limit is rejected", 0, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateOptions(processorOptions{Limit: tt.limit}, "all", "all")
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateOptions(Limit=%d) error = %v, wantErr %v", tt.limit, err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestResolveQueryParams(t *testing.T) {
+// TestValidateOptions pins that validateOptions delegates to
+// validate.ValidateCategory/ValidatePref/ValidateLimit and returns their
+// resolved values. The validation rules themselves are covered by the
+// validate package's own tests.
+func TestValidateOptions(t *testing.T) {
 	tests := []struct {
 		name            string
 		opts            processorOptions
@@ -38,10 +18,11 @@ func TestResolveQueryParams(t *testing.T) {
 		enabledPref     string
 		wantCategory    model.Category
 		wantPref        string
+		wantErr         bool
 	}{
 		{
 			name:            "omitted flags fall back to the cache config",
-			opts:            processorOptions{},
+			opts:            processorOptions{Limit: 1},
 			enabledCategory: "all",
 			enabledPref:     "all",
 			wantCategory:    model.CategoryAll,
@@ -49,7 +30,7 @@ func TestResolveQueryParams(t *testing.T) {
 		},
 		{
 			name:            "omitted pref falls back to a single prefecture",
-			opts:            processorOptions{},
+			opts:            processorOptions{Limit: 1},
 			enabledCategory: "all",
 			enabledPref:     "13",
 			wantCategory:    model.CategoryAll,
@@ -57,27 +38,43 @@ func TestResolveQueryParams(t *testing.T) {
 		},
 		{
 			name:            "explicit flags are kept",
-			opts:            processorOptions{Category: "basic", Pref: "13"},
+			opts:            processorOptions{Category: "basic", Pref: "13", Limit: 1},
 			enabledCategory: "all",
 			enabledPref:     "all",
 			wantCategory:    model.CategoryBasic,
 			wantPref:        "13",
 		},
+		{
+			name:            "pref all variant is normalized",
+			opts:            processorOptions{Pref: "ALL", Limit: 1},
+			enabledCategory: "all",
+			enabledPref:     "all",
+			wantCategory:    model.CategoryAll,
+			wantPref:        "all",
+		},
+		{
+			name:            "out-of-range limit is rejected",
+			opts:            processorOptions{Limit: 0},
+			enabledCategory: "all",
+			enabledPref:     "all",
+			wantErr:         true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &processorSetup{CacheCfg: &cache.Config{
-				EnabledCategory: tt.enabledCategory,
-				EnabledPref:     tt.enabledPref,
-			}}
-			s.resolveQueryParams(tt.opts)
-
-			if s.Category != tt.wantCategory {
-				t.Errorf("Category = %q, want %q", s.Category, tt.wantCategory)
+			category, pref, err := validateOptions(tt.opts, tt.enabledCategory, tt.enabledPref)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("validateOptions() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if s.Pref != tt.wantPref {
-				t.Errorf("Pref = %q, want %q", s.Pref, tt.wantPref)
+			if tt.wantErr {
+				return
+			}
+			if category != tt.wantCategory {
+				t.Errorf("category = %q, want %q", category, tt.wantCategory)
+			}
+			if pref != tt.wantPref {
+				t.Errorf("pref = %q, want %q", pref, tt.wantPref)
 			}
 		})
 	}
