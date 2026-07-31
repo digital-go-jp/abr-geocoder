@@ -63,7 +63,9 @@ func parseSearchAddr(searchAddr string) parsedAddress {
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterColon)
 		} else if len(afterAt) > 1 && afterAt[0] == '-' && char.IsASCIIDigit(afterAt[1]) {
 			// "@-N": the numbers follow the chome marker directly, as they do
-			// when the input wrote the chome out and then a hyphen.
+			// when the input wrote the chome out and then a hyphen and
+			// AddColon did not mark the boundary itself
+			// (e.g. "銀座1丁目-5-2" -> "銀座1@-5-2").
 			p.Numbers, p.LeadingHyphen, p.Building = parseNumbersAndBuilding(afterAt)
 		}
 	} else {

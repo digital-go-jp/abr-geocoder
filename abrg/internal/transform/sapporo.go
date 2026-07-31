@@ -25,7 +25,9 @@ func expandSapporoJou(s string) (string, bool) {
 		return s, false
 	}
 	// The abbreviated form hid the chome boundary from AddColon; mark it now
-	// that 丁目 is spelled out.
+	// that 丁目 is spelled out. AddColon sees the whole string, but it is a
+	// no-op once a colon is present, so it only ever fills in a boundary the
+	// earlier pass had to skip.
 	result, _ = AddColon(result)
 	return result, true
 }

@@ -128,9 +128,10 @@ func detectMachiaza(ctx context.Context, repo basicFinder, address string, prefC
 		}
 	}
 
-	// Handle "@-N": a chome marker followed directly by the address numbers,
-	// which is what a written-out chome plus a hyphen leaves behind
-	// (e.g. "銀座1丁目-5" -> "銀座1@-5").
+	// Handle "@-N": a chome marker followed directly by the address numbers.
+	// A written-out chome plus a hyphen leaves this behind wherever AddColon
+	// did not already mark the boundary itself
+	// (e.g. "銀座1丁目-5-2" -> "銀座1@-5-2").
 	if !found {
 		if atHyphenIdx := strings.Index(address, "@-"); atHyphenIdx >= 0 {
 			rest := address[atHyphenIdx+2:]
