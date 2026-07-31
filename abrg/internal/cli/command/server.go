@@ -37,7 +37,7 @@ func NewServerCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&cachePath, "cache", "c", "", "Cache file path (default: ~/.abrg/cache/abrg.duckdb)")
+	registerCacheFlag(cmd, &cachePath)
 
 	return cmd
 }

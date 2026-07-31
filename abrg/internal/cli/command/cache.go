@@ -12,6 +12,12 @@ import (
 	"abrg/internal/infra/duckdb"
 )
 
+// registerCacheFlag registers the shared -c/--cache flag used by every
+// command that reads or builds the DuckDB cache.
+func registerCacheFlag(cmd *cobra.Command, cachePath *string) {
+	cmd.Flags().StringVarP(cachePath, "cache", "c", "", "Cache file path (default: ~/.abrg/cache/abrg.duckdb)")
+}
+
 // resolveCachePath resolves the cache path from flag or config.
 // Returns error if path is empty.
 func resolveCachePath(flagValue string) (string, error) {
@@ -79,7 +85,7 @@ The data category is automatically determined from the PostgreSQL database confi
 		},
 	}
 
-	cmd.Flags().StringVarP(&cachePath, "cache", "c", "", "Cache file path (default: ~/.abrg/cache/abrg.duckdb)")
+	registerCacheFlag(cmd, &cachePath)
 
 	return cmd
 }
@@ -101,7 +107,7 @@ This command does not require PostgreSQL connection.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&cachePath, "cache", "c", "", "Cache file path (default: ~/.abrg/cache/abrg.duckdb)")
+	registerCacheFlag(cmd, &cachePath)
 
 	return cmd
 }
