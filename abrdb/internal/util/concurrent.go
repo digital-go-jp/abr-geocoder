@@ -13,8 +13,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// MaxConcurrency caps operator-supplied worker limits so a typo cannot flood
-// the source feed or exhaust PostgreSQL connections.
+// MaxConcurrency caps every worker limit so neither a typo nor a large host
+// can flood the source feed or exhaust PostgreSQL connections.
 const MaxConcurrency = 32
 
 // defaultLimit is the worker limit of a stage the operator did not configure.
@@ -22,7 +22,12 @@ const MaxConcurrency = 32
 // sized from it and lives for the whole process, and Go raises GOMAXPROCS
 // when a container's CPU allowance grows. Reading it again later would let
 // the stages ask for more workers than the pool can serve.
-var defaultLimit = runtime.GOMAXPROCS(0)
+var defaultLimit = defaultConcurrency()
+
+// defaultConcurrency is the worker limit derived from the machine.
+func defaultConcurrency() int {
+	return min(runtime.GOMAXPROCS(0), MaxConcurrency)
+}
 
 // Concurrency reports the worker limit of each stage that runs in parallel.
 type Concurrency struct {
@@ -46,8 +51,8 @@ func LoadConcurrency() Concurrency {
 }
 
 // concurrencyLimit returns the worker limit configured in the named
-// environment variable. Unset, invalid, or non-positive values fall back to
-// defaultLimit; values above MaxConcurrency are clamped.
+// environment variable, clamped to MaxConcurrency. Unset, invalid, or
+// non-positive values fall back to defaultLimit.
 func concurrencyLimit(envName string) int {
 	v, ok := os.LookupEnv(envName)
 	if !ok || v == "" {

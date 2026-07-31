@@ -11,7 +11,7 @@ import (
 // TestDSNWithPoolSize pins the rule documented on dsnWithPoolSize.
 func TestDSNWithPoolSize(t *testing.T) {
 	const dsn = "postgres://u@h:5432/d?sslmode=disable"
-	gomaxprocs := runtime.GOMAXPROCS(0)
+	gomaxprocs := min(runtime.GOMAXPROCS(0), util.MaxConcurrency)
 	withPool := func(workers int) string {
 		return fmt.Sprintf("%s&pool_max_conns=%d", dsn, workers+4)
 	}

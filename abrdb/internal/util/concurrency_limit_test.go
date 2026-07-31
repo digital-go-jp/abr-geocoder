@@ -7,7 +7,7 @@ import (
 
 func TestConcurrencyLimit(t *testing.T) {
 	const envName = "ABRDB_TEST_CONCURRENCY"
-	gomaxprocs := runtime.GOMAXPROCS(0)
+	gomaxprocs := defaultLimit
 
 	tests := []struct {
 		name  string
@@ -33,6 +33,16 @@ func TestConcurrencyLimit(t *testing.T) {
 				t.Errorf("concurrencyLimit(%q=%q) = %d, want %d", envName, tt.value, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDefaultConcurrencyIsCapped(t *testing.T) {
+	previous := runtime.GOMAXPROCS(MaxConcurrency + 8)
+	t.Cleanup(func() { runtime.GOMAXPROCS(previous) })
+
+	if got := defaultConcurrency(); got != MaxConcurrency {
+		t.Errorf("defaultConcurrency() on a %d-CPU host = %d, want %d",
+			MaxConcurrency+8, got, MaxConcurrency)
 	}
 }
 
