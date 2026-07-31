@@ -190,8 +190,9 @@ func (s *GinServer) HealthHandler(c *gin.Context) {
 }
 
 func (s *GinServer) RootHandler(c *gin.Context) {
-	endpoints := make([]string, 0, len(endpointSpecs()))
-	for _, spec := range endpointSpecs() {
+	specs := endpointSpecs()
+	endpoints := make([]string, 0, len(specs))
+	for _, spec := range specs {
 		if spec.available(s) {
 			endpoints = append(endpoints, spec.path)
 		}

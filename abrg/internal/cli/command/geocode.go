@@ -2,13 +2,11 @@ package command
 
 import (
 	"context"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"abrg/internal/matching"
 	"abrg/internal/model"
-	"abrg/internal/util"
 )
 
 // NewGeocodeCmd creates a new geocode command.
@@ -36,18 +34,14 @@ func runGeocode(ctx context.Context, opts processorOptions) error {
 	defer setup.Cleanup()
 
 	p := newDefaultProcessor(setup, func(ctx context.Context, address string) (*model.GeocodeResponse, error) {
-		start := time.Now()
-		result, err := matching.Geocode(ctx, setup.Matcher, setup.Repo, model.MatchQuery{
-			Address:  address,
-			Category: setup.Category,
-			Limit:    opts.Limit,
-			Pref:     setup.Pref,
+		return runTimed(setup, func() (*model.GeocodeResponse, error) {
+			return matching.Geocode(ctx, setup.Matcher, setup.Repo, model.MatchQuery{
+				Address:  address,
+				Category: setup.Category,
+				Limit:    opts.Limit,
+				Pref:     setup.Pref,
+			})
 		})
-		if result != nil {
-			result.ResultInfo.DurationMs = util.DurationMs(time.Since(start))
-			setup.setResultInfo(&result.ResultInfo)
-		}
-		return result, err
 	})
 	return p.Run(ctx, setup.InFile, setup.OutFile)
 }

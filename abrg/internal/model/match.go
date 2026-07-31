@@ -38,3 +38,11 @@ type MatchResponse struct {
 	ResultInfo ResultInfo      `json:"result_info"`
 	Features   []MatchedResult `json:"features"`
 }
+
+// ResultInfoPtr returns a pointer to r's ResultInfo, or nil if r is nil.
+func (r *MatchResponse) ResultInfoPtr() *ResultInfo {
+	if r == nil {
+		return nil
+	}
+	return &r.ResultInfo
+}

@@ -5,6 +5,14 @@ import (
 	"math"
 )
 
+// Latitude and longitude bounds for coordinate validation.
+const (
+	MinLat = -90.0
+	MaxLat = 90.0
+	MinLon = -180.0
+	MaxLon = 180.0
+)
+
 // coordinatePrecision is the number of decimal places for coordinate rounding.
 // 6 decimal places provides approximately 11cm precision, which matches
 // the precision of the source data stored as float32 in PostgreSQL.
@@ -21,13 +29,13 @@ func RoundCoordinates(coords []float64) {
 	}
 }
 
-// ValidateCoordinates validates that lon is in [-180, 180] and lat is in [-90, 90].
+// ValidateCoordinates validates that lon is in [MinLon, MaxLon] and lat is in [MinLat, MaxLat].
 func ValidateCoordinates(lon, lat float64) error {
-	if lon < -180 || lon > 180 {
-		return fmt.Errorf("longitude out of range [-180, 180]: %f", lon)
+	if lon < MinLon || lon > MaxLon {
+		return fmt.Errorf("longitude out of range [%g, %g]: %f", MinLon, MaxLon, lon)
 	}
-	if lat < -90 || lat > 90 {
-		return fmt.Errorf("latitude out of range [-90, 90]: %f", lat)
+	if lat < MinLat || lat > MaxLat {
+		return fmt.Errorf("latitude out of range [%g, %g]: %f", MinLat, MaxLat, lat)
 	}
 	return nil
 }
