@@ -1,9 +1,11 @@
 package cache
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"abr.local/common/db"
 
@@ -39,18 +41,32 @@ func (c *Config) HasParcel() bool {
 	return c.EnabledCategory == model.All || c.EnabledCategory == string(model.CategoryParcel)
 }
 
+// newConfig builds a Config from decoded abrdb config values. abrdb init
+// parses pref and category case-insensitively (and treats an empty pref as
+// all prefectures) but stores the raw input, so the values are canonicalized
+// here — the single funnel both the DuckDB cache config and the PostgreSQL
+// abrdb config pass through — and every consumer sees what abrdb meant.
+func newConfig(decoded *db.ABRDBConfig) *Config {
+	return &Config{
+		DBVersion:       decoded.Version,
+		EnabledPref:     cmp.Or(canonical(decoded.EnabledPref), model.All),
+		EnabledCategory: canonical(decoded.EnabledCategory),
+		EnabledPos:      decoded.EnabledPos,
+	}
+}
+
+// canonical lowercases and trims a stored pref or category value.
+func canonical(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
+}
+
 // loadConfigFromRows scans config key-value rows into a Config struct.
 func loadConfigFromRows(rows *sql.Rows) (*Config, error) {
 	decoded, err := db.ScanABRDBConfig(rows)
 	if err != nil {
 		return nil, err
 	}
-	return &Config{
-		DBVersion:       decoded.Version,
-		EnabledPref:     decoded.EnabledPref,
-		EnabledCategory: decoded.EnabledCategory,
-		EnabledPos:      decoded.EnabledPos,
-	}, nil
+	return newConfig(decoded), nil
 }
 
 // loadConfigFromTable loads config from the specified config table.
