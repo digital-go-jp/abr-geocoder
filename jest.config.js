@@ -1,5 +1,9 @@
-const { compilerOptions } = require('./tsconfig.json')
+const ts = require('typescript')
 const { pathsToModuleNameMapper } = require('ts-jest')
+
+// tsconfig.json holds comments, which JSON.parse rejects. Read it with the
+// compiler's own parser instead of require().
+const { compilerOptions } = ts.readConfigFile('./tsconfig.json', ts.sys.readFile).config
 
 const targetTestFile = process.argv[2];
 const { roots, moduleDirectories } = (() => {

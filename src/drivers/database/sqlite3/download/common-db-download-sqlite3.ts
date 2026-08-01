@@ -282,11 +282,7 @@ export class CommonDbDownloadSqlite3
         crc32 IS NULL
     `;
     await this.createTownTable();
-    const cityKey = TableKeyProvider.getCityKey({
-      lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
-    });
     return await this.upsertRowsForTown({
-      cityKey,
       upsert: this.prepare(sql),
       rows,
     });
@@ -318,25 +314,24 @@ export class CommonDbDownloadSqlite3
     `;
     await this.createTownTable();
 
-    const cityKey = TableKeyProvider.getCityKey({
-      lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
-    });
     return await this.upsertRowsForTown({
-      cityKey,
       upsert: this.prepare(sql),
       rows,
     });
   }
 
+  // mt_town_pos_pref** は都道府県単位のファイルなので、1バッチに複数の市区町村が
+  // 混ざる。city_key は行ごとに、その行の lg_code から求める。
   private async upsertRowsForTown(params: Required<{
     upsert: Statement;
-    cityKey: number;
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
       this.driver.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
-          row.city_key = params.cityKey;
+          row.city_key = TableKeyProvider.getCityKey({
+            lg_code: row[DataField.LG_CODE.dbColumn] as string,
+          });
           row.town_key = TableKeyProvider.getTownKey({
             lg_code: row[DataField.LG_CODE.dbColumn] as string,
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn] as string,
