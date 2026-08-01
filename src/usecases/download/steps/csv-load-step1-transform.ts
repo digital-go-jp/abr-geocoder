@@ -129,7 +129,7 @@ export class CsvLoadStep1Transform extends Duplex {
       };
 
       case 'town_pos': {
-        return new TownPosDatasetFile(params);
+        return new TownPosDatasetFile(datasetParams);
       }
 
       case 'rsdtdsp_blk': {

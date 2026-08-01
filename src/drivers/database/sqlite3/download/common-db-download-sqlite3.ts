@@ -270,6 +270,7 @@ export class CommonDbDownloadSqlite3
         @koaza_aka_code,
         @crc32
       ) ON CONFLICT (town_key) DO UPDATE SET
+        city_key = @city_key,
         ${DataField.MACHIAZA_ID.dbColumn} = @machiaza_id,
         ${DataField.OAZA_CHO.dbColumn} = @oaza_cho,
         ${DataField.CHOME.dbColumn} = @chome,
@@ -279,14 +280,11 @@ export class CommonDbDownloadSqlite3
         crc32 = @crc32
       WHERE
         crc32 != @crc32 OR
-        crc32 IS NULL
+        crc32 IS NULL OR
+        city_key != @city_key
     `;
     await this.createTownTable();
-    const cityKey = TableKeyProvider.getCityKey({
-      lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
-    });
     return await this.upsertRowsForTown({
-      cityKey,
       upsert: this.prepare(sql),
       rows,
     });
@@ -308,35 +306,36 @@ export class CommonDbDownloadSqlite3
         @rep_lat,
         @rep_lon
       ) ON CONFLICT (town_key) DO UPDATE SET
+        city_key = @city_key,
         ${DataField.REP_LAT.dbColumn} = @rep_lat,
         ${DataField.REP_LON.dbColumn} = @rep_lon
-      WHERE 
-        ${DataField.REP_LAT.dbColumn} != @rep_lat OR 
-        ${DataField.REP_LON.dbColumn} != @rep_lon OR 
+      WHERE
+        ${DataField.REP_LAT.dbColumn} != @rep_lat OR
+        ${DataField.REP_LON.dbColumn} != @rep_lon OR
         ${DataField.REP_LAT.dbColumn} IS NULL OR
-        ${DataField.REP_LON.dbColumn} IS NULL
+        ${DataField.REP_LON.dbColumn} IS NULL OR
+        city_key != @city_key
     `;
     await this.createTownTable();
 
-    const cityKey = TableKeyProvider.getCityKey({
-      lg_code: rows[0][DataField.LG_CODE.dbColumn].toString(),
-    });
     return await this.upsertRowsForTown({
-      cityKey,
       upsert: this.prepare(sql),
       rows,
     });
   }
 
+  // mt_town_pos_pref** は都道府県単位のファイルなので、1バッチに複数の市区町村が
+  // 混ざる。city_key は行ごとに、その行の lg_code から求める。
   private async upsertRowsForTown(params: Required<{
     upsert: Statement;
-    cityKey: number;
     rows: Record<string, string | number>[];
   }>) {
     return await new Promise((resolve: (_?: void) => void) => {
       this.driver.transaction((rows: Record<string, string | number>[]) => {
         for (const row of rows) {
-          row.city_key = params.cityKey;
+          row.city_key = TableKeyProvider.getCityKey({
+            lg_code: row[DataField.LG_CODE.dbColumn] as string,
+          });
           row.town_key = TableKeyProvider.getTownKey({
             lg_code: row[DataField.LG_CODE.dbColumn] as string,
             machiaza_id: row[DataField.MACHIAZA_ID.dbColumn] as string,
