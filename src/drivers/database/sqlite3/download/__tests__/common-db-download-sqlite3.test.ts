@@ -44,6 +44,34 @@ describe('CommonDbDownloadSqlite3', () => {
     await db.close();
   });
 
+  // A database built before the per-row fix holds towns under the wrong city.
+  // Downloading again must move them back instead of leaving them stranded.
+  it('repairs a wrong city_key on re-import', async () => {
+    const db = openDb();
+    const townRow = {
+      lg_code: '271209', machiaza_id: '0025003', oaza_cho: '南住吉', chome: '三丁目',
+      koaza: '', rsdt_addr_flg: 1, koaza_aka_code: 0, machiaza_dist: '', crc32: 1,
+    };
+    await db.townCsvRows([townRow]);
+
+    const driver = (db as unknown as {
+      driver: {
+        prepare: (sql: string) => { run: (...args: unknown[]) => void; get: () => Record<string, number> };
+      };
+    }).driver;
+    const wrongCityKey = TableKeyProvider.getCityKey({ lg_code: '271021' });
+    driver.prepare(`UPDATE ${DbTableName.TOWN} SET city_key = ?`).run(wrongCityKey);
+
+    await db.townCsvRows([townRow]);
+    await db.townPosCsvRows([
+      { lg_code: '271209', machiaza_id: '0025003', rep_lat: '34.604514', rep_lon: '135.500015' },
+    ]);
+
+    const row = driver.prepare(`SELECT city_key FROM ${DbTableName.TOWN}`).get();
+    expect(row.city_key).toBe(TableKeyProvider.getCityKey({ lg_code: '271209' }));
+    await db.close();
+  });
+
   it('keeps city_key per row for town rows', async () => {
     const db = openDb();
     await db.townCsvRows([
