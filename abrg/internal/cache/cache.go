@@ -40,8 +40,22 @@ func NewDuckDBCache(ctx context.Context) (*DuckDBCache, error) {
 }
 
 // The cache file must already exist and be valid (created by `abrg cache build`).
+//
+// Unlike NewDuckDBCache, this verifies that the cache's normalized addresses
+// match what this binary produces. Only serve opens its cache this way: a
+// server on a mismatched cache answers with silently degraded match levels,
+// while the CLI is left able to run a changed normalization against an
+// existing cache.
 func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache, error) {
-	return newDuckDBCache(ctx, cachePath, config.Load().Cache.DuckDBThreads)
+	cache, err := newDuckDBCache(ctx, cachePath, config.Load().Cache.DuckDBThreads)
+	if err != nil {
+		return nil, err
+	}
+	if err := verifyNormalization(ctx, cache.db); err != nil {
+		_ = cache.Close()
+		return nil, err
+	}
+	return cache, nil
 }
 
 func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*DuckDBCache, error) {

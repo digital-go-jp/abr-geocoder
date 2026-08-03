@@ -19,7 +19,7 @@ import (
 func TestQuickstartFixture_Structure(t *testing.T) {
 	ctx := context.Background()
 
-	conn, err := duckdb.OpenReadOnly("../../../quickstart/tokyo_basic.duckdb")
+	conn, err := duckdb.OpenReadOnly(quickstartCachePath)
 	if err != nil {
 		t.Fatalf("open quickstart cache: %v", err)
 	}
