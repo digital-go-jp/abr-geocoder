@@ -117,6 +117,18 @@ resource "aws_cloudwatch_log_group" "step_functions" {
   }
 }
 
+locals {
+  # Every task state in this workflow runs on the same private subnets with
+  # the same security group, so the wiring is declared once here.
+  task_network_configuration = {
+    AwsvpcConfiguration = {
+      Subnets        = var.private_subnet_ids
+      SecurityGroups = [var.ecs_security_group_id]
+      AssignPublicIp = "DISABLED"
+    }
+  }
+}
+
 # Step Functions State Machine
 resource "aws_sfn_state_machine" "data_update" {
   name     = "${var.project_name}-data-update"
@@ -183,16 +195,10 @@ resource "aws_sfn_state_machine" "data_update" {
         Resource       = "arn:aws:states:::ecs:runTask.sync"
         TimeoutSeconds = var.force_import_timeout_seconds
         Parameters = {
-          Cluster        = var.ecs_cluster_arn
-          TaskDefinition = var.abrdb_import_task_arn
-          LaunchType     = "FARGATE"
-          NetworkConfiguration = {
-            AwsvpcConfiguration = {
-              Subnets        = var.private_subnet_ids
-              SecurityGroups = [var.ecs_security_group_id]
-              AssignPublicIp = "DISABLED"
-            }
-          }
+          Cluster              = var.ecs_cluster_arn
+          TaskDefinition       = var.abrdb_import_task_arn
+          LaunchType           = "FARGATE"
+          NetworkConfiguration = local.task_network_configuration
           Overrides = {
             ContainerOverrides = [
               {
@@ -228,16 +234,10 @@ resource "aws_sfn_state_machine" "data_update" {
         Resource       = "arn:aws:states:::ecs:runTask.sync"
         TimeoutSeconds = 300
         Parameters = {
-          Cluster        = var.ecs_cluster_arn
-          TaskDefinition = var.abrdb_import_task_arn
-          LaunchType     = "FARGATE"
-          NetworkConfiguration = {
-            AwsvpcConfiguration = {
-              Subnets        = var.private_subnet_ids
-              SecurityGroups = [var.ecs_security_group_id]
-              AssignPublicIp = "DISABLED"
-            }
-          }
+          Cluster              = var.ecs_cluster_arn
+          TaskDefinition       = var.abrdb_import_task_arn
+          LaunchType           = "FARGATE"
+          NetworkConfiguration = local.task_network_configuration
           Overrides = {
             Cpu    = "1024"
             Memory = "2048"
@@ -319,16 +319,10 @@ resource "aws_sfn_state_machine" "data_update" {
         Resource       = "arn:aws:states:::ecs:runTask.sync"
         TimeoutSeconds = 3600
         Parameters = {
-          Cluster        = var.ecs_cluster_arn
-          TaskDefinition = var.abrdb_import_task_arn
-          LaunchType     = "FARGATE"
-          NetworkConfiguration = {
-            AwsvpcConfiguration = {
-              Subnets        = var.private_subnet_ids
-              SecurityGroups = [var.ecs_security_group_id]
-              AssignPublicIp = "DISABLED"
-            }
-          }
+          Cluster              = var.ecs_cluster_arn
+          TaskDefinition       = var.abrdb_import_task_arn
+          LaunchType           = "FARGATE"
+          NetworkConfiguration = local.task_network_configuration
           Overrides = {
             Cpu    = var.daily_import_cpu
             Memory = var.daily_import_memory
@@ -353,16 +347,10 @@ resource "aws_sfn_state_machine" "data_update" {
         Resource       = "arn:aws:states:::ecs:runTask.sync"
         TimeoutSeconds = 1800
         Parameters = {
-          Cluster        = var.ecs_cluster_arn
-          TaskDefinition = var.abrg_cache_build_task_arn
-          LaunchType     = "FARGATE"
-          NetworkConfiguration = {
-            AwsvpcConfiguration = {
-              Subnets        = var.private_subnet_ids
-              SecurityGroups = [var.ecs_security_group_id]
-              AssignPublicIp = "DISABLED"
-            }
-          }
+          Cluster              = var.ecs_cluster_arn
+          TaskDefinition       = var.abrg_cache_build_task_arn
+          LaunchType           = "FARGATE"
+          NetworkConfiguration = local.task_network_configuration
           Overrides = {
             Cpu    = var.daily_cache_build_cpu
             Memory = var.daily_cache_build_memory
