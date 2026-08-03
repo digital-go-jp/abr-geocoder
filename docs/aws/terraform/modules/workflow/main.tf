@@ -1,16 +1,21 @@
 # Workflow Module - Step Functions + EventBridge for automated data updates
 #
 # Workflow:
-#   EventBridge (schedule) -> Step Functions -> ECS Tasks -> ECS Service restart
+#   EventBridge (schedule) or a manual execution -> Step Functions -> ECS tasks
+#   -> ECS service restart
 #
 # Steps:
 #   1. abrdb import (check & import if changes)
 #   2. abrg cache build
 #   3. ECS service force-new-deployment
 #
-# Note: Daily updates use lower task specs via Overrides (2vCPU/4GB for import,
-#       4vCPU/8GB for cache build). For full imports, run tasks manually with
-#       default specs (16vCPU/32GB) or override via aws ecs run-task.
+# The execution input can skip ahead: rebuild_cache_only starts at the cache
+# build, force replaces the change check with a full re-import. Both exist for
+# releases where the code changed but the data did not.
+#
+# Every state overrides the task spec down to what a daily run needs (2vCPU/4GB
+# for import, 4vCPU/16GB for cache build) except ForceImport, which keeps the
+# task definition's own 8vCPU/16GB for a full volume.
 
 # IAM Role for Step Functions
 resource "aws_iam_role" "step_functions" {
@@ -224,8 +229,7 @@ resource "aws_sfn_state_machine" "data_update" {
       # guaranteed. A hung task costs nothing while it hangs - the service
       # keeps serving the cache it already loaded - whereas a timeout that
       # fires on a healthy run fails the update. Each value therefore covers
-      # the worst case that task can legitimately reach, which is a different
-      # quantity for each of them and is noted where they are set.
+      # the worst case its own task can legitimately reach.
       #
       # Comparing the DCAT feed against the catalog costs the same whatever
       # changed, so this one only has to cover its own spread.
