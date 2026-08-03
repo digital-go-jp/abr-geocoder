@@ -85,6 +85,6 @@ variable "daily_cache_build_memory" {
 
 variable "force_import_timeout_seconds" {
   type        = number
-  default     = 2700 # 45 min, against a measured full re-import of 14 min
+  default     = 2700 # covers a full re-import, measured at 14 min
   description = "Timeout for the full re-import triggered by {\"force\": true}"
 }
