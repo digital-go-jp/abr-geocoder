@@ -225,8 +225,8 @@ func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec m
 func insertBasicTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec map[string]float64) error {
 	inserts := []struct{ name, stmt string }{
 		{"machiaza", buildInsertMachiazaSQL(cfg.HasResidential(), cfg.HasParcel())},
-		{"city", insertCitySQL},
-		{"pref", insertPrefSQL},
+		{"city", buildInsertSQL(insertCitySQLTemplate, cityNormalizedParts)},
+		{"pref", buildInsertSQL(insertPrefSQLTemplate, prefNormalizedParts)},
 	}
 	for _, in := range inserts {
 		sec, err := execTimed(ctx, conn, "insert", in.name, in.stmt)

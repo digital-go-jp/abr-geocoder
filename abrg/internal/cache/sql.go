@@ -61,7 +61,7 @@ SELECT
 	CASE WHEN t.koaza_aka_code = 2 THEN NULL ELSE t.koaza END AS koaza,
 	t.machiaza_dist,
 	t.wake_num_flg::SMALLINT,
-	normalize_text_go(CONCAT_WS('', c.county, c.city, c.ward, CASE WHEN t.koaza_aka_code = 2 THEN t.koaza ELSE NULL END, t.oaza_cho, t.chome, CASE WHEN t.koaza_aka_code = 2 THEN NULL ELSE t.koaza END)) AS normalized_address,
+	{{normalized_address}} AS normalized_address,
 	-- has_chome: true if:
 	-- 1. This record has chome set, OR
 	-- 2. oaza_cho itself contains 丁目 (e.g., 下田市の二丁目), OR
@@ -101,11 +101,12 @@ func buildInsertMachiazaSQL(hasRsdtdsp, hasParcel bool) string {
 	return strings.NewReplacer(
 		"{{parcel_cnt}}", machiazaCountCTE("cache_parcel", "parcel_count", hasParcel),
 		"{{rsdt_cnt}}", machiazaCountCTE("cache_rsdtdsp", "rsdtdsp_count", hasRsdtdsp),
+		"{{normalized_address}}", buildNormalizedExpr(machiazaNormalizedParts),
 	).Replace(insertMachiazaSQLTemplate)
 }
 
 // insertCitySQL inserts city-level data from PostgreSQL.
-const insertCitySQL = `
+const insertCitySQLTemplate = `
 INSERT INTO cache_city (pref_code, lg_code, pref, county, city, ward, normalized_address, geom)
 SELECT
 	CAST(SUBSTR(c.lg_code, 1, 2) AS SMALLINT) AS pref_code,
@@ -114,23 +115,29 @@ SELECT
 	c.county,
 	c.city,
 	c.ward,
-	normalize_text_go(CONCAT_WS('', c.county, c.city, c.ward)) AS normalized_address,
+	{{normalized_address}} AS normalized_address,
 	ST_Point(c.rep_lon, c.rep_lat) AS geom
 FROM pg.public.mt_pref_unified p
 JOIN pg.public.mt_city_unified c ON SUBSTR(p.lg_code, 1, 2) = SUBSTR(c.lg_code, 1, 2)
 `
 
 // insertPrefSQL inserts prefecture-level data from PostgreSQL.
-const insertPrefSQL = `
+const insertPrefSQLTemplate = `
 INSERT INTO cache_pref (pref_code, lg_code, pref, normalized_address, geom)
 SELECT
 	CAST(SUBSTR(p.lg_code, 1, 2) AS SMALLINT) AS pref_code,
 	p.lg_code,
 	p.pref,
-	normalize_text_go(p.pref) AS normalized_address,
+	{{normalized_address}} AS normalized_address,
 	ST_Point(p.rep_lon, p.rep_lat) AS geom
 FROM pg.public.mt_pref_unified p
 `
+
+// buildInsertSQL fills a template's normalized_address placeholder with the
+// expression shared with the open-time check.
+func buildInsertSQL(template string, parts []normalizedPart) string {
+	return strings.Replace(template, "{{normalized_address}}", buildNormalizedExpr(parts), 1)
+}
 
 // createRsdtdspSQL creates rsdtdsp (residential) table from PostgreSQL.
 // Uses CREATE TABLE AS SELECT ... ORDER BY to ensure DuckDB Row Group statistics

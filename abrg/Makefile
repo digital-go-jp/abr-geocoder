@@ -5,7 +5,7 @@ EXTRA_CLEAN := rm -rf tmp
 
 include ../Makefile.common
 
-.PHONY: test-issues test-issue1 test-coverage-pkg bench-match help
+.PHONY: test-issues test-issue1 test-coverage-pkg bench-match quickstart-cache help
 
 REGRESSION_PKG := ./internal/matching/issues
 
@@ -42,6 +42,13 @@ test-coverage-pkg:
 bench-match: build
 	@bash testdata/bench/run.sh ./$(BINARY) $(or $(REPS),3)
 
+# Rewrite normalized_address in the committed quickstart cache with what the
+# current normalization produces. Run this when a normalization change makes
+# the tests that open the bundled cache report a normalization mismatch, then
+# commit the updated file.
+quickstart-cache:
+	go test ./internal/cache -count=1 -v -run TestRefreshQuickstartCache -refresh-quickstart-cache
+
 # Show help
 help:
 	@echo "Available targets:"
@@ -66,6 +73,7 @@ help:
 	@echo "  modernize     - Check go fix modernizations (CI-friendly, no changes)"
 	@echo "  bench         - Run benchmarks"
 	@echo "  bench-match   - Compare per-record match cost (bundled Tokyo cache)"
+	@echo "  quickstart-cache - Refresh normalized_address in the bundled Tokyo cache"
 	@echo ""
 	@echo "Other:"
 	@echo "  help          - Show this help"
