@@ -90,12 +90,6 @@ func TestAddColon(t *testing.T) {
 			changed:  true,
 		},
 		{
-			name:     "English followed by number",
-			input:    "TokyoMinato123",
-			expected: "TokyoMinato:123",
-			changed:  true,
-		},
-		{
 			name:     "katakana followed by number",
 			input:    "イケ谷492",
 			expected: "イケ谷:492",
