@@ -78,6 +78,18 @@ func TestAddColon(t *testing.T) {
 			changed:  true,
 		},
 		{
+			name:     "hyphen directly after chome",
+			input:    "東京都中央区銀座1丁目-5-2",
+			expected: "東京都中央区銀座1丁目:5-2",
+			changed:  true,
+		},
+		{
+			name:     "hyphen directly after chome, single number",
+			input:    "東京都中央区銀座1丁目-5",
+			expected: "東京都中央区銀座1丁目:5",
+			changed:  true,
+		},
+		{
 			name:     "English followed by number",
 			input:    "TokyoMinato123",
 			expected: "TokyoMinato:123",
