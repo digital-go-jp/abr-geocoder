@@ -130,16 +130,94 @@ resource "aws_sfn_state_machine" "data_update" {
 
   definition = jsonencode({
     Comment = "ABR data update workflow: check changes -> import -> cache build -> service restart"
-    StartAt = "CheckChanges"
+    StartAt = "Route"
     States = {
+      # Manual releases enter here. The scheduled run carries both keys set to
+      # false and falls through to CheckChanges.
+      #
+      # Each key is guarded by IsPresent because a Choice that reads an absent
+      # path fails the execution itself. BooleanEquals also means the string
+      # "true" does not match and lands on the default branch, so the input
+      # has to carry real booleans.
+      Route = {
+        Type = "Choice"
+        Choices = [
+          {
+            And = [
+              {
+                Variable  = "$.rebuild_cache_only"
+                IsPresent = true
+              },
+              {
+                Variable      = "$.rebuild_cache_only"
+                BooleanEquals = true
+              }
+            ]
+            Next = "BuildCache"
+          },
+          {
+            And = [
+              {
+                Variable  = "$.force"
+                IsPresent = true
+              },
+              {
+                Variable      = "$.force"
+                BooleanEquals = true
+              }
+            ]
+            Next = "ForceImport"
+          }
+        ]
+        Default = "CheckChanges"
+      }
+      # abrdb import detects unchanged files and skips them, so a plain import
+      # cannot re-run the ETL after a logic change. --force deletes and
+      # re-inserts per file, replacing rows an older logic produced.
+      #
+      # No Cpu/Memory override: the daily values are sized for an incremental
+      # import and a full one runs out of memory under them. The task
+      # definition's own spec applies instead.
+      ForceImport = {
+        Type           = "Task"
+        Resource       = "arn:aws:states:::ecs:runTask.sync"
+        TimeoutSeconds = var.force_import_timeout_seconds
+        Parameters = {
+          Cluster        = var.ecs_cluster_arn
+          TaskDefinition = var.abrdb_import_task_arn
+          LaunchType     = "FARGATE"
+          NetworkConfiguration = {
+            AwsvpcConfiguration = {
+              Subnets        = var.private_subnet_ids
+              SecurityGroups = [var.ecs_security_group_id]
+              AssignPublicIp = "DISABLED"
+            }
+          }
+          Overrides = {
+            ContainerOverrides = [
+              {
+                Name    = "abrdb"
+                Command = ["import", "--force", "--quiet"]
+                Environment = [
+                  { Name = "LOG_LEVEL", Value = "info" }
+                ]
+              }
+            ]
+          }
+        }
+        Next = "BuildCache"
+      }
       # Step 1: Check for changes (dry-run)
       # - exit 0: no changes -> end workflow
       # - exit 1: changes pending -> continue to import (caught as task failure)
-      # TimeoutSeconds on each task is 5-10x its measured normal duration.
-      # On timeout the execution fails and Step Functions attempts a
-      # best-effort cancellation (ecs:StopTask) of the .sync task - the stop
-      # itself is not guaranteed, but the timeout bounds how long the
-      # workflow can block on a hung task (e.g. an uncancellable DuckDB query).
+      # TimeoutSeconds exists to stop the workflow blocking forever on a hung
+      # task (e.g. an uncancellable DuckDB query), not to flag a slow one. On
+      # timeout the execution fails and Step Functions attempts a best-effort
+      # cancellation (ecs:StopTask) of the .sync task; the stop itself is not
+      # guaranteed. A hung task costs nothing while it hangs - the service
+      # keeps serving the cache it already loaded - whereas a timeout that
+      # fires on a healthy run fails the update, so each value sits well above
+      # the durations observed for that task rather than close to them.
       CheckChanges = {
         Type           = "Task"
         Resource       = "arn:aws:states:::ecs:runTask.sync"
@@ -355,6 +433,13 @@ resource "aws_scheduler_schedule" "daily_update" {
   target {
     arn      = aws_sfn_state_machine.data_update.arn
     role_arn = aws_iam_role.eventbridge[0].arn
+
+    # Both keys are spelled out so the Route choice sees them present and
+    # false rather than absent.
+    input = jsonencode({
+      force              = false
+      rebuild_cache_only = false
+    })
   }
 
   state = "ENABLED"

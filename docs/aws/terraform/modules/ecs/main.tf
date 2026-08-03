@@ -523,6 +523,15 @@ resource "aws_ecs_service" "abrg" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  # abrg refuses to start on a cache it cannot read, so a deployment that
+  # pairs a new binary with an incompatible cache would otherwise retry
+  # forever. The circuit breaker stops it and returns to the last deployment
+  # that reached steady state.
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [var.ecs_security_group_id]
