@@ -31,6 +31,12 @@ var (
 	// misses U+3000), - (hyphen patterns handled elsewhere)
 	chomeKanjiBlockNumPattern = regexp.MustCompile(`(丁目)([` + kanjiBlockChars + `]*[^町\d\s\pZ-])(\d+)\s*$`)
 
+	// chomeHyphenNumPattern matches 丁目 + hyphen + the address numbers
+	// (e.g., "1丁目-5-2"). Writing a hyphen straight after 丁目 puts it where the
+	// boundary belongs rather than between two number components, so the colon
+	// takes its place.
+	chomeHyphenNumPattern = regexp.MustCompile(`(丁目)-(\d+(?:-[` + addressEndChars + `]+)*-?)\s*$`)
+
 	// textNumberBoundaryPattern matches typical address numbers at the end.
 	// Supports: numbers (123-4), alphabet (A-20), katakana (12-エ-46), kanji block + hyphen-number
 	// Excludes \pZ alongside \s so an ideographic space separates the number the
@@ -60,6 +66,7 @@ var (
 		{Re: chomeKanjiBlockGoPattern, Repl: "${1}:${2}-${3}"},
 		{Re: chomeKanjiBlockNumPattern, Repl: "${1}:${2}-${3}"},
 		{Re: chomeKanjiBlockPattern, Repl: "${1}:${2}"},
+		{Re: chomeHyphenNumPattern, Repl: "${1}:${2}"},
 	}
 )
 
