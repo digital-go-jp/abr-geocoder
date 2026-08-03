@@ -439,13 +439,21 @@ aws ecs run-task --cluster $ECS_CLUSTER --task-definition abrdb-import --launch-
 
 キャッシュは稼働中バイナリと組で整合している必要があります。スキーマ版と正規化のどちらが食い違っても起動を拒否されるため、イメージとキャッシュは同じ世代の組に戻します。
 
-タスク定義は `:latest` を参照するので、旧バージョンタグを `:latest` に付け替えた上で、S3 のバージョニングから1世代前のキャッシュに戻します。整合した組に戻るため、キャッシュの再構築を待たずに復旧できます。
+タスク定義は `:latest` を参照するので、旧バージョンタグを `:latest` に付け替えた上で、戻す先のイメージが作ったキャッシュに戻します。整合した組に戻るため、キャッシュの再構築を待たずに復旧できます。
+
+戻す先は**単純に1世代前ではありません**。戻したいリリースの後に日次実行や手動実行でキャッシュが作り直されていると、直前の世代も新しいイメージが作ったものです。**リリースより前に作られた最新のキャッシュ**を、`LastModified` を見て選びます。
 
 ```bash
 # 旧バージョンを latest に付け替える（例: 3.0.40 へ戻す）
 MANIFEST=$(aws ecr batch-get-image --repository-name abrg \
   --image-ids imageTag=3.0.40 --query 'images[0].imageManifest' --output text)
 aws ecr put-image --repository-name abrg --image-tag latest --image-manifest "$MANIFEST"
+
+# 戻す先のイメージが push された時刻を調べ、それより前の最新のキャッシュを選ぶ
+aws ecr describe-images --repository-name abrg \
+  --image-ids imageTag=3.0.40 --query 'imageDetails[0].imagePushedAt' --output text
+aws s3api list-object-versions --bucket $(terraform output -raw cache_bucket) \
+  --prefix abrg/abrg.duckdb.gz --query 'sort_by(Versions,&LastModified)[].[LastModified,VersionId]' --output text
 ```
 
 S3 のキャッシュは非現行バージョンを30日で失効させるため、それより前には戻せません。その場合は現行バイナリで `cache build` し直してください。
