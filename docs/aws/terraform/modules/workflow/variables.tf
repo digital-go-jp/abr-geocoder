@@ -61,24 +61,30 @@ variable "log_retention_days" {
 # Daily update task specs (lower than full import)
 variable "daily_import_cpu" {
   type        = string
-  default     = "2048" # 2 vCPU (vs 16 vCPU for full import)
+  default     = "2048" # 2 vCPU (the task definition allows 8)
   description = "CPU units for daily import task"
 }
 
 variable "daily_import_memory" {
   type        = string
-  default     = "4096" # 4 GB (vs 32 GB for full import)
+  default     = "4096" # 4 GB (the task definition allows 16)
   description = "Memory (MB) for daily import task"
 }
 
 variable "daily_cache_build_cpu" {
   type        = string
-  default     = "4096" # 4 vCPU (vs 16 vCPU for full import)
+  default     = "4096" # 4 vCPU (the task definition allows 8)
   description = "CPU units for daily cache build task"
 }
 
 variable "daily_cache_build_memory" {
   type        = string
-  default     = "16384" # 16 GB (vs 32 GB for full import)
+  default     = "16384" # 16 GB (the task definition allows 32)
   description = "Memory (MB) for daily cache build task"
+}
+
+variable "force_import_timeout_seconds" {
+  type        = number
+  default     = 2700 # covers a full re-import, measured at 14 min
+  description = "Timeout for the full re-import triggered by {\"force\": true}"
 }

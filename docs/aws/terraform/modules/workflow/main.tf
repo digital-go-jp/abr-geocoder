@@ -1,16 +1,21 @@
 # Workflow Module - Step Functions + EventBridge for automated data updates
 #
 # Workflow:
-#   EventBridge (schedule) -> Step Functions -> ECS Tasks -> ECS Service restart
+#   EventBridge (schedule) or a manual execution -> Step Functions -> ECS tasks
+#   -> ECS service restart
 #
 # Steps:
 #   1. abrdb import (check & import if changes)
 #   2. abrg cache build
 #   3. ECS service force-new-deployment
 #
-# Note: Daily updates use lower task specs via Overrides (2vCPU/4GB for import,
-#       4vCPU/8GB for cache build). For full imports, run tasks manually with
-#       default specs (16vCPU/32GB) or override via aws ecs run-task.
+# The execution input can skip ahead: rebuild_cache_only starts at the cache
+# build, force replaces the change check with a full re-import. Both exist for
+# releases where the code changed but the data did not.
+#
+# Every state overrides the task spec down to what a daily run needs (2vCPU/4GB
+# for import, 4vCPU/16GB for cache build) except ForceImport, which keeps the
+# task definition's own 8vCPU/16GB for a full volume.
 
 # IAM Role for Step Functions
 resource "aws_iam_role" "step_functions" {
@@ -117,6 +122,18 @@ resource "aws_cloudwatch_log_group" "step_functions" {
   }
 }
 
+locals {
+  # Every task state in this workflow runs on the same private subnets with
+  # the same security group, so the wiring is declared once here.
+  task_network_configuration = {
+    AwsvpcConfiguration = {
+      Subnets        = var.private_subnet_ids
+      SecurityGroups = [var.ecs_security_group_id]
+      AssignPublicIp = "DISABLED"
+    }
+  }
+}
+
 # Step Functions State Machine
 resource "aws_sfn_state_machine" "data_update" {
   name     = "${var.project_name}-data-update"
@@ -130,31 +147,101 @@ resource "aws_sfn_state_machine" "data_update" {
 
   definition = jsonencode({
     Comment = "ABR data update workflow: check changes -> import -> cache build -> service restart"
-    StartAt = "CheckChanges"
+    StartAt = "Route"
     States = {
+      # Manual releases enter here. The scheduled run carries both keys set to
+      # false and falls through to CheckChanges.
+      #
+      # Each key is guarded by IsPresent because a Choice that reads an absent
+      # path fails the execution itself. BooleanEquals also means the string
+      # "true" does not match and lands on the default branch, so the input
+      # has to carry real booleans.
+      Route = {
+        Type = "Choice"
+        Choices = [
+          {
+            And = [
+              {
+                Variable  = "$.rebuild_cache_only"
+                IsPresent = true
+              },
+              {
+                Variable      = "$.rebuild_cache_only"
+                BooleanEquals = true
+              }
+            ]
+            Next = "BuildCache"
+          },
+          {
+            And = [
+              {
+                Variable  = "$.force"
+                IsPresent = true
+              },
+              {
+                Variable      = "$.force"
+                BooleanEquals = true
+              }
+            ]
+            Next = "ForceImport"
+          }
+        ]
+        Default = "CheckChanges"
+      }
+      # abrdb import detects unchanged files and skips them, so a plain import
+      # cannot re-run the ETL after a logic change. --force deletes and
+      # re-inserts per file, replacing rows an older logic produced.
+      #
+      # No Cpu/Memory override: the daily values are sized for an incremental
+      # import and a full one runs out of memory under them. The task
+      # definition's own spec applies instead.
+      ForceImport = {
+        Type           = "Task"
+        Resource       = "arn:aws:states:::ecs:runTask.sync"
+        TimeoutSeconds = var.force_import_timeout_seconds
+        Parameters = {
+          Cluster              = var.ecs_cluster_arn
+          TaskDefinition       = var.abrdb_import_task_arn
+          LaunchType           = "FARGATE"
+          NetworkConfiguration = local.task_network_configuration
+          Overrides = {
+            ContainerOverrides = [
+              {
+                Name    = "abrdb"
+                Command = ["import", "--force", "--quiet"]
+                Environment = [
+                  { Name = "LOG_LEVEL", Value = "info" }
+                ]
+              }
+            ]
+          }
+        }
+        Next = "BuildCache"
+      }
       # Step 1: Check for changes (dry-run)
       # - exit 0: no changes -> end workflow
       # - exit 1: changes pending -> continue to import (caught as task failure)
-      # TimeoutSeconds on each task is 5-10x its measured normal duration.
-      # On timeout the execution fails and Step Functions attempts a
-      # best-effort cancellation (ecs:StopTask) of the .sync task - the stop
-      # itself is not guaranteed, but the timeout bounds how long the
-      # workflow can block on a hung task (e.g. an uncancellable DuckDB query).
+      #
+      # TimeoutSeconds exists to stop the workflow blocking forever on a hung
+      # task (e.g. an uncancellable DuckDB query), not to flag a slow one. On
+      # timeout the execution fails and Step Functions attempts a best-effort
+      # cancellation (ecs:StopTask) of the .sync task; the stop itself is not
+      # guaranteed. A hung task costs nothing while it hangs - the service
+      # keeps serving the cache it already loaded - whereas a timeout that
+      # fires on a healthy run fails the update. Each value therefore covers
+      # the worst case its own task can legitimately reach.
+      #
+      # Comparing the DCAT feed against the catalog costs the same whatever
+      # changed, so this one only has to cover its own spread.
       CheckChanges = {
         Type           = "Task"
         Resource       = "arn:aws:states:::ecs:runTask.sync"
-        TimeoutSeconds = 900
+        TimeoutSeconds = 300
         Parameters = {
-          Cluster        = var.ecs_cluster_arn
-          TaskDefinition = var.abrdb_import_task_arn
-          LaunchType     = "FARGATE"
-          NetworkConfiguration = {
-            AwsvpcConfiguration = {
-              Subnets        = var.private_subnet_ids
-              SecurityGroups = [var.ecs_security_group_id]
-              AssignPublicIp = "DISABLED"
-            }
-          }
+          Cluster              = var.ecs_cluster_arn
+          TaskDefinition       = var.abrdb_import_task_arn
+          LaunchType           = "FARGATE"
+          NetworkConfiguration = local.task_network_configuration
           Overrides = {
             Cpu    = "1024"
             Memory = "2048"
@@ -226,21 +313,20 @@ resource "aws_sfn_state_machine" "data_update" {
         Comment = "No changes detected, workflow complete"
       }
       # Step 2: Import data (with changes detected)
+      # An ordinary day is a minute or two, but this scales with how much ABR
+      # republished, so the case to cover is every file changing at once. That
+      # is the same work ForceImport does, and it runs here under the smaller
+      # daily spec - not proportionally slower, since import throughput is
+      # bound by Aurora writes rather than CPU.
       UpdateData = {
         Type           = "Task"
         Resource       = "arn:aws:states:::ecs:runTask.sync"
         TimeoutSeconds = 3600
         Parameters = {
-          Cluster        = var.ecs_cluster_arn
-          TaskDefinition = var.abrdb_import_task_arn
-          LaunchType     = "FARGATE"
-          NetworkConfiguration = {
-            AwsvpcConfiguration = {
-              Subnets        = var.private_subnet_ids
-              SecurityGroups = [var.ecs_security_group_id]
-              AssignPublicIp = "DISABLED"
-            }
-          }
+          Cluster              = var.ecs_cluster_arn
+          TaskDefinition       = var.abrdb_import_task_arn
+          LaunchType           = "FARGATE"
+          NetworkConfiguration = local.task_network_configuration
           Overrides = {
             Cpu    = var.daily_import_cpu
             Memory = var.daily_import_memory
@@ -258,21 +344,17 @@ resource "aws_sfn_state_machine" "data_update" {
         Next = "BuildCache"
       }
       # Step 3: Build cache
+      # Every run rebuilds the whole cache, so there is no busy day to allow
+      # for - only the spread between runs and the dataset growing.
       BuildCache = {
         Type           = "Task"
         Resource       = "arn:aws:states:::ecs:runTask.sync"
         TimeoutSeconds = 1800
         Parameters = {
-          Cluster        = var.ecs_cluster_arn
-          TaskDefinition = var.abrg_cache_build_task_arn
-          LaunchType     = "FARGATE"
-          NetworkConfiguration = {
-            AwsvpcConfiguration = {
-              Subnets        = var.private_subnet_ids
-              SecurityGroups = [var.ecs_security_group_id]
-              AssignPublicIp = "DISABLED"
-            }
-          }
+          Cluster              = var.ecs_cluster_arn
+          TaskDefinition       = var.abrg_cache_build_task_arn
+          LaunchType           = "FARGATE"
+          NetworkConfiguration = local.task_network_configuration
           Overrides = {
             Cpu    = var.daily_cache_build_cpu
             Memory = var.daily_cache_build_memory
@@ -355,6 +437,13 @@ resource "aws_scheduler_schedule" "daily_update" {
   target {
     arn      = aws_sfn_state_machine.data_update.arn
     role_arn = aws_iam_role.eventbridge[0].arn
+
+    # Both keys are spelled out so the Route choice sees them present and
+    # false rather than absent.
+    input = jsonencode({
+      force              = false
+      rebuild_cache_only = false
+    })
   }
 
   state = "ENABLED"

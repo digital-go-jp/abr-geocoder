@@ -203,14 +203,20 @@ aws ecr get-login-password | \
 docker build --platform linux/arm64 -f abrg/Dockerfile \
   --build-arg COMMIT=$(git rev-parse --short HEAD) -t abrg .
 docker tag abrg:latest $ABRG_REPO:latest
+docker tag abrg:latest $ABRG_REPO:$(cat abrg/VERSION)
 docker push $ABRG_REPO:latest
+docker push $ABRG_REPO:$(cat abrg/VERSION)
 
 # abrdb
 docker build --platform linux/arm64 -f abrdb/Dockerfile \
   --build-arg COMMIT=$(git rev-parse --short HEAD) -t abrdb .
 docker tag abrdb:latest $ABRDB_REPO:latest
+docker tag abrdb:latest $ABRDB_REPO:$(cat abrdb/VERSION)
 docker push $ABRDB_REPO:latest
+docker push $ABRDB_REPO:$(cat abrdb/VERSION)
 ```
+
+タスク定義は `:latest` を参照します。バージョンタグは戻し先を残すために併せて push します。`:latest` だけだと、旧イメージへ戻す手段がタグのないダイジェスト探しになり、ECR の保持世代を超えると失われます。
 
 ### データベース初期化
 
@@ -331,19 +337,26 @@ EventBridge Scheduler が毎日 02:00 JST に Step Functions を実行します�
 ```mermaid
 flowchart TD
     EB["EventBridge Scheduler<br/>毎日 02:00 JST"] --> SFN["Step Functions"]
-    SFN --> CHECK["CheckChanges<br/>(import --dry-run)"]
+    MAN["手動実行"] --> SFN
+    SFN --> ROUTE{"Route<br/>(実行入力)"}
+    ROUTE -->|rebuild_cache_only| CACHE
+    ROUTE -->|force| FORCE["ForceImport<br/>(import --force --quiet)"]
+    ROUTE -->|既定| CHECK["CheckChanges<br/>(import --dry-run)"]
     CHECK -->|exit 0<br/>変更なし| END1["完了"]
     CHECK -->|exit 1<br/>変更あり| IMPORT["UpdateData<br/>(import --quiet)"]
     CHECK -->|その他<br/>判定不能| FAIL["実行失敗"]
+    FORCE --> CACHE
     IMPORT --> CACHE["BuildCache"]
     CACHE --> RESTART["RestartService"]
     RESTART --> END2["完了"]
 ```
 
-1. **CheckChanges** (`import --dry-run`) — DCAT Feed と差分検出。変更がなければ完了し、以降の処理は実行されません。判定に失敗した場合は実行が失敗になります。
-2. **UpdateData** (`import --quiet`) — 差分インポート
-3. **BuildCache** — DuckDB キャッシュ再構築
-4. **RestartService** — ECS サービス再起動
+1. **Route** — 実行入力で経路を選びます。`{"rebuild_cache_only": true}` は BuildCache から、`{"force": true}` は ForceImport から始まります。どちらもない場合と `false` の場合は CheckChanges に進みます。
+2. **CheckChanges** (`import --dry-run`) — DCAT Feed と差分検出。変更がなければ完了し、以降の処理は実行されません。判定に失敗した場合は実行が失敗になります。
+3. **ForceImport** (`import --force --quiet`) — 差分検出を飛ばした全件取り込み。取り込み済みのファイルもファイル単位で削除して入れ直すため、古いロジックが生成した行が置き換わります。
+4. **UpdateData** (`import --quiet`) — 差分インポート
+5. **BuildCache** — DuckDB キャッシュ再構築
+6. **RestartService** — ECS サービス再起動
 
 ### 手動トリガー
 
@@ -366,16 +379,34 @@ aws logs filter-log-events \
 
 ### イメージ更新
 
-[初回構築 > Docker イメージのビルド・プッシュ](#docker-イメージのビルド・プッシュ)の手順でイメージを更新後、タスク定義の更新とサービスの再起動を行います。
+[初回構築 > Docker イメージのビルド・プッシュ](#docker-イメージのビルド・プッシュ)の手順でイメージを更新後、キャッシュを再構築します。
 
 ```bash
 cd docs/aws/terraform
 terraform apply
 
-aws ecs update-service --cluster $ECS_CLUSTER --service abrg-service --force-new-deployment
+aws stepfunctions start-execution \
+  --state-machine-arn arn:aws:states:ap-northeast-1:$(aws sts get-caller-identity --query Account --output text):stateMachine:abrg-data-update \
+  --input '{"rebuild_cache_only": true}'
 ```
 
-> **⚠️ キャッシュスキーマ版が上がるリリース**: abrg は起動時にキャッシュのスキーマ版を検証し、不一致なら起動を拒否します（`abrg/README.ja.md` 参照）。リリースノートにスキーマ版の変更が含まれる場合は、**先にキャッシュを再構築してからサービスを再起動**してください（新イメージでの [キャッシュビルド](#キャッシュビルド) → [サービス再起動](#サービス再起動) の順。DB のテーブル構成も変わる場合は [設定（取り込みフィルタ）変更の反映](#設定取り込みフィルタ変更の反映) の全手順）。逆順で再起動すると新しいタスクが旧キャッシュを読めず起動失敗を繰り返します。
+`rebuild_cache_only` はキャッシュ構築とサービス再起動だけを実行します。変更内容で場合分けせず、abrg のイメージを push したら常に続けて実行してください。abrg はキャッシュのスキーマ版と正規化の整合を起動時に検証し、どちらかが食い違うと起動を拒否します（`abrg/README.ja.md` 参照）。順序が逆になると、新しいタスクが旧キャッシュを読めずに起動失敗を繰り返します。
+
+abrdb の取り込みロジックが変わるリリースでは、キャッシュだけでなく取り込み済みデータの作り直しが必要です。`{"force": true}` は差分チェックを飛ばして全件を取り込み直し、そのままキャッシュ構築とサービス再起動まで続けます。
+
+```bash
+aws stepfunctions start-execution \
+  --state-machine-arn arn:aws:states:ap-northeast-1:$(aws sts get-caller-identity --query Account --output text):stateMachine:abrg-data-update \
+  --input '{"force": true}'
+```
+
+値は真偽値で渡します。文字列の `"true"` は一致せず、差分チェックから始まる通常経路に落ちます。
+
+> **⚠️ 定期実行との重複**: 定期実行（毎日 02:00 JST）と手動実行が重なると、同じキャッシュ保存先に二重に書き込みます。時間帯を避けて実行してください。
+
+> **⚠️ 列構成が変わる abrdb のリリース**: 取り込み自体がエラーで止まるため `force` では復旧できません。[設定（取り込みフィルタ）変更の反映](#設定取り込みフィルタ変更の反映) の `init` からの手順を実行してください。人が実行するまで日次実行も失敗し続けます。また `force` はファイル単位の削除と再挿入のため、繰り返すとデータベースに未回収の領域が残ります。大規模な入れ直しを繰り返す場合も `init` からの手順を使ってください。
+
+ワークフローの成功はサービスが定常状態に達したことまでは保証しません。実行後に [動作確認](#動作確認) を行ってください。起動拒否が続く場合は deployment circuit breaker がデプロイを止め、直前の定常状態に戻します。
 
 ### 設定（取り込みフィルタ）変更の反映
 
@@ -406,7 +437,26 @@ aws ecs run-task --cluster $ECS_CLUSTER --task-definition abrdb-import --launch-
 
 ### ロールバック
 
-キャッシュは稼働中バイナリの要求するスキーマ版と一致している必要があります。バイナリ更新をまたいで古いキャッシュに戻す場合は、イメージも同時に戻すか、現行バイナリで `cache build` し直してください。
+キャッシュは稼働中バイナリと組で整合している必要があります。スキーマ版と正規化のどちらが食い違っても起動を拒否されるため、イメージとキャッシュは同じ世代の組に戻します。
+
+タスク定義は `:latest` を参照するので、旧バージョンタグを `:latest` に付け替えた上で、戻す先のイメージが作ったキャッシュに戻します。整合した組に戻るため、キャッシュの再構築を待たずに復旧できます。
+
+戻す先は**単純に1世代前ではありません**。戻したいリリースの後に日次実行や手動実行でキャッシュが作り直されていると、直前の世代も新しいイメージが作ったものです。**リリースより前に作られた最新のキャッシュ**を、`LastModified` を見て選びます。
+
+```bash
+# 旧バージョンを latest に付け替える（例: 3.0.40 へ戻す）
+MANIFEST=$(aws ecr batch-get-image --repository-name abrg \
+  --image-ids imageTag=3.0.40 --query 'images[0].imageManifest' --output text)
+aws ecr put-image --repository-name abrg --image-tag latest --image-manifest "$MANIFEST"
+
+# 戻す先のイメージが push された時刻を調べ、それより前の最新のキャッシュを選ぶ
+aws ecr describe-images --repository-name abrg \
+  --image-ids imageTag=3.0.40 --query 'imageDetails[0].imagePushedAt' --output text
+aws s3api list-object-versions --bucket $(terraform output -raw cache_bucket) \
+  --prefix abrg/abrg.duckdb.gz --query 'sort_by(Versions,&LastModified)[].[LastModified,VersionId]' --output text
+```
+
+S3 のキャッシュは非現行バージョンを30日で失効させるため、それより前には戻せません。その場合は現行バイナリで `cache build` し直してください。
 
 ```bash
 # S3 バージョン一覧確認
