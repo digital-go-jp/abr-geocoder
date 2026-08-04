@@ -152,6 +152,13 @@ func evalKanjiNumber(runes []rune, start int) (int, int) {
 // that part is converted and the remainder is recursively processed.
 // If no pattern is found, the entire segment is treated as individual digits/multipliers.
 func convertKanjiSegment(seg string) string {
+	if !containsKanjiNumbers(seg) {
+		// Multipliers alone (万/億) are part of an ordinary place name, not a
+		// number. Applying the same rule per segment as KanjiToArabic applies
+		// per string keeps normalization independent of the surrounding text.
+		return seg
+	}
+
 	runes := []rune(seg)
 	value, consumed := evalKanjiNumber(runes, 0)
 
