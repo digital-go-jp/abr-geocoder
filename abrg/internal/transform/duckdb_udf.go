@@ -26,8 +26,8 @@ func (*TextForDBUDF) Executor() duckdb.ScalarFuncExecutor {
 				return nil, nil
 			}
 
-			// Call textForDB function (excludes AddColon since DB records already have colons)
-			result, _ := textForDB(values[0].(string))
+			// Call TextForDB function (excludes AddColon since DB records already have colons)
+			result, _ := TextForDB(values[0].(string))
 			return result, nil
 		},
 	}

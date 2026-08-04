@@ -175,12 +175,12 @@ func TestTextForDB(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, changed := textForDB(tt.input)
+			got, changed := TextForDB(tt.input)
 			if got != tt.want {
-				t.Errorf("textForDB(%q) [%s] = %q, want %q", tt.input, tt.step, got, tt.want)
+				t.Errorf("TextForDB(%q) [%s] = %q, want %q", tt.input, tt.step, got, tt.want)
 			}
 			if changed != tt.changed {
-				t.Errorf("textForDB(%q) [%s] changed = %v, want %v", tt.input, tt.step, changed, tt.changed)
+				t.Errorf("TextForDB(%q) [%s] changed = %v, want %v", tt.input, tt.step, changed, tt.changed)
 			}
 		})
 	}
@@ -195,10 +195,10 @@ func TestSpaceCollapsingIsTheSameOnBothPipelines(t *testing.T) {
 		"倉敷市児島下の町　9丁目",
 		"厚岸郡浜中町大字後静村  字姉別原野南9線",
 	} {
-		db, _ := textForDB(in)
+		db, _ := TextForDB(in)
 		basic, _ := TextForBasicNormalized(in)
 		if db != basic {
-			t.Errorf("textForDB(%q) = %q, TextForBasicNormalized = %q; the pipelines must collapse spaces alike",
+			t.Errorf("TextForDB(%q) = %q, TextForBasicNormalized = %q; the pipelines must collapse spaces alike",
 				in, db, basic)
 		}
 	}
