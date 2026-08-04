@@ -113,7 +113,7 @@ func isSingleKatakanaColon(result string) bool {
 }
 
 // AddColon inserts a colon separator between text and trailing address number.
-// Example: "米花町492-1" -> "米花町:492-1".
+// Example: "紀尾井町1-3" -> "紀尾井町:1-3".
 func AddColon(s string) (string, bool) {
 	if strings.Contains(s, ":") {
 		return s, false

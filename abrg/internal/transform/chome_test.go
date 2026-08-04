@@ -34,7 +34,7 @@ func TestChomeToSymbol(t *testing.T) {
 			expected: "NOTアラビア数字丁目",
 		},
 		{
-			name:     "chome with ban - no change (should be handled by banchi)",
+			name:     "chome symbol applied, 番 left for the banchi rules",
 			input:    "1丁目2番",
 			expected: "1@2番",
 		},
