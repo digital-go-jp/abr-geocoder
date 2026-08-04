@@ -42,26 +42,11 @@ var (
 	// Excludes \pZ alongside \s so an ideographic space separates the number the
 	// same way an ASCII space does.
 	textNumberBoundaryPattern = regexp.MustCompile(`([^\d\s\pZ-A-Zア-ン])((?:\d+|[A-Z]+|[ア-ン]+)(?:-[` + addressEndChars + `]+)*-?|(?:-\d+))\s*$`)
-
-	// atKanjiBlockPattern matches @ + single alphabetic/kanji/katakana character
-	atKanjiBlockPattern = regexp.MustCompile(`(@)([` + nonDigitEndChars + `])`)
-
-	// atKanjiBlockGoPattern matches @ + kanji block + number + 号 (e.g., "@渡辺3号")
-	atKanjiBlockGoPattern = regexp.MustCompile(`(@)([` + kanjiBlockChars + `]+)(\d+)号\s*$`)
-
-	// atKanjiBlockNumPattern matches @ + kanji block + number without 号 (e.g., "@渡辺3")
-	atKanjiBlockNumPattern = regexp.MustCompile(`(@)([` + kanjiBlockChars + `]+)(\d+)\s*$`)
 )
 
-// atRules and chomeRules insert the colon after an @ or 丁目 marker. Both are
-// ordered most specific first; the first rule that changes the string wins.
+// chomeRules inserts the colon after the 丁目 marker. It is ordered most
+// specific first; the first rule that changes the string wins.
 var (
-	atRules = []normalize.ReplaceRule{
-		{Re: atKanjiBlockGoPattern, Repl: "${1}:${2}-${3}"},
-		{Re: atKanjiBlockNumPattern, Repl: "${1}:${2}-${3}"},
-		{Re: atKanjiBlockPattern, Repl: "${1}:${2}"},
-	}
-
 	chomeRules = []normalize.ReplaceRule{
 		{Re: chomeKanjiBlockGoPattern, Repl: "${1}:${2}-${3}"},
 		{Re: chomeKanjiBlockNumPattern, Repl: "${1}:${2}-${3}"},
@@ -131,13 +116,6 @@ func AddColon(s string) (string, bool) {
 	// Skip special patterns that should not have colons inserted
 	if isHokkaidoSenPattern(s) || isGaikuPattern(s) || isSapporoAbbreviation(s) {
 		return s, false
-	}
-
-	// Handle @ symbol patterns (chome symbol followed by block names)
-	if strings.Contains(s, "@") && !strings.Contains(s, "@:") {
-		if result, ok := normalize.ApplyFirstMatch(s, atRules); ok {
-			return result, true
-		}
 	}
 
 	if strings.Contains(s, "丁目") {

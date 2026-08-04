@@ -170,18 +170,6 @@ func TestAddColon(t *testing.T) {
 			changed:  false,
 		},
 		{
-			name:     "@ followed by kanji block name (渡辺-3)",
-			input:    "大阪市中央区久太郎町4@渡辺-3",
-			expected: "大阪市中央区久太郎町4@:渡辺-3",
-			changed:  true,
-		},
-		{
-			name:     "@ followed by kanji block + number without 号 (渡辺3)",
-			input:    "大阪市中央区久太郎町4@渡辺3",
-			expected: "大阪市中央区久太郎町4@:渡辺-3",
-			changed:  true,
-		},
-		{
 			name:     "alphabet block name without chome (A-12)",
 			input:    "大阪市中央区上町A-12",
 			expected: "大阪市中央区上町:A-12",
