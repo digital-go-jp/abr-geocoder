@@ -256,6 +256,14 @@ func TestKanjiToArabic(t *testing.T) {
 			changed:  true,
 		},
 		{
+			// A place name keeps its 万 while a real number in the same
+			// string still converts, so the two rules do not interfere.
+			name:     "place name and number sharing 万 - 万代町一万五千番地",
+			input:    "万代町一万五千番地",
+			expected: "万代町15000番地",
+			changed:  true,
+		},
+		{
 			name:     "twelve thousand - 一万二千",
 			input:    "一万二千",
 			expected: "12000",
