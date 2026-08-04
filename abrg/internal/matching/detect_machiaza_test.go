@@ -144,35 +144,37 @@ func TestBuildFallbackAddress(t *testing.T) {
 	}{
 		{
 			name:              "With colon and single digit",
-			baseAddress:       "千代田区紀尾井町",
+			baseAddress:       "千代田区神田佐久間町",
 			afterColon:        "1-3",
-			expectedFallback:  "千代田区紀尾井町1@",
+			expectedFallback:  "千代田区神田佐久間町1@",
 			expectedRemaining: ":3",
 		},
 		{
+			// 123丁目 and 0丁目 exist nowhere: ABR tops out at 42丁目. These
+			// three pin how the digits are split, not a real address.
 			name:              "With colon and multi-digit",
-			baseAddress:       "千代田区紀尾井町",
+			baseAddress:       "千代田区神田佐久間町",
 			afterColon:        "123-456",
-			expectedFallback:  "千代田区紀尾井町123@",
+			expectedFallback:  "千代田区神田佐久間町123@",
 			expectedRemaining: ":456",
 		},
 		{
 			name:              "No number after colon",
-			baseAddress:       "千代田区紀尾井町",
+			baseAddress:       "千代田区神田佐久間町",
 			afterColon:        "",
 			expectedFallback:  "",
 			expectedRemaining: "",
 		},
 		{
 			name:              "Japanese text after colon",
-			baseAddress:       "千代田区紀尾井町",
+			baseAddress:       "千代田区神田佐久間町",
 			afterColon:        "文字列",
 			expectedFallback:  "",
 			expectedRemaining: "",
 		},
 		{
 			name:              "Space before number",
-			baseAddress:       "千代田区紀尾井町",
+			baseAddress:       "千代田区神田佐久間町",
 			afterColon:        " 1-3",
 			expectedFallback:  "",
 			expectedRemaining: "",
@@ -193,16 +195,16 @@ func TestBuildFallbackAddress(t *testing.T) {
 		},
 		{
 			name:              "Zero",
-			baseAddress:       "千代田区紀尾井町",
+			baseAddress:       "千代田区神田佐久間町",
 			afterColon:        "0-1",
-			expectedFallback:  "千代田区紀尾井町0@",
+			expectedFallback:  "千代田区神田佐久間町0@",
 			expectedRemaining: ":1",
 		},
 		{
 			name:              "Number without hyphen",
-			baseAddress:       "千代田区紀尾井町",
+			baseAddress:       "千代田区神田佐久間町",
 			afterColon:        "123",
-			expectedFallback:  "千代田区紀尾井町123@",
+			expectedFallback:  "千代田区神田佐久間町123@",
 			expectedRemaining: "",
 		},
 		{

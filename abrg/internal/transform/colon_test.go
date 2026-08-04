@@ -211,8 +211,8 @@ func TestAddColon(t *testing.T) {
 		{
 			// 街区 koaza pattern (isGaikuPattern).
 			name:     "gaiku pattern suppresses colon",
-			input:    "米花町13街区5号",
-			expected: "米花町13街区5号",
+			input:    "宮崎県都城市平江町13街区5号",
+			expected: "宮崎県都城市平江町13街区5号",
 			changed:  false,
 		},
 		{
@@ -225,8 +225,8 @@ func TestAddColon(t *testing.T) {
 		{
 			// A trailing single katakana is likely a koaza, so the colon is reverted.
 			name:     "trailing single katakana reverts colon",
-			input:    "米花町イ",
-			expected: "米花町イ",
+			input:    "七尾市柑子町チ",
+			expected: "七尾市柑子町チ",
 			changed:  false,
 		},
 	}

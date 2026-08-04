@@ -257,12 +257,12 @@ func TestBuildParcelSearchAddr(t *testing.T) {
 		{
 			name: "with koaza",
 			sa: &model.StructuredAddress{
-				City:    new("新宿区"),
-				OazaCho: new("西新宿"),
-				Koaza:   new("北町"),
+				City:    new("七尾市"),
+				OazaCho: new("柑子町"),
+				Koaza:   new("チ"),
 			},
 			afterColon: "100",
-			expected:   "新宿区西新宿北町:100",
+			expected:   "七尾市柑子町チ:100",
 		},
 		{
 			name: "empty afterColon",
@@ -308,7 +308,7 @@ func BenchmarkNormalize(b *testing.B) {
 			Limit:    1,
 		},
 		{
-			Address:  "岡山県阿哲郡神郷下神代2029番地",
+			Address:  "岡山県新見市神郷下神代2029番地",
 			Category: model.CategoryParcel,
 			Pref:     "all",
 			Limit:    1,

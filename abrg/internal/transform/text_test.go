@@ -16,7 +16,7 @@ func TestTextForBasicNormalized(t *testing.T) {
 			changed: false,
 		},
 		{
-			name:    "no change needed",
+			name:    "kanji numeral in a city name is converted",
 			input:   "東京都千代田区",
 			want:    "東京都1000代田区",
 			changed: true,
@@ -52,7 +52,7 @@ func TestTextForBasicNormalized(t *testing.T) {
 			changed: true,
 		},
 		{
-			name:    "address with building name separator",
+			name:    "kanji numeral in a town name with address numbers",
 			input:   "三輪2-1-1",
 			want:    "3輪:2-1-1",
 			changed: true,
@@ -183,5 +183,23 @@ func TestTextForDB(t *testing.T) {
 				t.Errorf("textForDB(%q) [%s] changed = %v, want %v", tt.input, tt.step, changed, tt.changed)
 			}
 		})
+	}
+}
+
+// A cache record and a query reach each other only where the two pipelines
+// agree, so NormalizeSpaces has to sit in both. No oaza_cho or koaza in the
+// cache holds whitespace today, which is why the step is pinned by the
+// agreement rather than by a row.
+func TestSpaceCollapsingIsTheSameOnBothPipelines(t *testing.T) {
+	for _, in := range []string{
+		"倉敷市児島下の町　9丁目",
+		"厚岸郡浜中町大字後静村  字姉別原野南9線",
+	} {
+		db, _ := textForDB(in)
+		basic, _ := TextForBasicNormalized(in)
+		if db != basic {
+			t.Errorf("textForDB(%q) = %q, TextForBasicNormalized = %q; the pipelines must collapse spaces alike",
+				in, db, basic)
+		}
 	}
 }

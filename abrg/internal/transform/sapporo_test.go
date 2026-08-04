@@ -19,9 +19,11 @@ func TestExpandSapporoJou(t *testing.T) {
 			changed:  true,
 		},
 		{
+			// 南N条東M丁目 is Chuo-ku and Abashiri, never Higashi-ku, which has
+			// no 南 series at all.
 			name:     "南東 pattern",
-			input:    "札幌市東区南10東5-3",
-			expected: "札幌市東区南10条東5丁目:3",
+			input:    "網走市南10東5-3",
+			expected: "網走市南10条東5丁目:3",
 			changed:  true,
 		},
 		{

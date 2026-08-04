@@ -118,7 +118,7 @@ func TestHiraganaToKatakana(t *testing.T) {
 			changed:  true,
 		},
 		{
-			name:     "real address example",
+			name:     "address spelled entirely in kana",
 			input:    "とうきょうとちよだくきおいちょう",
 			expected: "トウキョウトチヨダクキオイチョウ",
 			changed:  true,
@@ -156,7 +156,7 @@ func BenchmarkHiraganaToKatakana(b *testing.B) {
 		"カタカナ",     // No change
 		"あいうえお",    // Basic hiragana
 		"ひらがなカタカナ", // Mixed
-		"とうきょうとちよだくきおいちょう",          // Real world example
+		"とうきょうとちよだくきおいちょう",          // Address-length kana run
 		"あいうえおかきくけこさしすせそたちつてとなにぬねの", // Long hiragana string
 	}
 

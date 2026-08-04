@@ -77,7 +77,7 @@ func TestExtractSenGoSuffix(t *testing.T) {
 		{"旭川市東鷹栖11線23号", "旭川市東鷹栖11線", "23号", true},
 		{"旭川市東鷹栖12線22号", "旭川市東鷹栖12線", "22号", true},
 		// With direction (方角)
-		{"旭川市東鷹栖10線西5号", "旭川市東鷹栖10線西", "5号", true},
+		{"旭川市近文7線南1号", "旭川市近文7線南", "1号", true},
 		// Not extractable
 		{"上川郡鷹栖町7線", "", "", false},      // no 号
 		{"標津郡標津町茶志骨6線南", "", "", false},  // 6線南 is oaza_cho, not sen-go
