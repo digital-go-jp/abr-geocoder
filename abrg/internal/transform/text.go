@@ -46,8 +46,8 @@ func TextForBasicNormalized(s string) (string, bool) {
 	return normalize.ApplySteps(s, basicNormalizedSteps)
 }
 
-// textForDB transforms database records (oaza_cho, koaza, etc.).
-func textForDB(s string) (string, bool) {
+// TextForDB transforms database records (oaza_cho, koaza, etc.).
+func TextForDB(s string) (string, bool) {
 	if s == "" {
 		return s, false
 	}

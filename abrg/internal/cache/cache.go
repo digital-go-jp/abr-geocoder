@@ -15,6 +15,7 @@ import (
 	"abrg/internal/infra/duckdb"
 	"abrg/internal/model"
 	"abrg/internal/schema"
+	"abrg/internal/transform"
 	"abrg/internal/util"
 )
 
@@ -276,7 +277,11 @@ func (c *DuckDBCache) buildCityBoundary(ctx context.Context) error {
 		if err := rows.Scan(&s); err != nil {
 			return fmt.Errorf("failed to scan city boundary row: %w", err)
 		}
-		cityStrings = append(cityStrings, s)
+		// Find is given normalized text, so the dictionary holds the
+		// normalized form. TextForDB is what normalized_address is built
+		// with, which keeps the two sides in step.
+		normalized, _ := transform.TextForDB(s)
+		cityStrings = append(cityStrings, normalized)
 	}
 	if err := rows.Err(); err != nil {
 		return err
