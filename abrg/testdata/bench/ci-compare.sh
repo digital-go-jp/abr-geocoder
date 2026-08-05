@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Compare per-record match cost between two abrg binaries on the same runner.
-# Both binaries run against this checkout's input and cache; only the binary
-# differs, so hardware/runner speed cancels out. Fails when the PR binary is
-# more than THRESHOLD times slower than the base binary.
+# Both binaries run against this checkout's input, so hardware/runner speed
+# cancels out. Fails when the PR binary is more than THRESHOLD times slower than
+# the base binary.
+#
+# A cache carries the schema version of the binary that built it, so set
+# BASE_CACHE to the fixture from the base checkout whenever the two sides differ
+# on it. Unset, both sides read this checkout's fixture.
 #
 # Usage: ci-compare.sh <base-binary> <pr-binary>
 set -euo pipefail
@@ -11,12 +15,13 @@ BASE_BIN=${1:?usage: ci-compare.sh <base-binary> <pr-binary>}
 PR_BIN=${2:?usage: ci-compare.sh <base-binary> <pr-binary>}
 THRESHOLD=${THRESHOLD:-1.15}
 REPS=${REPS:-5}
+BASE_CACHE=${BASE_CACHE:-}
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 get() { printf '%s\n' "$1" | grep -oE "$2=[0-9.]+" | cut -d= -f2; }
 
 echo "Measuring base binary ($REPS reps)..." >&2
-base_line=$(bash "$HERE/run.sh" "$BASE_BIN" "$REPS")
+base_line=$(BENCH_CACHE=$BASE_CACHE bash "$HERE/run.sh" "$BASE_BIN" "$REPS")
 echo "Measuring PR binary ($REPS reps)..." >&2
 pr_line=$(bash "$HERE/run.sh" "$PR_BIN" "$REPS")
 
