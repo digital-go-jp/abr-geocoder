@@ -1,7 +1,6 @@
 package matching
 
 import (
-	"slices"
 	"strings"
 
 	"abrg/internal/model"
@@ -34,13 +33,16 @@ func (n *Impl) fuzzyMatchAllowsTwoStage(nctx *normalizeContext) (allowed bool, p
 	}
 	best := &nctx.State.BasicResults[0]
 	inputTown := n.townPortion(nctx.Input.SearchAddr.Base)
-	matchedTown := n.townPortion(best.MatchedAddress)
-	if inputTown == "" || matchedTown == "" {
+	if inputTown == "" {
 		return false, ""
 	}
 	if prefix := nctx.Input.SearchAddr.parcelNumberPrefix(); prefix != "" &&
 		strings.TrimSuffix(inputTown, prefix) == matchedTownName(best) {
 		return true, prefix
+	}
+	matchedTown := n.townPortion(best.MatchedAddress)
+	if matchedTown == "" {
+		return false, ""
 	}
 	return isPureSubstitution(inputTown, matchedTown), ""
 }
@@ -61,9 +63,12 @@ func consumedParcelPrefix(results []model.MatchedResult, prefix string) bool {
 		return false
 	}
 	num1 := derefString(results[0].StructuredAddress.PrcNum1)
-	return slices.ContainsFunc(util.KanaSpellings(prefix), func(s string) bool {
-		return strings.HasPrefix(num1, s)
-	})
+	for _, spelling := range util.KanaSpellings(prefix) {
+		if strings.HasPrefix(num1, spelling) {
+			return true
+		}
+	}
+	return false
 }
 
 // townPortion returns the address portion after the city/ward boundary.

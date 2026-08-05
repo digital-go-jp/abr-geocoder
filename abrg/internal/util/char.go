@@ -34,30 +34,22 @@ func IsParcelNumberPrefix(r rune) bool {
 	return char.IsKatakanaNumberChar(r)
 }
 
-// halfWidthKatakana maps each katakana to its half-width form. The two literals
-// below have to stay in the same order.
-var halfWidthKatakana = func() map[rune]rune {
-	full := []rune("アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン")
-	half := []rune("ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ")
-	m := make(map[rune]rune, len(full))
-	for i, r := range full {
-		m[r] = half[i]
-	}
-	return m
-}()
+// The two katakana orders line up rune for rune, which is what the SQL that
+// widens the cache columns relies on.
+const (
+	FullWidthKatakana = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン"
+	HalfWidthKatakana = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ"
+)
 
 // KanaSpellings returns s and every other kana spelling ABR records the same
-// prefix in, starting with s itself. A search address holds full-width katakana
-// because NFKC and the hiragana step put it there, while ABR writes an iroha
-// prefix in half-width katakana or in hiragana depending on the municipality.
+// prefix in, starting with s itself. A search address holds full-width katakana,
+// which is also what the cache holds, but some municipalities register an iroha
+// prefix in hiragana and that spelling stands as it is.
 func KanaSpellings(s string) []string {
-	spellings := []string{s}
-	for _, alt := range []string{KatakanaToHalfWidth(s), KatakanaToHiragana(s)} {
-		if alt != s {
-			spellings = append(spellings, alt)
-		}
+	if hiragana := KatakanaToHiragana(s); hiragana != s {
+		return []string{s, hiragana}
 	}
-	return spellings
+	return []string{s}
 }
 
 // KatakanaToHiragana turns the katakana in s into hiragana and leaves everything
@@ -75,19 +67,6 @@ func KatakanaToHiragana(s string) string {
 // katakanaToHiraganaOffset is the distance between the two kana blocks, which
 // run in the same order.
 const katakanaToHiraganaOffset = 'ア' - 'あ'
-
-// KatakanaToHalfWidth narrows the katakana in s and leaves everything else as it
-// is. ABR records an iroha parcel prefix in half-width katakana (イ402 is stored
-// as ｲ402), while a search address has been through NFKC and holds the
-// full-width form.
-func KatakanaToHalfWidth(s string) string {
-	return strings.Map(func(r rune) rune {
-		if h, ok := halfWidthKatakana[r]; ok {
-			return h
-		}
-		return r
-	}, s)
-}
 
 // IsAddressNumberRune reports whether r is a digit used in Japanese address numbers.
 // Includes ASCII digits, full-width digits, and kanji numerals.

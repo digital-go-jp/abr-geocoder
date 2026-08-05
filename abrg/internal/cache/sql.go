@@ -3,6 +3,8 @@ package cache
 import (
 	"fmt"
 	"strings"
+
+	"abrg/internal/util"
 )
 
 // SQL constants for data insertion from PostgreSQL to DuckDB cache.
@@ -183,20 +185,26 @@ SELECT * FROM (
 ) ORDER BY lg_code, machiaza_id
 `
 
+// widenKatakana renders the SQL that turns the half-width katakana ABR writes a
+// parcel number in into the full-width form every other table uses.
+func widenKatakana(col string) string {
+	return fmt.Sprintf("translate(%s, '%s', '%s')", col, util.HalfWidthKatakana, util.FullWidthKatakana)
+}
+
 // createParcelSQL creates parcel (land lot) table from PostgreSQL.
 // Uses CREATE TABLE AS SELECT ... ORDER BY to ensure DuckDB Row Group statistics
 // are properly set for lg_code/machiaza_id filtering optimization.
-const createParcelSQL = `
+var createParcelSQL = fmt.Sprintf(`
 CREATE OR REPLACE TABLE cache_parcel AS
 SELECT
 	CAST(SUBSTR(prc.lg_code, 1, 2) AS SMALLINT) AS pref_code,
 	prc.lg_code,
 	prc.machiaza_id,
 	prc.prc_id,
-	prc.prc_num1,
-	prc.prc_num2,
-	prc.prc_num3,
+	%s AS prc_num1,
+	%s AS prc_num2,
+	%s AS prc_num3,
 	ST_Point(prc.rep_lon, prc.rep_lat) AS geom
 FROM pg.public.mt_parcel_unified prc
 ORDER BY prc.lg_code, prc.machiaza_id
-`
+`, widenKatakana("prc.prc_num1"), widenKatakana("prc.prc_num2"), widenKatakana("prc.prc_num3"))

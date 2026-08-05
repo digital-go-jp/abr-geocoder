@@ -50,16 +50,17 @@ func TestIssue336(t *testing.T) {
 			},
 		},
 		{
-			// ABR records an iroha parcel prefix in half-width katakana (ｾ16).
+			// ABR records an iroha parcel prefix in half-width katakana, and the
+			// result widens it so one address does not mix the two forms.
 			name:               "issue336-3 [千葉県成田市松子セ16番地] iroha parcel prefix",
 			query:              query("千葉県成田市松子セ16番地"),
 			wantMatchLevel:     model.MatchLevelParcel,
-			wantMatchedAddress: "千葉県成田市松子ｾ16",
+			wantMatchedAddress: "千葉県成田市松子セ16",
 			wantStructured: map[string]any{
 				FieldPref:    "千葉県",
 				FieldCity:    "成田市",
 				FieldOazaCho: "松子",
-				FieldPrcNum1: "ｾ16",
+				FieldPrcNum1: "セ16",
 			},
 		},
 		{
