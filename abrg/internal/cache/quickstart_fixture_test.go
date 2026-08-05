@@ -5,17 +5,20 @@ import (
 	"database/sql"
 	"errors"
 	"slices"
+	"strconv"
 	"testing"
 
 	"abrg/internal/infra/duckdb"
+	"abrg/internal/schema"
 )
 
 // TestQuickstartFixture_Structure pins the structure of the committed
 // quickstart cache against static expectations: the exact table and index
-// sets a version-2 basic build produces. The fixture is updated by in-place
-// surgery (a wholesale rebuild would shift data and break tests that pin row
-// contents), and this test catches a botched surgery (leftover category
-// tables or indexes, missing config).
+// sets a basic build produces, at the schema version this binary loads. The
+// fixture is updated by in-place surgery (a wholesale rebuild would shift data
+// and break tests that pin row contents), and this test catches a botched
+// surgery (leftover category tables or indexes, missing config, a version left
+// behind).
 func TestQuickstartFixture_Structure(t *testing.T) {
 	ctx := context.Background()
 
@@ -56,8 +59,13 @@ func TestQuickstartFixture_Structure(t *testing.T) {
 		t.Errorf("indexes = %v, want %v", got, wantIndexes)
 	}
 
+	wantVersion, err := schema.Version()
+	if err != nil {
+		t.Fatalf("schema.Version(): %v", err)
+	}
+
 	for key, want := range map[string]string{
-		KeySchemaVersion:   "2",
+		KeySchemaVersion:   strconv.Itoa(wantVersion),
 		"enabled_category": "basic",
 		"enabled_pref":     "13",
 		"enabled_pos":      "true",

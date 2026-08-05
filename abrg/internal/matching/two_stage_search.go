@@ -149,14 +149,13 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 
 	// The prefixed form is tried first: a town can hold both 402 and 甲402, and
 	// an address that spells the prefix means the latter.
-	num1Forms := []string{prcNum1}
+	var num1Forms []string
 	if prcPrefix != "" {
-		num1Forms = []string{prcPrefix + prcNum1}
-		if narrow := util.KatakanaToHalfWidth(prcPrefix); narrow != prcPrefix {
-			num1Forms = append(num1Forms, narrow+prcNum1)
+		for _, spelling := range util.KanaSpellings(prcPrefix) {
+			num1Forms = append(num1Forms, spelling+prcNum1)
 		}
-		num1Forms = append(num1Forms, prcNum1)
 	}
+	num1Forms = append(num1Forms, prcNum1)
 	find := func(mID string) (*repository.ParcelResult, error) {
 		for _, num1 := range num1Forms {
 			pr, err := s.repo.FindParcelExact(ctx, lgCode, mID, repository.ParcelFilter{

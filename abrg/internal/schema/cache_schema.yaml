@@ -1,7 +1,8 @@
 # DuckDB Cache Schema for abrg geocoder
 # version 2: cache_rsdtdsp / cache_parcel exist only when enabled_category
 # includes them; they are created by CTAS at build time, not declared here.
-version: 2
+# version 3: cache_parcel holds its prc_num columns in full-width katakana.
+version: 3
 
 tables:
   cache_machiaza:

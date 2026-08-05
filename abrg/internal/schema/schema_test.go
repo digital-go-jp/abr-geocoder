@@ -13,8 +13,8 @@ func TestLoadSchema(t *testing.T) {
 		t.Fatalf("loadSchema() error = %v", err)
 	}
 
-	if schema.Version != 2 {
-		t.Errorf("schema.Version = %d, want 2", schema.Version)
+	if schema.Version != 3 {
+		t.Errorf("schema.Version = %d, want 3", schema.Version)
 	}
 
 	// Check tables exist
