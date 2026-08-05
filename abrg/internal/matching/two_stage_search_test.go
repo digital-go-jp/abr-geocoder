@@ -126,7 +126,7 @@ func TestTwoStageSearchParcel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := search.searchParcel(t.Context(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr), 1)
+			result, err := search.searchParcel(t.Context(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr), 1, "")
 			if err != nil {
 				t.Fatalf("searchParcel() error = %v", err)
 			}

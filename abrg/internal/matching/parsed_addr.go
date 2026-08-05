@@ -2,6 +2,7 @@ package matching
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"abrg/internal/char"
 	"abrg/internal/util"
@@ -134,6 +135,17 @@ func (p parsedAddress) String() string {
 	}
 
 	return sb.String()
+}
+
+// parcelNumberPrefix returns the parcel-number prefix the base address ends
+// with, or "" when it ends with anything else. An address writes the prefix
+// between the town name and the digits, so it lands at the end of the base.
+func (p parsedAddress) parcelNumberPrefix() string {
+	last, size := utf8.DecodeLastRuneInString(p.Base)
+	if size == 0 || !util.IsParcelNumberPrefix(last) {
+		return ""
+	}
+	return string(last)
 }
 
 // numericParts returns only the numeric parts from the number components.

@@ -21,24 +21,44 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 	// IMPORTANT: When Levenshtein fallback is used, we skip residential/parcel search
 	// because the remaining address part may be misinterpreted
 	// (e.g., "2-5" in "福室字久保野:2-5" being interpreted as chome + block number).
-	// The exception is a pure same-length substitution in the town name
-	// (e.g. 紀●井町 → 紀尾井町): there the number section is byte-identical to an
-	// exact match, so it is safe to resolve. See fuzzyMatchAllowsTwoStage / #246.
+	// The exceptions are a pure same-length substitution in the town name
+	// (e.g. 紀●井町 → 紀尾井町) and a town short of the input by a parcel-number
+	// prefix (e.g. 白浜町甲402): in both the number section sits where an exact
+	// match would put it, so it is safe to resolve. See fuzzyMatchAllowsTwoStage.
 	newState, usedLevenshteinFallback, err := n.tryLevenshteinFallback(ctx, nctx)
 	if err != nil {
 		return nil, err
 	}
 	nctx.State = newState
 
-	if !usedLevenshteinFallback || n.fuzzyMatchAllowsTwoStage(nctx) {
-		results, err = n.tryDetailedSearch(ctx, nctx)
+	// fuzzyMatchAllowsTwoStage scans the city boundary twice, so it is asked
+	// only on the path whose answer it decides.
+	var allowsTwoStage bool
+	var parcelPrefix string
+	if usedLevenshteinFallback {
+		allowsTwoStage, parcelPrefix = n.fuzzyMatchAllowsTwoStage(nctx)
+	}
+
+	if !usedLevenshteinFallback || allowsTwoStage {
+		// A parcel-number prefix only accounts for the length difference if the
+		// parcel search consumes it. The residential search would read the same
+		// digits as a block number and drop the prefix silently, so it is left
+		// out whatever the address was classified as.
+		if parcelPrefix != "" {
+			results, err = n.tryTwoStageParcel(ctx, nctx)
+		} else {
+			results, err = n.tryDetailedSearch(ctx, nctx)
+		}
 		if err != nil {
 			return nil, err
 		}
 
 		// A detail resolved from a fuzzy (sub-1.0) town match must not outrank an
-		// exact match, so inherit the fuzzy town score onto it.
-		if usedLevenshteinFallback && len(nctx.State.BasicResults) > 0 {
+		// exact match, so inherit the fuzzy town score onto it. A parcel that took
+		// the prefix into its number leaves nothing of the input unmatched and
+		// keeps the score it earned.
+		if usedLevenshteinFallback && !consumedParcelPrefix(results, parcelPrefix) &&
+			len(nctx.State.BasicResults) > 0 {
 			capScoresToFuzzy(results, nctx.State.BasicResults[0].Score)
 		}
 	}
