@@ -1,6 +1,10 @@
 package util
 
-import "abrg/internal/char"
+import (
+	"strings"
+
+	"abrg/internal/char"
+)
 
 // IsKanjiNumeral reports whether r is a kanji numeral, either plain
 // (一二三四五六七八九十〇零百千) or formal (壱弐参肆伍陸漆捌玖拾).
@@ -15,21 +19,44 @@ func IsKanjiNumeral(r rune) bool {
 	return false
 }
 
-// IsParcelNumberPrefix reports whether r is one of the ten stems or twelve
-// branches, which a parcel number can carry in front of its digits. ABR keeps
-// the prefix in prc_num1 (甲402), while an address writes it between the town
-// name and the digits (白浜町甲402番地).
-//
-// ABR uses the iroha letters the same way, but a katakana before the digits
-// keeps AddColon from marking the number boundary at all, so those addresses
-// never reach a parcel search. See #336.
+// IsParcelNumberPrefix reports whether r can stand in front of the digits of a
+// parcel number: one of the ten stems, the twelve branches or a katakana, which
+// is how ABR writes the iroha letters. ABR keeps the prefix in prc_num1 (甲402)
+// while an address writes it between the town name and the digits
+// (白浜町甲402番地). A katakana that merely ends a town name answers yes as well;
+// the parcel lookup is what tells the two apart.
 func IsParcelNumberPrefix(r rune) bool {
 	switch r {
 	case '甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸',
 		'子', '丑', '寅', '卯', '夘', '辰', '巳', '午', '未', '申', '酉', '戌', '亥':
 		return true
 	}
-	return false
+	return char.IsKatakanaNumberChar(r)
+}
+
+// halfWidthKatakana maps each katakana to its half-width form. The two literals
+// below have to stay in the same order.
+var halfWidthKatakana = func() map[rune]rune {
+	full := []rune("アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン")
+	half := []rune("ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ")
+	m := make(map[rune]rune, len(full))
+	for i, r := range full {
+		m[r] = half[i]
+	}
+	return m
+}()
+
+// KatakanaToHalfWidth narrows the katakana in s and leaves everything else as it
+// is. ABR records an iroha parcel prefix in half-width katakana (イ402 is stored
+// as ｲ402), while a search address has been through NFKC and holds the
+// full-width form.
+func KatakanaToHalfWidth(s string) string {
+	return strings.Map(func(r rune) rune {
+		if h, ok := halfWidthKatakana[r]; ok {
+			return h
+		}
+		return r
+	}, s)
 }
 
 // IsAddressNumberRune reports whether r is a digit used in Japanese address numbers.

@@ -211,6 +211,36 @@ func TestAddColon(t *testing.T) {
 			changed:  false,
 		},
 		{
+			// A katakana run standing on its own is a town name, and the boundary
+			// belongs in front of it.
+			name:     "katakana town name",
+			input:    "横浜市西区ミナトミライ",
+			expected: "横浜市西区:ミナトミライ",
+			changed:  true,
+		},
+		{
+			// A katakana can end a town name (長ガ) or be the prefix of a parcel
+			// number (セ16); either way the boundary belongs after it.
+			name:     "katakana before the number",
+			input:    "多気郡大台町長ガ1317",
+			expected: "多気郡大台町長ガ:1317",
+			changed:  true,
+		},
+		{
+			name:     "katakana before the number with a branch",
+			input:    "成田市松子セ16-2",
+			expected: "成田市松子セ:16-2",
+			changed:  true,
+		},
+		{
+			// アパ-ト is the town name 公団アパ―ト after dash normalization, not a
+			// katakana address number followed by a branch.
+			name:     "katakana run in a town name is not a number",
+			input:    "仙台市宮城野区小田原幸町公団アパ-ト",
+			expected: "仙台市宮城野区小田原幸町公団アパ-ト",
+			changed:  false,
+		},
+		{
 			// A trailing single katakana is likely a koaza, so the colon is reverted.
 			name:     "trailing single katakana reverts colon",
 			input:    "七尾市柑子町チ",

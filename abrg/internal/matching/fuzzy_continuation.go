@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"abrg/internal/model"
+	"abrg/internal/util"
 )
 
 // maxTownTypos is the number of single-character substitutions tolerated in a
@@ -43,11 +44,13 @@ func (n *Impl) fuzzyMatchAllowsTwoStage(nctx *normalizeContext) (allowed bool, p
 
 // consumedParcelPrefix reports whether the result is a parcel whose number starts
 // with prefix, i.e. the prefix ended up in the answer rather than being dropped.
+// The half-width form of the prefix counts as consumed as well.
 func consumedParcelPrefix(results []model.MatchedResult, prefix string) bool {
 	if len(results) == 0 || prefix == "" {
 		return false
 	}
-	return strings.HasPrefix(derefString(results[0].StructuredAddress.PrcNum1), prefix)
+	num1 := derefString(results[0].StructuredAddress.PrcNum1)
+	return strings.HasPrefix(num1, prefix) || strings.HasPrefix(num1, util.KatakanaToHalfWidth(prefix))
 }
 
 // townPortion returns the address portion after the city/ward boundary.

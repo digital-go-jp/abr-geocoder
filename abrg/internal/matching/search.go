@@ -40,11 +40,11 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 	}
 
 	if !usedLevenshteinFallback || allowsTwoStage {
-		// A parcel-number prefix only accounts for the length difference if the
-		// parcel search consumes it. The residential search would read the same
-		// digits as a block number and drop the prefix silently, so it is left
-		// out whatever the address was classified as.
-		if parcelPrefix != "" {
+		// The prefix path stands or falls on the parcel search taking the prefix
+		// into its number: only that search can, the answer is worth nothing
+		// without it, and an answer that has it leaves no part of the input over.
+		onPrefixPath := parcelPrefix != ""
+		if onPrefixPath {
 			results, err = n.tryTwoStageParcel(ctx, nctx)
 		} else {
 			results, err = n.tryDetailedSearch(ctx, nctx)
@@ -52,13 +52,13 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 		if err != nil {
 			return nil, err
 		}
+		if onPrefixPath && !consumedParcelPrefix(results, parcelPrefix) {
+			results = nil
+		}
 
 		// A detail resolved from a fuzzy (sub-1.0) town match must not outrank an
-		// exact match, so inherit the fuzzy town score onto it. A parcel that took
-		// the prefix into its number leaves nothing of the input unmatched and
-		// keeps the score it earned.
-		if usedLevenshteinFallback && !consumedParcelPrefix(results, parcelPrefix) &&
-			len(nctx.State.BasicResults) > 0 {
+		// exact match, so inherit the fuzzy town score onto it.
+		if usedLevenshteinFallback && !onPrefixPath && len(nctx.State.BasicResults) > 0 {
 			capScoresToFuzzy(results, nctx.State.BasicResults[0].Score)
 		}
 	}
