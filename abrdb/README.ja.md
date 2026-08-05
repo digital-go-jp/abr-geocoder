@@ -1,6 +1,6 @@
 # Address Base Registry Database Tools
 
-アドレス・ベース・レジストリをPostgreSQLにインポートするツールです。
+アドレス・ベース・レジストリを PostgreSQL にインポートするツールです。
 
 ## インストール
 
@@ -20,8 +20,8 @@ abrdb init [options]
 ```
 
 オプション:
-- `--pref` - 都道府県コード (default: all)。1-47の数値または"all"
-- `--category` - データカテゴリ (default: basic)
+- `--pref` - 都道府県コード（default: all）。1-47の数値または `all`
+- `--category` - データカテゴリ（default: basic）
   - `basic`: 都道府県・市区町村・町字
   - `rsdtdsp`: basic + 住居表示
   - `parcel`: basic + 地番
@@ -60,7 +60,7 @@ abrdb import [options]
 - `-d, --dry-run` - 実際にはインポートせず、対象を表示
 - `-f, --force` - 変更検出をスキップして強制インポート
 - `-q, --quiet` - 進捗表示を抑制
-- `-v, --verbose` - 詳細なファイル一覧を表示（--dry-run時）
+- `-v, --verbose` - 詳細なファイル一覧を表示（--dry-run 時）
 
 環境変数:
 - `ABRDB_DOWNLOAD_DIR` - ダウンロード先ディレクトリ。default は `/tmp/abrdb/data` で、docker compose ではここに named volume `abrdb_data` が載る
@@ -94,7 +94,7 @@ abrdb show config
 
 | プロファイル | 定義 | 説明 |
 |----------|------|------|
-| `default` | [`config_default.yaml`](internal/schema/config_default.yaml) | 最小限のカラム（abrg用、デフォルト） |
+| `default` | [`config_default.yaml`](internal/schema/config_default.yaml) | 最小限のカラム（abrg 用、デフォルト） |
 | `full` | [`config_full.yaml`](internal/schema/config_full.yaml) | 全カラム |
 
 プロファイルを変更するには `init` を再実行し、全件取り込みし直します。設定の変わった新しいバイナリで `import` を実行した場合も、同様に `init` のやり直しを求めるエラーになることがあります。

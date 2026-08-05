@@ -14,7 +14,7 @@ curl -s "http://localhost:3001/geocode?address=東京都千代田区紀尾井町
 
 Includes test data (Tokyo prefecture/city/town). See [quickstart/README.md](quickstart/README.md) for details.
 
-## Full Dataset
+## Nationwide Data
 
 Nationwide data, and residential/parcel data, need PostgreSQL. The
 [docker-compose.yml](docker-compose.yml) at the repository root runs PostgreSQL,

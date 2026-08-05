@@ -4,7 +4,7 @@
 
 ## 前提条件
 
-事前に [abrdb](../abrdb/README.ja.md) でPostgreSQLにデータをインポートしてください。
+事前に [abrdb](../abrdb/README.ja.md) で PostgreSQL にデータをインポートしてください。
 
 ## インストール
 
@@ -15,28 +15,14 @@ make build
 
 ## キャッシュ管理
 
-APIサーバー・CLIツールの両方で使用するDuckDBキャッシュを管理します。
+API サーバー・CLI ツールの両方で使用する DuckDB キャッシュを管理します。
 
 ### `abrg cache build`
 
-PostgreSQLからDuckDBキャッシュファイルを構築します。
+PostgreSQL から DuckDB キャッシュファイルを構築します。
 
 ```bash
 ./abrg cache build
-```
-
-キャッシュにはスキーマ版が記録され、起動時にバイナリの要求する版と照合します。バイナリ更新後にスキーマ版のエラーが出た場合は `cache build` で再構築してください。住居表示 (cache_rsdtdsp)・地番 (cache_parcel) のテーブルは enabled_category に含まれるカテゴリの分だけ作られます。
-
-`serve` は起動時にもう一段の照合を行います。キャッシュに保存された `normalized_address` を原文の列から計算し直し、1件でも食い違えば起動を拒否します。住所の正規化が変わったバイナリで古いキャッシュを読むと、照合時の正規化と保存値がずれて該当する住所の照合レベルが黙って落ちるためです。この場合も `cache build` で再構築してください。
-
-`match` と `geocode` はこの照合を行いません。正規化を変えたコードを既存のキャッシュに対して実行し、挙動の差を観測できるようにしてあります。
-
-### 同梱キャッシュの更新
-
-`quickstart/tokyo_basic.duckdb` はテストが参照します。正規化を変えると、このファイルを開くテストが正規化の不一致で失敗します。次のコマンドで `normalized_address` を書き戻し、更新されたファイルをコミットしてください。行の中身を固定するテストがあるため、丸ごと作り直さず該当の列だけを書き換えます。
-
-```bash
-make -C abrg quickstart-cache
 ```
 
 環境変数:
@@ -50,11 +36,11 @@ make -C abrg quickstart-cache
 ./abrg cache info
 ```
 
-## APIサーバー
+## API サーバー
 
 ### `abrg serve`
 
-APIサーバーを起動します。事前に `cache build` が必要です。
+API サーバーを起動します。事前に `cache build` が必要です。
 
 ```bash
 ./abrg serve
@@ -64,48 +50,50 @@ APIサーバーを起動します。事前に `cache build` が必要です。
 
 | エンドポイント | 説明 |
 |---------------|------|
-| `/normalize` | 住所正規化（表記揺れの統一、ABRデータと照合なし） |
-| `/match` | 住所マッチング（ABRデータと照合） |
-| `/geocode` | ジオコーディング（住所->座標） |
-| `/reverse` | 逆ジオコーディング（座標->住所）※実験的API |
+| `/normalize` | 住所正規化（表記揺れの統一、ABR データと照合なし） |
+| `/match` | 住所マッチング（ABR データと照合） |
+| `/geocode` | ジオコーディング（住所→座標） |
+| `/reverse` | 逆ジオコーディング（座標→住所）※実験的 |
 | `/health` | ヘルスチェック |
 
-API仕様: [openapi/openapi.yml](openapi/openapi.yml)
+※実験的なエンドポイントです。今後仕様が変わる可能性があります。
+
+API 仕様: [openapi/openapi.yml](openapi/openapi.yml)
 
 ### 環境変数
 
 | 変数名 | デフォルト | 説明 |
 |--------|----------|------|
 | `PORT` | `3000` | サーバーポート |
-| `CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDBキャッシュファイルのパス |
-| `ABRG_DUCKDB_THREADS` | `2` | DuckDBのクエリ内並列数の上限（`0` でDuckDB既定＝コア数） |
-| `CORS_ALLOW_ORIGIN` | `*` | CORS許可オリジン。カンマ区切りで複数指定できる |
-| `ABRG_HTTP_READ_TIMEOUT` | `10s` | HTTPサーバーの読み取りタイムアウト（Go duration形式） |
-| `ABRG_HTTP_WRITE_TIMEOUT` | `30s` | HTTPサーバーの書き込みタイムアウト |
-| `ABRG_HTTP_IDLE_TIMEOUT` | `60s` | HTTPサーバーのアイドルタイムアウト |
+| `CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDB キャッシュファイルのパス |
+| `ABRG_DUCKDB_THREADS` | `2` | DuckDB のクエリ内並列数の上限（`0` で DuckDB 既定＝コア数） |
+| `CORS_ALLOW_ORIGIN` | `*` | CORS 許可オリジン。カンマ区切りで複数指定できる |
+| `ABRG_HTTP_READ_TIMEOUT` | `10s` | HTTP サーバーの読み取りタイムアウト（Go duration 形式） |
+| `ABRG_HTTP_WRITE_TIMEOUT` | `30s` | HTTP サーバーの書き込みタイムアウト |
+| `ABRG_HTTP_IDLE_TIMEOUT` | `60s` | HTTP サーバーのアイドルタイムアウト |
 | `LOG_LEVEL` | `INFO` | ログレベル（`DEBUG`, `INFO`, `WARN`, `ERROR`） |
-| `LOG_FORMAT` | `auto` | ログ形式（`json` または `text`、未指定時はTTY自動判定） |
+| `LOG_FORMAT` | `auto` | ログ形式（`json` または `text`、未指定時は TTY 自動判定） |
 
 例：
 ```bash
 PORT=8080 CACHE_PATH=/data/cache.duckdb LOG_LEVEL=DEBUG ./abrg serve
 ```
 
-## CLIツール
+## CLI ツール
 
 `match`、`geocode`、`reverse` は共通のオプションを持ちます。
 
 共通オプション:
 - `-i, --input` - 入力パス（必須）
 - `-o, --output` - 出力パス（必須）
-- `-c, --category` - 対象カテゴリ (all, basic, rsdtdsp, parcel)。省略時はキャッシュの `enabled_category` 設定に従う
-- `-p, --pref` - 検索対象の都道府県コード（例: 13）または "all"
-- `-l, --limit` - 住所あたりの最大結果数 (1-5) (default: 1)
+- `-c, --category` - 対象カテゴリ（all, basic, rsdtdsp, parcel）。省略時はキャッシュの `enabled_category` 設定に従う
+- `-p, --pref` - 検索対象の都道府県コード（例: 13）または `all`
+- `-l, --limit` - 住所あたりの最大結果数（1-5、default: 1）
 - `-q, --quiet` - プログレス表示を抑制
 
 ### `abrg match`
 
-住所をABRデータとマッチングします。
+住所を ABR データとマッチングします。
 
 ```bash
 echo "東京都千代田区紀尾井町1番3号" | ./abrg match -i /dev/stdin -o /dev/stdout -c all -q
@@ -113,7 +101,7 @@ echo "東京都千代田区紀尾井町1番3号" | ./abrg match -i /dev/stdin -o
 
 ### `abrg geocode`
 
-住所をジオコーディング（住所->座標）します。
+住所をジオコーディング（住所→座標）します。
 
 ```bash
 echo "東京都千代田区紀尾井町1番3号" | ./abrg geocode -i /dev/stdin -o /dev/stdout -c all -q
@@ -121,7 +109,9 @@ echo "東京都千代田区紀尾井町1番3号" | ./abrg geocode -i /dev/stdin 
 
 ### `abrg reverse`
 
-座標を逆ジオコーディング（座標->住所）します。入力は `経度,緯度` 形式です。
+座標を逆ジオコーディング（座標→住所）します。入力は `経度,緯度` 形式です。
+
+※実験的なコマンドです。今後仕様が変わる可能性があります。
 
 ```bash
 echo "139.7369,35.6812" | ./abrg reverse -i /dev/stdin -o /dev/stdout -c all -q

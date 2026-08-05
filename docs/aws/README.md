@@ -29,7 +29,7 @@ flowchart TB
 
     USER -->|HTTPS + API Key| APIGW
     APIGW --> NLB --> ABRG
-    S3 -.->|起動時DL| ABRG
+    S3 -.->|起動時 DL| ABRG
 
     EB -.-> SFN
     SFN -.-> IMPORT
@@ -104,7 +104,7 @@ aws apigateway update-account \
 
 ### Bootstrap（初回のみ）
 
-S3 バケット `abrg-tfstate-${ACCOUNT_ID}` と DynamoDB `abrg-terraform-lock` を作成し、bootstrap 自身の state も同じバケットに同居させます (chicken-and-egg を `terraform init -migrate-state` で解消する標準パターン)。
+S3 バケット `abrg-tfstate-${ACCOUNT_ID}` と DynamoDB `abrg-terraform-lock` を作成し、bootstrap 自身の state も同じバケットに同居させます（chicken-and-egg を `terraform init -migrate-state` で解消する標準パターン）。
 
 ```bash
 cd docs/aws/terraform/bootstrap
@@ -221,7 +221,7 @@ docker push $ABRDB_REPO:$(cat abrdb/VERSION)
 ### データベース初期化
 
 ```bash
-# PRIVATE_SUBNETS をJSON配列形式に変換
+# PRIVATE_SUBNETS を JSON 配列形式に変換
 SUBNET_JSON=$(echo $PRIVATE_SUBNETS | jq -R 'split(",")' -c)
 
 TASK_ARN=$(aws ecs run-task \
@@ -352,9 +352,9 @@ flowchart TD
 ```
 
 1. **Route** — 実行入力で経路を選びます。`{"rebuild_cache_only": true}` は BuildCache から、`{"force": true}` は ForceImport から始まります。どちらもない場合と `false` の場合は CheckChanges に進みます。
-2. **CheckChanges** (`import --dry-run`) — DCAT Feed と差分検出。変更がなければ完了し、以降の処理は実行されません。判定に失敗した場合は実行が失敗になります。
-3. **ForceImport** (`import --force --quiet`) — 差分検出を飛ばした全件取り込み。取り込み済みのファイルもファイル単位で削除して入れ直すため、古いロジックが生成した行が置き換わります。
-4. **UpdateData** (`import --quiet`) — 差分インポート
+2. **CheckChanges**（`import --dry-run`） — DCAT Feed と差分検出。変更がなければ完了し、以降の処理は実行されません。判定に失敗した場合は実行が失敗になります。
+3. **ForceImport**（`import --force --quiet`） — 差分検出を飛ばした全件取り込み。取り込み済みのファイルもファイル単位で削除して入れ直すため、古いロジックが生成した行が置き換わります。
+4. **UpdateData**（`import --quiet`） — 差分インポート
 5. **BuildCache** — DuckDB キャッシュ再構築
 6. **RestartService** — ECS サービス再起動
 
@@ -390,7 +390,7 @@ aws stepfunctions start-execution \
   --input '{"rebuild_cache_only": true}'
 ```
 
-`rebuild_cache_only` はキャッシュ構築とサービス再起動だけを実行します。変更内容で場合分けせず、abrg のイメージを push したら常に続けて実行してください。abrg はキャッシュのスキーマ版と正規化の整合を起動時に検証し、どちらかが食い違うと起動を拒否します（`abrg/README.ja.md` 参照）。順序が逆になると、新しいタスクが旧キャッシュを読めずに起動失敗を繰り返します。
+`rebuild_cache_only` はキャッシュ構築とサービス再起動だけを実行します。変更内容で場合分けせず、abrg のイメージを push したら常に続けて実行してください。abrg はキャッシュのスキーマ版と正規化の整合を起動時に検証し、どちらかが一致しないと起動を拒否します（`abrg/README.ja.md` 参照）。順序が逆になると、新しいタスクが旧キャッシュを読めずに起動失敗を繰り返します。
 
 abrdb の取り込みロジックが変わるリリースでは、キャッシュだけでなく取り込み済みデータの作り直しが必要です。`{"force": true}` は差分チェックを飛ばして全件を取り込み直し、そのままキャッシュ構築とサービス再起動まで続けます。
 
@@ -417,7 +417,7 @@ aws stepfunctions start-execution \
 ```bash
 # 1. 新イメージをビルド・プッシュ（「イメージ更新」参照）
 
-# 2. init でDBをリセット＋新しい取り込み設定を保存
+# 2. init で DB をリセット＋新しい取り込み設定を保存
 #    （--force は「既存データを削除します」確認プロンプトをスキップする）
 aws ecs run-task --cluster $ECS_CLUSTER --task-definition abrdb-import --launch-type FARGATE \
   --overrides '{"containerOverrides":[{"name":"abrdb","command":["init","--force"]}]}' \
@@ -437,7 +437,7 @@ aws ecs run-task --cluster $ECS_CLUSTER --task-definition abrdb-import --launch-
 
 ### ロールバック
 
-キャッシュは稼働中バイナリと組で整合している必要があります。スキーマ版と正規化のどちらが食い違っても起動を拒否されるため、イメージとキャッシュは同じ世代の組に戻します。
+キャッシュは稼働中バイナリと組で整合している必要があります。スキーマ版と正規化のどちらか一方でも一致しないと起動を拒否されるため、イメージとキャッシュは同じ世代の組に戻します。
 
 タスク定義は `:latest` を参照するので、旧バージョンタグを `:latest` に付け替えた上で、戻す先のイメージが作ったキャッシュに戻します。整合した組に戻るため、キャッシュの再構築を待たずに復旧できます。
 

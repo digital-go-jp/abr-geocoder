@@ -21,7 +21,7 @@ curl -s "http://localhost:3001/match?address=東京都千代田区紀尾井町1�
 # Geocode (address → coordinates)
 curl -s "http://localhost:3001/geocode?address=東京都千代田区紀尾井町1-3"
 
-# Reverse geocode (coordinates → address)
+# Reverse geocode (coordinates → address, experimental)
 curl -s "http://localhost:3001/reverse?lat=35.679107&lon=139.736394"
 
 ```
