@@ -149,7 +149,7 @@ func (p parsedAddress) parcelNumberPrefix() string {
 }
 
 // numericParts returns the number components of the address, stopping at the
-// first part that starts with neither.
+// first part that opens with neither a digit nor a branch character.
 func (p parsedAddress) numericParts() []string {
 	var numbers []string
 	for i, part := range p.Numbers {
@@ -178,5 +178,10 @@ func numberComponent(part string, allowBranch bool) string {
 	if size == 0 || !util.IsParcelNumberPrefix(first) {
 		return ""
 	}
-	return part[:skipDigits(part, size)]
+	// A branch has to be the whole part. Taking it from the front of something
+	// longer would read ロ棟, the name of a building, as the branch ロ.
+	if end := skipDigits(part, size); end == len(part) {
+		return part
+	}
+	return ""
 }

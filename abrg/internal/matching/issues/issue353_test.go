@@ -51,6 +51,38 @@ func TestIssue353(t *testing.T) {
 			},
 		},
 		{
+			// An address commonly writes の or ノ between the number and its
+			// branch.
+			name:               "issue353-2b [北海道岩内郡共和町南幌似6番地のロ] branch written after 番地の",
+			query:              query("北海道岩内郡共和町南幌似6番地のロ"),
+			wantMatchLevel:     model.MatchLevelParcel,
+			wantMatchedAddress: "北海道岩内郡共和町南幌似6-ロ",
+			wantStructured: map[string]any{
+				FieldPref:    "北海道",
+				FieldCounty:  "岩内郡",
+				FieldCity:    "共和町",
+				FieldOazaCho: "南幌似",
+				FieldPrcNum1: "6",
+				FieldPrcNum2: "ロ",
+			},
+		},
+		{
+			// 十干十二支 stand in the same position as an iroha, and ABR keeps
+			// them in prc_num2 the same way.
+			name:               "issue353-2c [京都府亀岡市宮前町神前一本木7番地の乙] 乙 branch",
+			query:              query("京都府亀岡市宮前町神前一本木7番地の乙"),
+			wantMatchLevel:     model.MatchLevelParcel,
+			wantMatchedAddress: "京都府亀岡市宮前町神前一本木7-乙",
+			wantStructured: map[string]any{
+				FieldPref:    "京都府",
+				FieldCity:    "亀岡市",
+				FieldOazaCho: "宮前町神前",
+				FieldKoaza:   "一本木",
+				FieldPrcNum1: "7",
+				FieldPrcNum2: "乙",
+			},
+		},
+		{
 			// 大子町 registers the branch in hiragana.
 			name:               "issue353-3 [茨城県久慈郡大子町大字上岡193番地ろ] hiragana branch",
 			query:              query("茨城県久慈郡大子町大字上岡193番地ろ"),

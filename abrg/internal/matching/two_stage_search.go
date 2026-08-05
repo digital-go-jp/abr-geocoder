@@ -131,25 +131,15 @@ func parcelPrefixFor(parsed parsedAddress, basic *model.MatchedResult) string {
 	return prefix
 }
 
-// parcelFilters pairs every form of the first number with every kana spelling
-// of the branch numbers, so a branch written in one kana still finds the row
-// ABR registered in the other.
-func parcelFilters(num1Forms []string, num2, num3 string) []repository.ParcelFilter {
-	var filters []repository.ParcelFilter
-	for _, n1 := range num1Forms {
-		for _, n2 := range util.KanaSpellings(num2) {
-			for _, n3 := range util.KanaSpellings(num3) {
-				filters = append(filters, repository.ParcelFilter{PrcNum1: n1, PrcNum2: n2, PrcNum3: n3})
-			}
-		}
-	}
-	return filters
-}
-
 // searchParcel searches for parcel address using exact prc_num matching.
 func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress, parcelCount int, prcPrefix string) (*model.MatchedResult, error) {
 	numbers := parsed.numericParts()
 	if len(numbers) == 0 {
+		return nil, nil
+	}
+	// Neither lookup below applies when the machiaza holds no parcels and is
+	// already the base one, so stop before building the search terms.
+	if parcelCount == 0 && model.IsBaseMachiazaID(machiazaID) {
 		return nil, nil
 	}
 
@@ -171,12 +161,20 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 		}
 	}
 	num1Forms = append(num1Forms, prcNum1)
-	filters := parcelFilters(num1Forms, prcNum2, prcNum3)
+	// A branch number is looked up in every kana ABR records it in, since the
+	// search address holds only one of them.
+	num2Forms, num3Forms := util.KanaSpellings(prcNum2), util.KanaSpellings(prcNum3)
 	find := func(mID string) (*repository.ParcelResult, error) {
-		for _, filter := range filters {
-			pr, err := s.repo.FindParcelExact(ctx, lgCode, mID, filter)
-			if err != nil || pr != nil {
-				return pr, err
+		for _, num1 := range num1Forms {
+			for _, num2 := range num2Forms {
+				for _, num3 := range num3Forms {
+					pr, err := s.repo.FindParcelExact(ctx, lgCode, mID, repository.ParcelFilter{
+						PrcNum1: num1, PrcNum2: num2, PrcNum3: num3,
+					})
+					if err != nil || pr != nil {
+						return pr, err
+					}
+				}
 			}
 		}
 		return nil, nil
