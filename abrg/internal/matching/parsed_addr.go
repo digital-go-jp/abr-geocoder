@@ -148,17 +148,35 @@ func (p parsedAddress) parcelNumberPrefix() string {
 	return string(last)
 }
 
-// numericParts returns only the numeric parts from the number components.
-// Filters out non-numeric parts and extracts leading digits from each part.
+// numericParts returns the number components of the address, stopping at the
+// first part that starts with neither.
 func (p parsedAddress) numericParts() []string {
 	var numbers []string
-	for _, part := range p.Numbers {
-		numEnd := skipDigits(part, 0)
-		if numEnd > 0 {
-			numbers = append(numbers, part[:numEnd])
-		} else {
+	for i, part := range p.Numbers {
+		component := numberComponent(part, i > 0)
+		if component == "" {
 			break
 		}
+		numbers = append(numbers, component)
 	}
 	return numbers
+}
+
+// numberComponent returns the number a part opens with: its digits, or, when a
+// branch is allowed, the iroha ABR writes a branch number in followed by any
+// digits (ロ in 6-ロ, ニ2 in 3872-ニ2). The first component of an address is
+// never a branch, since an iroha in front of the digits belongs to the number
+// itself and reaches here as a prefix on the base address instead.
+func numberComponent(part string, allowBranch bool) string {
+	if end := skipDigits(part, 0); end > 0 {
+		return part[:end]
+	}
+	if !allowBranch {
+		return ""
+	}
+	first, size := utf8.DecodeRuneInString(part)
+	if size == 0 || !util.IsParcelNumberPrefix(first) {
+		return ""
+	}
+	return part[:skipDigits(part, size)]
 }

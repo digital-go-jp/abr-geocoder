@@ -88,6 +88,12 @@ var (
 	banchiSingleEnd = regexp.MustCompile(`(\d+)番地$`)
 	// banchiSingleNotEnd handles: N番地+non-digit -> N non-digit
 	banchiSingleNotEnd = regexp.MustCompile(`(\d+)番地([^\d-先])`)
+	// banchiNoBranchKana handles: N番地の/ノX -> N-X, where X is the single kana
+	// a parcel branch number is written in. A kana run is a building name, so
+	// the character after X has to be something else.
+	banchiNoBranchKana = regexp.MustCompile(`(\d+)番地[のノ]([ぁ-んァ-ヶ])([^ぁ-んァ-ヶー]|$)`)
+	// banchiBranchKanaEnd handles: N番地X (at end) -> N-X, same single kana.
+	banchiBranchKanaEnd = regexp.MustCompile(`(\d+)番地([ぁ-んァ-ヶ])$`)
 )
 
 // -----------------------------------------------------------------------------
@@ -284,6 +290,8 @@ var illegalBanchiRules = []ReplaceRule{
 var banchiRules = []ReplaceRule{
 	{banchiNoGo, "${1}-${2}"},                  // N番地の/ノM号 → N-M
 	{banchiNo, "${1}-${2}"},                    // N番地の/ノM → N-M
+	{banchiNoBranchKana, "${1}-${2}${3}"},      // N番地の/ノX（かな1文字） → N-X
+	{banchiBranchKanaEnd, "${1}-${2}"},         // N番地X（かな1文字・末尾） → N-X
 	{banchiHyphenGo, "${1}-${2}"},              // N番地-M号 → N-M (remove 号)
 	{banchiHyphen, "${1}-${2}"},                // N番地-M → N-M (号なし)
 	{banchiWithHyphenNumeric, "${1}-${2}${3}"}, // N番地M-P → N-M-P

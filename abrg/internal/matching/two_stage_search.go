@@ -131,6 +131,21 @@ func parcelPrefixFor(parsed parsedAddress, basic *model.MatchedResult) string {
 	return prefix
 }
 
+// parcelFilters pairs every form of the first number with every kana spelling
+// of the branch numbers, so a branch written in one kana still finds the row
+// ABR registered in the other.
+func parcelFilters(num1Forms []string, num2, num3 string) []repository.ParcelFilter {
+	var filters []repository.ParcelFilter
+	for _, n1 := range num1Forms {
+		for _, n2 := range util.KanaSpellings(num2) {
+			for _, n3 := range util.KanaSpellings(num3) {
+				filters = append(filters, repository.ParcelFilter{PrcNum1: n1, PrcNum2: n2, PrcNum3: n3})
+			}
+		}
+	}
+	return filters
+}
+
 // searchParcel searches for parcel address using exact prc_num matching.
 func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress, parcelCount int, prcPrefix string) (*model.MatchedResult, error) {
 	numbers := parsed.numericParts()
@@ -156,11 +171,10 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 		}
 	}
 	num1Forms = append(num1Forms, prcNum1)
+	filters := parcelFilters(num1Forms, prcNum2, prcNum3)
 	find := func(mID string) (*repository.ParcelResult, error) {
-		for _, num1 := range num1Forms {
-			pr, err := s.repo.FindParcelExact(ctx, lgCode, mID, repository.ParcelFilter{
-				PrcNum1: num1, PrcNum2: prcNum2, PrcNum3: prcNum3,
-			})
+		for _, filter := range filters {
+			pr, err := s.repo.FindParcelExact(ctx, lgCode, mID, filter)
 			if err != nil || pr != nil {
 				return pr, err
 			}
