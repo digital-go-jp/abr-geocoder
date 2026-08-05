@@ -1,9 +1,11 @@
 package matching
 
 import (
+	"slices"
 	"strings"
 
 	"abrg/internal/model"
+	"abrg/internal/transform"
 	"abrg/internal/util"
 )
 
@@ -30,27 +32,38 @@ func (n *Impl) fuzzyMatchAllowsTwoStage(nctx *normalizeContext) (allowed bool, p
 	if len(nctx.State.BasicResults) == 0 {
 		return false, ""
 	}
+	best := &nctx.State.BasicResults[0]
 	inputTown := n.townPortion(nctx.Input.SearchAddr.Base)
-	matchedTown := n.townPortion(nctx.State.BasicResults[0].MatchedAddress)
+	matchedTown := n.townPortion(best.MatchedAddress)
 	if inputTown == "" || matchedTown == "" {
 		return false, ""
 	}
 	if prefix := nctx.Input.SearchAddr.parcelNumberPrefix(); prefix != "" &&
-		strings.TrimSuffix(inputTown, prefix) == matchedTown {
+		strings.TrimSuffix(inputTown, prefix) == matchedTownName(best) {
 		return true, prefix
 	}
 	return isPureSubstitution(inputTown, matchedTown), ""
 }
 
+// matchedTownName returns the town of a result in the form the search address
+// holds it. The result carries the name as ABR registers it, 大字 and 字 markers
+// and all, which the search address has had removed.
+func matchedTownName(r *model.MatchedResult) string {
+	name, _ := transform.TextForDB(derefString(r.StructuredAddress.OazaCho) + derefString(r.StructuredAddress.Koaza))
+	return name
+}
+
 // consumedParcelPrefix reports whether the result is a parcel whose number starts
 // with prefix, i.e. the prefix ended up in the answer rather than being dropped.
-// The half-width form of the prefix counts as consumed as well.
+// Any of the kana spellings ABR records the prefix in counts as consumed.
 func consumedParcelPrefix(results []model.MatchedResult, prefix string) bool {
 	if len(results) == 0 || prefix == "" {
 		return false
 	}
 	num1 := derefString(results[0].StructuredAddress.PrcNum1)
-	return strings.HasPrefix(num1, prefix) || strings.HasPrefix(num1, util.KatakanaToHalfWidth(prefix))
+	return slices.ContainsFunc(util.KanaSpellings(prefix), func(s string) bool {
+		return strings.HasPrefix(num1, s)
+	})
 }
 
 // townPortion returns the address portion after the city/ward boundary.

@@ -151,9 +151,9 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 	// an address that spells the prefix means the latter.
 	num1Forms := []string{prcNum1}
 	if prcPrefix != "" {
-		num1Forms = []string{prcPrefix + prcNum1}
-		if narrow := util.KatakanaToHalfWidth(prcPrefix); narrow != prcPrefix {
-			num1Forms = append(num1Forms, narrow+prcNum1)
+		num1Forms = nil
+		for _, spelling := range util.KanaSpellings(prcPrefix) {
+			num1Forms = append(num1Forms, spelling+prcNum1)
 		}
 		num1Forms = append(num1Forms, prcNum1)
 	}

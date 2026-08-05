@@ -46,6 +46,36 @@ var halfWidthKatakana = func() map[rune]rune {
 	return m
 }()
 
+// KanaSpellings returns s and every other kana spelling ABR records the same
+// prefix in, starting with s itself. A search address holds full-width katakana
+// because NFKC and the hiragana step put it there, while ABR writes an iroha
+// prefix in half-width katakana or in hiragana depending on the municipality.
+func KanaSpellings(s string) []string {
+	spellings := []string{s}
+	for _, alt := range []string{KatakanaToHalfWidth(s), KatakanaToHiragana(s)} {
+		if alt != s {
+			spellings = append(spellings, alt)
+		}
+	}
+	return spellings
+}
+
+// KatakanaToHiragana turns the katakana in s into hiragana and leaves everything
+// else as it is. Some municipalities record an iroha parcel prefix in hiragana
+// (い9), while a search address has had its hiragana turned into katakana.
+func KatakanaToHiragana(s string) string {
+	return strings.Map(func(r rune) rune {
+		if char.IsKatakanaNumberChar(r) {
+			return r - katakanaToHiraganaOffset
+		}
+		return r
+	}, s)
+}
+
+// katakanaToHiraganaOffset is the distance between the two kana blocks, which
+// run in the same order.
+const katakanaToHiraganaOffset = 'ア' - 'あ'
+
 // KatakanaToHalfWidth narrows the katakana in s and leaves everything else as it
 // is. ABR records an iroha parcel prefix in half-width katakana (イ402 is stored
 // as ｲ402), while a search address has been through NFKC and holds the
