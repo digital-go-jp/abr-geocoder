@@ -306,20 +306,47 @@ func (c *DuckDBCache) buildCityPrefectureCodes(ctx context.Context) error {
 	}
 	defer func() { _ = rows.Close() }()
 
-	c.lookups.CityPrefCodes = make(map[string]string)
+	codes := make(map[string]string)
 	for rows.Next() {
 		var city, prefCode string
 		if err := rows.Scan(&city, &prefCode); err != nil {
 			return fmt.Errorf("failed to scan city-prefecture row: %w", err)
 		}
-		c.lookups.CityPrefCodes[city] = prefCode
+		codes[city] = prefCode
+	}
+	if err := rows.Err(); err != nil {
+		return err
 	}
 
-	return rows.Err()
+	c.lookups.CityPrefCodes = normalizeKeys(codes)
+	return nil
+}
+
+// normalizeKeys re-keys a lookup by the normalized form of its keys, because
+// callers search it with normalized text. Names that are distinct raw but share
+// a normalized form (鹿嶋市 and 鹿島市 both become 鹿島市) are dropped when they
+// disagree, so the address is scoped by the rest of it — its town, or the
+// prefecture it names — instead of by a coin flip between two municipalities.
+// Nationwide that is one key.
+func normalizeKeys(raw map[string]string) map[string]string {
+	out := make(map[string]string, len(raw))
+	ambiguous := make(map[string]bool)
+	for k, v := range raw {
+		nk, _ := transform.TextForDB(k)
+		if prev, ok := out[nk]; ok && prev != v {
+			ambiguous[nk] = true
+		}
+		out[nk] = v
+	}
+	for k := range ambiguous {
+		delete(out, k)
+	}
+	return out
 }
 
 // This enables faster Levenshtein search by filtering to specific lg_code.
-// The key format is "city+ward" (e.g., "京都市中京区") to match findCityBoundary output.
+// The key format is the normalized "city+ward" (e.g. "京都市中京区",
+// "名古屋市1000種区") to match what CityBoundary.Find returns.
 // For towns with counties, both "county+city" and "city" keys are added.
 // Note: city_ward names that exist in multiple prefectures (e.g., "池田町") are excluded
 // because they map to multiple lg_codes and cannot be uniquely resolved.
@@ -347,26 +374,33 @@ func (c *DuckDBCache) buildCityWardLgCodes(ctx context.Context) error {
 	}
 	defer func() { _ = rows.Close() }()
 
-	c.lookups.CityWardLgCodes = make(map[string]string)
+	codes := make(map[string]string)
 	for rows.Next() {
 		var cityWard, countyCityWard, lgCode string
 		if err := rows.Scan(&cityWard, &countyCityWard, &lgCode); err != nil {
 			return fmt.Errorf("failed to scan city-ward lg_code row: %w", err)
 		}
-		c.lookups.CityWardLgCodes[cityWard] = lgCode
+		codes[cityWard] = lgCode
 		// Also add county+city key for towns (e.g., "遠田郡涌谷町")
 		if countyCityWard != cityWard {
-			c.lookups.CityWardLgCodes[countyCityWard] = lgCode
+			codes[countyCityWard] = lgCode
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
 
-	return rows.Err()
+	c.lookups.CityWardLgCodes = normalizeKeys(codes)
+	return nil
 }
 
 // This enables ward-only address resolution (e.g., "中区本町" → try "横浜市中区本町", "名古屋市中区本町", etc.)
 // Candidates are ordered by prefecture code and then by city name, because
 // equally strong matches are returned in candidate order (e.g. 大阪市北区 and
 // 堺市北区 both answer "北区").
+// The key is the normalized ward name so that 保土ヶ谷区 finds the ward
+// registered as 保土ケ谷区. The city names it maps to stay raw: the caller
+// prepends one to the address and transforms the result itself.
 func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	query := `
 		SELECT ward, city || ward AS city_ward, printf('%02d', pref_code) AS pref_code
@@ -388,7 +422,8 @@ func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 		if err := rows.Scan(&ward, &cityWard, &prefCode); err != nil {
 			return fmt.Errorf("failed to scan ward candidate row: %w", err)
 		}
-		c.lookups.WardCandidates[ward] = append(c.lookups.WardCandidates[ward], WardCandidate{
+		key, _ := transform.TextForDB(ward)
+		c.lookups.WardCandidates[key] = append(c.lookups.WardCandidates[key], WardCandidate{
 			CityWard: cityWard,
 			PrefCode: prefCode,
 		})

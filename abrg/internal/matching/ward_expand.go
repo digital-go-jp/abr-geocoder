@@ -8,6 +8,7 @@ import (
 	"abrg/internal/cache"
 	"abrg/internal/matchlevel"
 	"abrg/internal/model"
+	"abrg/internal/transform"
 )
 
 // tryWardExpansion retries a ward-only address with each candidate city name
@@ -39,7 +40,10 @@ func (n *Impl) tryWardExpansion(
 	}
 
 	ward := extractWardPrefix(normalizedAddr)
-	candidates := n.wardCandidates[ward]
+	// The dictionary is keyed by the normalized ward name, so that ケ, ヶ and ガ
+	// spellings of 保土ケ谷区 all reach it.
+	wardKey, _ := transform.TextForDB(ward)
+	candidates := n.wardCandidates[wardKey]
 	if len(candidates) == 0 {
 		return nil, nil
 	}
