@@ -13,9 +13,12 @@ import (
 // every regex character class in this file; isAddressEndChar tests
 // addressEndChars as runes.
 const (
-	kanjiBlockChars  = "一-龥"
-	nonDigitEndChars = "A-Zア-ン" + kanjiBlockChars
-	addressEndChars  = `\d` + nonDigitEndChars
+	kanjiBlockChars = "一-龥"
+	// katakanaBlockChars is the whole katakana block, wider than the range an
+	// address number uses.
+	katakanaBlockChars = "ァ-ヿ"
+	nonDigitEndChars   = "A-Z" + char.KatakanaNumberChars + kanjiBlockChars
+	addressEndChars    = `\d` + nonDigitEndChars
 )
 
 // Regex patterns for colon insertion between text and address numbers.
@@ -41,7 +44,25 @@ var (
 	// Supports: numbers (123-4), alphabet (A-20), katakana (12-エ-46), kanji block + hyphen-number
 	// Excludes \pZ alongside \s so an ideographic space separates the number the
 	// same way an ASCII space does.
-	textNumberBoundaryPattern = regexp.MustCompile(`([^\d\s\pZ-A-Zア-ン])((?:\d+|[A-Z]+|[ア-ン]+)(?:-[` + addressEndChars + `]+)*-?|(?:-\d+))\s*$`)
+	// A katakana address component is a single character (チ-1), so only one may
+	// carry a hyphenated remainder. A longer run stands on its own as a name
+	// (ミナトミライ); with a hyphen inside it, it is still a name (公団アパ-ト).
+	textNumberBoundaryPattern = regexp.MustCompile(
+		`([^\d\s\pZ-A-Z` + char.KatakanaNumberChars + `])` +
+			`((?:\d+|[A-Z]+|[` + char.KatakanaNumberChars + `])(?:-[` + addressEndChars + `]+)*-?` +
+			`|[` + char.KatakanaNumberChars + `]+|(?:-\d+))\s*$`)
+
+	// katakanaNumberBoundaryPattern matches digits that follow a lone katakana,
+	// which the pattern above cannot cut because it takes no katakana on the
+	// left. The katakana ends a town name (長ガ1317) or prefixes a parcel number
+	// (松子セ16); either way the boundary belongs between it and the digits.
+	//
+	// It holds only for the first number in the address. Digits later on are a
+	// room or building number, and the katakana in front of them is the tail of
+	// a name (大通リ506, 屋敷ノ11), not a boundary.
+	katakanaNumberBoundaryPattern = regexp.MustCompile(
+		`^([^\d]*[^` + katakanaBlockChars + `\d][` + char.KatakanaNumberChars + `])` +
+			`(\d+(?:-[` + addressEndChars + `]+)*-?)\s*$`)
 )
 
 // chomeRules inserts the colon after the 丁目 marker. It is ordered most
@@ -58,7 +79,7 @@ var (
 func isAddressEndChar(r rune) bool {
 	return char.IsASCIIDigit(r) ||
 		(r >= 'A' && r <= 'Z') ||
-		(r >= 'ア' && r <= 'ン') ||
+		char.IsKatakanaNumberChar(r) ||
 		(r >= '一' && r <= '龥')
 }
 
@@ -94,7 +115,7 @@ func isSingleKatakanaColon(result string) bool {
 		return false
 	}
 	secondLast, _ := utf8.DecodeLastRuneInString(result[:len(result)-size])
-	return secondLast == ':' && last >= 'ア' && last <= 'ン'
+	return secondLast == ':' && char.IsKatakanaNumberChar(last)
 }
 
 // AddColon inserts a colon separator between text and trailing address number.
@@ -106,11 +127,8 @@ func AddColon(s string) (string, bool) {
 
 	// Check if string ends with a valid address character
 	trimmed := strings.TrimRight(s, " ")
-	if trimmed != "" {
-		last, _ := utf8.DecodeLastRuneInString(trimmed)
-		if !isAddressEndChar(last) {
-			return s, false
-		}
+	if last, _ := utf8.DecodeLastRuneInString(trimmed); trimmed != "" && !isAddressEndChar(last) {
+		return s, false
 	}
 
 	// Skip special patterns that should not have colons inserted
@@ -129,6 +147,13 @@ func AddColon(s string) (string, bool) {
 	changed := result != s
 	if changed && isSingleKatakanaColon(result) {
 		return s, false // Revert: likely a koaza, not an address number
+	}
+	// The katakana pattern needs the address to end in a digit, so an address
+	// ending in a name skips the second scan.
+	last, _ := utf8.DecodeLastRuneInString(trimmed)
+	if !changed && char.IsASCIIDigit(last) {
+		result = katakanaNumberBoundaryPattern.ReplaceAllString(s, "${1}:${2}")
+		changed = result != s
 	}
 	return result, changed
 }

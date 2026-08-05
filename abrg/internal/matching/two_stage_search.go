@@ -9,6 +9,7 @@ import (
 	"abrg/internal/char"
 	"abrg/internal/model"
 	"abrg/internal/repository"
+	"abrg/internal/util"
 )
 
 // residentialParcelQuerier is a consumer-defined interface for residential and parcel lookups.
@@ -150,7 +151,11 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 	// an address that spells the prefix means the latter.
 	num1Forms := []string{prcNum1}
 	if prcPrefix != "" {
-		num1Forms = []string{prcPrefix + prcNum1, prcNum1}
+		num1Forms = []string{prcPrefix + prcNum1}
+		if narrow := util.KatakanaToHalfWidth(prcPrefix); narrow != prcPrefix {
+			num1Forms = append(num1Forms, narrow+prcNum1)
+		}
+		num1Forms = append(num1Forms, prcNum1)
 	}
 	find := func(mID string) (*repository.ParcelResult, error) {
 		for _, num1 := range num1Forms {
