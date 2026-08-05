@@ -1,29 +1,53 @@
 package matching
 
-import "abrg/internal/model"
+import (
+	"strings"
+
+	"abrg/internal/model"
+)
 
 // maxTownTypos is the number of single-character substitutions tolerated in a
 // town name for the two-stage (residential/parcel) search to still run after a
 // Levenshtein fallback.
 const maxTownTypos = 1
 
-// fuzzyMatchAllowsTwoStage reports whether the Levenshtein-matched town is a
-// same-length substitution of the input town. In that case the number section
-// sits at the same position as it would for an exact match, so the
-// residential/parcel search can resolve it without misreading the digits.
-// Insertions, deletions, or a digit absorbed into the town name (e.g.
-// 福室字久保野2-5 → 福室字久保野二番) change the town's rune length and are
-// rejected, keeping the default skip that guards against boundary shifts. See #246.
-func (n *Impl) fuzzyMatchAllowsTwoStage(nctx *normalizeContext) bool {
+// fuzzyMatchAllowsTwoStage reports whether the Levenshtein-matched town lets the
+// residential/parcel search resolve the number section. parcelPrefix is set when
+// the town is short of the input by exactly that parcel-number prefix, which
+// implies allowed.
+//
+// A same-length substitution leaves the number section where an exact match
+// would put it, so the digits cannot be misread. Insertions, deletions, or a
+// digit absorbed into the town name (e.g. 福室字久保野2-5 → 福室字久保野二番)
+// change the town's rune length and are rejected, keeping the default skip that
+// guards against boundary shifts. See #246.
+//
+// A parcel-number prefix (白浜町甲402) is the one length difference that is
+// allowed: it is not a typo but part of the number that the parcel search puts
+// back on.
+func (n *Impl) fuzzyMatchAllowsTwoStage(nctx *normalizeContext) (allowed bool, parcelPrefix string) {
 	if len(nctx.State.BasicResults) == 0 {
-		return false
+		return false, ""
 	}
 	inputTown := n.townPortion(nctx.Input.SearchAddr.Base)
 	matchedTown := n.townPortion(nctx.State.BasicResults[0].MatchedAddress)
 	if inputTown == "" || matchedTown == "" {
+		return false, ""
+	}
+	if prefix := nctx.Input.SearchAddr.parcelNumberPrefix(); prefix != "" &&
+		strings.TrimSuffix(inputTown, prefix) == matchedTown {
+		return true, prefix
+	}
+	return isPureSubstitution(inputTown, matchedTown), ""
+}
+
+// consumedParcelPrefix reports whether the result is a parcel whose number starts
+// with prefix, i.e. the prefix ended up in the answer rather than being dropped.
+func consumedParcelPrefix(results []model.MatchedResult, prefix string) bool {
+	if len(results) == 0 || prefix == "" {
 		return false
 	}
-	return isPureSubstitution(inputTown, matchedTown)
+	return strings.HasPrefix(derefString(results[0].StructuredAddress.PrcNum1), prefix)
 }
 
 // townPortion returns the address portion after the city/ward boundary.

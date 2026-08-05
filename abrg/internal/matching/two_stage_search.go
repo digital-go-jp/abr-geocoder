@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"abrg/internal/char"
 	"abrg/internal/model"
@@ -117,8 +118,20 @@ func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiaza
 	return &result, nil
 }
 
+// parcelPrefixFor returns the prefix to try in front of the parcel number: the
+// character the address writes between the town name and the digits, unless the
+// town it matched already ends with it (字五軒丁 in 字五軒丁15-1), where the
+// character is part of the name and the number stands alone.
+func parcelPrefixFor(parsed parsedAddress, basic *model.MatchedResult) string {
+	prefix := parsed.parcelNumberPrefix()
+	if prefix == "" || strings.HasSuffix(basic.MatchedAddress, prefix) {
+		return ""
+	}
+	return prefix
+}
+
 // searchParcel searches for parcel address using exact prc_num matching.
-func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress, parcelCount int) (*model.MatchedResult, error) {
+func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress, parcelCount int, prcPrefix string) (*model.MatchedResult, error) {
 	numbers := parsed.numericParts()
 	if len(numbers) == 0 {
 		return nil, nil
@@ -133,11 +146,27 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 		prcNum3 = numbers[2]
 	}
 
-	filter := repository.ParcelFilter{PrcNum1: prcNum1, PrcNum2: prcNum2, PrcNum3: prcNum3}
+	// The prefixed form is tried first: a town can hold both 402 and 甲402, and
+	// an address that spells the prefix means the latter.
+	num1Forms := []string{prcNum1}
+	if prcPrefix != "" {
+		num1Forms = []string{prcPrefix + prcNum1, prcNum1}
+	}
+	find := func(mID string) (*repository.ParcelResult, error) {
+		for _, num1 := range num1Forms {
+			pr, err := s.repo.FindParcelExact(ctx, lgCode, mID, repository.ParcelFilter{
+				PrcNum1: num1, PrcNum2: prcNum2, PrcNum3: prcNum3,
+			})
+			if err != nil || pr != nil {
+				return pr, err
+			}
+		}
+		return nil, nil
+	}
 
 	// Only search if parcel_count > 0 (this machiaza_id has parcel data)
 	if parcelCount > 0 {
-		pr, err := s.repo.FindParcelExact(ctx, lgCode, machiazaID, filter)
+		pr, err := find(machiazaID)
 		if err != nil {
 			return nil, fmt.Errorf("parcel search: %w", err)
 		}
@@ -151,8 +180,7 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 	// (last 3 digits "000"). Kyoto street names and koaza addresses keep their
 	// parcel data there rather than under the detailed machiaza.
 	if parcelCount == 0 && !model.IsBaseMachiazaID(machiazaID) {
-		baseMachiazaID := machiazaID[:model.MachiazaBaseLength] + model.BaseMachiazaSuffix
-		pr, err := s.repo.FindParcelExact(ctx, lgCode, baseMachiazaID, filter)
+		pr, err := find(machiazaID[:model.MachiazaBaseLength] + model.BaseMachiazaSuffix)
 		if err != nil {
 			return nil, fmt.Errorf("parcel search (base machiaza): %w", err)
 		}
@@ -225,7 +253,8 @@ func (s *twoStageSearch) normalizeWithBasic(
 	case model.CategoryResidential:
 		result, err = s.searchResidential(ctx, lgCode, machiazaID, parsed)
 	case model.CategoryParcel:
-		result, err = s.searchParcel(ctx, lgCode, machiazaID, parsed, basic.Machiaza.ParcelCount)
+		result, err = s.searchParcel(ctx, lgCode, machiazaID, parsed, basic.Machiaza.ParcelCount,
+			parcelPrefixFor(parsed, basic))
 	default:
 		return nil, nil
 	}
