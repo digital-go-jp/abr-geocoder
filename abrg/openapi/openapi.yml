@@ -102,10 +102,10 @@ paths:
           $ref: "#/components/responses/serviceUnavailable"
   "/reverse":
     get:
-      summary: リバースジオコーディング
+      summary: 逆ジオコーディング
       description: |
         緯度経度から住所情報を取得します。
-        ※本エンドポイントは実験的です。今後仕様が変わる可能性があります。
+        ※実験的なエンドポイントです。今後仕様が変わる可能性があります。
       operationId: reverseGeocodeCoordinates
       parameters:
         - $ref: "#/components/parameters/longitude"
@@ -628,7 +628,7 @@ components:
                         prc_num2: null
                         prc_num3: null
     reverseGeocodeOk:
-      description: リバースジオコーディング結果
+      description: 逆ジオコーディング結果
       content:
         application/geo+json:
           schema:

@@ -33,7 +33,7 @@ docker compose run --rm abrdb_app import
 # PostgreSQL から DuckDB キャッシュを構築する
 docker compose run --rm abrg_app cache build
 
-# APIサーバーを起動する
+# API サーバーを起動する
 docker compose up -d abrg_app
 curl -s "http://localhost:3000/geocode?address=東京都千代田区紀尾井町1-3"
 ```
