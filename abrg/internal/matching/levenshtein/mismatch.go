@@ -64,37 +64,36 @@ func hasTownNameMismatch(boundary *util.CityBoundary, searchAddr string, result 
 		return false
 	}
 
-	matchedOazaCho := *result.StructuredAddress.OazaCho
-
-	// Check if town names match by comparing characters.
-	// Note: Both inputTownName and matchedOazaCho have already been processed by
-	// StandardizeSpecialChars, which normalizes ヶ/ケ → ガ variations
-	inputRunes := []rune(inputTownName)
-	matchedRunes := []rune(matchedOazaCho)
-
-	if len(inputRunes) == 0 || len(matchedRunes) == 0 {
+	// oaza_cho keeps the 大字/字 prefix that the search address has already had
+	// removed, so compare against the name with and without it. Both forms are
+	// needed: 猪高町猪子石原 only agrees with the stripped 猪高町大字猪子石原,
+	// while an input that misspells the prefix (大宇向町) only agrees with the raw one.
+	rawOazaCho := *result.StructuredAddress.OazaCho
+	if townNamesAgree(inputTownName, rawOazaCho) {
 		return false
 	}
 
-	// If first character differs, it's a mismatch
-	// e.g., 烏ケ辻 vs 石ケ辻 (烏 != 石)
-	if inputRunes[0] != matchedRunes[0] {
+	strippedOazaCho, _ := transform.TextForDB(rawOazaCho)
+	return !townNamesAgree(inputTownName, strippedOazaCho)
+}
+
+// townNamesAgree reports whether an input town name and a DB town name name the
+// same town. One may be a prefix of the other (烏ケ辻 and 烏ケ辻町) and they may
+// differ by a single character (麩 and 麸), but a differing first character is
+// never the same town (烏ケ辻 and 石ケ辻).
+func townNamesAgree(input, dbName string) bool {
+	inputRunes := []rune(input)
+	dbRunes := []rune(dbName)
+	if len(inputRunes) == 0 || len(dbRunes) == 0 {
 		return true
 	}
-
-	// Check if one is a prefix of the other (valid match)
-	// e.g., "烏ケ辻" vs "烏ケ辻町" → prefix match → OK
-	// e.g., "神田鍛冶町" vs "神田猿楽町" → neither is prefix → mismatch
-	if strings.HasPrefix(inputTownName, matchedOazaCho) || strings.HasPrefix(matchedOazaCho, inputTownName) {
+	if inputRunes[0] != dbRunes[0] {
 		return false
 	}
-
-	// Allow close matches for character variants (e.g., 麩/麸)
-	if runeLevenshtein(inputTownName, matchedOazaCho) <= 1 {
-		return false
+	if strings.HasPrefix(input, dbName) || strings.HasPrefix(dbName, input) {
+		return true
 	}
-
-	return true
+	return runeLevenshtein(input, dbName) <= 1
 }
 
 // extractTownNameFromSearch extracts the town name portion from searchAddr,

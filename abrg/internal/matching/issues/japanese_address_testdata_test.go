@@ -933,9 +933,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 		},
 		{
 			// 大字名に余分な「ノ」が含まれる
-			// 入力「鷹ノ巣」→ DB「大字鷹巣」だが、「ノ」の差異で大字レベルは未マッチ
-			// 前方一致検索により市町村までマッチ
-			// TODO: 「ノ」除去の正規化が必要（大字レベルマッチのため）
+			// 入力「鷹ノ巣」は1文字の差なので DB「大字鷹巣」と同じ町字とみなす
+			// 町字名が完全一致しないため番地までは進まず、番地は未マッチに残る
 			name: "jat030 [埼玉県大里郡寄居町鷹ノ巣５２−１]",
 			query: model.MatchQuery{
 				Address:  "埼玉県大里郡寄居町鷹ノ巣５２−１",
@@ -943,9 +942,9 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelCity,
-			wantMatchedAddress:   "埼玉県大里郡寄居町",
-			wantUnmatchedAddress: []string{"鷹ノ巣52-1"},
+			wantMatchLevel:       model.MatchLevelMachiaza,
+			wantMatchedAddress:   "埼玉県大里郡寄居町大字鷹巣",
+			wantUnmatchedAddress: []string{"52-1"},
 			wantStructured: map[string]any{
 				"pref":          "埼玉県",
 				"county":        "大里郡",
@@ -953,7 +952,7 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				"ward":          nil,
 				"machiaza_dist": nil,
 				"kyoto_st":      nil,
-				"oaza_cho":      nil,
+				"oaza_cho":      "大字鷹巣",
 				"chome":         nil,
 				"koaza":         nil,
 				"blk_num":       nil,
@@ -2164,7 +2163,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 			},
 		},
 		{
-			// 省略可能な字
+			// 大字「竹之下」に DB にない字が続く
+			// 字を落として大字まで届き、字と番地が未マッチに残る
 			name: "jat055 [静岡県駿東郡小山町竹之下字上ノ原５５４]",
 			query: model.MatchQuery{
 				Address:  "静岡県駿東郡小山町竹之下字上ノ原５５４",
@@ -2172,9 +2172,9 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelCity,
-			wantMatchedAddress:   "静岡県駿東郡小山町",
-			wantUnmatchedAddress: []string{"竹之下字上ノ原554"},
+			wantMatchLevel:       model.MatchLevelMachiaza,
+			wantMatchedAddress:   "静岡県駿東郡小山町竹之下",
+			wantUnmatchedAddress: []string{"字上ノ原554"},
 			wantStructured: map[string]any{
 				"pref":          "静岡県",
 				"county":        "駿東郡",
@@ -2182,7 +2182,7 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 				"ward":          nil,
 				"machiaza_dist": nil,
 				"kyoto_st":      nil,
-				"oaza_cho":      nil,
+				"oaza_cho":      "竹之下",
 				"chome":         nil,
 				"koaza":         nil,
 				"blk_num":       nil,

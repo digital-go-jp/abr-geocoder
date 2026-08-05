@@ -30,11 +30,27 @@ func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]mod
 		return nil, err
 	}
 
-	// Fallback 1: If town name mismatch detected, try city-level match.
+	// Fallback 1: If town name mismatch detected, try prefix matching, then a
+	// city-level match.
 	// This prevents false matches like 烏ケ辻町 -> 石ケ辻町 while allowing valid fuzzy matches.
 	// We check all results regardless of score because high-score matches can still have
 	// town name mismatches (e.g., 札内松町 -> 札内東町 at score 0.75).
 	if len(results) > 0 && hasTownNameMismatch(p.CityBoundary, p.SearchAddr, &results[0]) {
+		// The input town may still be in the DB under a shorter name, with the
+		// extra part (a chome the town does not have, an unregistered koaza)
+		// pushing the edit distance past the closest wrong town. Prefix matching
+		// finds it, and a town it agrees with beats falling back to the city.
+		prefixResults, prefixErr := searchWithPrefixMatch(ctx, repo, p)
+		if prefixErr != nil {
+			return nil, prefixErr
+		}
+		// A row without an oaza_cho is the municipality's own machiaza row, a
+		// city-level answer wearing a machiaza label, so it is no improvement.
+		if len(prefixResults) > 0 && prefixResults[0].StructuredAddress.OazaCho != nil &&
+			!hasTownNameMismatch(p.CityBoundary, p.SearchAddr, &prefixResults[0]) {
+			return prefixResults, nil
+		}
+
 		cityResults, cityErr := tryFallbackCitySearchByScore(ctx, repo, p)
 		if cityErr != nil {
 			return nil, cityErr
