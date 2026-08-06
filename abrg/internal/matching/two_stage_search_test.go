@@ -126,7 +126,8 @@ func TestTwoStageSearchParcel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := search.searchParcel(t.Context(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr), 1, "")
+			basic := &model.MatchedResult{Machiaza: model.MachiazaData{ParcelCount: 1}}
+			result, err := search.searchParcel(t.Context(), tt.lgCode, tt.machiazaID, parseSearchAddr(tt.searchAddr), basic)
 			if err != nil {
 				t.Fatalf("searchParcel() error = %v", err)
 			}

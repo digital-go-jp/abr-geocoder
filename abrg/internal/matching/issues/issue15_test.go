@@ -516,7 +516,8 @@ func TestIssue15(t *testing.T) {
 				FieldPrcNum3:      nil,
 			},
 		},
-		// 長野県長野市南長野県町 - 県名・市名・町名に重複がある
+		// 長野県長野市南長野県町 - 県名・市名・町名に重複がある。
+		// 字県町に地番は無く、477-1 は基底の大字南長野のもの (issue #361)
 		{
 			name: "issue15-9a [長野県長野市大字南長野県町477-1]",
 			query: model.MatchQuery{
@@ -525,9 +526,9 @@ func TestIssue15(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelParcel,
-			wantMatchedAddress:   "長野県長野市大字南長野県町477-1",
-			wantUnmatchedAddress: nil,
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "長野県長野市大字南長野県町",
+			wantUnmatchedAddress: []string{"477-1"},
 			wantStructured: map[string]any{
 				FieldPref:         "長野県",
 				FieldCounty:       nil,
@@ -541,8 +542,8 @@ func TestIssue15(t *testing.T) {
 				FieldBlkNum:       nil,
 				FieldRsdtNum:      nil,
 				FieldRsdtNum2:     nil,
-				FieldPrcNum1:      "477",
-				FieldPrcNum2:      "1",
+				FieldPrcNum1:      nil,
+				FieldPrcNum2:      nil,
 				FieldPrcNum3:      nil,
 			},
 		},
@@ -554,9 +555,9 @@ func TestIssue15(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelParcel,
-			wantMatchedAddress:   "長野県長野市大字南長野県町477-1",
-			wantUnmatchedAddress: nil,
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "長野県長野市大字南長野県町",
+			wantUnmatchedAddress: []string{"477-1"},
 			wantStructured: map[string]any{
 				FieldPref:         "長野県",
 				FieldCounty:       nil,
@@ -570,8 +571,8 @@ func TestIssue15(t *testing.T) {
 				FieldBlkNum:       nil,
 				FieldRsdtNum:      nil,
 				FieldRsdtNum2:     nil,
-				FieldPrcNum1:      "477",
-				FieldPrcNum2:      "1",
+				FieldPrcNum1:      nil,
+				FieldPrcNum2:      nil,
 				FieldPrcNum3:      nil,
 			},
 		},

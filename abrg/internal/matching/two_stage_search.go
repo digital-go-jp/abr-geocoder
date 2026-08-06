@@ -131,17 +131,29 @@ func parcelPrefixFor(parsed parsedAddress, basic *model.MatchedResult) string {
 	return prefix
 }
 
+// canUseBaseMachiaza reports whether the parcels of the base machiaza can answer
+// for machiazaID. Only a Kyoto street name qualifies: it is another way of
+// writing the same town, and ABR files the parcels under the town. A koaza is a
+// separate area inside the town, so the town's parcels are not its own.
+// kyoto_st is set exactly on the rows ABR marks koaza_aka_code = 2.
+func canUseBaseMachiaza(machiazaID string, basic *model.MatchedResult) bool {
+	return basic.StructuredAddress.KyotoSt != nil && !model.IsBaseMachiazaID(machiazaID)
+}
+
 // searchParcel searches for parcel address using exact prc_num matching.
-func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress, parcelCount int, prcPrefix string) (*model.MatchedResult, error) {
+func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID string, parsed parsedAddress, basic *model.MatchedResult) (*model.MatchedResult, error) {
 	numbers := parsed.numericParts()
 	if len(numbers) == 0 {
 		return nil, nil
 	}
-	// Neither lookup below applies when the machiaza holds no parcels and is
-	// already the base one, so stop before building the search terms.
-	if parcelCount == 0 && model.IsBaseMachiazaID(machiazaID) {
+	parcelCount := basic.Machiaza.ParcelCount
+	useBase := parcelCount == 0 && canUseBaseMachiaza(machiazaID, basic)
+	// With no parcels here and no base machiaza to stand in, neither lookup
+	// below runs, so stop before building the search terms.
+	if parcelCount == 0 && !useBase {
 		return nil, nil
 	}
+	prcPrefix := parcelPrefixFor(parsed, basic)
 
 	prcNum1 := numbers[0]
 	var prcNum2, prcNum3 string
@@ -193,9 +205,8 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 	}
 
 	// With no parcel rows under this machiaza, retry under the base machiaza
-	// (last 3 digits "000"). Kyoto street names and koaza addresses keep their
-	// parcel data there rather than under the detailed machiaza.
-	if parcelCount == 0 && !model.IsBaseMachiazaID(machiazaID) {
+	// (last 3 digits "000"), where a Kyoto street name keeps its parcel data.
+	if useBase {
 		pr, err := find(machiazaID[:model.MachiazaBaseLength] + model.BaseMachiazaSuffix)
 		if err != nil {
 			return nil, fmt.Errorf("parcel search (base machiaza): %w", err)
@@ -269,8 +280,7 @@ func (s *twoStageSearch) normalizeWithBasic(
 	case model.CategoryResidential:
 		result, err = s.searchResidential(ctx, lgCode, machiazaID, parsed)
 	case model.CategoryParcel:
-		result, err = s.searchParcel(ctx, lgCode, machiazaID, parsed, basic.Machiaza.ParcelCount,
-			parcelPrefixFor(parsed, basic))
+		result, err = s.searchParcel(ctx, lgCode, machiazaID, parsed, basic)
 	default:
 		return nil, nil
 	}

@@ -221,8 +221,16 @@ func newStubRepo() *stubRepo {
 		RsdtAddrFlg: new("0"), Pref: "石川県", City: "七尾市", OazaCho: new("大田町"), Koaza: new("111"),
 		ParcelCount: 82,
 	}
-	// 大字南長野/県町: parcel_count=0 on the koaza record; parcel rows live under
-	// the base machiaza_id 0231000 (base-machiaza fallback in searchParcel).
+	// 寺町通御池上る上本能寺前町: a Kyoto street name, parcel_count=0, with the
+	// parcel rows under the base machiaza_id 0098000 (base-machiaza fallback in
+	// searchParcel).
+	honnojimae := repository.BasicResult{
+		NormalizedAddress: "京都市中京区寺町通御池上ル上本能寺前町", LgCode: "261041", MachiazaID: "0098104",
+		RsdtAddrFlg: new("0"), Pref: "京都府", City: "京都市", Ward: new("中京区"),
+		KyotoSt: new("寺町通御池上る"), OazaCho: new("上本能寺前町"),
+	}
+	// 大字南長野/県町: a koaza with parcel_count=0. The base machiaza_id 0231000
+	// does hold parcels, but they are not this koaza's (issue #361).
 	kencho := repository.BasicResult{
 		NormalizedAddress: "長野市南長野県町", LgCode: "202011", MachiazaID: "0231136",
 		RsdtAddrFlg: new("0"), Pref: "長野県", City: "長野市", OazaCho: new("大字南長野"), Koaza: new("県町"),
@@ -237,6 +245,7 @@ func newStubRepo() *stubRepo {
 			"7尾市大田町":      {otaBase},
 			"7尾市大田町111":   {otaKoaza},
 			"長野市南長野県町":    {kencho},
+			"京都市中京区寺町通御池上ル上本能寺前町": {honnojimae},
 		},
 		levenByAddr: map[string][]repository.BasicResult{
 			"1000代田区紀●井町:1-3": {kioicho},
@@ -292,6 +301,10 @@ func newStubRepo() *stubRepo {
 			"202011|0231000|1217|4|": {
 				LgCode: new("202011"), MachiazaID: new("0231000"),
 				PrcID: new("012170000400000"), PrcNum1: new("1217"), PrcNum2: new("4"),
+			},
+			"261041|0098000|488||": {
+				LgCode: new("261041"), MachiazaID: new("0098000"),
+				PrcID: new("004880000000000"), PrcNum1: new("488"),
 			},
 		},
 		cityCoords: map[string][]float64{
@@ -420,10 +433,17 @@ func TestMatch_StubRepo(t *testing.T) {
 			wantJSON: `[{"matched_address":"千葉県浦安市舞浜2丁目11","unmatched_address":null,"match_level":"rsdtdsp_blk","score":1,"ids":{"lg_code":"122271","machiaza_id":"0018002","rsdt_addr_flg":"1","blk_id":"011","rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"千葉県","county":null,"city":"浦安市","ward":null,"kyoto_st":null,"oaza_cho":"舞浜","chome":"2丁目","koaza":null,"machiaza_dist":null,"blk_num":"11","rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
-			// searchParcel base-machiaza fallback: koaza record has parcel_count=0,
-			// parcel rows live under base machiaza_id; original id is kept in the result.
-			name: "parcel base machiaza fallback", address: "長野県長野市南長野県町1217-4", category: model.CategoryParcel,
-			wantJSON: `[{"matched_address":"長野県長野市大字南長野県町1217-4","unmatched_address":null,"match_level":"parcel","score":1,"ids":{"lg_code":"202011","machiaza_id":"0231136","rsdt_addr_flg":"0","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":"012170000400000"},"structured_address":{"pref":"長野県","county":null,"city":"長野市","ward":null,"kyoto_st":null,"oaza_cho":"大字南長野","chome":null,"koaza":"県町","machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":"1217","prc_num2":"4","prc_num3":null}}]`,
+			// searchParcel base-machiaza fallback: the street-name record has
+			// parcel_count=0 and the parcel rows live under the base machiaza_id;
+			// the street name's own id is kept in the result.
+			name: "parcel base machiaza fallback", address: "京都府京都市中京区寺町通御池上る上本能寺前町488番地", category: model.CategoryParcel,
+			wantJSON: `[{"matched_address":"京都府京都市中京区寺町通御池上る上本能寺前町488","unmatched_address":null,"match_level":"parcel","score":1,"ids":{"lg_code":"261041","machiaza_id":"0098104","rsdt_addr_flg":"0","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":"004880000000000"},"structured_address":{"pref":"京都府","county":null,"city":"京都市","ward":"中京区","kyoto_st":"寺町通御池上る","oaza_cho":"上本能寺前町","chome":null,"koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":"488","prc_num2":null,"prc_num3":null}}]`,
+		},
+		{
+			// A koaza does not take the base machiaza's parcels: the number is
+			// left unmatched rather than placed in an area it may not be in.
+			name: "parcel koaza keeps no base parcel", address: "長野県長野市南長野県町1217-4", category: model.CategoryParcel,
+			wantJSON: `[{"matched_address":"長野県長野市大字南長野県町","unmatched_address":["1217-4"],"match_level":"machiaza_detail","score":1,"ids":{"lg_code":"202011","machiaza_id":"0231136","rsdt_addr_flg":"0","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"長野県","county":null,"city":"長野市","ward":null,"kyoto_st":null,"oaza_cho":"大字南長野","chome":null,"koaza":"県町","machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
 			// tryMachiazaFallbackSearch: base 西新宿 has no record, 西新宿2@ hits.
