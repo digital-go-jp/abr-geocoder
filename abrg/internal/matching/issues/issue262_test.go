@@ -78,7 +78,7 @@ func TestIssue262(t *testing.T) {
 			wantMcID: "0074005",
 		},
 		{
-			// 単一フラグの町字マッチは従来どおり値を返す
+			// 単一フラグの町字マッチは値を返す
 			name: "issue262-5 [東京都千代田区紀尾井町]",
 			query: model.MatchQuery{
 				Address:  "東京都千代田区紀尾井町",

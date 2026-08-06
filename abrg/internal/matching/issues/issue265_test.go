@@ -52,7 +52,7 @@ func TestIssue265(t *testing.T) {
 				FieldPrcNum1: nil,
 			},
 		},
-		// 回帰確認: parcel / all は従来どおり地番まで解決
+		// 回帰確認: parcel / all は地番まで解決
 		{
 			name: "issue265-3 [七尾市大田町111-11 parcel] 回帰",
 			query: model.MatchQuery{

@@ -115,7 +115,7 @@ func TestIssue259(t *testing.T) {
 				FieldPrcNum1: "11",
 			},
 		},
-		// 回帰確認: 丁目解釈が優先されること（紀尾井町1-3 は従来どおり住居表示）
+		// 回帰確認: 丁目解釈が優先されること（紀尾井町1-3 は住居表示）
 		{
 			name: "issue259-4 [東京都千代田区紀尾井町1-3] 回帰",
 			query: model.MatchQuery{

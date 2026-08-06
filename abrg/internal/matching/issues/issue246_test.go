@@ -17,7 +17,7 @@ import (
 // 解決:
 //   - 曖昧マッチが同字数・置換のみ(挿入/削除なし)のときは、番地が完全一致時と
 //     同位置なので2段マッチを継続する (fuzzyMatchAllowsTwoStage)。
-//   - 挿入/削除や数字の地名吸収(境界ずれ)は従来どおりスキップする。
+//   - 挿入/削除や数字の地名吸収(境界ずれ)はスキップする。
 func TestIssue246(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
@@ -120,7 +120,7 @@ func TestIssue246(t *testing.T) {
 			},
 		},
 		{
-			// 回帰ガード: 町字先頭1文字差は従来どおり棄却され city 止まり。
+			// 回帰ガード: 町字先頭1文字差は棄却され city 止まり。
 			name: "issue246-6 [東京都千代田区●尾井町1-3] first-char difference rejected",
 			query: model.MatchQuery{
 				Address:  "東京都千代田区●尾井町1-3",

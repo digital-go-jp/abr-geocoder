@@ -23,8 +23,8 @@ func TestIssue341(t *testing.T) {
 
 	runNormalizeTests(t, []normalizeTestCase{
 		{
-			// 三春町 used to be cut at the first 市/町/村 marker and reached
-			// 田村市 (lg_code 072117) instead of 075213.
+			// 三春町 holds a kanji numeral and sits in 田村郡, next to 田村市
+			// (lg_code 072117), so the town has to survive as 075213.
 			name:               "issue341-1 [福島県田村郡三春町] kanji numeral in a town name",
 			query:              query("福島県田村郡三春町"),
 			wantMatchLevel:     model.MatchLevelCity,
@@ -36,7 +36,7 @@ func TestIssue341(t *testing.T) {
 			},
 		},
 		{
-			// 市川三郷町 used to stop at the prefecture.
+			// 郡名と町名の両方に漢数字が入る。
 			name:               "issue341-2 [山梨県西八代郡市川三郷町] kanji numeral in county and town",
 			query:              query("山梨県西八代郡市川三郷町"),
 			wantMatchLevel:     model.MatchLevelCity,

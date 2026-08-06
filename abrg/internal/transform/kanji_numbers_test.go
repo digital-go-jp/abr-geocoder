@@ -493,7 +493,7 @@ func TestKanjiNoToHyphen(t *testing.T) {
 			expected: "字西浦2-3甲",
 			changed:  true,
 		},
-		// 千/万 multipliers on either side of ノ (previously mangled, e.g. "千五ノ三"→"千5-3").
+		// 千/万 multipliers on either side of ノ.
 		{
 			name:     "sen compound left (千五 = 1005)",
 			input:    "千五ノ三",

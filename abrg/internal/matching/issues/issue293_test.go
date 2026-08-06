@@ -75,7 +75,7 @@ func TestIssue293(t *testing.T) {
 			wantMatchedAddress:   "宮城県柴田郡村田町大字沼辺字東小沼二",
 			wantUnmatchedAddress: nil,
 		},
-		// 小字名の全体が大字数字。元から成立していた。regression テスト
+		// 小字名の全体が大字数字。regression テスト
 		{
 			name: "issue293-5 [石川県七尾市能登島祖母ヶ浦町壱九] 小字全体が数字",
 			query: model.MatchQuery{

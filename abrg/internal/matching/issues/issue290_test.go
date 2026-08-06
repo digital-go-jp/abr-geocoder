@@ -76,7 +76,7 @@ func TestIssue290(t *testing.T) {
 			wantMatchedAddress:   "石川県加賀市横北町元矢田野村大字矢田野字七弐",
 			wantUnmatchedAddress: nil,
 		},
-		// 算用数字 + 字は元から保護されていた。regression テスト
+		// 算用数字 + 字も保護される。regression テスト
 		{
 			name: "issue290-5 [福井県大野市犬山22字] 算用数字+字",
 			query: model.MatchQuery{
