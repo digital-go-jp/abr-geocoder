@@ -1545,7 +1545,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 		},
 		{
 			// 大字名の「通」を「通り」と表記
-			// 都道府県省略時は滝上町が認識できず prefレベル
+			// 郡を省くと市区町村に届かないため pref 止まり。都道府県を補っても
+			// 変わらない。ABR の表記は「字滝ノ上市街地3条通」で、郡を書けば届く
 			name: "jat043 [滝上町字滝上市街地３条通り2-9]",
 			query: model.MatchQuery{
 				Address:  "滝上町字滝上市街地３条通り2-9",
@@ -1979,7 +1980,8 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 		},
 		{
 			// 字名と地番の間に余分な「の」
-			// 都道府県省略時は涌谷町が認識できず prefレベル
+			// 郡を省くと市区町村に届かないため pref 止まり。都道府県を補っても
+			// 変わらない。「宮城県遠田郡涌谷町…」なら字八方谷一まで届く
 			name: "jat052 [涌谷町涌谷八方谷１の16]",
 			query: model.MatchQuery{
 				Address:  "涌谷町涌谷八方谷１の16",
@@ -3093,9 +3095,6 @@ func TestJapaneseAddressTestdata(t *testing.T) {
 		},
 		{
 			// 街区符号が「渡辺」
-			// 「渡辺」部分が消費され住居番号「3」のみ未マッチ
-			// 注: 現在の出力は「久太郎町4丁目3」（blk_num=3）だが、これは誤マッチ
-			// 本来は渡辺ブロック+rsdt_num=3でマッチすべき（別Issue）
 			name: "jat074 [大阪市中央区久太郎町4丁目渡辺3]",
 			query: model.MatchQuery{
 				Address:  "大阪市中央区久太郎町4丁目渡辺3",

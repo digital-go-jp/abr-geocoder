@@ -17,12 +17,13 @@ import (
 //
 // 解決:
 // - Ward展開フォールバック: 区名のみの入力を検出し、全候補市名を前置して再検索
-// - 「中区」→ [横浜市中区, 名古屋市中区, 広島市中区, 浜松市中区] で展開
+// - 「中区」なら cache_city にある中区すべてを前置して引き直す
 func TestIssue297(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		// === Ward展開フォールバック ===
-		// 同名区「中区」: 横浜市/名古屋市/広島市/浜松市に存在
 		{
+			// 中区は複数の市にあり区名だけでは市が定まらないが、
+			// 本町1丁目を持つ中区は横浜市だけなので町字で定まる
 			name: "issue297-1 [中区本町1-1] ward-only with ambiguous ward",
 			query: model.MatchQuery{
 				Address:  "中区本町1-1",
@@ -30,16 +31,20 @@ func TestIssue297(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			// match_level should NOT be unknown — any city match is acceptable
-			wantMatchLevel:       "",
-			wantUnmatchedAddress: []string{}, // skip validation
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "神奈川県横浜市中区本町1丁目",
+			wantUnmatchedAddress: []string{"1"},
 			wantStructured: map[string]any{
-				FieldWard: "中区",
+				FieldPref:    "神奈川県",
+				FieldCity:    "横浜市",
+				FieldWard:    "中区",
+				FieldOazaCho: "本町",
+				FieldChome:   "1丁目",
 			},
 		},
 
-		// 同名区「南区」
 		{
+			// 南区も同じく複数の市にある。白妙町を持つ南区は横浜市だけ
 			name: "issue297-2 [南区白妙町1-1] ward-only",
 			query: model.MatchQuery{
 				Address:  "南区白妙町1-1",
@@ -47,9 +52,15 @@ func TestIssue297(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantUnmatchedAddress: []string{}, // skip validation (ward-only test)
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "神奈川県横浜市南区白妙町1丁目",
+			wantUnmatchedAddress: []string{"1"},
 			wantStructured: map[string]any{
-				FieldWard: "南区",
+				FieldPref:    "神奈川県",
+				FieldCity:    "横浜市",
+				FieldWard:    "南区",
+				FieldOazaCho: "白妙町",
+				FieldChome:   "1丁目",
 			},
 		},
 

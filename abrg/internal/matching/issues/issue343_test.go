@@ -86,8 +86,7 @@ func TestIssue343(t *testing.T) {
 		},
 		{
 			// 一ノ坂 is not in the registry, so how far the tail reaches is
-			// open. The municipality must be identified either way; it used
-			// to stop at the prefecture because 伊万里市 became 伊10000里市.
+			// open. The municipality must be identified either way.
 			name:                 "issue343-5 [佐賀県伊万里市大坪町一ノ坂乙4580番地2] kanji numeral after 万",
 			query:                query("佐賀県伊万里市大坪町一ノ坂乙4580番地2"),
 			wantUnmatchedAddress: []string{},
