@@ -9,13 +9,11 @@ import (
 // Issue #188: 「条」が重複
 // https://github.com/digital-go-jp/abr-geocoder/issues/188
 //
-// Node.js版では「三条」が「三条条」に誤って正規化されていた。
-// Go版では重複が発生しないことを確認する。
+// 「条」で終わる町字名を、条の処理で重複させないことを確認する。
 func TestIssue188(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
 			// 千葉県夷隅郡大多喜町三条 - 「三条」という町字
-			// Node.js版では「三条条」になっていた
 			name: "issue188-1 [千葉県夷隅郡大多喜町三条]",
 			query: model.MatchQuery{
 				Address:  "千葉県夷隅郡大多喜町三条",

@@ -9,13 +9,11 @@ import (
 // Issue #203: 町字が二重で追加される
 // https://github.com/digital-go-jp/abr-geocoder/issues/203
 //
-// Node.js版では「芦村町アラコ」→「芦町村町アラコ」と町字が二重になっていた。
-// Go版では正しくマッチすることを確認する。
+// 町字名の途中に「村町」が入る場合と、京都の複合町字名で、町字を二重にしないことを確認する。
 func TestIssue203(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
 			// 愛知県田原市芦村町アラコ
-			// Node.js版では「芦町村町アラコ」になっていた
 			name: "issue203-1 [愛知県田原市芦村町アラコ]",
 			query: model.MatchQuery{
 				Address:  "愛知県田原市芦村町アラコ",
@@ -76,8 +74,7 @@ func TestIssue203(t *testing.T) {
 		},
 		{
 			// 京都府京都市北区西賀茂北鎮守庵町 - 京都の複合町字名
-			// Node.js版では「西賀茂中島町北鎮守庵町」と町字が二重になっていた
-			// Go版では「西賀茂北鎮守菴町」として正しくマッチ（庵→菴は異体字）
+			// 「西賀茂北鎮守菴町」としてマッチする（庵→菴は異体字）
 			name: "issue203-3 [京都府京都市北区西賀茂北鎮守庵町100-2]",
 			query: model.MatchQuery{
 				Address:  "京都府京都市北区西賀茂北鎮守庵町100-2",

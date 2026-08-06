@@ -9,15 +9,12 @@ import (
 // Issue #221: 「麻生」検索時に川崎市麻生区ではなく山口県萩市麻生が返される
 // https://github.com/digital-go-jp/abr-geocoder/issues/221
 //
-// Node.js版では「麻生」で検索すると小字レベルの山口県萩市麻生がマッチしていた。
-// しかし元データ（mt_town_fullset_pref35.csv）では萩市麻生はstatus_flg=0（廃止）。
-// Go版ではstatus_flg=0のデータはインポートしないため、萩市麻生は存在しない。
-// 結果として曖昧な入力はマッチしないか、より適切な結果を返す。
+// 萩市麻生は status_flg=0（廃止）でインポートされないため、町字名だけの
+// 曖昧な入力はマッチしないことを確認する。
 func TestIssue221(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
 			// 「麻生」のみ - 曖昧すぎるためマッチしない
-			// Node.js版では「山口県萩市麻生」にマッチしていた
 			name: "issue221-1 [麻生]",
 			query: model.MatchQuery{
 				Address:  "麻生",

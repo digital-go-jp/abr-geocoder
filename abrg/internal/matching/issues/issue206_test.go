@@ -9,13 +9,11 @@ import (
 // Issue #206: 町字に含まれる数字が地番の先頭に追加される
 // https://github.com/digital-go-jp/abr-geocoder/issues/206
 //
-// Node.js版では「第1号958-4-1」→「1958-4-1」と地番に数字が追加されていた。
-// Go版では正しく町字と地番が分離されることを確認する。
+// 「第N号」で終わる町字に地番が続くとき、号の数字と地番が繋がらないことを確認する。
 func TestIssue206(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
 			// 香川県高松市塩江町安原下第1号958-4-1
-			// Node.js版では「1958-4-1」になっていた
 			name: "issue206-1 [香川県高松市塩江町安原下第1号958-4-1]",
 			query: model.MatchQuery{
 				Address:  "香川県高松市塩江町安原下第1号958-4-1",

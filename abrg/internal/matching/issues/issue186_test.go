@@ -9,13 +9,11 @@ import (
 // Issue #186: 「部」が重複
 // https://github.com/digital-go-jp/abr-geocoder/issues/186
 //
-// Node.js版では「三部」が「三部部」に誤って正規化されていた。
-// Go版では重複が発生しないことを確認する。
+// 「部」で終わる町字名を、接尾辞の処理で重複させないことを確認する。
 func TestIssue186(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
 			// 鳥取県西伯郡伯耆町三部 - 「三部」という町字
-			// Node.js版では「三部部」になっていた
 			name: "issue186-1 [鳥取県西伯郡伯耆町三部]",
 			query: model.MatchQuery{
 				Address:  "鳥取県西伯郡伯耆町三部",
@@ -46,7 +44,6 @@ func TestIssue186(t *testing.T) {
 		},
 		{
 			// 鳥取県米子市一部 - 「一部」という町字
-			// Node.js版では「一部部」になっていた
 			name: "issue186-2 [鳥取県米子市一部]",
 			query: model.MatchQuery{
 				Address:  "鳥取県米子市一部",

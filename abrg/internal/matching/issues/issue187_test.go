@@ -9,13 +9,11 @@ import (
 // Issue #187: 「丁」が重複
 // https://github.com/digital-go-jp/abr-geocoder/issues/187
 //
-// Node.js版では「戸丁」が「戸丁丁」に誤って正規化されていた。
-// Go版では重複が発生しないことを確認する。
+// 「丁」で終わる町字名を、丁目の処理で重複させないことを確認する。
 func TestIssue187(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
 			// 長野県小諸市丁 - 「丁」という町字
-			// Node.js版では「丁丁」になっていた
 			name: "issue187-1 [長野県小諸市丁]",
 			query: model.MatchQuery{
 				Address:  "長野県小諸市丁",
