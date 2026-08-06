@@ -88,7 +88,18 @@ var (
 	banchiSingleEnd = regexp.MustCompile(`(\d+)番地$`)
 	// banchiSingleNotEnd handles: N番地+non-digit -> N non-digit
 	banchiSingleNotEnd = regexp.MustCompile(`(\d+)番地([^\d-先])`)
+	// banchiBranchWithNo handles: N番地の/ノX -> N-X, where X is one character
+	// of branchChars. A run of kana or kanji opens a name, so the character
+	// after X has to be neither.
+	banchiBranchWithNo = regexp.MustCompile(`(\d+)番地[のノ]([` + branchChars + `])([^` + branchChars + `ー一-龯]|$)`)
+	// banchiBranchEnd handles: N番地X (at end) -> N-X, same single character.
+	banchiBranchEnd = regexp.MustCompile(`(\d+)番地([` + branchChars + `])$`)
 )
+
+// branchChars are the characters ABR writes a parcel branch number in: the
+// iroha, which an address spells in either kana at this point in the pipeline,
+// and the 十干十二支 that stand in the same position.
+const branchChars = `ぁ-んァ-ヶ甲乙丙丁戊己庚辛壬癸子丑寅卯夘辰巳午未申酉戌亥`
 
 // -----------------------------------------------------------------------------
 // Bancho (番町) patterns - town names ending with 番町
@@ -284,6 +295,8 @@ var illegalBanchiRules = []ReplaceRule{
 var banchiRules = []ReplaceRule{
 	{banchiNoGo, "${1}-${2}"},                  // N番地の/ノM号 → N-M
 	{banchiNo, "${1}-${2}"},                    // N番地の/ノM → N-M
+	{banchiBranchWithNo, "${1}-${2}${3}"},      // N番地の/ノX（枝番1文字） → N-X
+	{banchiBranchEnd, "${1}-${2}"},             // N番地X（枝番1文字・末尾） → N-X
 	{banchiHyphenGo, "${1}-${2}"},              // N番地-M号 → N-M (remove 号)
 	{banchiHyphen, "${1}-${2}"},                // N番地-M → N-M (号なし)
 	{banchiWithHyphenNumeric, "${1}-${2}${3}"}, // N番地M-P → N-M-P

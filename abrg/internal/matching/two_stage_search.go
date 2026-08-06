@@ -137,6 +137,11 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 	if len(numbers) == 0 {
 		return nil, nil
 	}
+	// Neither lookup below applies when the machiaza holds no parcels and is
+	// already the base one, so stop before building the search terms.
+	if parcelCount == 0 && model.IsBaseMachiazaID(machiazaID) {
+		return nil, nil
+	}
 
 	prcNum1 := numbers[0]
 	var prcNum2, prcNum3 string
@@ -156,13 +161,20 @@ func (s *twoStageSearch) searchParcel(ctx context.Context, lgCode, machiazaID st
 		}
 	}
 	num1Forms = append(num1Forms, prcNum1)
+	// A branch number is looked up in every kana ABR records it in, since the
+	// search address holds only one of them.
+	num2Forms, num3Forms := util.KanaSpellings(prcNum2), util.KanaSpellings(prcNum3)
 	find := func(mID string) (*repository.ParcelResult, error) {
 		for _, num1 := range num1Forms {
-			pr, err := s.repo.FindParcelExact(ctx, lgCode, mID, repository.ParcelFilter{
-				PrcNum1: num1, PrcNum2: prcNum2, PrcNum3: prcNum3,
-			})
-			if err != nil || pr != nil {
-				return pr, err
+			for _, num2 := range num2Forms {
+				for _, num3 := range num3Forms {
+					pr, err := s.repo.FindParcelExact(ctx, lgCode, mID, repository.ParcelFilter{
+						PrcNum1: num1, PrcNum2: num2, PrcNum3: num3,
+					})
+					if err != nil || pr != nil {
+						return pr, err
+					}
+				}
 			}
 		}
 		return nil, nil
