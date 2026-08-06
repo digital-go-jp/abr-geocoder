@@ -23,7 +23,7 @@ import (
 func TestIssue245(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
-			// 西新宿一丁目は漢数字表記で status_flg=0。従来は city 止まり。
+			// 西新宿一丁目は漢数字表記で status_flg=0
 			name: "issue245-1 [東京都新宿区西新宿一丁目] status_flg=0 chome resolves",
 			query: model.MatchQuery{
 				Address:  "東京都新宿区西新宿一丁目",
@@ -79,7 +79,7 @@ func TestIssue245(t *testing.T) {
 			},
 		},
 		{
-			// 熊谷市は丁目町字が全件 status_flg=0。従来は市内の丁目住所が全件 city 止まり。
+			// 熊谷市は丁目町字が全件 status_flg=0
 			name: "issue245-4 [埼玉県熊谷市本町1丁目] all-status_flg=0 city resolves",
 			query: model.MatchQuery{
 				Address:  "埼玉県熊谷市本町1丁目",

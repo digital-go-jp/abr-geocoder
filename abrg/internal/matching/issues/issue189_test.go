@@ -9,13 +9,12 @@ import (
 // Issue #189: 「丁目」が省略される
 // https://github.com/digital-go-jp/abr-geocoder/issues/189
 //
-// Node.js版では「北海道美唄市六丁目」→「北海道美唄市六」と丁目が省略されていた。
-// Go版では丁目が町字名として正しくマッチすることを確認する。
+// 「N丁目」が丁目ではなく町字名そのものであるとき、丁目として切り落とさず
+// 町字名としてマッチすることを確認する。
 func TestIssue189(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
 			// 埼玉県春日部市八丁目 - 「八丁目」が町字名
-			// Node.js版では「八」になっていた
 			name: "issue189-1 [埼玉県春日部市八丁目]",
 			query: model.MatchQuery{
 				Address:  "埼玉県春日部市八丁目",

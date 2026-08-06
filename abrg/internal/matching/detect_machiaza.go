@@ -250,8 +250,8 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address string, 
 	}
 
 	// A machiaza where 住居表示実施/非実施 coexist has one row per flag in ABR, so
-	// which side the address belongs to is unknown at machiaza level (issue #262).
-	// v2 represented this as AMBIGUOUS_RSDT_ADDR_FLG (-1); v3 uses null.
+	// which side the address belongs to is unknown at machiaza level, so the flag
+	// is reported as null (issue #262).
 	for i := range results {
 		if results[i].IDs.LgCode != nil && results[i].IDs.MachiazaID != nil &&
 			ambiguousFlg[*results[i].IDs.LgCode+*results[i].IDs.MachiazaID] {

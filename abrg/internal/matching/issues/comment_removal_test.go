@@ -48,8 +48,7 @@ func TestCommentRemoval(t *testing.T) {
 			},
 		},
 		// コメント付き - Levenshtein fallbackケース（低精度マッチ）
-		// 修正前: コメントがotherに残る ["大字晴山23-35", "晴山小学校", "/*", "B103250100039", ...]
-		// 修正後: コメントが除去される ["大字晴山23-35", "晴山小学校"]
+		// コメントは除去され、未マッチには住所と施設名だけが残る
 		{
 			name: "comment-removal-3 [Levenshtein fallback - コメント除去]",
 			query: model.MatchQuery{

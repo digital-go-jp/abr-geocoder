@@ -9,13 +9,11 @@ import (
 // Issue #197: 「町」が重複
 // https://github.com/digital-go-jp/abr-geocoder/issues/197
 //
-// Node.js版では「山川町宗田」→「山川町町宗田」と町が重複していた。
-// Go版では重複が発生しないことを確認する。
+// 町字名の途中に「町」が入るとき、町を重複させないことを確認する。
 func TestIssue197(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{
 			// 徳島県吉野川市山川町宗田 - 山川町が町字名
-			// Node.js版では「山川町町宗田」になっていた
 			name: "issue197-1 [徳島県吉野川市山川町宗田]",
 			query: model.MatchQuery{
 				Address:  "徳島県吉野川市山川町宗田",

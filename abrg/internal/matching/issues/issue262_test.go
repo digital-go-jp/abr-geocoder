@@ -54,8 +54,7 @@ func TestIssue262(t *testing.T) {
 		wantMcID string
 	}{
 		{
-			// 混在地域の町字マッチ: フラグが 0/1 の2行あるため不明 (null)。
-			// v2 は AMBIGUOUS_RSDT_ADDR_FLG = -1 を返していた
+			// 混在地域の町字マッチ: フラグが 0/1 の2行あるため不明 (null)
 			name: "issue262-3 [千葉県浦安市舞浜 (混在の基底町字)]",
 			query: model.MatchQuery{
 				Address:  "千葉県浦安市舞浜",
@@ -79,7 +78,7 @@ func TestIssue262(t *testing.T) {
 			wantMcID: "0074005",
 		},
 		{
-			// 単一フラグの町字マッチは従来どおり値を返す
+			// 単一フラグの町字マッチは値を返す
 			name: "issue262-5 [東京都千代田区紀尾井町]",
 			query: model.MatchQuery{
 				Address:  "東京都千代田区紀尾井町",

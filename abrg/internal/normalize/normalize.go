@@ -34,8 +34,8 @@ func NormalizeBasicNormalized(s string) (string, model.NormalizeCategory) {
 
 	s, _ = addSpacesAroundPunctuation(s)
 
-	// Note: addSpacesAroundPunctuation now handles consecutive spaces internally,
-	// so a second NormalizeSpaces call is no longer needed.
+	// addSpacesAroundPunctuation collapses consecutive spaces itself, so no
+	// NormalizeSpaces call belongs here.
 
 	s = strings.TrimSpace(s)
 

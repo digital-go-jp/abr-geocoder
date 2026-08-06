@@ -17,8 +17,7 @@ import (
 // このissueの意図: category=basic（町字未満のデータなし）でも正しい丁目にマッチすべき
 func TestIssue234(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
-		// 建物名あり: 「虎の門」(ひらがな)→「虎ノ門」(カタカナ)に正規化され、1丁目にマッチすべき
-		// issueでは2丁目に誤マッチしていた
+		// 建物名あり: 「虎の門」(ひらがな)→「虎ノ門」(カタカナ)に正規化される
 		{
 			name: "issue234-1 [東京都港区虎の門１－２３－１ 虎ノ門ヒルズ森タワー ２２階]",
 			query: model.MatchQuery{
@@ -78,7 +77,6 @@ func TestIssue234(t *testing.T) {
 				FieldPrcNum3:      nil,
 			},
 		},
-		// 芝公園: issueでは4丁目が2丁目に誤マッチしていた
 		{
 			name: "issue234-3 [東京都港区芝公園４－２－８]",
 			query: model.MatchQuery{

@@ -5,13 +5,12 @@ import (
 	"testing"
 )
 
-// TestIssue214 tests handling of addresses with special characters that cause freezing in Node.js version
+// TestIssue214 covers addresses padded with full-width digits and letters.
 // Issue #214: API serverにおいてgeocode中にフリーズしてしまう・server側におけるTimeoutの設定Option
 // https://github.com/digital-go-jp/abr-geocoder/issues/214
 //
-// The Node.js version freezes when processing addresses containing special characters
-// like full-width numbers and alphabets (e.g., "ＴＥＬ　０　００").
-// This test verifies that the Go implementation handles such inputs correctly without hanging.
+// Noise such as "ＴＥＬ　０　００" has to come back as unmatched parts rather
+// than hang the match.
 func TestIssue214(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{

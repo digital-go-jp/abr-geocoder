@@ -43,7 +43,7 @@ func TestIssue260(t *testing.T) {
 			},
 			want: "石川県七尾市大田町111-2-5",
 		},
-		// 漢数字小字は数字で終わらないので区切り不要（従来どおり）
+		// 漢数字小字は数字で終わらないので区切り不要
 		{
 			name: "issue260-3 [大田町壱壱壱 + 地番11] 区切りなし",
 			sa: model.StructuredAddress{
@@ -53,7 +53,7 @@ func TestIssue260(t *testing.T) {
 			},
 			want: "石川県七尾市大田町壱壱壱11",
 		},
-		// 小字が数字以外で終わる場合も区切り不要（従来どおり）
+		// 小字が数字以外で終わる場合も区切り不要
 		{
 			name: "issue260-4 [大聖寺上木町95の + 地番7] 区切りなし",
 			sa: model.StructuredAddress{
