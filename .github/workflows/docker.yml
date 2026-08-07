@@ -2,7 +2,7 @@ name: docker
 
 on:
   push:
-    branches: [main, v3-beta]
+    branches: [main]
     paths: &docker_paths
       - 'abrg/**'
       - 'abrdb/**'
