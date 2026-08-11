@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/duckdb/duckdb-go/v2 v2.10505.0
-	golang.org/x/term v0.42.0
+	golang.org/x/term v0.45.0
 )
 
 require (
