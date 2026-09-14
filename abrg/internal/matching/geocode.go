@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"abrg/internal/model"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // CoordinatesGetter is a consumer-defined interface for coordinate lookups.

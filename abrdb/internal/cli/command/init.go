@@ -10,14 +10,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
 
-	"abr.local/common/env"
-	"abr.local/common/version"
+	"github.com/digital-go-jp/abr-geocoder/common/env"
+	"github.com/digital-go-jp/abr-geocoder/common/version"
 
-	"abrdb/internal/config"
-	"abrdb/internal/infra/postgres"
-	"abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/config"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/postgres"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
 )
 
 // InitOptions holds the init command options

@@ -12,7 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
 )
 
 // The tests in this file pin the route wiring of NewGinServer for the

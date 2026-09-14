@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"abrg/internal/model"
-	"abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
 )
 
 // stubCityQuerier returns a fixed city result for FindCityByAddress.

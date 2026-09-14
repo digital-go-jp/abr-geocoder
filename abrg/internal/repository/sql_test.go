@@ -5,8 +5,8 @@ import (
 	"sync"
 	"testing"
 
-	"abrg/internal/cache"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // The tests in this file run against the committed quickstart cache (Tokyo,

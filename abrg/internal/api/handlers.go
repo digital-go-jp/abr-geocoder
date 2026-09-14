@@ -7,10 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"abrg/internal/matching"
-	"abrg/internal/model"
-	"abrg/internal/normalize"
-	"abrg/internal/reverse"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/reverse"
 )
 
 // logHandlerError logs a failed handler request with its parameters.

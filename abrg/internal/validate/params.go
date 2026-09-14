@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"abr.local/common/validate"
+	"github.com/digital-go-jp/abr-geocoder/common/validate"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // categoryCompatible checks if the requested category is compatible with enabledCategory.

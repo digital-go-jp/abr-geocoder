@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
 )
 
 // The tests in this file run the real build SQL for every enabled_category

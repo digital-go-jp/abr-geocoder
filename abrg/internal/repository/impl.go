@@ -6,8 +6,8 @@ import (
 	"errors"
 	"log/slog"
 
-	"abrg/internal/matchlevel"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 type DB struct {

@@ -5,9 +5,9 @@ import (
 	"context"
 	"slices"
 
-	"abrg/internal/matching/levenshtein"
-	"abrg/internal/matchlevel"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/levenshtein"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // scoreEpsilon is the tolerance for comparing scores (differences <= this are treated as equal).

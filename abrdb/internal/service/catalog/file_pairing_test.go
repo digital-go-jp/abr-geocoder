@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
 )
 
 func TestFileNameParser_ParseFileInfo(t *testing.T) {

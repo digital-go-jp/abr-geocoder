@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrdb/internal/infra/db"
-	"abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
 )
 
 // NewShowCmd creates a new show command

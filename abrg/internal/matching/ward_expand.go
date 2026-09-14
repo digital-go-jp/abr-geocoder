@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"abrg/internal/cache"
-	"abrg/internal/matchlevel"
-	"abrg/internal/model"
-	"abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 )
 
 // tryWardExpansion retries a ward-only address with each candidate city name

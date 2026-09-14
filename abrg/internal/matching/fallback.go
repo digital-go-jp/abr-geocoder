@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"abrg/internal/matching/levenshtein"
-	"abrg/internal/matching/unmatched"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/levenshtein"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/unmatched"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // debugMatchPath records which non-exact resolution path produced the result,

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"abrg/internal/char"
-	"abrg/internal/normalize"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
 )
 
 // Character ranges an address may end with. They are the single source for

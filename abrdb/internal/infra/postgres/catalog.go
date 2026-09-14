@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
 
-	"abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
 )
 
 // lightweight interface to share Scan between *sql.Row and *sql.Rows

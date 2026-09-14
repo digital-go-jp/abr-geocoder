@@ -6,7 +6,7 @@ package matching
 import (
 	"strings"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // mergeKyotoStToResults adds kyoto_st from basicResults to dest results.

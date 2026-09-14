@@ -1,8 +1,8 @@
 package matching
 
 import (
-	"abrg/internal/char"
-	"abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 )
 
 // extractFirstNumber extracts the first number from a string.

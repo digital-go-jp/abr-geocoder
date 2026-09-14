@@ -12,12 +12,12 @@ import (
 
 	duckdbdriver "github.com/duckdb/duckdb-go/v2"
 
-	"abr.local/common/db"
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
-	"abrg/internal/infra/duckdb"
-	"abrg/internal/schema"
-	"abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 )
 
 func Build(ctx context.Context, cachePath string) error {

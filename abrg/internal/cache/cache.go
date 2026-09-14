@@ -8,14 +8,14 @@ import (
 	"log/slog"
 	"strconv"
 
-	"abr.local/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
 
-	"abrg/internal/infra/config"
-	"abrg/internal/infra/duckdb"
-	"abrg/internal/model"
-	"abrg/internal/schema"
-	"abrg/internal/transform"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/config"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // WardCandidate is a city+ward that a ward name alone may refer to, e.g. 横浜市中区 for "中区".

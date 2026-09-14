@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
-	"abrg/internal/infra/duckdb"
-	"abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
 // newTestCacheFile creates a DuckDB file with the YAML cache schema (empty

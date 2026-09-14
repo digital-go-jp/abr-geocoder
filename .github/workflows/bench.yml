@@ -31,9 +31,7 @@ jobs:
         with:
           go-version: '1.27.x'
           cache: true
-          cache-dependency-path: |
-            pr/abrg/go.sum
-            base/abrg/go.sum
+          cache-dependency-path: pr/go.sum
       - name: Build PR binary
         run: cd pr/abrg && make build && cp abrg "$RUNNER_TEMP/abrg_pr"
       - name: Build base binary

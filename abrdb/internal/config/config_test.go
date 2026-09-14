@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
 )
 
 func TestParsePref(t *testing.T) {

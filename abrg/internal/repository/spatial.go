@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // prefFilter returns a prefecture filter clause for SQL.

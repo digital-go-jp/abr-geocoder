@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // SQL constants for data insertion from PostgreSQL to DuckDB cache.

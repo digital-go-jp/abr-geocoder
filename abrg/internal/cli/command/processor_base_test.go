@@ -3,7 +3,7 @@ package command
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestValidateOptions pins that validateOptions delegates to

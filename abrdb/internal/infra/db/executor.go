@@ -10,9 +10,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	commondb "abr.local/common/db"
+	commondb "github.com/digital-go-jp/abr-geocoder/common/db"
 
-	"abrdb/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/util"
 )
 
 // QueryExecutor handles database query execution using pgxpool.

@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"abrdb/internal/infra/api"
-	"abrdb/internal/model"
-	"abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/api"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
 )
 
 // fakeLister serves fixed FileInfo lists per prefix.

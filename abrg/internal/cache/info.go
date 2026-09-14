@@ -7,7 +7,7 @@ import (
 	"io/fs"
 	"os"
 
-	"abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
 )
 
 type Info struct {

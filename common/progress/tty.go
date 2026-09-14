@@ -1,7 +1,7 @@
 package progress
 
 import (
-	"abr.local/common/env"
+	"github.com/digital-go-jp/abr-geocoder/common/env"
 )
 
 // ShouldShowProgress determines if progress should be displayed.

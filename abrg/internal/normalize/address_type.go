@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // Address type detection patterns grouped by category.

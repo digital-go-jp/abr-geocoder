@@ -7,7 +7,7 @@ import (
 	"math"
 	"testing"
 
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 )
 
 // greatCircleMeters is the haversine distance on a sphere of earthRadiusMeters.
