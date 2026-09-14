@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"abr.local/common/db"
-	"abr.local/common/duck"
 
 	"abrg/internal/infra/config"
 	"abrg/internal/infra/duckdb"
@@ -99,11 +98,6 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 	// configuration claiming them.
 	if err := checkCategoryTables(ctx, conn); err != nil {
 		return nil, err
-	}
-
-	// Load spatial extension (works in read-only mode)
-	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
-		return nil, fmt.Errorf("failed to initialize spatial extension: %w", err)
 	}
 
 	// Build city-prefecture mapping from existing cache

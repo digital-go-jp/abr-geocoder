@@ -88,11 +88,11 @@ func (r *DB) Coordinates(ctx context.Context, lgCode, machiazaID string) ([]floa
 
 func (r *DB) queryBasicCoordinates(ctx context.Context, lgCode, machiazaID string) ([]float64, model.MatchLevel) {
 	query := `
-		SELECT ST_X(geom) AS lon, ST_Y(geom) AS lat
+		SELECT lon, lat
 		FROM cache_machiaza
 		WHERE lg_code = ?
 		AND machiaza_id = ?
-		AND geom IS NOT NULL
+		AND lon IS NOT NULL AND lat IS NOT NULL
 		LIMIT 1
 	`
 
@@ -108,9 +108,9 @@ func (r *DB) queryBasicCoordinates(ctx context.Context, lgCode, machiazaID strin
 
 func (r *DB) queryCityCoordinates(ctx context.Context, lgCode string) ([]float64, model.MatchLevel) {
 	query := `
-		SELECT ST_X(geom) AS lon, ST_Y(geom) AS lat
+		SELECT lon, lat
 		FROM cache_city
-		WHERE lg_code = ? AND geom IS NOT NULL
+		WHERE lg_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
 		LIMIT 1
 	`
 	if coords, ok := scanCoordinates(r.db.QueryRowContext(ctx, query, lgCode)); ok {
@@ -121,9 +121,9 @@ func (r *DB) queryCityCoordinates(ctx context.Context, lgCode string) ([]float64
 
 func (r *DB) queryPrefectureByLgCode(ctx context.Context, lgCode string) ([]float64, model.MatchLevel) {
 	query := `
-		SELECT ST_X(geom) AS lon, ST_Y(geom) AS lat
+		SELECT lon, lat
 		FROM cache_pref
-		WHERE lg_code = ? AND geom IS NOT NULL
+		WHERE lg_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
 		LIMIT 1
 	`
 	if coords, ok := scanCoordinates(r.db.QueryRowContext(ctx, query, lgCode)); ok {
@@ -134,9 +134,9 @@ func (r *DB) queryPrefectureByLgCode(ctx context.Context, lgCode string) ([]floa
 
 func (r *DB) queryPrefectureCoordinates(ctx context.Context, prefCode string) ([]float64, model.MatchLevel) {
 	query := `
-		SELECT ST_X(geom) AS lon, ST_Y(geom) AS lat
+		SELECT lon, lat
 		FROM cache_pref
-		WHERE pref_code = ? AND geom IS NOT NULL
+		WHERE pref_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
 		LIMIT 1
 	`
 	if coords, ok := scanCoordinates(r.db.QueryRowContext(ctx, query, prefCode)); ok {

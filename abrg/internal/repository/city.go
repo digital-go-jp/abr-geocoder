@@ -15,12 +15,12 @@ func (r *DB) FindCityByAddress(ctx context.Context, p CitySearchParams) (*CityRe
 
 	if p.LgCode != "" {
 		query = `SELECT lg_code, pref, county, city, ward,
-			ST_X(geom) AS lon, ST_Y(geom) AS lat
+			lon, lat
 			FROM cache_city WHERE lg_code = ? LIMIT 1`
 		args = []any{p.LgCode}
 	} else {
 		query = `SELECT lg_code, pref, county, city, ward,
-			ST_X(geom) AS lon, ST_Y(geom) AS lat
+			lon, lat
 			FROM cache_city WHERE normalized_address = ?`
 		args = []any{p.CityAddr}
 		if p.PrefCode != "" && p.PrefCode != model.All {

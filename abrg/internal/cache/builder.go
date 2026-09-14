@@ -32,12 +32,6 @@ func Build(ctx context.Context, cachePath string) error {
 	defer func() { _ = conn.Close() }()
 	phaseSec["open"] = time.Since(openStart).Seconds()
 
-	extStart := time.Now()
-	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
-		return fmt.Errorf("failed to load spatial extension: %w", err)
-	}
-	phaseSec["extension"] = time.Since(extStart).Seconds()
-
 	udfStart := time.Now()
 	if err := registerUDF(ctx, conn); err != nil {
 		return fmt.Errorf("register UDF: %w", err)
@@ -94,20 +88,13 @@ func initSchema(ctx context.Context, conn *sql.DB) error {
 	return nil
 }
 
-// buildCategoryTable creates one category table via CTAS and its spatial
-// index, recording the timings in phaseSec.
-func buildCategoryTable(ctx context.Context, conn *sql.DB, phaseSec map[string]float64, name, createSQL, indexSQL string) error {
+// buildCategoryTable creates one category table and records its build time.
+func buildCategoryTable(ctx context.Context, conn *sql.DB, phaseSec map[string]float64, name, createSQL string) error {
 	sec, err := execTimed(ctx, conn, "create", name, createSQL)
 	if err != nil {
 		return err
 	}
 	phaseSec[name] = sec
-
-	sec, err = execTimed(ctx, conn, "index", name, indexSQL)
-	if err != nil {
-		return err
-	}
-	phaseSec[name+"_index"] = sec
 	return nil
 }
 
@@ -189,12 +176,12 @@ func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec m
 		return fmt.Errorf("unknown category: %q", category)
 	}
 	if category == "rsdtdsp" || category == "all" {
-		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL); err != nil {
 			return err
 		}
 	}
 	if category == "parcel" || category == "all" {
-		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL); err != nil {
 			return err
 		}
 	}
@@ -208,12 +195,6 @@ func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec m
 		return err
 	}
 	phaseSec["indexes"] = time.Since(indexStart).Seconds()
-
-	spatialStart := time.Now()
-	if err := execSchemaSQL(ctx, conn, "spatial indexes", schema.GetCreateSpatialIndexesSQL); err != nil {
-		return err
-	}
-	phaseSec["spatial_indexes"] = time.Since(spatialStart).Seconds()
 
 	if err := saveConfigToCache(ctx, conn, cfg); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)

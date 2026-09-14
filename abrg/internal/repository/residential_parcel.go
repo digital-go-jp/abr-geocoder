@@ -17,7 +17,7 @@ const (
 	residentialBestMatchSelect = `
 		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
 			blk_num, rsdt_num, rsdt_num2,
-			ST_X(geom) AS lon, ST_Y(geom) AS lat,
+			lon, lat,
 			CASE`
 	residentialBestMatchFrom = ` ELSE 0 END AS match_level
 		FROM cache_rsdtdsp
@@ -121,8 +121,8 @@ func (r *DB) FindParcelExact(ctx context.Context, lgCode, machiazaID string, fil
 			prc_num1,
 			prc_num2,
 			prc_num3,
-			ST_X(geom) AS lon,
-			ST_Y(geom) AS lat
+			lon,
+			lat
 		FROM cache_parcel
 		WHERE lg_code = ?
 		AND machiaza_id = ?

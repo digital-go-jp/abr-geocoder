@@ -13,8 +13,8 @@ func TestLoadSchema(t *testing.T) {
 		t.Fatalf("loadSchema() error = %v", err)
 	}
 
-	if schema.Version != 3 {
-		t.Errorf("schema.Version = %d, want 3", schema.Version)
+	if schema.Version != 4 {
+		t.Errorf("schema.Version = %d, want 4", schema.Version)
 	}
 
 	// Check tables exist
@@ -49,8 +49,8 @@ func Test_generateCreateTableSQL(t *testing.T) {
 	if !strings.Contains(sql, "pref_code SMALLINT") {
 		t.Error("SQL should contain pref_code column")
 	}
-	if !strings.Contains(sql, "geom GEOMETRY") {
-		t.Error("SQL should contain geom column")
+	if !strings.Contains(sql, "lon FLOAT") || !strings.Contains(sql, "lat FLOAT") {
+		t.Error("SQL should contain lon and lat columns")
 	}
 }
 
@@ -68,23 +68,6 @@ func Test_generateIndexSQL(t *testing.T) {
 	}
 	if !strings.Contains(sql, "idx_machiaza_normalized") {
 		t.Error("SQL should contain idx_machiaza_normalized index")
-	}
-}
-
-func Test_generateSpatialIndexSQL(t *testing.T) {
-	schema, err := loadSchema()
-	if err != nil {
-		t.Fatalf("loadSchema() error = %v", err)
-	}
-
-	table := schema.Tables["cache_machiaza"]
-	sql := table.generateSpatialIndexSQL("cache_machiaza")
-
-	if !strings.Contains(sql, "USING RTREE") {
-		t.Error("SQL should contain USING RTREE for spatial index")
-	}
-	if !strings.Contains(sql, "idx_machiaza_geom") {
-		t.Error("SQL should contain idx_machiaza_geom index")
 	}
 }
 
@@ -129,19 +112,6 @@ func TestGetCreateIndexesSQL(t *testing.T) {
 	}
 	if !strings.Contains(sql, "CREATE INDEX") {
 		t.Error("GetCreateIndexesSQL should contain CREATE INDEX")
-	}
-}
-
-func TestGetCreateSpatialIndexesSQL(t *testing.T) {
-	sql, err := GetCreateSpatialIndexesSQL()
-	if err != nil {
-		t.Fatalf("GetCreateSpatialIndexesSQL() error = %v", err)
-	}
-	if sql == "" {
-		t.Error("GetCreateSpatialIndexesSQL should not return empty")
-	}
-	if !strings.Contains(sql, "RTREE") {
-		t.Error("GetCreateSpatialIndexesSQL should contain RTREE")
 	}
 }
 
@@ -199,8 +169,8 @@ func TestInsertMachiazaColumnCount(t *testing.T) {
 
 	// The INSERT INTO cache_machiaza SQL in sql.go must have an explicit column list
 	// that matches the YAML schema. This test validates the column count.
-	if colCount != 19 {
-		t.Errorf("cache_machiaza column count = %d, want 19", colCount)
+	if colCount != 20 {
+		t.Errorf("cache_machiaza column count = %d, want 20", colCount)
 	}
 }
 
@@ -216,8 +186,8 @@ func TestCacheCityColumnCount(t *testing.T) {
 	}
 
 	colCount := len(table.Columns)
-	if colCount != 8 {
-		t.Errorf("cache_city column count = %d, want 8", colCount)
+	if colCount != 9 {
+		t.Errorf("cache_city column count = %d, want 9", colCount)
 	}
 }
 
@@ -233,7 +203,7 @@ func TestCachePrefColumnCount(t *testing.T) {
 	}
 
 	colCount := len(table.Columns)
-	if colCount != 5 {
-		t.Errorf("cache_pref column count = %d, want 5", colCount)
+	if colCount != 6 {
+		t.Errorf("cache_pref column count = %d, want 6", colCount)
 	}
 }

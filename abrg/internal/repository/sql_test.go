@@ -413,7 +413,7 @@ func TestFindNearestBasic(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("nearest to kioicho point", func(t *testing.T) {
-		results, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Radius: 0.009})
+		results, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Radius: 1000})
 		if err != nil {
 			t.Fatalf("FindNearestBasic() error = %v", err)
 		}
@@ -430,7 +430,7 @@ func TestFindNearestBasic(t *testing.T) {
 	})
 
 	t.Run("prefecture filter excludes results", func(t *testing.T) {
-		results, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Pref: "14", Radius: 0.009})
+		results, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Pref: "14", Radius: 1000})
 		if err != nil {
 			t.Fatalf("FindNearestBasic() error = %v", err)
 		}
@@ -440,7 +440,7 @@ func TestFindNearestBasic(t *testing.T) {
 	})
 
 	t.Run("invalid prefecture code is an error", func(t *testing.T) {
-		_, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Pref: "abc", Radius: 0.009})
+		_, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Pref: "abc", Radius: 1000})
 		if err == nil {
 			t.Error("FindNearestBasic() error = nil, want error")
 		}

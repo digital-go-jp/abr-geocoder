@@ -19,7 +19,7 @@ package matching
 //     (geocode cases use ./abrg geocode with the same flags).
 //   - Fixture rows: the same cache queried read-only with the duckdb CLI
 //     against cache_machiaza / cache_city / cache_pref / cache_rsdtdsp /
-//     cache_parcel, coordinates rounded to 6 digits via round(ST_X(geom),6).
+//     cache_parcel, coordinates rounded to 6 digits via round(lon,6).
 
 import (
 	"context"

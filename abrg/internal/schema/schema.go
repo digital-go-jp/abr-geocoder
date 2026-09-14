@@ -17,9 +17,8 @@ type cacheSchema struct {
 
 // tableConfig represents a single table configuration.
 type tableConfig struct {
-	Columns        []columnConfig `yaml:"columns"`
-	Indexes        []indexConfig  `yaml:"indexes"`
-	SpatialIndexes []indexConfig  `yaml:"spatial_indexes"`
+	Columns []columnConfig `yaml:"columns"`
+	Indexes []indexConfig  `yaml:"indexes"`
 }
 
 // columnConfig represents a column definition.
@@ -33,8 +32,7 @@ type columnConfig struct {
 // indexConfig represents an index definition.
 type indexConfig struct {
 	Name    string   `yaml:"name"`
-	Column  string   `yaml:"column,omitempty"`  // for spatial indexes
-	Columns []string `yaml:"columns,omitempty"` // for regular indexes
+	Columns []string `yaml:"columns"`
 }
 
 var loadSchemaOnce = sync.OnceValues(func() (*cacheSchema, error) {
@@ -92,15 +90,6 @@ func (t *tableConfig) generateIndexSQL(tableName string) string {
 	for _, idx := range t.Indexes {
 		cols := strings.Join(idx.Columns, ", ")
 		fmt.Fprintf(&sb, "CREATE INDEX IF NOT EXISTS %s ON %s(%s);\n", idx.Name, tableName, cols)
-	}
-	return sb.String()
-}
-
-// generateSpatialIndexSQL generates CREATE INDEX SQL for spatial indexes.
-func (t *tableConfig) generateSpatialIndexSQL(tableName string) string {
-	var sb strings.Builder
-	for _, idx := range t.SpatialIndexes {
-		fmt.Fprintf(&sb, "CREATE INDEX IF NOT EXISTS %s ON %s USING RTREE(%s);\n", idx.Name, tableName, idx.Column)
 	}
 	return sb.String()
 }

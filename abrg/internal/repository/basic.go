@@ -16,7 +16,7 @@ import (
 // column-order drift between SQL and Go scan calls.
 const basicColumns = `normalized_address, lg_code, machiaza_id, rsdt_addr_flg,
 	pref, county, city, ward, kyoto_st, oaza_cho, chome, koaza, machiaza_dist,
-	has_chome, parcel_count, rsdtdsp_count, ST_X(geom) AS lon, ST_Y(geom) AS lat`
+	has_chome, parcel_count, rsdtdsp_count, lon, lat`
 
 // FindBasicByAddress searches cache_machiaza by normalized_address.
 func (r *DB) FindBasicByAddress(ctx context.Context, params BasicSearchParams) ([]BasicResult, error) {

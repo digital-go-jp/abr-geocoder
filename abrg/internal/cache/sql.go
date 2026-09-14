@@ -12,7 +12,13 @@ import (
 // The category tables (cache_rsdtdsp / cache_parcel) exist only in caches
 // whose enabled_category includes them. They are created by the CTAS
 // statements below rather than by cache_schema.yaml, so their whole DDL
-// (table shape, spatial indexes, cleanup of stale copies) lives in this file.
+// (table shape, cleanup of stale copies) lives in this file.
+//
+// The category tables have no indexes. Their rows are ordered by lg_code and
+// machiaza_id, which lets DuckDB skip row groups when filtering by those columns
+// or by the lon / lat range of a reverse search.
+//
+// Coordinates are FLOAT, the type abrdb imports them as by default.
 
 // dropCategoryTablesSQL removes category tables left over from a previous
 // build so that a category table exists if and only if the current build
@@ -21,12 +27,6 @@ const dropCategoryTablesSQL = `
 DROP TABLE IF EXISTS cache_rsdtdsp;
 DROP TABLE IF EXISTS cache_parcel;
 `
-
-// Note: No index on (lg_code, machiaza_id) for the category tables - Row
-// Group statistics from the CTAS ORDER BY provide sufficient filtering.
-const createRsdtdspIndexSQL = `CREATE INDEX IF NOT EXISTS idx_rsdtdsp_geom ON cache_rsdtdsp USING RTREE(geom)`
-
-const createParcelIndexSQL = `CREATE INDEX IF NOT EXISTS idx_parcel_geom ON cache_parcel USING RTREE(geom)`
 
 // insertMachiazaSQLTemplate inserts town/machiaza-level data from PostgreSQL.
 // It must run AFTER cache_parcel and cache_rsdtdsp are populated.
@@ -47,7 +47,7 @@ oaza_has_chome AS (
 	WHERE chome IS NOT NULL
 	GROUP BY lg_code, oaza_cho
 )
-INSERT INTO cache_machiaza (pref_code, lg_code, machiaza_id, rsdt_addr_flg, pref, county, city, ward, kyoto_st, oaza_cho, chome, koaza, machiaza_dist, wake_num_flg, normalized_address, has_chome, parcel_count, rsdtdsp_count, geom)
+INSERT INTO cache_machiaza (pref_code, lg_code, machiaza_id, rsdt_addr_flg, pref, county, city, ward, kyoto_st, oaza_cho, chome, koaza, machiaza_dist, wake_num_flg, normalized_address, has_chome, parcel_count, rsdtdsp_count, lon, lat)
 SELECT
 	CAST(SUBSTR(t.lg_code, 1, 2) AS SMALLINT) AS pref_code,
 	t.lg_code,
@@ -75,7 +75,8 @@ SELECT
 	) AS has_chome,
 	COALESCE(pc.parcel_count, 0) AS parcel_count,
 	COALESCE(rc.rsdtdsp_count, 0) AS rsdtdsp_count,
-	ST_Point(t.rep_lon, t.rep_lat) AS geom
+	CAST(t.rep_lon AS FLOAT) AS lon,
+	CAST(t.rep_lat AS FLOAT) AS lat
 FROM pg.public.mt_pref_unified p
 JOIN pg.public.mt_city_unified c ON SUBSTR(p.lg_code, 1, 2) = SUBSTR(c.lg_code, 1, 2)
 JOIN pg.public.mt_town_unified t ON c.lg_code = t.lg_code
@@ -109,7 +110,7 @@ func buildInsertMachiazaSQL(hasRsdtdsp, hasParcel bool) string {
 
 // insertCitySQL inserts city-level data from PostgreSQL.
 const insertCitySQLTemplate = `
-INSERT INTO cache_city (pref_code, lg_code, pref, county, city, ward, normalized_address, geom)
+INSERT INTO cache_city (pref_code, lg_code, pref, county, city, ward, normalized_address, lon, lat)
 SELECT
 	CAST(SUBSTR(c.lg_code, 1, 2) AS SMALLINT) AS pref_code,
 	c.lg_code,
@@ -118,20 +119,22 @@ SELECT
 	c.city,
 	c.ward,
 	{{normalized_address}} AS normalized_address,
-	ST_Point(c.rep_lon, c.rep_lat) AS geom
+	CAST(c.rep_lon AS FLOAT) AS lon,
+	CAST(c.rep_lat AS FLOAT) AS lat
 FROM pg.public.mt_pref_unified p
 JOIN pg.public.mt_city_unified c ON SUBSTR(p.lg_code, 1, 2) = SUBSTR(c.lg_code, 1, 2)
 `
 
 // insertPrefSQL inserts prefecture-level data from PostgreSQL.
 const insertPrefSQLTemplate = `
-INSERT INTO cache_pref (pref_code, lg_code, pref, normalized_address, geom)
+INSERT INTO cache_pref (pref_code, lg_code, pref, normalized_address, lon, lat)
 SELECT
 	CAST(SUBSTR(p.lg_code, 1, 2) AS SMALLINT) AS pref_code,
 	p.lg_code,
 	p.pref,
 	{{normalized_address}} AS normalized_address,
-	ST_Point(p.rep_lon, p.rep_lat) AS geom
+	CAST(p.rep_lon AS FLOAT) AS lon,
+	CAST(p.rep_lat AS FLOAT) AS lat
 FROM pg.public.mt_pref_unified p
 `
 
@@ -159,7 +162,8 @@ SELECT * FROM (
 		b.blk_num,
 		NULL AS rsdt_num,
 		NULL AS rsdt_num2,
-		ST_Point(b.rep_lon, b.rep_lat) AS geom
+		CAST(b.rep_lon AS FLOAT) AS lon,
+		CAST(b.rep_lat AS FLOAT) AS lat
 	FROM pg.public.mt_town_unified t
 	INNER JOIN pg.public.mt_rsdtdsp_blk_unified b ON t.lg_code = b.lg_code AND t.machiaza_id = b.machiaza_id
 	WHERE t.rsdt_addr_flg = 1
@@ -177,7 +181,8 @@ SELECT * FROM (
 		b.blk_num,
 		r.rsdt_num,
 		r.rsdt_num2,
-		ST_Point(r.rep_lon, r.rep_lat) AS geom
+		CAST(r.rep_lon AS FLOAT) AS lon,
+		CAST(r.rep_lat AS FLOAT) AS lat
 	FROM pg.public.mt_town_unified t
 	INNER JOIN pg.public.mt_rsdtdsp_blk_unified b ON t.lg_code = b.lg_code AND t.machiaza_id = b.machiaza_id
 	INNER JOIN pg.public.mt_rsdtdsp_rsdt_unified r ON b.lg_code = r.lg_code AND b.machiaza_id = r.machiaza_id AND b.blk_id = r.blk_id
@@ -204,7 +209,8 @@ SELECT
 	%s AS prc_num1,
 	%s AS prc_num2,
 	%s AS prc_num3,
-	ST_Point(prc.rep_lon, prc.rep_lat) AS geom
+	CAST(prc.rep_lon AS FLOAT) AS lon,
+	CAST(prc.rep_lat AS FLOAT) AS lat
 FROM pg.public.mt_parcel_unified prc
 ORDER BY prc.lg_code, prc.machiaza_id
 `, widenKatakana("prc.prc_num1"), widenKatakana("prc.prc_num2"), widenKatakana("prc.prc_num3"))

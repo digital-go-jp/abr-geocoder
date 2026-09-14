@@ -54,7 +54,7 @@ func TestQuickstartFixture_Structure(t *testing.T) {
 		t.Errorf("tables = %v, want %v", got, wantTables)
 	}
 
-	wantIndexes := []string{"idx_city_geom", "idx_machiaza_geom", "idx_machiaza_normalized", "idx_pref_geom"}
+	wantIndexes := []string{"idx_machiaza_normalized"}
 	if got := queryStrings("SELECT index_name FROM duckdb_indexes() ORDER BY index_name"); !slices.Equal(got, wantIndexes) {
 		t.Errorf("indexes = %v, want %v", got, wantIndexes)
 	}

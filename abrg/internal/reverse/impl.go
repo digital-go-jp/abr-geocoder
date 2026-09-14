@@ -23,8 +23,8 @@ type spatialQuerier interface {
 	FindNearestParcel(ctx context.Context, params repository.SpatialParams) ([]repository.ReverseParcelResult, error)
 }
 
-// searchRadius is the search radius in degrees (~1km at latitude 35).
-const searchRadius = 0.009
+// searchRadius bounds the reverse search, in metres.
+const searchRadius = 1000
 
 // ErrDataUnavailable marks reverse queries whose backing data is not loaded
 // in the current cache. The HTTP layer maps it to 503.
@@ -34,7 +34,7 @@ var ErrDataUnavailable = errors.New("data not available in current cache")
 // maps it to 400.
 var ErrUnknownCategory = errors.New("unknown category")
 
-// ReverseGeocoder provides reverse geocoding using DuckDB spatial queries.
+// ReverseGeocoder provides reverse geocoding.
 type ReverseGeocoder struct {
 	repo           spatialQuerier
 	hasResidential bool

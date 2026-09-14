@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"abr.local/common/duck"
-
 	"abrg/internal/infra/duckdb"
 )
 
@@ -22,20 +20,20 @@ import (
 // and one parcel machiaza (0002000, rsdt_addr_flg=0, one parcel).
 const fakePGSourceSQL = `
 CREATE SCHEMA pg.public;
-CREATE TABLE pg.public.mt_pref_unified (lg_code VARCHAR, pref VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
-CREATE TABLE pg.public.mt_city_unified (lg_code VARCHAR, county VARCHAR, city VARCHAR, ward VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
+CREATE TABLE pg.public.mt_pref_unified (lg_code VARCHAR, pref VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
+CREATE TABLE pg.public.mt_city_unified (lg_code VARCHAR, county VARCHAR, city VARCHAR, ward VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
 CREATE TABLE pg.public.mt_town_unified (
 	lg_code VARCHAR, machiaza_id VARCHAR, rsdt_addr_flg INTEGER, koaza_aka_code INTEGER,
 	oaza_cho VARCHAR, chome VARCHAR, koaza VARCHAR, machiaza_dist VARCHAR, wake_num_flg INTEGER,
-	rep_lon DOUBLE, rep_lat DOUBLE);
+	rep_lon FLOAT, rep_lat FLOAT);
 CREATE TABLE pg.public.mt_rsdtdsp_blk_unified (
-	lg_code VARCHAR, machiaza_id VARCHAR, blk_id VARCHAR, blk_num VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
+	lg_code VARCHAR, machiaza_id VARCHAR, blk_id VARCHAR, blk_num VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
 CREATE TABLE pg.public.mt_rsdtdsp_rsdt_unified (
 	lg_code VARCHAR, machiaza_id VARCHAR, blk_id VARCHAR, rsdt_id VARCHAR, rsdt2_id VARCHAR,
-	rsdt_num VARCHAR, rsdt_num2 VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
+	rsdt_num VARCHAR, rsdt_num2 VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
 CREATE TABLE pg.public.mt_parcel_unified (
 	lg_code VARCHAR, machiaza_id VARCHAR, prc_id VARCHAR,
-	prc_num1 VARCHAR, prc_num2 VARCHAR, prc_num3 VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
+	prc_num1 VARCHAR, prc_num2 VARCHAR, prc_num3 VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
 
 INSERT INTO pg.public.mt_pref_unified VALUES ('130001', '東京都', 139.6917, 35.6895);
 INSERT INTO pg.public.mt_city_unified VALUES ('131016', NULL, '千代田区', NULL, 139.7536, 35.6940);
@@ -60,9 +58,6 @@ func newCategoryBuildCache(t *testing.T, category string) (string, *sql.DB) {
 	}
 	t.Cleanup(func() { _ = conn.Close() })
 
-	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
-		t.Fatalf("load spatial extension: %v", err)
-	}
 	if err := registerUDF(ctx, conn); err != nil {
 		t.Fatalf("register UDF: %v", err)
 	}

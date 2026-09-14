@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-
-	"abr.local/common/duck"
 )
 
 // normalizedPart is one column of a normalized_address in the two forms it
@@ -142,11 +140,6 @@ func verifyNormalizedTable(ctx context.Context, db *sql.DB, t normalizedTable) e
 // normalizedTables. It reuses the build's own expressions, so it needs no ABR
 // data and is deterministic.
 func refreshNormalizedAddresses(ctx context.Context, db *sql.DB) ([]int64, error) {
-	// The tables carry RTREE indexes on geom, which DuckDB binds before any
-	// write - even one that only touches the text column.
-	if err := duck.LoadExtension(ctx, db, "spatial"); err != nil {
-		return nil, fmt.Errorf("failed to load spatial extension: %w", err)
-	}
 	if err := registerUDF(ctx, db); err != nil {
 		return nil, err
 	}

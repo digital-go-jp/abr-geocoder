@@ -145,8 +145,8 @@ type SpatialParams struct {
 	Lon    float64
 	Lat    float64
 	Limit  int
-	Pref   string // prefecture code filter, empty or "all" means no filter
-	Radius float64
+	Pref   string  // prefecture code filter, empty or "all" means no filter
+	Radius float64 // search radius in metres
 }
 
 // ReverseBaseFields holds the common base address fields for reverse geocoding results.
