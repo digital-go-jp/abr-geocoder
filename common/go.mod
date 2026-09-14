@@ -1,6 +1,6 @@
 module abr.local/common
 
-go 1.26
+go 1.27.0
 
 require (
 	github.com/duckdb/duckdb-go/v2 v2.10505.0

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
           cache: true
       - name: Build ${{ matrix.module }}
         run: cd ${{ matrix.module }} && make build
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
           cache: true
       - name: Integration tests against PostgreSQL
         run: cd abrdb && go test -count=1 -run Integration ./internal/infra/db/
@@ -75,13 +75,13 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
           cache: true
       - name: go mod verify / go vet ${{ matrix.module }}
         run: cd ${{ matrix.module }} && go mod verify && go vet ./...
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.12.2
+          version: v2.13.2
           working-directory: ${{ matrix.module }}
       # Go 1.26 `go fix` bundles the modernize suite; -diff exits non-zero on any change.
       - name: modernize ${{ matrix.module }}
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
           cache: true
       # Version pinned via each module's go.mod tool directive, so local and
       # CI runs use the same scanner.
@@ -111,7 +111,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
           cache: true
       - name: check govulncheck version is identical across modules
         run: |
