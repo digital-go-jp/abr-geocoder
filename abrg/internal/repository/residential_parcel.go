@@ -97,18 +97,16 @@ func (r *DB) scanResidentialBestMatch(ctx context.Context, query string, args []
 		return nil, fmt.Errorf("scan residential best match: %w", err)
 	}
 	return &ResidentialBestResult{
-		ResidentialResult: ResidentialResult{
-			LgCode:     scanOpt(lgCode),
-			MachiazaID: scanOpt(machiazaID),
-			BlkID:      scanOpt(blkID),
-			RsdtID:     scanOpt(rsdtID),
-			Rsdt2ID:    scanOpt(rsdt2ID),
-			BlkNum:     scanOpt(blkNum),
-			RsdtNum:    scanOpt(rsdtNum),
-			RsdtNum2:   scanOpt(rsdtNum2),
-			Lon:        scanOpt(lon),
-			Lat:        scanOpt(lat),
-		},
+		LgCode:     scanOpt(lgCode),
+		MachiazaID: scanOpt(machiazaID),
+		BlkID:      scanOpt(blkID),
+		RsdtID:     scanOpt(rsdtID),
+		Rsdt2ID:    scanOpt(rsdt2ID),
+		BlkNum:     scanOpt(blkNum),
+		RsdtNum:    scanOpt(rsdtNum),
+		RsdtNum2:   scanOpt(rsdtNum2),
+		Lon:        scanOpt(lon),
+		Lat:        scanOpt(lat),
 		MatchLevel: ResidentialMatchLevel(matchLevel),
 	}, nil
 }
