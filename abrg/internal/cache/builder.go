@@ -79,9 +79,8 @@ func initSchema(ctx context.Context, conn *sql.DB) error {
 	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
 		return fmt.Errorf("failed to execute init schema: %w", err)
 	}
-	// The YAML schema only covers the always-present tables; category tables
-	// from a previous build are dropped here and recreated by CTAS if the
-	// configured category needs them.
+	// Category tables are not in the YAML schema. Drop any left by a previous
+	// build; buildCacheTables recreates those the configured category needs.
 	if _, err := conn.ExecContext(ctx, dropCategoryTablesSQL); err != nil {
 		return fmt.Errorf("failed to drop stale category tables: %w", err)
 	}
@@ -98,14 +97,11 @@ func buildCategoryTable(ctx context.Context, conn *sql.DB, phaseSec map[string]f
 	return nil
 }
 
-// memoryLimitFormat accepts DuckDB memory-limit literals such as "8GB",
-// "512MiB", or "1.5GB". The value is interpolated into a SET statement, so
-// anything else is rejected.
+// memoryLimitFormat accepts DuckDB memory-limit literals such as "8GB", "512MiB"
+// or "1.5GB". The value is interpolated into a SET statement, so nothing else is allowed.
 var memoryLimitFormat = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?\s*(B|KB|MB|GB|TB|KiB|MiB|GiB|TiB)$`)
 
-// cacheMemoryLimit returns the DuckDB memory limit for cache build, tunable
-// via ABRG_CACHE_MEMORY_LIMIT to match the build host. Unset or malformed
-// values fall back to the 8GB default.
+// cacheMemoryLimit returns ABRG_CACHE_MEMORY_LIMIT, or 8GB when it is unset or malformed.
 func cacheMemoryLimit() string {
 	const def = "8GB"
 	v, ok := os.LookupEnv("ABRG_CACHE_MEMORY_LIMIT")
@@ -120,8 +116,6 @@ func cacheMemoryLimit() string {
 	return v
 }
 
-// Category-specific tables must load before basic tables (cache_machiaza has CTEs
-// that aggregate counts from category tables).
 func loadFromPostgres(ctx context.Context, conn *sql.DB, phaseSec map[string]float64) error {
 	ctx, cancel := context.WithTimeout(ctx, 900*time.Second) // Large datasets need 10+ min
 	defer cancel()
@@ -165,9 +159,9 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB, phaseSec map[string]flo
 	return buildCacheTables(ctx, conn, cfg, phaseSec)
 }
 
-// buildCacheTables creates and populates every cache table for the configured
-// category, creates the indexes, and saves the configuration. The source
-// PostgreSQL database must already be attached as pg.
+// buildCacheTables builds every cache table, index and config row for the
+// configured category from the PostgreSQL database attached as pg. Category
+// tables load first because the cache_machiaza insert counts their rows.
 func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec map[string]float64) error {
 	category := cfg.EnabledCategory
 	switch category {
@@ -231,10 +225,8 @@ func saveConfigToCache(ctx context.Context, conn *sql.DB, cfg *Config) error {
 		{db.KeyEnabledPref, cfg.EnabledPref},
 		{db.KeyEnabledPos, cfg.EnabledPos},
 		{"build_time", time.Now().Format(time.RFC3339)},
-		// KeySchemaVersion doubles as the completion marker and must stay
-		// last: a build that dies before this write leaves a cache without a
-		// schema version, which the open-time check rejects with a rebuild
-		// instruction.
+		// KeySchemaVersion must stay last: it marks a completed build, and
+		// the open-time check rejects a cache without it.
 		{KeySchemaVersion, strconv.Itoa(schemaVersion)},
 	}
 	for _, c := range configs {
@@ -253,7 +245,6 @@ func execTimed(ctx context.Context, conn *sql.DB, action, name, stmt string) (fl
 	return time.Since(start).Seconds(), nil
 }
 
-// execSchemaSQL executes schema SQL obtained from a getter function.
 func execSchemaSQL(ctx context.Context, conn *sql.DB, name string, getSQL func() (string, error)) error {
 	sqlText, err := getSQL()
 	if err != nil {

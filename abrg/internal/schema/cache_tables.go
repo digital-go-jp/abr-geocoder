@@ -34,8 +34,7 @@ var loadSQLStrings = sync.OnceValues(func() (*sqlStrings, error) {
 	}, nil
 })
 
-// GetCreateIndexesSQL returns SQL for creating regular indexes.
-// Thread-safe and cached after first call.
+// GetCreateIndexesSQL returns the CREATE INDEX statements, generated once.
 func GetCreateIndexesSQL() (string, error) {
 	s, err := loadSQLStrings()
 	if err != nil {
@@ -44,8 +43,7 @@ func GetCreateIndexesSQL() (string, error) {
 	return s.createIndexes, nil
 }
 
-// getClearCacheSQL returns SQL for clearing all cache tables.
-// Thread-safe and cached after first call.
+// getClearCacheSQL returns a DELETE for every schema table, generated once.
 func getClearCacheSQL() (string, error) {
 	s, err := loadSQLStrings()
 	if err != nil {
@@ -54,8 +52,7 @@ func getClearCacheSQL() (string, error) {
 	return s.clearCache, nil
 }
 
-// InitSchemaSQL returns the full schema initialization SQL.
-// Returns an error if schema loading fails.
+// InitSchemaSQL returns SQL that creates every schema table and empties it.
 func InitSchemaSQL() (string, error) {
 	schema, err := loadSchema()
 	if err != nil {
@@ -69,13 +66,12 @@ func InitSchemaSQL() (string, error) {
 
 	var sb strings.Builder
 
-	// Generate CREATE TABLE statements in sorted order for deterministic SQL
+	// Sorted so the generated SQL is deterministic.
 	for _, tableName := range slices.Sorted(maps.Keys(schema.Tables)) {
 		sb.WriteString(schema.Tables[tableName].generateCreateTableSQL(tableName))
 		sb.WriteString(";\n")
 	}
 
-	// Clear existing data
 	sb.WriteString(clearSQL)
 
 	return sb.String(), nil

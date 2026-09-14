@@ -16,7 +16,7 @@ import (
 	"abrg/internal/util"
 )
 
-// spatialQuerier is a consumer-defined interface for spatial (reverse geocoding) queries.
+// spatialQuerier is the repository subset used for reverse geocoding.
 type spatialQuerier interface {
 	FindNearestBasic(ctx context.Context, params repository.SpatialParams) ([]repository.ReverseBaseFields, error)
 	FindNearestResidential(ctx context.Context, params repository.SpatialParams) ([]repository.ReverseResidentialResult, error)
@@ -26,8 +26,8 @@ type spatialQuerier interface {
 // searchRadius bounds the reverse search, in metres.
 const searchRadius = 1000
 
-// ErrDataUnavailable marks reverse queries whose backing data is not loaded
-// in the current cache. The HTTP layer maps it to 503.
+// ErrDataUnavailable marks a category whose table is not in the current cache.
+// The HTTP layer maps it to 503.
 var ErrDataUnavailable = errors.New("data not available in current cache")
 
 // ErrUnknownCategory marks an unrecognized reverse category. The HTTP layer
@@ -41,7 +41,7 @@ type ReverseGeocoder struct {
 	hasParcel      bool
 }
 
-// NewReverseGeocoder creates a new reverse geocoder instance.
+// NewReverseGeocoder creates a ReverseGeocoder.
 func NewReverseGeocoder(repo spatialQuerier, hasResidential, hasParcel bool) *ReverseGeocoder {
 	return &ReverseGeocoder{
 		repo:           repo,
@@ -62,7 +62,6 @@ func (g *ReverseGeocoder) Reverse(ctx context.Context, query model.ReverseQuery)
 		query.Limit = 1
 	}
 
-	// Find nearest addresses based on category level
 	features, err := g.findNearestAddresses(ctx, query)
 	if err != nil {
 		return nil, err
@@ -86,14 +85,12 @@ func (g *ReverseGeocoder) Reverse(ctx context.Context, query model.ReverseQuery)
 	}, nil
 }
 
-// findNearestAddresses finds the nearest addresses based on the category level.
-// CategoryAll returns partial results from available tables (residential, parcel, basic).
-// Specific categories require the requested table to be available in cache.
+// findNearestAddresses searches the table of query.Category. CategoryAll combines
+// the loaded tables; any other category fails if its table is not loaded.
 func (g *ReverseGeocoder) findNearestAddresses(ctx context.Context, query model.ReverseQuery) ([]model.ReverseFeature, error) {
 	params := spatialParams(query)
 
 	if query.Category == model.CategoryAll {
-		// Partial success is acceptable (returns data from available tables)
 		return g.findNearestAll(ctx, params)
 	}
 
@@ -110,9 +107,8 @@ func (g *ReverseGeocoder) findNearestAddresses(ctx context.Context, query model.
 }
 
 // reverseSource ties a category to whether its table is loaded and to the
-// find+build pair that produces its features. It is the single enumeration of
-// the reverse categories: both the single-category path and findNearestAll
-// read it, so a new category is added in one place.
+// function that finds its features. sources is the only list of reverse
+// categories, shared by the single-category path and findNearestAll.
 type reverseSource struct {
 	category  model.Category
 	name      string // log/error label, which differs from the category string for rsdtdsp
@@ -159,8 +155,9 @@ func findAndBuild[T any](ctx context.Context, findFn func(context.Context, repos
 	return features, nil
 }
 
-// findNearestAll finds addresses from all levels.
-// Returns partial results if some queries fail (errors are logged).
+// findNearestAll queries every loaded table concurrently and returns the nearest
+// features. Failed queries are logged and skipped; an error is returned only
+// when no features were found and some query failed.
 func (g *ReverseGeocoder) findNearestAll(ctx context.Context, params repository.SpatialParams) ([]model.ReverseFeature, error) {
 	sources := g.sources()
 
@@ -177,7 +174,6 @@ func (g *ReverseGeocoder) findNearestAll(ctx context.Context, params repository.
 	}
 	wg.Wait()
 
-	// Log query errors and combine results from successful sources
 	var allResults []model.ReverseFeature
 	for i, src := range sources {
 		if errs[i] != nil {
@@ -188,7 +184,6 @@ func (g *ReverseGeocoder) findNearestAll(ctx context.Context, params repository.
 		allResults = append(allResults, results[i]...)
 	}
 
-	// Return error if all queries failed
 	if len(allResults) == 0 {
 		if err := errors.Join(errs...); err != nil {
 			return nil, fmt.Errorf("no reverse geocoding results; a query failed: %w", err)
@@ -196,7 +191,6 @@ func (g *ReverseGeocoder) findNearestAll(ctx context.Context, params repository.
 		return nil, nil
 	}
 
-	// Sort by distance and apply limit
 	slices.SortFunc(allResults, func(a, b model.ReverseFeature) int {
 		return cmp.Compare(a.Properties.Distance, b.Properties.Distance)
 	})
@@ -204,7 +198,7 @@ func (g *ReverseGeocoder) findNearestAll(ctx context.Context, params repository.
 	return allResults[:min(len(allResults), params.Limit)], nil
 }
 
-// buildReverseFeature creates a ReverseFeature with common structure.
+// buildReverseFeature builds the point feature shared by all categories.
 func buildReverseFeature(sa model.StructuredAddress, ids model.IDs, lon, lat, distance float64) model.ReverseFeature {
 	return model.ReverseFeature{
 		Type: "Feature",

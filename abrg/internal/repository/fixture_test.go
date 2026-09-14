@@ -9,20 +9,17 @@ import (
 	"abrg/internal/schema"
 )
 
-// The tests in this file run the residential/parcel queries against a small
-// in-memory DuckDB built from schema.InitSchemaSQL with hand-inserted rows,
-// so the row scan paths (NULL conversion, match conditions, match levels) are
-// exercised with actual data. The quickstart cache cannot cover these because
-// it is a basic-category cache without cache_rsdtdsp and cache_parcel.
+// The tests in this file run the residential and parcel queries against an
+// in-memory DuckDB with hand-inserted rows, because the quickstart cache has no
+// cache_rsdtdsp or cache_parcel.
 
 const (
 	fixtureLgCode     = "131016"
 	fixtureMachiazaID = "0001000"
 )
 
-// createCategoryTablesSQL creates the category tables for tests. At build
-// time these tables come from the CTAS statements in cache/sql.go, not from
-// schema.InitSchemaSQL; the column shape here mirrors the CTAS output.
+// createCategoryTablesSQL mirrors the tables the CTAS statements in cache/sql.go
+// build, which schema.InitSchemaSQL does not create.
 const createCategoryTablesSQL = `
 CREATE TABLE cache_rsdtdsp (
 	pref_code SMALLINT,

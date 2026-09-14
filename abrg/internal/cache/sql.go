@@ -9,10 +9,9 @@ import (
 
 // SQL constants for data insertion from PostgreSQL to DuckDB cache.
 //
-// The category tables (cache_rsdtdsp / cache_parcel) exist only in caches
-// whose enabled_category includes them. They are created by the CTAS
-// statements below rather than by cache_schema.yaml, so their whole DDL
-// (table shape, cleanup of stale copies) lives in this file.
+// The category tables (cache_rsdtdsp, cache_parcel) exist only when
+// enabled_category includes them. They are created by CTAS here, not by
+// cache_schema.yaml, so their whole DDL lives in this file.
 //
 // The category tables have no indexes. Their rows are ordered by lg_code and
 // machiaza_id, which lets DuckDB skip row groups when filtering by those columns
@@ -20,19 +19,17 @@ import (
 //
 // Coordinates are FLOAT, the type abrdb imports them as by default.
 
-// dropCategoryTablesSQL removes category tables left over from a previous
-// build so that a category table exists if and only if the current build
-// created it.
+// dropCategoryTablesSQL removes category tables from a previous build, so a
+// category table exists only if the current build created it.
 const dropCategoryTablesSQL = `
 DROP TABLE IF EXISTS cache_rsdtdsp;
 DROP TABLE IF EXISTS cache_parcel;
 `
 
-// insertMachiazaSQLTemplate inserts town/machiaza-level data from PostgreSQL.
-// It must run AFTER cache_parcel and cache_rsdtdsp are populated.
-// Uses CTE + LEFT JOIN instead of correlated subqueries for better performance.
-// The count CTE bodies are placeholders because the category tables exist only
-// when enabled_category includes them; buildInsertMachiazaSQL fills them in.
+// insertMachiazaSQLTemplate inserts cache_machiaza rows and must run after the
+// category tables are built. Counts come from CTEs with LEFT JOIN, which is
+// faster than correlated subqueries. The count CTE bodies are placeholders,
+// filled by buildInsertMachiazaSQL, because the category tables may not exist.
 const insertMachiazaSQLTemplate = `
 WITH
 parcel_cnt AS (
@@ -108,7 +105,7 @@ func buildInsertMachiazaSQL(hasRsdtdsp, hasParcel bool) string {
 	).Replace(insertMachiazaSQLTemplate)
 }
 
-// insertCitySQL inserts city-level data from PostgreSQL.
+// insertCitySQLTemplate inserts cache_city rows from PostgreSQL.
 const insertCitySQLTemplate = `
 INSERT INTO cache_city (pref_code, lg_code, pref, county, city, ward, normalized_address, lon, lat)
 SELECT
@@ -125,7 +122,7 @@ FROM pg.public.mt_pref_unified p
 JOIN pg.public.mt_city_unified c ON SUBSTR(p.lg_code, 1, 2) = SUBSTR(c.lg_code, 1, 2)
 `
 
-// insertPrefSQL inserts prefecture-level data from PostgreSQL.
+// insertPrefSQLTemplate inserts cache_pref rows from PostgreSQL.
 const insertPrefSQLTemplate = `
 INSERT INTO cache_pref (pref_code, lg_code, pref, normalized_address, lon, lat)
 SELECT
@@ -144,10 +141,7 @@ func buildInsertSQL(template string, parts []normalizedPart) string {
 	return strings.Replace(template, "{{normalized_address}}", buildNormalizedExpr(parts), 1)
 }
 
-// createRsdtdspSQL creates rsdtdsp (residential) table from PostgreSQL.
-// Uses CREATE TABLE AS SELECT ... ORDER BY to ensure DuckDB Row Group statistics
-// are properly set for lg_code/machiaza_id filtering optimization.
-// This reduces query time from ~60ms to ~6ms by allowing DuckDB to skip irrelevant Row Groups.
+// createRsdtdspSQL creates cache_rsdtdsp from PostgreSQL.
 const createRsdtdspSQL = `
 CREATE OR REPLACE TABLE cache_rsdtdsp AS
 SELECT * FROM (
@@ -196,9 +190,7 @@ func widenKatakana(col string) string {
 	return fmt.Sprintf("translate(%s, '%s', '%s')", col, util.HalfWidthKatakana, util.FullWidthKatakana)
 }
 
-// createParcelSQL creates parcel (land lot) table from PostgreSQL.
-// Uses CREATE TABLE AS SELECT ... ORDER BY to ensure DuckDB Row Group statistics
-// are properly set for lg_code/machiaza_id filtering optimization.
+// createParcelSQL creates cache_parcel from PostgreSQL.
 var createParcelSQL = fmt.Sprintf(`
 CREATE OR REPLACE TABLE cache_parcel AS
 SELECT

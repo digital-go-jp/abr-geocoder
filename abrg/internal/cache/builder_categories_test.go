@@ -9,11 +9,9 @@ import (
 	"abrg/internal/infra/duckdb"
 )
 
-// The tests in this file run the real build SQL (CTAS, machiaza insert,
-// indexes, config save) for every enabled_category against a small in-memory
-// database attached as pg, mirroring the mt_* columns the build reads. This
-// pins that single-category builds work without the tables of the other
-// categories existing.
+// The tests in this file run the real build SQL for every enabled_category
+// against a small in-memory database attached as pg, checking that a
+// single-category build works without the other categories' cache tables.
 
 // fakePGSourceSQL creates the attached pg database schema with one city
 // (131016), one residential machiaza (0001000, rsdt_addr_flg=1, one block)
@@ -112,9 +110,9 @@ func TestBuildCacheTables_Categories(t *testing.T) {
 				}
 			}
 
-			// The machiaza counts reflect only the categories that were built:
-			// the residential machiaza has 2 rsdtdsp rows (block-only row plus
-			// block+rsdt row), the parcel machiaza has 1 parcel row.
+			// Counts cover only the built categories: the residential machiaza
+			// has 2 rsdtdsp rows (block-only and block+rsdt), the parcel
+			// machiaza has 1 parcel row.
 			wantCount := func(built bool, rows int) int {
 				if built {
 					return rows
@@ -142,9 +140,8 @@ func TestBuildCacheTables_Categories(t *testing.T) {
 				t.Errorf("parcel_count = %d, want %d", parcelCount, want)
 			}
 
-			// The built cache passes the open-time version and integrity
-			// checks. The build connection must close first: a read-only open
-			// cannot coexist with the read-write one.
+			// The built cache passes the open-time checks. The read-write
+			// connection must close first; a read-only open cannot coexist with it.
 			if err := conn.Close(); err != nil {
 				t.Fatalf("close build connection: %v", err)
 			}

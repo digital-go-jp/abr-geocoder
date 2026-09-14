@@ -22,17 +22,14 @@ func prefFilter(alias, pref string) (string, error) {
 	return fmt.Sprintf("AND %s.pref_code = %d", alias, code), nil
 }
 
-// Every reverse query orders by distance and then by lg_code and machiaza_id.
-// The tie-break is what makes the result reproducible: several machiaza can sit
-// on one coordinate (Kyoto street names, for one), and with distance as the only
-// key the parallel scan decides which of the tied rows LIMIT keeps, so the same
-// coordinate can answer with a different address on each run.
+// Every reverse query orders by distance, then lg_code and machiaza_id, so the
+// result is reproducible: several machiaza can sit on one coordinate (Kyoto
+// street names, for one), and with distance alone the parallel scan decides
+// which tied row LIMIT keeps.
 //
-// For cache_machiaza that pair is the primary key, so the order is total. For
-// the detail tables it orders down to the machiaza only; adding the rows' own
-// ids would make it total there too, but sorting the candidate set on those
-// high-cardinality columns costs several times the query time, and the ties it
-// would resolve are between detail rows of a single machiaza.
+// The detail tables are not also ordered by their own ids: sorting on those
+// high-cardinality columns is costly, and the ties left are between rows of a
+// single machiaza.
 
 // reverseAddrColumns are the address columns every reverse result carries, in
 // the order reverseBaseScan.appendAddrPtrs scans them. They always come from
@@ -140,14 +137,12 @@ type reverseBaseScan struct {
 	lon, lat, distance             float64
 }
 
-// appendAddrPtrs appends scan destination pointers for the 9 address columns
-// (pref through machiaza_dist) to dst.
+// appendAddrPtrs appends scan destinations for reverseAddrColumns to dst.
 func (v *reverseBaseScan) appendAddrPtrs(dst []any) []any {
 	return append(dst, &v.pref, &v.county, &v.city, &v.ward, &v.kyotoSt, &v.oazaCho, &v.chome, &v.koaza, &v.machiazaDist)
 }
 
-// appendTailPtrs appends scan destination pointers for the 6 trailing columns
-// (rsdt_addr_flg through distance) to dst.
+// appendTailPtrs appends scan destinations for rsdt_addr_flg through distance to dst.
 func (v *reverseBaseScan) appendTailPtrs(dst []any) []any {
 	return append(dst, &v.rsdtAddrFlg, &v.lgCode, &v.machiazaID, &v.lon, &v.lat, &v.distance)
 }

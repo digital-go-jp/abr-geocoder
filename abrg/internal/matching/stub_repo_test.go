@@ -1,17 +1,13 @@
 package matching
 
-// Stub-repository tests for the matching orchestration layer. They run without
-// a DuckDB cache: the repository interface is faked with rows copied from the
-// production cache, and the expected feature JSON is pinned from the real
-// pipeline output. This keeps the orchestration branches (category dispatch,
-// two-stage search, fallback chain, city/prefecture records, Levenshtein
-// fallback) exercised in CI where the cache-dependent suites are skipped.
+// Stub-repository tests for the matching orchestration layer. The repository is
+// faked with rows copied from the production cache and the expected feature JSON
+// is real pipeline output, so these branches run in CI without a DuckDB cache.
 //
-// Provenance of the pinned expectations (for regeneration):
+// How the expectations were generated; regenerate after any matching behavior change:
 //   - Cache: a full nationwide cache (enabled_pref=all, enabled_category=all,
-//     enabled_pos=true); the pinned result_info carries its db_version 3.0.12.
-//   - Binary: the abrg CLI built from the commit that last updated the
-//     expectations (any matching behavior change requires regeneration).
+//     enabled_pos=true), db_version 3.0.12.
+//   - Binary: the abrg CLI built from the commit that last updated the expectations.
 //   - Expected JSON: the features array of
 //     printf '<address>\n' > in.txt &&
 //     CACHE_PATH=$HOME/.abrg/cache/abrg.duckdb \
@@ -38,12 +34,9 @@ import (
 	"abrg/internal/util"
 )
 
-// stubRepo implements implQuerier and matching.CoordinatesGetter with canned
-// rows keyed by the query parameters. Unknown keys yield empty results, which
-// is how the "not found" branches are reached. Every method records its full
-// parameter set into calls so tests can pin the exact search conditions the
-// orchestration issues, and errByMethod injects a failure into a method to
-// pin error propagation.
+// stubRepo implements implQuerier and CoordinatesGetter with canned rows keyed
+// by query parameters; unknown keys return empty results. Every call is logged
+// with its parameters in calls, and errByMethod makes the named method fail.
 type stubRepo struct {
 	basicByAddr  map[string][]repository.BasicResult
 	levenByAddr  map[string][]repository.BasicResult
@@ -54,8 +47,7 @@ type stubRepo struct {
 	rsdtByKey    map[string]*repository.ResidentialBestResult
 	parcelByKey  map[string]*repository.ParcelResult
 
-	// Coordinate maps for the three tiers of the parent-coordinate fallback,
-	// keyed like the corresponding cache tables.
+	// Tiers of the Coordinates fallback, keyed like the matching cache tables.
 	machiazaCoords map[string][]float64 // lgCode|machiazaID
 	cityCoords     map[string][]float64 // lgCode
 	prefCoords     map[string][]float64 // lgCode or 2-digit pref code
@@ -159,9 +151,8 @@ func (s *stubRepo) FindParcelExact(_ context.Context, lgCode, machiazaID string,
 	return s.parcelByKey[key], nil
 }
 
-// Coordinates implements matching.CoordinatesGetter for the Geocode tests,
-// mirroring the fallback tiers of repository.DB.Coordinates (impl.go):
-// machiaza row → city row → prefecture row by lg_code → prefecture by code.
+// Coordinates mirrors the fallback of repository.DB.Coordinates: machiaza row
+// → city row → prefecture row by lg_code → prefecture by code.
 func (s *stubRepo) Coordinates(_ context.Context, lgCode, machiazaID string) ([]float64, model.MatchLevel) {
 	s.record("Coordinates(%q, %q)", lgCode, machiazaID)
 	if machiazaID != "" {
@@ -190,7 +181,7 @@ func newStubRepo() *stubRepo {
 		RsdtAddrFlg: new("1"), Pref: "東京都", City: "千代田区", OazaCho: new("紀尾井町"),
 		ParcelCount: 155, RsdtdspCount: 93, Lon: new(139.734955), Lat: new(35.681412),
 	}
-	// 舞浜 base: one row per rsdt_addr_flg (0/1) → ambiguous flag (issue #262).
+	// 舞浜 base: one row per rsdt_addr_flg, so the flag is ambiguous.
 	maihamaBase0 := repository.BasicResult{
 		NormalizedAddress: "浦安市舞浜", LgCode: "122271", MachiazaID: "0018000",
 		RsdtAddrFlg: new("0"), Pref: "千葉県", City: "浦安市", OazaCho: new("舞浜"),
@@ -221,16 +212,15 @@ func newStubRepo() *stubRepo {
 		RsdtAddrFlg: new("0"), Pref: "石川県", City: "七尾市", OazaCho: new("大田町"), Koaza: new("111"),
 		ParcelCount: 82,
 	}
-	// 寺町通御池上る上本能寺前町: a Kyoto street name, parcel_count=0, with the
-	// parcel rows under the base machiaza_id 0098000 (base-machiaza fallback in
-	// searchParcel).
+	// 寺町通御池上る上本能寺前町: a Kyoto street name with parcel_count=0 whose
+	// parcel rows are under the base machiaza_id 0098000.
 	honnojimae := repository.BasicResult{
 		NormalizedAddress: "京都市中京区寺町通御池上ル上本能寺前町", LgCode: "261041", MachiazaID: "0098104",
 		RsdtAddrFlg: new("0"), Pref: "京都府", City: "京都市", Ward: new("中京区"),
 		KyotoSt: new("寺町通御池上る"), OazaCho: new("上本能寺前町"),
 	}
 	// 大字南長野/県町: a koaza with parcel_count=0. The base machiaza_id 0231000
-	// does hold parcels, but they are not this koaza's (issue #361).
+	// does hold parcels, but they are not this koaza's.
 	kencho := repository.BasicResult{
 		NormalizedAddress: "長野市南長野県町", LgCode: "202011", MachiazaID: "0231136",
 		RsdtAddrFlg: new("0"), Pref: "長野県", City: "長野市", OazaCho: new("大字南長野"), Koaza: new("県町"),
@@ -339,8 +329,7 @@ func newStubMatcher() (*Impl, *stubRepo) {
 	return NewMatcher(repo, newStubLookups(), true, true), repo
 }
 
-// assertFeaturesJSON compares got (marshalled) against the pinned JSON from the
-// real pipeline, ignoring formatting.
+// assertFeaturesJSON compares got with wantJSON as JSON values, ignoring formatting.
 func assertFeaturesJSON(t *testing.T, repo *stubRepo, got []model.MatchedResult, wantJSON string) {
 	t.Helper()
 	gotJSON, err := json.Marshal(got)
@@ -360,17 +349,14 @@ func assertFeaturesJSON(t *testing.T, repo *stubRepo, got []model.MatchedResult,
 	}
 }
 
-// TestMatch_StubRepo pins the observable Match output for the main orchestration
-// branches. Expected JSON is the features array produced by the real pipeline
-// with the full nationwide cache for the same query.
+// TestMatch_StubRepo pins Match output for the main orchestration branches.
 func TestMatch_StubRepo(t *testing.T) {
 	tests := []struct {
 		name     string
 		address  string
 		category model.Category
 		wantJSON string
-		// wantCalls, when set, pins the exact repository call sequence with
-		// full parameters for one representative scenario per category.
+		// wantCalls, when set, pins the exact repository call sequence.
 		wantCalls []string
 	}{
 		{
@@ -418,7 +404,7 @@ func TestMatch_StubRepo(t *testing.T) {
 		},
 		{
 			// two-stage parcel: chome-adjusted attempt misses, plain 2-11 hits.
-			// rsdt_addr_flg is null because the base machiaza has one row per flag (issue #262).
+			// rsdt_addr_flg is null because the base machiaza has one row per flag.
 			name: "parcel with ambiguous rsdt flag", address: "千葉県浦安市舞浜2-11", category: model.CategoryParcel,
 			wantCalls: []string{
 				`FindBasicByAddress("浦安市舞浜", pref="12", limit=5)`,
@@ -433,9 +419,8 @@ func TestMatch_StubRepo(t *testing.T) {
 			wantJSON: `[{"matched_address":"千葉県浦安市舞浜2丁目11","unmatched_address":null,"match_level":"rsdtdsp_blk","score":1,"ids":{"lg_code":"122271","machiaza_id":"0018002","rsdt_addr_flg":"1","blk_id":"011","rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"千葉県","county":null,"city":"浦安市","ward":null,"kyoto_st":null,"oaza_cho":"舞浜","chome":"2丁目","koaza":null,"machiaza_dist":null,"blk_num":"11","rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
-			// searchParcel base-machiaza fallback: the street-name record has
-			// parcel_count=0 and the parcel rows live under the base machiaza_id;
-			// the street name's own id is kept in the result.
+			// searchParcel base-machiaza fallback: the parcel is found under the
+			// base machiaza_id, and the street name's own id is kept in the result.
 			name: "parcel base machiaza fallback", address: "京都府京都市中京区寺町通御池上る上本能寺前町488番地", category: model.CategoryParcel,
 			wantJSON: `[{"matched_address":"京都府京都市中京区寺町通御池上る上本能寺前町488","unmatched_address":null,"match_level":"parcel","score":1,"ids":{"lg_code":"261041","machiaza_id":"0098104","rsdt_addr_flg":"0","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":"004880000000000"},"structured_address":{"pref":"京都府","county":null,"city":"京都市","ward":"中京区","kyoto_st":"寺町通御池上る","oaza_cho":"上本能寺前町","chome":null,"koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":"488","prc_num2":null,"prc_num3":null}}]`,
 		},
@@ -451,7 +436,7 @@ func TestMatch_StubRepo(t *testing.T) {
 			wantJSON: `[{"matched_address":"東京都新宿区西新宿2丁目","unmatched_address":["8-1"],"match_level":"machiaza_detail","score":1,"ids":{"lg_code":"131041","machiaza_id":"0023002","rsdt_addr_flg":"1","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"東京都","county":null,"city":"新宿区","ward":null,"kyoto_st":null,"oaza_cho":"西新宿","chome":"2丁目","koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
-			// tryNumericKoazaSearch: number reinterpreted as koaza, remainder as parcel (issue #259).
+			// tryNumericKoazaSearch: number reinterpreted as koaza, remainder as parcel.
 			name: "all numeric koaza with parcel", address: "石川県七尾市大田町111-11", category: model.CategoryAll,
 			wantJSON: `[{"matched_address":"石川県七尾市大田町111-11","unmatched_address":null,"match_level":"parcel","score":1,"ids":{"lg_code":"172022","machiaza_id":"0022145","rsdt_addr_flg":"0","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":"000110000000000"},"structured_address":{"pref":"石川県","county":null,"city":"七尾市","ward":null,"kyoto_st":null,"oaza_cho":"大田町","chome":null,"koaza":"111","machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":"11","prc_num2":null,"prc_num3":null}}]`,
 		},
@@ -471,7 +456,7 @@ func TestMatch_StubRepo(t *testing.T) {
 			wantJSON: `[{"matched_address":"千葉県船橋市","unmatched_address":null,"match_level":"city","score":0.3,"ids":{"lg_code":"122041","machiaza_id":null,"rsdt_addr_flg":null,"blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"千葉県","county":null,"city":"船橋市","ward":null,"kyoto_st":null,"oaza_cho":null,"chome":null,"koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
-			// detectCityPrefectureCode: no prefecture in input, resolved from city prefix map.
+			// detectAndRemovePrefecture: no prefecture in input, resolved from the city prefix map.
 			name: "basic city without prefecture", address: "大阪市天王寺区", category: model.CategoryBasic,
 			wantJSON: `[{"matched_address":"大阪府大阪市天王寺区","unmatched_address":null,"match_level":"city","score":0.3,"ids":{"lg_code":"271098","machiaza_id":null,"rsdt_addr_flg":null,"blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"大阪府","county":null,"city":"大阪市","ward":"天王寺区","kyoto_st":null,"oaza_cho":null,"chome":null,"koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
@@ -492,7 +477,7 @@ func TestMatch_StubRepo(t *testing.T) {
 		},
 		{
 			// tryLevenshteinFallback + fuzzyMatchAllowsTwoStage: same-length substitution
-			// resolves the rsdt detail, capped to the fuzzy town score (#246).
+			// resolves the rsdt detail, capped to the fuzzy town score.
 			name: "all levenshtein fallback resolves detail", address: "東京都千代田区紀●井町1-3", category: model.CategoryAll,
 			wantCalls: []string{
 				// First try: base before the colon; second try repeats the base

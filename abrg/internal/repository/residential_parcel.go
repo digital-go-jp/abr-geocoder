@@ -8,11 +8,9 @@ import (
 )
 
 // Residential best-match queries, one per shape a ResidentialFilter can take.
-// The match clauses run from most specific to least specific; each appears
-// twice, once as a CASE arm carrying its match level and once in the WHERE
-// filter, so every placeholder value is bound on both sides of the three key
-// columns. The shared clauses are single-sourced below; Go folds the
-// concatenations into plain string constants at compile time.
+// Each match clause, most specific first, appears both as a CASE arm giving its
+// match level and in the WHERE filter, so its values are bound on both sides of
+// the three key columns.
 const (
 	residentialBestMatchSelect = `
 		SELECT lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id,
@@ -48,8 +46,8 @@ const (
 		residentialBestMatchOrder
 )
 
-// FindResidentialBestMatch finds the best residential match in a single query,
-// trying rsdt_num2, rsdt_num, then blk_num fallback, returning match level.
+// FindResidentialBestMatch returns the most specific of the rsdt_num2, rsdt_num
+// and blk_num matches with its match level, in a single query.
 func (r *DB) FindResidentialBestMatch(ctx context.Context, lgCode, machiazaID string, filter ResidentialFilter) (*ResidentialBestResult, error) {
 	var query string
 	var args []any
@@ -72,8 +70,7 @@ func (r *DB) FindResidentialBestMatch(ctx context.Context, lgCode, machiazaID st
 	return r.scanResidentialBestMatch(ctx, query, args)
 }
 
-// scanResidentialBestMatch executes a query that includes a match_level column
-// and scans the result into a ResidentialBestResult.
+// scanResidentialBestMatch runs a best-match query, returning nil if no row matches.
 func (r *DB) scanResidentialBestMatch(ctx context.Context, query string, args []any) (*ResidentialBestResult, error) {
 	var (
 		lgCode, machiazaID     sql.Null[string]
@@ -111,7 +108,7 @@ func (r *DB) scanResidentialBestMatch(ctx context.Context, query string, args []
 	}, nil
 }
 
-// FindParcelExact searches cache_parcel for parcel address records with exact matching.
+// FindParcelExact returns the cache_parcel row matching filter exactly.
 func (r *DB) FindParcelExact(ctx context.Context, lgCode, machiazaID string, filter ParcelFilter) (*ParcelResult, error) {
 	query := `
 		SELECT

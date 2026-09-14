@@ -17,7 +17,6 @@ func TestLoadSchema(t *testing.T) {
 		t.Errorf("schema.Version = %d, want 4", schema.Version)
 	}
 
-	// Check tables exist
 	expectedTables := []string{"cache_machiaza", "cache_city", "cache_pref", "cache_config"}
 	for _, tableName := range expectedTables {
 		if _, ok := schema.Tables[tableName]; !ok {
@@ -25,8 +24,7 @@ func TestLoadSchema(t *testing.T) {
 		}
 	}
 
-	// Category tables are created at build time by CTAS (cache/sql.go), not
-	// declared in the YAML schema.
+	// Category tables are created by CTAS in cache/sql.go, not declared in YAML.
 	for _, tableName := range []string{"cache_rsdtdsp", "cache_parcel"} {
 		if _, ok := schema.Tables[tableName]; ok {
 			t.Errorf("schema.Tables[%q] found, category tables must not be declared in YAML", tableName)
@@ -77,7 +75,6 @@ func TestInitSchemaSQL(t *testing.T) {
 		t.Fatalf("InitSchemaSQL() error = %v", err)
 	}
 
-	// Should contain CREATE TABLE for all tables
 	if !strings.Contains(sql, "cache_machiaza") {
 		t.Error("InitSchemaSQL should contain cache_machiaza")
 	}
@@ -87,8 +84,7 @@ func TestInitSchemaSQL(t *testing.T) {
 	if !strings.Contains(sql, "cache_pref") {
 		t.Error("InitSchemaSQL should contain cache_pref")
 	}
-	// Category tables come from CTAS at build time; the init SQL must not
-	// create (or clear) them.
+	// Category tables come from CTAS at build time, so the init SQL must not touch them.
 	if strings.Contains(sql, "cache_rsdtdsp") {
 		t.Error("InitSchemaSQL should not contain cache_rsdtdsp")
 	}
@@ -96,7 +92,6 @@ func TestInitSchemaSQL(t *testing.T) {
 		t.Error("InitSchemaSQL should not contain cache_parcel")
 	}
 
-	// Should contain DELETE statements
 	if !strings.Contains(sql, "DELETE FROM cache_machiaza") {
 		t.Error("InitSchemaSQL should contain DELETE FROM cache_machiaza")
 	}
@@ -167,8 +162,8 @@ func TestInsertMachiazaColumnCount(t *testing.T) {
 	table := schema.Tables["cache_machiaza"]
 	colCount := len(table.Columns)
 
-	// The INSERT INTO cache_machiaza SQL in sql.go must have an explicit column list
-	// that matches the YAML schema. This test validates the column count.
+	// The explicit column list of INSERT INTO cache_machiaza in cache/sql.go must
+	// match the YAML schema.
 	if colCount != 20 {
 		t.Errorf("cache_machiaza column count = %d, want 20", colCount)
 	}

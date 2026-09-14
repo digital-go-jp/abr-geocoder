@@ -9,7 +9,7 @@ type BasicSearchParams struct {
 	Limit    int
 }
 
-// BasicResult holds a row from cache_machiaza address search.
+// BasicResult holds a cache_machiaza row.
 type BasicResult struct {
 	NormalizedAddress string
 	LgCode            string
@@ -64,7 +64,7 @@ type CityRecordParams struct {
 // CityFuzzyParams holds parameters for fuzzy city record lookup.
 type CityFuzzyParams struct {
 	CityPart        string // City part to fuzzy-match
-	PrefCode        string // Required prefecture code filter
+	PrefCode        string // Prefecture code filter, required by FindCityRecordFuzzy
 	MaxEditDistance int    // Maximum edit distance for fuzzy matching
 }
 

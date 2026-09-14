@@ -10,18 +10,14 @@ import (
 	"abrg/internal/model"
 )
 
-// The tests in this file run the repository SQL against the committed
-// quickstart cache (Tokyo, basic category, pos enabled) so that queries and
-// scan code are exercised without a full nationwide cache. The cache has no
-// cache_rsdtdsp / cache_parcel tables; the residential/parcel queries are
-// covered by fixture_test.go (empty-result paths included), and requests for
-// unavailable categories are stopped before the repository by category
-// validation and the reverse availability guard.
+// The tests in this file run against the committed quickstart cache (Tokyo,
+// basic category, pos enabled). It has no cache_rsdtdsp or cache_parcel:
+// fixture_test.go covers those queries, and requests for categories a cache
+// lacks are rejected before they reach the repository.
 const quickstartCachePath = "../../../quickstart/tokyo_basic.duckdb"
 
-// Kioicho, Chiyoda-ku in the quickstart cache. normalized_address stores the
-// search-normalized form where kanji numerals are converted to digits
-// (千代田区 → 1000代田区).
+// Kioicho, Chiyoda-ku in the quickstart cache. normalized_address has kanji
+// numerals converted to digits (千代田区 → 1000代田区).
 const (
 	kioichoAddr       = "1000代田区紀尾井町"
 	chiyodaLgCode     = "131016"
@@ -38,9 +34,8 @@ var initTestRepo = sync.OnceValues(func() (*DB, error) {
 	return NewRepository(c.DB()), nil
 })
 
-// setupRepo opens the quickstart cache. The file is tracked in Git, so a
-// failure to open it is a real regression and fails the test instead of
-// skipping.
+// setupRepo opens the quickstart cache. The file is tracked in Git, so failing
+// to open it fails the test.
 func setupRepo(t *testing.T) *DB {
 	t.Helper()
 	repo, err := initTestRepo()

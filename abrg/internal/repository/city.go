@@ -82,9 +82,8 @@ func (r *DB) FindCityRecordFuzzy(ctx context.Context, p CityFuzzyParams) (*CityR
 const maxCandidateLgCodes = 20
 
 // FindCandidateLgCodes returns the lg_codes of the cities closest to CityPart,
-// nearest first. It gives a search with no detected code something to scope on:
-// cache_city holds one row per city and ward, so the lookup is cheap, and an
-// empty result means the address names no city worth searching.
+// nearest first, to scope a search with no detected code. cache_city holds one
+// row per city and ward, so the lookup is cheap.
 func (r *DB) FindCandidateLgCodes(ctx context.Context, p CityFuzzyParams) ([]string, error) {
 	inner := `SELECT lg_code, editdist3(?, normalized_address) AS dist FROM cache_city`
 	args := []any{p.CityPart}

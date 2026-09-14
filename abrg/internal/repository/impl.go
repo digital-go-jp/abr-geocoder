@@ -18,7 +18,7 @@ func NewRepository(db *sql.DB) *DB {
 	return &DB{db: db}
 }
 
-// queryRows executes a query and scans all rows using the provided scan function.
+// queryRows scans every row of query with scanFn; limit only sizes the slice.
 func queryRows[T any](ctx context.Context, db *sql.DB, query string, args []any, limit int, scanFn func(*sql.Rows) (T, error)) ([]T, error) {
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -40,8 +40,7 @@ func queryRows[T any](ctx context.Context, db *sql.DB, query string, args []any,
 	return results, nil
 }
 
-// queryOne executes a single-row query and scans the result using the provided scan function.
-// Returns nil without error when no rows match.
+// queryOne scans one row with scanFn, returning nil without error if none matches.
 func queryOne[T any](ctx context.Context, db *sql.DB, query string, args []any, scanFn func(*sql.Row) (T, error)) (*T, error) {
 	row := db.QueryRowContext(ctx, query, args...)
 	result, err := scanFn(row)
@@ -54,10 +53,9 @@ func queryOne[T any](ctx context.Context, db *sql.DB, query string, args []any, 
 	return &result, nil
 }
 
-// Coordinates retrieves coordinates from cache tables, falling back through
-// town -> city -> prefecture levels.
+// Coordinates returns the first coordinates found at the machiaza, city, then
+// prefecture level, with that level.
 func (r *DB) Coordinates(ctx context.Context, lgCode, machiazaID string) ([]float64, model.MatchLevel) {
-	// Try to get coordinates from cache_machiaza using lg_code and machiaza_id
 	if machiazaID != "" {
 		coords, level := r.queryBasicCoordinates(ctx, lgCode, machiazaID)
 		if coords != nil {
@@ -65,17 +63,14 @@ func (r *DB) Coordinates(ctx context.Context, lgCode, machiazaID string) ([]floa
 		}
 	}
 
-	// Fall back to city level
 	if coords, level := r.queryCityCoordinates(ctx, lgCode); coords != nil {
 		return coords, level
 	}
 
-	// Try prefecture record by lg_code
 	if coords, level := r.queryPrefectureByLgCode(ctx, lgCode); coords != nil {
 		return coords, level
 	}
 
-	// Fall back to any coordinate in the prefecture
 	if len(lgCode) >= model.LgCodePrefLength {
 		prefCode := lgCode[:model.LgCodePrefLength]
 		if coords, level := r.queryPrefectureCoordinates(ctx, prefCode); coords != nil {
@@ -145,7 +140,8 @@ func (r *DB) queryPrefectureCoordinates(ctx context.Context, prefCode string) ([
 	return nil, ""
 }
 
-// scanCoordinates scans lon/lat from a query row and returns coordinates if valid.
+// scanCoordinates returns [lon, lat] from row, or false if there is no row or
+// either value is NULL.
 func scanCoordinates(row *sql.Row) ([]float64, bool) {
 	var lon, lat sql.Null[float64]
 	if err := row.Scan(&lon, &lat); err != nil {

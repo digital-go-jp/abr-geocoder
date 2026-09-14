@@ -11,9 +11,8 @@ import (
 	"abrg/internal/util"
 )
 
-// basicColumns is the canonical column list for cache_machiaza queries.
-// All queries selecting from cache_machiaza should use this constant to prevent
-// column-order drift between SQL and Go scan calls.
+// basicColumns lists the cache_machiaza columns in the order scanBasicResultRow
+// scans them.
 const basicColumns = `normalized_address, lg_code, machiaza_id, rsdt_addr_flg,
 	pref, county, city, ward, kyoto_st, oaza_cho, chome, koaza, machiaza_dist,
 	has_chome, parcel_count, rsdtdsp_count, lon, lat`
@@ -80,12 +79,10 @@ func scanBasicResultRow(rows *sql.Rows) (BasicResult, error) {
 	}, nil
 }
 
-// Levenshtein search tuning constants.
+// The Levenshtein search fetches max(Limit*sqlLimitMultiplier, minSQLLimit) candidates.
 const (
-	// sqlLimitMultiplier is the factor by which the requested limit is multiplied for SQL queries.
 	sqlLimitMultiplier = 10
 
-	// minSQLLimit is the minimum number of candidates to retrieve from SQL.
 	minSQLLimit = 10
 )
 
@@ -97,7 +94,6 @@ func (r *DB) FindBasicByLevenshtein(ctx context.Context, p LevenshteinParams) ([
 		" WHERE editdist3(?, normalized_address) <= ?"
 	args := []any{p.SearchAddr, maxEditDist}
 
-	// Location filters
 	if p.MachiazaID != "" && p.LgCode != "" {
 		if p.MachiazaID == model.UnknownMachiazaID {
 			query += " AND lg_code = ?"
@@ -105,7 +101,6 @@ func (r *DB) FindBasicByLevenshtein(ctx context.Context, p LevenshteinParams) ([
 		} else {
 			query += " AND lg_code = ? AND substr(machiaza_id, 1, 4) = substr(?, 1, 4)"
 			args = append(args, p.LgCode, p.MachiazaID)
-			// Filter by exact chome if searchAddr contains "@:"
 			if chomeFilter, chomeArg := extractChomeFilter(p.SearchAddr); chomeFilter != "" {
 				query += chomeFilter
 				args = append(args, chomeArg)
@@ -118,15 +113,12 @@ func (r *DB) FindBasicByLevenshtein(ctx context.Context, p LevenshteinParams) ([
 		query += " AND pref_code = ?"
 		args = append(args, p.PrefCode)
 	} else if len(p.LgCodes) > 0 {
-		// No single code was detected, so the search is bounded by the cities
-		// whose name is closest to the one in the address. The distance over the
-		// whole address still decides which row wins, so a city name that is
-		// nearer in isolation does not take the result.
+		// With no single code, search the cities whose names are closest. The
+		// distance over the whole address still ranks the rows.
 		//
-		// The codes go through cache_city rather than a bare IN list: only then
-		// does DuckDB build the semi-join and narrow the scan before evaluating
-		// editdist3. A bare list becomes another filter on the scan, computing
-		// the distance for every machiaza in the country first (15x slower).
+		// The codes go through cache_city so that DuckDB builds a semi-join and
+		// narrows the scan before editdist3. A bare IN list becomes a scan filter,
+		// computing the distance for every machiaza in the country first.
 		query += " AND lg_code IN (SELECT lg_code FROM cache_city WHERE lg_code IN (?" +
 			strings.Repeat(", ?", len(p.LgCodes)-1) + "))"
 		for _, lgCode := range p.LgCodes {
@@ -145,7 +137,8 @@ func (r *DB) FindBasicByLevenshtein(ctx context.Context, p LevenshteinParams) ([
 	return results, nil
 }
 
-// extractChomeFilter extracts a chome number from patterns like "久保田1@:23" where digits before "@:" are the chome.
+// extractChomeFilter returns a clause and its argument matching the chome given
+// by the digits before "@:", as in "久保田1@:23", or empty strings if there is none.
 func extractChomeFilter(searchAddr string) (string, string) {
 	idx := strings.Index(searchAddr, "@:")
 	if idx <= 0 {
