@@ -282,7 +282,6 @@ func (e *ETL) initializeDuckDB() error {
 	_, err := e.db.ExecContext(context.Background(), `
 		INSTALL postgres; LOAD postgres;
 		INSTALL zipfs FROM community; LOAD zipfs;
-		INSTALL spatial; LOAD spatial;
 	`)
 	return err
 }
