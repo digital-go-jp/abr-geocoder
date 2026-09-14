@@ -191,7 +191,7 @@ func (g *ReverseGeocoder) findNearestAll(ctx context.Context, params repository.
 	// Return error if all queries failed
 	if len(allResults) == 0 {
 		if err := errors.Join(errs...); err != nil {
-			return nil, fmt.Errorf("all reverse geocoding queries failed: %w", err)
+			return nil, fmt.Errorf("no reverse geocoding results; a query failed: %w", err)
 		}
 		return nil, nil
 	}
