@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"abr.local/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/progress"
 )
 
 type job[R any] struct {

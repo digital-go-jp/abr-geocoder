@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 
-	"abr.local/common/version"
+	"github.com/digital-go-jp/abr-geocoder/common/version"
 	"github.com/spf13/cobra"
 )
 

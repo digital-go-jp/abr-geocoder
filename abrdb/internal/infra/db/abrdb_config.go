@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	commondb "abr.local/common/db"
+	commondb "github.com/digital-go-jp/abr-geocoder/common/db"
 )
 
 // LoadABRDBConfig loads configuration from the abrdb_config table

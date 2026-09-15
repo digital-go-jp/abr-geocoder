@@ -3,7 +3,7 @@ package normalize
 import (
 	"strings"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // NormalizeAddressText standardizes the given address string with minimal transformations

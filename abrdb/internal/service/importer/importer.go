@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"abr.local/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/progress"
 
-	"abrdb/internal/model"
-	"abrdb/internal/schema"
-	"abrdb/internal/service/catalog"
-	"abrdb/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/service/catalog"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/util"
 )
 
 // loader loads a text/position file pair for a category into the working store.

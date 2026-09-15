@@ -7,6 +7,8 @@ on:
       - 'abrg/**'
       - 'abrdb/**'
       - 'common/**'
+      - 'go.mod'
+      - 'go.sum'
       - 'docker-compose.yml'
       - '.env.example'
       - '.dockerignore'

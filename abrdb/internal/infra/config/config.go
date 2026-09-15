@@ -1,8 +1,8 @@
 package config
 
 import (
-	"abr.local/common/db"
-	"abr.local/common/env"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/env"
 )
 
 const (

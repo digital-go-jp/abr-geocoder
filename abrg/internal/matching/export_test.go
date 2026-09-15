@@ -3,8 +3,8 @@ package matching
 import (
 	"testing"
 
-	"abrg/internal/cache"
-	"abrg/internal/testutil"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/testutil"
 )
 
 // SetupTestCache returns the shared test cache, skipping when it is unavailable.

@@ -1,10 +1,11 @@
 package matching
 
 import (
-	"abrg/internal/normalize"
-	"abrg/internal/transform"
-	"abrg/internal/util"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // Benchmark individual transformation functions

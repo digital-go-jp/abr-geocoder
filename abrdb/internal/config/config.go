@@ -7,11 +7,11 @@ import (
 	"slices"
 	"strings"
 
-	"abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
 
-	"abr.local/common/validate"
+	"github.com/digital-go-jp/abr-geocoder/common/validate"
 
-	"abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
 )
 
 // ImportConfig holds parsed configuration values

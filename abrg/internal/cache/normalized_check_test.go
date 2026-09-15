@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"abrg/internal/infra/duckdb"
-	"abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
 // Normalization rewrites kanji numerals, so these fixtures use place names

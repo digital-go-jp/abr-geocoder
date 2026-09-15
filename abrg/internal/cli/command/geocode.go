@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrg/internal/matching"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // NewGeocodeCmd creates a new geocode command.

@@ -3,7 +3,7 @@ package issues
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue262 tests rsdt_addr_flg of residential matches in mixed areas

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"abrg/internal/model"
-	"abrg/internal/util"
-	"abrg/internal/validate"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/validate"
 )
 
 // bindingTag returns the binding tag of a baseRequest field.

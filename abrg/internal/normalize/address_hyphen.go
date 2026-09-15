@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 )
 
 // =============================================================================

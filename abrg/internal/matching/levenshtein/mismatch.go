@@ -5,10 +5,10 @@ package levenshtein
 import (
 	"strings"
 
-	"abrg/internal/char"
-	"abrg/internal/model"
-	"abrg/internal/transform"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // hasChomeMismatch checks if the search address chome doesn't match the result chome.

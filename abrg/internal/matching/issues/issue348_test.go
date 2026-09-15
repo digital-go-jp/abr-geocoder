@@ -3,7 +3,7 @@ package issues
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue348 covers parcel numbers that are not written in digits alone.

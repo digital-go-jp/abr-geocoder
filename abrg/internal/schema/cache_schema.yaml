@@ -1,8 +1,5 @@
 # DuckDB Cache Schema for abrg geocoder
-# version 2: cache_rsdtdsp / cache_parcel exist only when enabled_category
-# includes them; they are created by CTAS at build time, not declared here.
-# version 3: cache_parcel holds its prc_num columns in full-width katakana.
-version: 3
+version: 4
 
 tables:
   cache_machiaza:
@@ -47,14 +44,13 @@ tables:
       - name: rsdtdsp_count
         type: INTEGER
         default: "0"
-      - name: geom
-        type: GEOMETRY
+      - name: lon
+        type: FLOAT
+      - name: lat
+        type: FLOAT
     indexes:
       - name: idx_machiaza_normalized
         columns: [normalized_address]
-    spatial_indexes:
-      - name: idx_machiaza_geom
-        column: geom
 
   cache_city:
     description: "City-level address data"
@@ -73,11 +69,10 @@ tables:
         type: VARCHAR
       - name: normalized_address
         type: VARCHAR
-      - name: geom
-        type: GEOMETRY
-    spatial_indexes:
-      - name: idx_city_geom
-        column: geom
+      - name: lon
+        type: FLOAT
+      - name: lat
+        type: FLOAT
 
   cache_pref:
     description: "Prefecture-level address data"
@@ -90,16 +85,14 @@ tables:
         type: VARCHAR
       - name: normalized_address
         type: VARCHAR
-      - name: geom
-        type: GEOMETRY
-    spatial_indexes:
-      - name: idx_pref_geom
-        column: geom
+      - name: lon
+        type: FLOAT
+      - name: lat
+        type: FLOAT
 
   # cache_rsdtdsp and cache_parcel are not declared here: they exist only in
   # caches whose enabled_category includes them, and are created at build time
-  # by the CTAS statements in cache/sql.go (which also defines their spatial
-  # index DDL).
+  # by the CTAS statements in cache/sql.go.
 
   cache_config:
     description: "Cache metadata and configuration"

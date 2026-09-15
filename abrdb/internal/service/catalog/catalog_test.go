@@ -3,9 +3,9 @@ package catalog
 import (
 	"testing"
 
-	"abrdb/internal/infra/api"
-	"abrdb/internal/model"
-	"abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/api"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
 )
 
 func TestExtractCategoryFromPrefix(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"abr.local/common/env"
+	"github.com/digital-go-jp/abr-geocoder/common/env"
 
-	"abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
 )
 
 // DefaultCORSAllowOrigin allows every origin, which suits a public read-only

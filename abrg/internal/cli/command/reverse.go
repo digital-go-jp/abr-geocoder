@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrg/internal/model"
-	"abrg/internal/reverse"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/reverse"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // NewReverseCmd creates a new reverse geocoding command.

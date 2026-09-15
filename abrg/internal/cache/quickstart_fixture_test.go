@@ -8,17 +8,14 @@ import (
 	"strconv"
 	"testing"
 
-	"abrg/internal/infra/duckdb"
-	"abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
-// TestQuickstartFixture_Structure pins the structure of the committed
-// quickstart cache against static expectations: the exact table and index
-// sets a basic build produces, at the schema version this binary loads. The
-// fixture is updated by in-place surgery (a wholesale rebuild would shift data
-// and break tests that pin row contents), and this test catches a botched
-// surgery (leftover category tables or indexes, missing config, a version left
-// behind).
+// TestQuickstartFixture_Structure checks that the committed quickstart cache
+// has exactly the tables, indexes and config of a basic build at the current
+// schema version. The fixture is edited in place, because a rebuild would change
+// row contents that other tests assert on, and this test catches a bad edit.
 func TestQuickstartFixture_Structure(t *testing.T) {
 	ctx := context.Background()
 
@@ -54,7 +51,7 @@ func TestQuickstartFixture_Structure(t *testing.T) {
 		t.Errorf("tables = %v, want %v", got, wantTables)
 	}
 
-	wantIndexes := []string{"idx_city_geom", "idx_machiaza_geom", "idx_machiaza_normalized", "idx_pref_geom"}
+	wantIndexes := []string{"idx_machiaza_normalized"}
 	if got := queryStrings("SELECT index_name FROM duckdb_indexes() ORDER BY index_name"); !slices.Equal(got, wantIndexes) {
 		t.Errorf("indexes = %v, want %v", got, wantIndexes)
 	}

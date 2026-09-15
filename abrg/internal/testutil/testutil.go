@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
 )
 
 // NewCacheOnce returns a lazily-initialized, cached constructor for a value

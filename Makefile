@@ -1,4 +1,4 @@
-.PHONY: help build test lint fmt vuln modernize clean abrg-build abrg-test abrg-lint abrg-fmt abrg-vuln abrg-modernize abrdb-build abrdb-test abrdb-lint abrdb-fmt abrdb-vuln abrdb-modernize common-test common-lint common-vuln common-modernize all
+.PHONY: help build test lint fmt vuln modernize clean mod-check mod-tidy abrg-build abrg-test abrg-lint abrg-fmt abrg-vuln abrg-modernize abrdb-build abrdb-test abrdb-lint abrdb-fmt abrdb-vuln abrdb-modernize common-test common-lint common-vuln common-modernize all
 
 # Default target
 help:
@@ -31,15 +31,23 @@ build: abrg-build abrdb-build
 
 test: abrg-test abrdb-test common-test
 
-lint: abrg-lint abrdb-lint common-lint
+lint: mod-check abrg-lint abrdb-lint common-lint
 
-fmt: abrg-fmt abrdb-fmt
+fmt: mod-tidy abrg-fmt abrdb-fmt
 
 vuln: abrg-vuln abrdb-vuln common-vuln
 
 modernize: abrg-modernize abrdb-modernize common-modernize
 
 clean: abrg-clean abrdb-clean
+
+# go.mod is shared by every directory, so these run once for the module
+mod-check:
+	go mod tidy -diff
+	go mod verify
+
+mod-tidy:
+	go mod tidy
 
 # ABRG targets
 abrg-build:

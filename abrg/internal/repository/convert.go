@@ -3,8 +3,8 @@ package repository
 import (
 	"log/slog"
 
-	"abrg/internal/matchlevel"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // BuildIDs constructs model.IDs from already-converted fields.

@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abr.local/common/logging"
+	"github.com/digital-go-jp/abr-geocoder/common/logging"
 
-	"abrg/internal/cli/command"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cli/command"
 )
 
 func main() {

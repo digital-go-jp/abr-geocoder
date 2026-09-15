@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"abrg/internal/cache"
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 
-	"abrg/internal/matchlevel"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
 )
 
 func Test_derefString(t *testing.T) {

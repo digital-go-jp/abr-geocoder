@@ -12,12 +12,12 @@ import (
 
 	duckdbdriver "github.com/duckdb/duckdb-go/v2"
 
-	"abr.local/common/db"
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
-	"abrg/internal/infra/duckdb"
-	"abrg/internal/schema"
-	"abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 )
 
 func Build(ctx context.Context, cachePath string) error {
@@ -31,12 +31,6 @@ func Build(ctx context.Context, cachePath string) error {
 	}
 	defer func() { _ = conn.Close() }()
 	phaseSec["open"] = time.Since(openStart).Seconds()
-
-	extStart := time.Now()
-	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
-		return fmt.Errorf("failed to load spatial extension: %w", err)
-	}
-	phaseSec["extension"] = time.Since(extStart).Seconds()
 
 	udfStart := time.Now()
 	if err := registerUDF(ctx, conn); err != nil {
@@ -85,40 +79,29 @@ func initSchema(ctx context.Context, conn *sql.DB) error {
 	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
 		return fmt.Errorf("failed to execute init schema: %w", err)
 	}
-	// The YAML schema only covers the always-present tables; category tables
-	// from a previous build are dropped here and recreated by CTAS if the
-	// configured category needs them.
+	// Category tables are not in the YAML schema. Drop any left by a previous
+	// build; buildCacheTables recreates those the configured category needs.
 	if _, err := conn.ExecContext(ctx, dropCategoryTablesSQL); err != nil {
 		return fmt.Errorf("failed to drop stale category tables: %w", err)
 	}
 	return nil
 }
 
-// buildCategoryTable creates one category table via CTAS and its spatial
-// index, recording the timings in phaseSec.
-func buildCategoryTable(ctx context.Context, conn *sql.DB, phaseSec map[string]float64, name, createSQL, indexSQL string) error {
+// buildCategoryTable creates one category table and records its build time.
+func buildCategoryTable(ctx context.Context, conn *sql.DB, phaseSec map[string]float64, name, createSQL string) error {
 	sec, err := execTimed(ctx, conn, "create", name, createSQL)
 	if err != nil {
 		return err
 	}
 	phaseSec[name] = sec
-
-	sec, err = execTimed(ctx, conn, "index", name, indexSQL)
-	if err != nil {
-		return err
-	}
-	phaseSec[name+"_index"] = sec
 	return nil
 }
 
-// memoryLimitFormat accepts DuckDB memory-limit literals such as "8GB",
-// "512MiB", or "1.5GB". The value is interpolated into a SET statement, so
-// anything else is rejected.
+// memoryLimitFormat accepts DuckDB memory-limit literals such as "8GB", "512MiB"
+// or "1.5GB". The value is interpolated into a SET statement, so nothing else is allowed.
 var memoryLimitFormat = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?\s*(B|KB|MB|GB|TB|KiB|MiB|GiB|TiB)$`)
 
-// cacheMemoryLimit returns the DuckDB memory limit for cache build, tunable
-// via ABRG_CACHE_MEMORY_LIMIT to match the build host. Unset or malformed
-// values fall back to the 8GB default.
+// cacheMemoryLimit returns ABRG_CACHE_MEMORY_LIMIT, or 8GB when it is unset or malformed.
 func cacheMemoryLimit() string {
 	const def = "8GB"
 	v, ok := os.LookupEnv("ABRG_CACHE_MEMORY_LIMIT")
@@ -133,8 +116,6 @@ func cacheMemoryLimit() string {
 	return v
 }
 
-// Category-specific tables must load before basic tables (cache_machiaza has CTEs
-// that aggregate counts from category tables).
 func loadFromPostgres(ctx context.Context, conn *sql.DB, phaseSec map[string]float64) error {
 	ctx, cancel := context.WithTimeout(ctx, 900*time.Second) // Large datasets need 10+ min
 	defer cancel()
@@ -178,9 +159,9 @@ func loadFromPostgres(ctx context.Context, conn *sql.DB, phaseSec map[string]flo
 	return buildCacheTables(ctx, conn, cfg, phaseSec)
 }
 
-// buildCacheTables creates and populates every cache table for the configured
-// category, creates the indexes, and saves the configuration. The source
-// PostgreSQL database must already be attached as pg.
+// buildCacheTables builds every cache table, index and config row for the
+// configured category from the PostgreSQL database attached as pg. Category
+// tables load first because the cache_machiaza insert counts their rows.
 func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec map[string]float64) error {
 	category := cfg.EnabledCategory
 	switch category {
@@ -189,12 +170,12 @@ func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec m
 		return fmt.Errorf("unknown category: %q", category)
 	}
 	if category == "rsdtdsp" || category == "all" {
-		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL, createRsdtdspIndexSQL); err != nil {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "rsdtdsp", createRsdtdspSQL); err != nil {
 			return err
 		}
 	}
 	if category == "parcel" || category == "all" {
-		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL, createParcelIndexSQL); err != nil {
+		if err := buildCategoryTable(ctx, conn, phaseSec, "parcel", createParcelSQL); err != nil {
 			return err
 		}
 	}
@@ -208,12 +189,6 @@ func buildCacheTables(ctx context.Context, conn *sql.DB, cfg *Config, phaseSec m
 		return err
 	}
 	phaseSec["indexes"] = time.Since(indexStart).Seconds()
-
-	spatialStart := time.Now()
-	if err := execSchemaSQL(ctx, conn, "spatial indexes", schema.GetCreateSpatialIndexesSQL); err != nil {
-		return err
-	}
-	phaseSec["spatial_indexes"] = time.Since(spatialStart).Seconds()
 
 	if err := saveConfigToCache(ctx, conn, cfg); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
@@ -250,10 +225,8 @@ func saveConfigToCache(ctx context.Context, conn *sql.DB, cfg *Config) error {
 		{db.KeyEnabledPref, cfg.EnabledPref},
 		{db.KeyEnabledPos, cfg.EnabledPos},
 		{"build_time", time.Now().Format(time.RFC3339)},
-		// KeySchemaVersion doubles as the completion marker and must stay
-		// last: a build that dies before this write leaves a cache without a
-		// schema version, which the open-time check rejects with a rebuild
-		// instruction.
+		// KeySchemaVersion must stay last: it marks a completed build, and
+		// the open-time check rejects a cache without it.
 		{KeySchemaVersion, strconv.Itoa(schemaVersion)},
 	}
 	for _, c := range configs {
@@ -272,7 +245,6 @@ func execTimed(ctx context.Context, conn *sql.DB, action, name, stmt string) (fl
 	return time.Since(start).Seconds(), nil
 }
 
-// execSchemaSQL executes schema SQL obtained from a getter function.
 func execSchemaSQL(ctx context.Context, conn *sql.DB, name string, getSQL func() (string, error)) error {
 	sqlText, err := getSQL()
 	if err != nil {

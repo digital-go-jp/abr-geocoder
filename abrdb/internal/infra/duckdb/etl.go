@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"abr.local/common/db"
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
-	"abrdb/internal/schema"
-	"abrdb/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/util"
 )
 
 const pgSecretName = "abrdb_pg_secret"
@@ -30,9 +30,8 @@ type tableNames struct {
 var nonIdentChar = regexp.MustCompile(`[^A-Za-z0-9_]`)
 
 func generateTableNames(suffix string) tableNames {
-	// The suffix becomes part of a SQL identifier (table name), which cannot be
-	// parameterized. Restrict it to identifier-safe characters so a crafted source
-	// filename cannot inject SQL.
+	// Table names cannot be parameterized, so restrict the suffix to identifier
+	// characters to keep a crafted source filename from injecting SQL.
 	suffix = nonIdentChar.ReplaceAllString(suffix, "_")
 	return tableNames{
 		Text:        "text_data" + suffix,
@@ -81,10 +80,9 @@ func (e *ETL) Close() error {
 func (e *ETL) LoadData(ctx context.Context, categoryInfo *schema.CategoryInfo, textPath string, posPath string) error {
 	tn := generateTableNames("_" + strings.TrimSuffix(filepath.Base(textPath), ".csv.zip"))
 
-	// TEMP tables are connection-local in DuckDB and survive the commit, so
-	// the whole load runs on one pinned connection and the deferred DROP uses
-	// that same connection; a pool-level DROP would land on an arbitrary
-	// connection and silently miss them, accumulating them in memory.
+	// TEMP tables are connection-local in DuckDB and survive the commit, so the
+	// load and the deferred DROP share one connection. A DROP through the pool
+	// could run on another connection and leave the tables in memory.
 	conn, err := e.db.Conn(ctx)
 	if err != nil {
 		return fmt.Errorf("acquire duckdb connection: %w", err)
@@ -143,7 +141,8 @@ func csvNameFromZip(zipPath string) string {
 	return strings.TrimSuffix(filepath.Base(zipPath), ".zip")
 }
 
-// DuckDB 1.4+ optimizations reduce type inference and enable parallel CSV reading.
+// readZipSQL fills tempTable with the distinct rows of columns from a zipped CSV.
+// The read_csv options limit type-inference sampling and read in parallel on DuckDB 1.4+.
 func readZipSQL(tempTable, zipPath, csvName string, columns []string, columnTypes map[string]string, whereClause string) string {
 	where := ""
 	if whereClause != "" {
@@ -194,9 +193,7 @@ func (e *ETL) loadTextDataTx(ctx context.Context, tx *sql.Tx, categoryInfo *sche
 		return fmt.Errorf("read ZIP file %q: %w", textPath, err)
 	}
 
-	// Verify data was loaded (after DISTINCT)
-	// tn.Text is an internally generated, identifier-sanitized table name
-	// (see generateTableNames), not raw user input.
+	// tn.Text is sanitized by generateTableNames, so concatenating it is safe.
 	var rowCount int
 	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+tn.Text).Scan(&rowCount); err != nil {
 		return fmt.Errorf("verify %s table: %w", tn.Text, err)
@@ -215,18 +212,18 @@ func (e *ETL) loadPositionDataTx(ctx context.Context, tx *sql.Tx, categoryInfo *
 
 	csvName := csvNameFromZip(posPath)
 
-	// Position data doesn't have status_flg, so no filtering needed
+	// Position data has no status_flg, so it is not filtered.
 	createPosSQL := readZipSQL(tn.Pos, posPath, csvName, categoryInfo.PosColumns, categoryInfo.PosColumnTypes, "")
 	if _, err := tx.ExecContext(ctx, createPosSQL); err != nil {
-		// Return error to distinguish "file missing" from "load failure"
+		// Unlike a missing file, a failed read is an error.
 		return false, err
 	}
 
 	return true, nil
 }
 
-// Rows for this file's scope are deleted beforehand via a direct PostgreSQL
-// connection (see postgres.DeleteFileScope); here we only transform and insert.
+// transformAndLoadTx transforms and inserts one file's rows. The file's old rows
+// are deleted beforehand by postgres.DeleteFileScope.
 func (e *ETL) transformAndLoadTx(ctx context.Context, tx *sql.Tx, categoryInfo *schema.CategoryInfo, hasPosData bool, tn tableNames, filename string) error {
 	transformer := newTransformer(categoryInfo)
 
@@ -254,11 +251,9 @@ func (e *ETL) transformAndLoadTx(ctx context.Context, tx *sql.Tx, categoryInfo *
 	return nil
 }
 
-// buildInsertSQL lists the same explicit columns (CategoryInfo.OutputColumns)
-// on both the INSERT and the SELECT side, so a column-order drift between the
-// transformed temp table and the PostgreSQL DDL fails loudly instead of
-// inserting silently misaligned data (the previous SELECT * EXCLUDE form
-// relied on the two orders matching by construction).
+// buildInsertSQL names CategoryInfo.OutputColumns on both the INSERT and the
+// SELECT side, so a column-order difference between the transformed temp table
+// and the PostgreSQL DDL cannot misalign the inserted data.
 func buildInsertSQL(categoryInfo *schema.CategoryInfo, transformedTable string) (string, error) {
 	table, err := util.QuoteIdentifier(categoryInfo.TableName)
 	if err != nil {
@@ -282,7 +277,6 @@ func (e *ETL) initializeDuckDB() error {
 	_, err := e.db.ExecContext(context.Background(), `
 		INSTALL postgres; LOAD postgres;
 		INSTALL zipfs FROM community; LOAD zipfs;
-		INSTALL spatial; LOAD spatial;
 	`)
 	return err
 }

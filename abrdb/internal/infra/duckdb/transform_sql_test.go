@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
 )
 
 func TestBuildTransformSQL(t *testing.T) {

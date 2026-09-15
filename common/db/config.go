@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"abr.local/common/env"
+	"github.com/digital-go-jp/abr-geocoder/common/env"
 )
 
 // DBConfig represents database configuration

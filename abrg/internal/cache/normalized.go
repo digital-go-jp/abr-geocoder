@@ -5,16 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-
-	"abr.local/common/duck"
 )
 
-// normalizedPart is one column of a normalized_address in the two forms it
-// takes: the expression the build reads from PostgreSQL, and the column the
-// cache stores it in. The two differ by more than a table alias - the machiaza
-// parts split koaza on koaza_aka_code, which the cache has already resolved
-// into separate columns. Pairing them here keeps a column from being added to
-// one side only.
+// normalizedPart is one column of normalized_address as the build reads it from
+// PostgreSQL and as the cache stores it. For koaza the two differ by more than a
+// table alias, because the cache has already split it on koaza_aka_code. Pairing
+// them keeps a column from being added to one side only.
 type normalizedPart struct {
 	build  string
 	verify string
@@ -42,9 +38,8 @@ var prefNormalizedParts = []normalizedPart{
 	{build: "p.pref", verify: "pref"},
 }
 
-// normalizedExpr renders columns into the normalize_text_go call that produces
-// a normalized_address. Both sides go through it so the call itself cannot
-// differ between the build and the check.
+// normalizedExpr wraps cols in the normalize_text_go call. The build and the
+// check both use it so the call cannot differ between them.
 func normalizedExpr(cols []string) string {
 	return fmt.Sprintf("normalize_text_go(CONCAT_WS('', %s))", strings.Join(cols, ", "))
 }
@@ -65,14 +60,12 @@ func verifyNormalizedExpr(parts []normalizedPart) string {
 	return normalizedExpr(cols)
 }
 
-// normalizedTable names a table to check and the parts its normalized_address
-// is made of.
+// normalizedTable is a table to check and the parts of its normalized_address.
 type normalizedTable struct {
 	name  string
 	parts []normalizedPart
-	// sample is the SQL expression identifying a row in the error message. A
-	// machiaza_id is unique only within its municipality, so it is always
-	// shown with its lg_code.
+	// sample is the SQL expression naming a row in the error message. A
+	// machiaza_id is unique only within its lg_code, so both are shown.
 	sample string
 }
 
@@ -86,11 +79,9 @@ var normalizedTables = []normalizedTable{
 
 const normalizedSampleLimit = 5
 
-// verifyNormalization recomputes normalized_address from the source columns
-// and rejects the cache if any row disagrees with the stored value.
-//
-// The comparison is IS DISTINCT FROM because <> does not count rows where
-// either side is NULL.
+// verifyNormalization rejects the cache if any stored normalized_address
+// differs from one recomputed from its columns. It compares with IS DISTINCT
+// FROM because <> skips rows where either side is NULL.
 func verifyNormalization(ctx context.Context, db *sql.DB) error {
 	if err := registerUDF(ctx, db); err != nil {
 		return err
@@ -104,9 +95,8 @@ func verifyNormalization(ctx context.Context, db *sql.DB) error {
 }
 
 func verifyNormalizedTable(ctx context.Context, db *sql.DB, t normalizedTable) error {
-	// COUNT(*) OVER () is evaluated over the whole match set before LIMIT
-	// applies, so one query yields both the total and the first few rows to
-	// name. No rows back means the table agrees.
+	// COUNT(*) OVER () is computed before LIMIT, so one query returns both the
+	// total and a few sample rows.
 	query := fmt.Sprintf(
 		"SELECT COUNT(*) OVER () AS total, %s FROM %s WHERE normalized_address IS DISTINCT FROM %s LIMIT %d",
 		t.sample, t.name, verifyNormalizedExpr(t.parts), normalizedSampleLimit)
@@ -137,16 +127,10 @@ func verifyNormalizedTable(ctx context.Context, db *sql.DB, t normalizedTable) e
 		t.name, total, strings.Join(samples, ", "))
 }
 
-// refreshNormalizedAddresses rewrites normalized_address with what the current
-// normalization produces, returning the rows changed per table in the order of
-// normalizedTables. It reuses the build's own expressions, so it needs no ABR
-// data and is deterministic.
+// refreshNormalizedAddresses rewrites normalized_address with the current
+// normalization and returns the rows changed per table, in normalizedTables
+// order. It reads only the cache's columns, so it needs no ABR data.
 func refreshNormalizedAddresses(ctx context.Context, db *sql.DB) ([]int64, error) {
-	// The tables carry RTREE indexes on geom, which DuckDB binds before any
-	// write - even one that only touches the text column.
-	if err := duck.LoadExtension(ctx, db, "spatial"); err != nil {
-		return nil, fmt.Errorf("failed to load spatial extension: %w", err)
-	}
 	if err := registerUDF(ctx, db); err != nil {
 		return nil, err
 	}
