@@ -1,9 +1,14 @@
 package command
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"log/slog"
 	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -106,4 +111,112 @@ func TestRunHTTPServer_ListenFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when port is already in use")
 	}
+}
+
+// syncBuffer collects the log output the server writes from its own goroutine.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// TestRunHTTPServer_LogsTheAddressItAcceptsOn pins that the "server started"
+// log names the address the server is listening on, and that it is accepting
+// connections by the time that log is written. Clients use it to tell when the
+// server is ready.
+func TestRunHTTPServer_LogsTheAddressItAcceptsOn(t *testing.T) {
+	var logs syncBuffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	defer slog.SetDefault(prev)
+
+	srv := &http.Server{
+		Addr:              "127.0.0.1:0",
+		Handler:           http.NewServeMux(),
+		ReadHeaderTimeout: time.Second,
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	go func() { done <- runHTTPServer(ctx, srv) }()
+
+	var addr string
+	deadline := time.Now().Add(2 * time.Second)
+	for addr == "" {
+		if time.Now().After(deadline) {
+			cancel()
+			<-done
+			t.Fatalf("no server_start log within deadline: %s", logs.String())
+		}
+		time.Sleep(20 * time.Millisecond)
+		for line := range strings.SplitSeq(logs.String(), "\n") {
+			var entry struct {
+				Event string `json:"event"`
+				Addr  string `json:"addr"`
+			}
+			if json.Unmarshal([]byte(line), &entry) == nil && entry.Event == "server_start" {
+				addr = entry.Addr
+			}
+		}
+	}
+
+	if addr == srv.Addr {
+		t.Errorf("logged addr = %q, want the address the listener resolved to", addr)
+	}
+
+	conn, err := (&net.Dialer{Timeout: time.Second}).DialContext(t.Context(), "tcp", addr)
+	if err != nil {
+		t.Errorf("dial %s after server_start: %v", addr, err)
+	} else {
+		_ = conn.Close()
+	}
+
+	cancel()
+	if err := <-done; err != nil {
+		t.Errorf("runHTTPServer returned error: %v", err)
+	}
+}
+
+// TestRunHTTPServer_FreesThePortWhenCancelledAtStartup pins that the listener
+// is closed by the time runHTTPServer returns, so restarting on the same port
+// works. Shutdown alone does not close a listener that Serve has not
+// registered yet.
+func TestRunHTTPServer_FreesThePortWhenCancelledAtStartup(t *testing.T) {
+	t.Parallel()
+
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           http.NewServeMux(),
+		ReadHeaderTimeout: time.Second,
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := runHTTPServer(ctx, srv); err != nil {
+		t.Fatalf("runHTTPServer with a cancelled context = %v, want nil", err)
+	}
+
+	again, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", addr)
+	if err != nil {
+		t.Fatalf("listen on %s after runHTTPServer returned: %v", addr, err)
+	}
+	_ = again.Close()
 }
