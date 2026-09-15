@@ -1,7 +1,6 @@
 package command
 
 import (
-	"bufio"
 	"context"
 	"database/sql"
 	"errors"
@@ -126,7 +125,9 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	setup.OutFile = outFile
 	setup.cleanup = append(setup.cleanup, func() { _ = outFile.Close() })
 
-	if monitor := progress.NewConsoleIfEnabled(opts.Quiet); monitor != nil {
+	// Counting the lines reads the input once more,
+	// which would consume a pipe such as /dev/stdin before it is processed.
+	if monitor := progress.NewConsoleIfEnabled(opts.Quiet); monitor != nil && isRegularFile(inFile) {
 		totalLines, err := countLines(opts.InputFile)
 		if err != nil {
 			setup.Cleanup()
@@ -168,6 +169,11 @@ func newDefaultProcessor[R any](setup *processorSetup, process processFunc[R]) *
 	}
 }
 
+func isRegularFile(f *os.File) bool {
+	info, err := f.Stat()
+	return err == nil && info.Mode().IsRegular()
+}
+
 func countLines(filename string) (int, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -175,7 +181,7 @@ func countLines(filename string) (int, error) {
 	}
 	defer func() { _ = file.Close() }()
 
-	scanner := bufio.NewScanner(file)
+	scanner := newLineScanner(file)
 	count := 0
 	for scanner.Scan() {
 		if len(scanner.Bytes()) != 0 {

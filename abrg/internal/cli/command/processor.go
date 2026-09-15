@@ -4,12 +4,16 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/digital-go-jp/abr-geocoder/common/progress"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
 )
 
 type job[R any] struct {
@@ -84,7 +88,7 @@ func (p *parallelProcessor[R]) worker(ctx context.Context, jobs <-chan *job[R], 
 
 func (p *parallelProcessor[R]) reader(ctx context.Context, r io.Reader, jobs chan<- *job[R]) error {
 	defer close(jobs)
-	scanner := bufio.NewScanner(r)
+	scanner := newLineScanner(r)
 	for i := 0; scanner.Scan(); {
 		if addr := scanner.Text(); addr != "" {
 			select {
@@ -98,6 +102,33 @@ func (p *parallelProcessor[R]) reader(ctx context.Context, r io.Reader, jobs cha
 	return scanner.Err()
 }
 
+// lineScanner is a bufio.Scanner whose error names the line that is too long to read.
+type lineScanner struct {
+	*bufio.Scanner
+	line int
+}
+
+func newLineScanner(r io.Reader) *lineScanner {
+	return &lineScanner{Scanner: bufio.NewScanner(r)}
+}
+
+func (s *lineScanner) Scan() bool {
+	if !s.Scanner.Scan() {
+		return false
+	}
+	s.line++
+	return true
+}
+
+func (s *lineScanner) Err() error {
+	err := s.Scanner.Err()
+	if errors.Is(err, bufio.ErrTooLong) {
+		return fmt.Errorf("input line %d is longer than %d KiB: the file may not be text, or its lines may not end with LF or CRLF",
+			s.line+1, bufio.MaxScanTokenSize/1024)
+	}
+	return err
+}
+
 func (p *parallelProcessor[R]) writer(w io.Writer, results <-chan *job[R]) error {
 	bw := bufio.NewWriter(w)
 	enc := json.NewEncoder(bw)
@@ -109,9 +140,12 @@ func (p *parallelProcessor[R]) writer(w io.Writer, results <-chan *job[R]) error
 		if encodeErr != nil {
 			return
 		}
-		if j.Err != nil {
+		switch {
+		case errors.Is(j.Err, normalize.ErrEmptyAddress):
+			// A line holding only a comment or whitespace is not an address, so it has no output.
+		case j.Err != nil:
 			encodeErr = enc.Encode(errorResponse{Error: j.Err.Error(), Input: j.Address})
-		} else {
+		default:
 			encodeErr = enc.Encode(j.Result)
 		}
 		if p.Monitor != nil {
