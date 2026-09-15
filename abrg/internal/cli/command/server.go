@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -96,11 +97,20 @@ func runServer(ctx context.Context, cacheFlag string) error {
 
 // runHTTPServer runs an http.Server until ctx is cancelled, then performs
 // a graceful shutdown with a bounded timeout.
+// It logs the address it accepts connections on once it is listening,
+// so that log marks the point where the server can be called.
 func runHTTPServer(ctx context.Context, srv *http.Server) error {
+	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", srv.Addr)
+	if err != nil {
+		return fmt.Errorf("server failed to start: %w", err)
+	}
+	slog.Info("server started", "event", "server_start", "addr", ln.Addr().String())
+
 	errChan := make(chan error, 1)
+	serveDone := make(chan struct{})
 	go func() {
-		slog.Info("server started", "event", "server_start", "addr", srv.Addr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		defer close(serveDone)
+		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errChan <- err
 		}
 	}()
@@ -109,7 +119,7 @@ func runHTTPServer(ctx context.Context, srv *http.Server) error {
 	case <-ctx.Done():
 		slog.Info("received shutdown signal", "event", "shutdown_signal", "cause", context.Cause(ctx))
 	case err := <-errChan:
-		return fmt.Errorf("server failed to start: %w", err)
+		return fmt.Errorf("server failed: %w", err)
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
@@ -118,6 +128,10 @@ func runHTTPServer(ctx context.Context, srv *http.Server) error {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("graceful shutdown failed: %w", err)
 	}
+
+	// Shutdown only closes the listeners Serve has registered,
+	// so a cancellation during startup frees the port once Serve returns.
+	<-serveDone
 
 	slog.Info("server stopped", "event", "server_stop")
 	return nil
