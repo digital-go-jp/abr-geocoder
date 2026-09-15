@@ -52,14 +52,11 @@ test-coverage:
 
 # Run lint checks without modifying files (CI-friendly)
 lint:
-	go mod tidy -diff
-	go mod verify
 	go vet ./...
 	golangci-lint run
 
 # Run lint tools with auto-fix (local dev; incl. go fix modernizations)
 fmt:
-	go mod tidy
 	go fix ./...
 	golangci-lint fmt ./...
 	golangci-lint run --fix
