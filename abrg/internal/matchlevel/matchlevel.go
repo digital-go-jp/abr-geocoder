@@ -1,7 +1,7 @@
 // Package matchlevel provides functions to determine address match levels from ID fields.
 package matchlevel
 
-import "abrg/internal/model"
+import "github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 
 // DetermineMatchLevel determines the match level using ID fields.
 // Invariant: MachiazaID and LgCode are either nil or valid length (enforced by repository.BuildIDs).

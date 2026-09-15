@@ -14,15 +14,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abr.local/common/progress"
-	"abr.local/common/version"
+	"github.com/digital-go-jp/abr-geocoder/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/version"
 
-	"abrg/internal/cache"
-	"abrg/internal/matching"
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/util"
-	"abrg/internal/validate"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/validate"
 )
 
 // defaultBufferSize is the buffer size for parallel processing channels.

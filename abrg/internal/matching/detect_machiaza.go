@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"abrg/internal/char"
-	"abrg/internal/matching/levenshtein"
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/levenshtein"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 )
 
 // basicFinder is a consumer-defined interface for basic address lookup.

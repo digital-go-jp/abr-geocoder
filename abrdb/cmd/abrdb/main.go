@@ -12,9 +12,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 
-	"abr.local/common/logging"
+	"github.com/digital-go-jp/abr-geocoder/common/logging"
 
-	"abrdb/internal/cli/command"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/cli/command"
 )
 
 func main() {

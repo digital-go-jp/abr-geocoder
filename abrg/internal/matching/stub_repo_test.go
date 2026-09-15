@@ -27,11 +27,11 @@ import (
 	"strings"
 	"testing"
 
-	"abrg/internal/cache"
-	"abrg/internal/matchlevel"
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // stubRepo implements implQuerier and CoordinatesGetter with canned rows keyed

@@ -7,9 +7,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrg/internal/cache"
-	"abrg/internal/infra/config"
-	"abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/config"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
 )
 
 // registerCacheFlag registers the shared -c/--cache flag used by every

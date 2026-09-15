@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"abrg/internal/cache"
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/testutil"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/testutil"
 )
 
 var initTestReverseGeocoder = testutil.NewCacheOnce(func(c *cache.DuckDBCache) (*ReverseGeocoder, error) {

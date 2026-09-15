@@ -12,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 
-	"abrg/internal/model"
-	"abrg/internal/validate"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/validate"
 )
 
 // baseRequest contains common fields for all requests. The category list and

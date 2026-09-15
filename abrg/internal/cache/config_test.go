@@ -3,7 +3,7 @@ package cache
 import (
 	"testing"
 
-	"abr.local/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
 )
 
 func TestNewConfigCanonicalizesEnabledValues(t *testing.T) {

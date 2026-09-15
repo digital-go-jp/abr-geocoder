@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
 )
 
 const quickstartCachePath = "../../../quickstart/tokyo_basic.duckdb"

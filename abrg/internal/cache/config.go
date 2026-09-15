@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"abr.local/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // KeySchemaVersion is the cache_config key holding the DuckDB cache schema

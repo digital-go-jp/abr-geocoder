@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	commondb "abr.local/common/db"
+	commondb "github.com/digital-go-jp/abr-geocoder/common/db"
 
-	"abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
 )
 
 // SaveConfigValue upserts a single key/value into abrdb_config.

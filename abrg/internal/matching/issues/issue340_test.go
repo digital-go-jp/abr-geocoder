@@ -3,7 +3,7 @@ package issues
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue340 covers wards whose name changes under normalization: 千種区

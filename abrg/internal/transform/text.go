@@ -1,8 +1,8 @@
 package transform
 
 import (
-	"abrg/internal/normalize"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // The steps are pure functions with no mutable state, so the pipelines are

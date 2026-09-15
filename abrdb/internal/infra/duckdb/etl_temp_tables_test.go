@@ -3,7 +3,7 @@ package duckdb
 import (
 	"testing"
 
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 )
 
 // TestTempTablesAreConnectionLocal pins the DuckDB semantics LoadData relies

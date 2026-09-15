@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
-	"abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
 // The tests in this file run the residential and parcel queries against an

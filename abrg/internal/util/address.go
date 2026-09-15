@@ -4,7 +4,7 @@ package util
 import (
 	"strings"
 
-	"abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 )
 
 // ExtractTrailingAddressNumbers returns the trailing run of ASCII digits and

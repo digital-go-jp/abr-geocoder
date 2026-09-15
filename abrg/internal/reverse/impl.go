@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"abrg/internal/matchlevel"
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // spatialQuerier is the repository subset used for reverse geocoding.

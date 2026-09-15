@@ -11,11 +11,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abr.local/common/version"
+	"github.com/digital-go-jp/abr-geocoder/common/version"
 
-	"abrg/internal/api"
-	"abrg/internal/cache"
-	"abrg/internal/infra/config"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/api"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/config"
 )
 
 // NewServerCmd creates a new server command.

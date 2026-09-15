@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
 // Stub category tables: checkCategoryTables only verifies existence, and the

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // adjustSearchAddrForMatch adjusts a parsedAddress by removing the matched number from the source string.

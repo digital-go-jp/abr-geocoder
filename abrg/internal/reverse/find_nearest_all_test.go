@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
 )
 
 // fakeQuerier returns fixed rows or errors for each reverse table.

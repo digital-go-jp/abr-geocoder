@@ -1,30 +1,12 @@
 version: 2
 updates:
   - package-ecosystem: gomod
-    directory: /abrg
+    directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
-      abrg-deps:
-        patterns: ["*"]
-
-  - package-ecosystem: gomod
-    directory: /abrdb
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      abrdb-deps:
-        patterns: ["*"]
-
-  - package-ecosystem: gomod
-    directory: /common
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      common-deps:
+      go-deps:
         patterns: ["*"]
 
   - package-ecosystem: github-actions

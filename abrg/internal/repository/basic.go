@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"abrg/internal/model"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // basicColumns lists the cache_machiaza columns in the order scanBasicResultRow

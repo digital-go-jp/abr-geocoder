@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // FindCityByAddress searches cache_city by normalized_address or lg_code.

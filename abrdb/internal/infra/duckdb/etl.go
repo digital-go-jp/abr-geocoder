@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"abr.local/common/db"
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
-	"abrdb/internal/schema"
-	"abrdb/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/util"
 )
 
 const pgSecretName = "abrdb_pg_secret"

@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 )
 
 type MatchLevel string

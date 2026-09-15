@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
 )
 
 func TestPgTypeToDuckDB(t *testing.T) {

@@ -1,5 +1,5 @@
-# Shared Go module targets for abrg and abrdb.
-# Include from a module Makefile after setting BINARY (and optional overrides):
+# Shared targets for the abrg, abrdb and common directories of the Go module.
+# Include from a directory Makefile after setting BINARY (and optional overrides):
 #   BINARY      - output binary name and default cmd dir       (required)
 #   CMD_PATH    - main package path       (default ./cmd/$(BINARY))
 #   TEST_CMD    - unit test command       (default go test ./...)
@@ -11,18 +11,18 @@ CMD_PATH ?= ./cmd/$(BINARY)
 TEST_CMD ?= go test ./...
 COVERPKG ?= ./...
 
-# Version from VERSION file (library modules without one build as "dev")
+# Version from VERSION file (common has none and builds as "dev")
 VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 
 # Build variables
-LDFLAGS := -ldflags "-X abr.local/common/version.Version=$(VERSION) -X abr.local/common/version.Commit=$(COMMIT)"
+LDFLAGS := -ldflags "-X github.com/digital-go-jp/abr-geocoder/common/version.Version=$(VERSION) -X github.com/digital-go-jp/abr-geocoder/common/version.Commit=$(COMMIT)"
 
 .DEFAULT_GOAL := test
 
 .PHONY: build run clean test test-unit test-coverage lint fmt vuln modernize bench
 
-# Build the application (library modules override BUILD_CMD with `go build ./...`)
+# Build the application (common overrides BUILD_CMD with `go build ./...`)
 BUILD_CMD ?= go build $(LDFLAGS) -o ./$(BINARY) $(CMD_PATH)
 build:
 	$(BUILD_CMD)
@@ -52,14 +52,11 @@ test-coverage:
 
 # Run lint checks without modifying files (CI-friendly)
 lint:
-	go mod tidy -diff
-	go mod verify
 	go vet ./...
 	golangci-lint run
 
 # Run lint tools with auto-fix (local dev; incl. go fix modernizations)
 fmt:
-	go mod tidy
 	go fix ./...
 	golangci-lint fmt ./...
 	golangci-lint run --fix

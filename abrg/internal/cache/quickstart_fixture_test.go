@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"testing"
 
-	"abrg/internal/infra/duckdb"
-	"abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
 // TestQuickstartFixture_Structure checks that the committed quickstart cache

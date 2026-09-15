@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 )
 
 // senGoPattern matches Hokkaido colonial division addresses like "7線1号" or "10線西5号".

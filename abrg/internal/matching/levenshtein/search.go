@@ -8,10 +8,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"abrg/internal/matchlevel"
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // levenshteinQuerier is a consumer-defined interface for fuzzy address matching.

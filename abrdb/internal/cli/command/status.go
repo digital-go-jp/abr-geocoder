@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 
-	"abr.local/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/progress"
 )
 
 // printStatus writes a line of human-facing status. It goes to stderr through

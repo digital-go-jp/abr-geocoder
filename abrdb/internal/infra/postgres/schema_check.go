@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
 )
 
 // VerifyTableColumns checks that every table in required exists in the public

@@ -1,6 +1,6 @@
 package repository
 
-import "abrg/internal/model"
+import "github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 
 // BasicSearchParams holds parameters for basic address search.
 type BasicSearchParams struct {
