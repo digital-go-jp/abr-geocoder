@@ -59,7 +59,6 @@ services:
     environment:
       <<: *db-env
       PORT: 3000
-      GIN_MODE: ${GIN_MODE}
       LOG_LEVEL: ${LOG_LEVEL}
       CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
     ports:

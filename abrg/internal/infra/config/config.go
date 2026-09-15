@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,6 +49,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
+	// Host is the address to listen on.
+	// An empty Host listens on every interface.
+	Host             string
 	Port             string
 	CORSAllowOrigins []string
 	// HTTP server timeouts, tunable to match the idle settings of a fronting
@@ -55,6 +59,11 @@ type ServerConfig struct {
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
+}
+
+// Addr returns the host:port address the server listens on.
+func (c ServerConfig) Addr() string {
+	return net.JoinHostPort(c.Host, c.Port)
 }
 
 type cacheConfig struct {
@@ -67,6 +76,7 @@ type cacheConfig struct {
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
+			Host:             env.GetEnv("ABRG_HTTP_HOST", ""),
 			Port:             env.GetEnv("PORT", "3000"),
 			CORSAllowOrigins: splitOrigins(env.GetEnv("CORS_ALLOW_ORIGIN", DefaultCORSAllowOrigin)),
 			ReadTimeout:      durationEnv("ABRG_HTTP_READ_TIMEOUT", 10*time.Second),

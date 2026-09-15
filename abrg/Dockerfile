@@ -33,8 +33,7 @@ COPY --from=builder /build/abrg/abrg /app/abrg
 
 EXPOSE 3000
 
-ENV GIN_MODE=release \
-    PORT=3000
+ENV PORT=3000
 
 ENTRYPOINT ["/app/abrg"]
 CMD ["serve"]
