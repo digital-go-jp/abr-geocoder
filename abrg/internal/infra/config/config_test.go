@@ -98,6 +98,29 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+func TestServerConfigAddr(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+		want string
+	}{
+		{name: "every interface when host is not set", host: "", want: ":3000"},
+		{name: "IPv4 loopback", host: "127.0.0.1", want: "127.0.0.1:3000"},
+		{name: "IPv6 loopback", host: "::1", want: "[::1]:3000"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("PORT", "3000")
+			t.Setenv("ABRG_HTTP_HOST", tt.host)
+
+			if got := Load().Server.Addr(); got != tt.want {
+				t.Errorf("Addr() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestLoadCORSAllowOrigins covers the comma-separated form, which lets more
 // than one frontend be allowed, and the values that must not leave the list
 // empty: the middleware rejects a configuration allowing no origin at all.

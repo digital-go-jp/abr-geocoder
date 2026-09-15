@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 
 	"github.com/digital-go-jp/abr-geocoder/common/version"
@@ -63,6 +65,11 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		"pref", cacheCfg.EnabledPref,
 		"pos", cacheCfg.PosEnabled())
 
+	// Gin's default debug mode prints plain-text lines among the JSON logs.
+	if os.Getenv(gin.EnvGinMode) == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	server := api.NewGinServer(api.ServerConfig{
 		APIVersion:       version.Version,
 		CORSAllowOrigins: cfg.Server.CORSAllowOrigins,
@@ -76,7 +83,7 @@ func runServer(ctx context.Context, cacheFlag string) error {
 	}()
 
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%s", cfg.Server.Port),
+		Addr:              cfg.Server.Addr(),
 		Handler:           server.Handler(),
 		ReadHeaderTimeout: cfg.Server.ReadTimeout,
 		ReadTimeout:       cfg.Server.ReadTimeout,

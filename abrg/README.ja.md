@@ -64,6 +64,7 @@ API 仕様: [openapi/openapi.yml](openapi/openapi.yml)
 
 | 変数名 | デフォルト | 説明 |
 |--------|----------|------|
+| `ABRG_HTTP_HOST` | すべてのインターフェース | 待ち受けるアドレス。`127.0.0.1` を指定すると同じ PC からのみ接続できる |
 | `PORT` | `3000` | サーバーポート |
 | `CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDB キャッシュファイルのパス |
 | `ABRG_DUCKDB_THREADS` | `2` | DuckDB のクエリ内並列数の上限（`0` で DuckDB 既定＝コア数） |
