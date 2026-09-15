@@ -5,6 +5,8 @@ on:
     paths:
       - 'abrg/**'
       - 'common/**'
+      - 'go.mod'
+      - 'go.sum'
       - 'quickstart/tokyo_basic.duckdb'
 
 permissions:
