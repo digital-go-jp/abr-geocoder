@@ -63,16 +63,6 @@ func TestParseCoordinates(t *testing.T) {
 			input:   "139.7369,xyz",
 			wantErr: true,
 		},
-		{
-			name:    "longitude out of range",
-			input:   "181,35",
-			wantErr: true,
-		},
-		{
-			name:    "latitude out of range",
-			input:   "139,91",
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {

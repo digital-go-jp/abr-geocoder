@@ -16,7 +16,9 @@ import (
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/reverse"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 func TestMain(m *testing.M) {
@@ -90,24 +92,6 @@ func TestGeocodeRequest_Validation(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 			wantError:  true,
 		},
-		{
-			name:       "invalid category value",
-			query:      "?address=東京都&category=invalid",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
-		},
-		{
-			name:       "limit out of range (6)",
-			query:      "?address=東京都&limit=6",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
-		},
-		{
-			name:       "limit out of range (0)",
-			query:      "?address=東京都&limit=0",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -175,69 +159,23 @@ func TestReverseRequest_Validation(t *testing.T) {
 			wantError:  true,
 		},
 		{
-			name:       "lat out of range (-91)",
-			query:      "?lat=-91&lon=139.6503",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
-		},
-		{
-			name:       "lat out of range (91)",
+			// Range checks belong to reverse.Reverse, so binding accepts the value.
+			name:       "out-of-range lat is left to the reverse geocoder",
 			query:      "?lat=91&lon=139.6503",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
-		},
-		{
-			name:       "lon out of range (-181)",
-			query:      "?lat=35.6762&lon=-181",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
-		},
-		{
-			name:       "lon out of range (181)",
-			query:      "?lat=35.6762&lon=181",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
-		},
-		{
-			// min=-90 is inclusive, so lat=-90 (with a non-zero lon) must be accepted.
-			name:       "lat lower bound -90 is valid",
-			query:      "?lat=-90&lon=139.6503",
 			wantStatus: http.StatusOK,
 			wantError:  false,
 		},
 		{
-			// max=90 is inclusive, so lat=90 must be accepted.
-			name:       "lat upper bound 90 is valid",
-			query:      "?lat=90&lon=139.6503",
-			wantStatus: http.StatusOK,
-			wantError:  false,
-		},
-		{
-			name:       "lon lower bound -180 is valid",
-			query:      "?lat=35.6762&lon=-180",
-			wantStatus: http.StatusOK,
-			wantError:  false,
-		},
-		{
-			name:       "lon upper bound 180 is valid",
-			query:      "?lat=35.6762&lon=180",
-			wantStatus: http.StatusOK,
-			wantError:  false,
-		},
-		{
-			// `required` treats the float64 zero value as missing, so lat=0 is
-			// rejected. A point at lat=0/lon=0 is far outside Japan, so this is
-			// acceptable for a Japan-only geocoder.
-			name:       "lat=0 rejected as missing (required)",
+			name:       "lat=0 is accepted",
 			query:      "?lat=0&lon=139.6503",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
+			wantStatus: http.StatusOK,
+			wantError:  false,
 		},
 		{
-			name:       "lon=0 rejected as missing (required)",
+			name:       "lon=0 is accepted",
 			query:      "?lat=35.6762&lon=0",
-			wantStatus: http.StatusBadRequest,
-			wantError:  true,
+			wantStatus: http.StatusOK,
+			wantError:  false,
 		},
 	}
 
@@ -570,45 +508,6 @@ func TestRegisterEndpoints(t *testing.T) {
 	}
 }
 
-// TestValidateAddress tests the validateAddress helper function.
-// Note: This overlaps with TestRequestValidation but tests the function directly.
-func TestValidateAddress(t *testing.T) {
-	tests := []struct {
-		name    string
-		address string
-		wantErr bool
-	}{
-		{"valid address", "東京都千代田区", false},
-		{"valid with spaces", "東京都 千代田区", false},
-		{"empty string", "", true},
-		{"whitespace only", "   ", true},
-		{"tab only", "\t\t", true},
-		{"newline only", "\n", true},
-		{"mixed whitespace", " \t\n ", true},
-		// Note: strings.TrimSpace uses unicode.IsSpace, which includes U+3000 (ideographic space)
-		{"fullwidth space only", "\u3000", true},
-		{"address within max length (100 chars)", makeAddressString(100), false},
-		{"address exceeds max length (101 chars)", makeAddressString(101), true},
-		{"very long address (200 chars)", makeAddressString(200), true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateAddress(tt.address)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateAddress(%q) error = %v, wantErr %v", tt.address, err, tt.wantErr)
-			}
-			// Verify error message for whitespace-only validation (not length validation)
-			if tt.wantErr && err != nil && len(tt.address) > 0 && len([]rune(tt.address)) <= MaxAddressLength {
-				if err.Error() != "address cannot be empty or whitespace only" {
-					t.Errorf("validateAddress(%q) error message = %q, want %q",
-						tt.address, err.Error(), "address cannot be empty or whitespace only")
-				}
-			}
-		})
-	}
-}
-
 // TestSendBadRequest tests the sendBadRequest helper function.
 func TestSendBadRequest(t *testing.T) {
 	router := gin.New()
@@ -663,103 +562,6 @@ func TestSendInternalServerError(t *testing.T) {
 	}
 }
 
-// TestValidateParams tests the GinServer.validateParams method.
-func TestValidateParams(t *testing.T) {
-	tests := []struct {
-		name            string
-		category        string
-		pref            string
-		enabledCategory string
-		enabledPref     string
-		wantCategory    model.Category
-		wantPref        string
-		wantErr         bool
-	}{
-		{
-			name:            "valid all category with all category",
-			category:        "all",
-			pref:            "all",
-			enabledCategory: "all",
-			enabledPref:     "all",
-			wantCategory:    model.CategoryAll,
-			wantPref:        "all",
-			wantErr:         false,
-		},
-		{
-			name:            "valid basic category with specific prefecture",
-			category:        "basic",
-			pref:            "13",
-			enabledCategory: "all",
-			enabledPref:     "all",
-			wantCategory:    model.CategoryBasic,
-			wantPref:        "13",
-			wantErr:         false,
-		},
-		{
-			name:            "empty category defaults to enabledCategory",
-			category:        "",
-			pref:            "all",
-			enabledCategory: "basic",
-			enabledPref:     "all",
-			wantCategory:    model.CategoryBasic,
-			wantPref:        "all",
-			wantErr:         false,
-		},
-		{
-			name:            "invalid category",
-			category:        "invalid",
-			pref:            "all",
-			enabledCategory: "all",
-			enabledPref:     "all",
-			wantCategory:    "",
-			wantPref:        "",
-			wantErr:         true,
-		},
-		{
-			name:            "invalid pref",
-			category:        "all",
-			pref:            "99",
-			enabledCategory: "all",
-			enabledPref:     "all",
-			wantCategory:    "",
-			wantPref:        "",
-			wantErr:         true,
-		},
-		{
-			name:            "incompatible category with enabled category",
-			category:        "rsdtdsp",
-			pref:            "all",
-			enabledCategory: "basic",
-			enabledPref:     "all",
-			wantCategory:    "",
-			wantPref:        "",
-			wantErr:         true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			server := &GinServer{
-				enabledCategory: tt.enabledCategory,
-				enabledPref:     tt.enabledPref,
-			}
-			gotCategory, gotPref, err := server.validateParams(tt.category, tt.pref)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateParams() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				if gotCategory != tt.wantCategory {
-					t.Errorf("validateParams() category = %v, want %v", gotCategory, tt.wantCategory)
-				}
-				if gotPref != tt.wantPref {
-					t.Errorf("validateParams() pref = %v, want %v", gotPref, tt.wantPref)
-				}
-			}
-		})
-	}
-}
-
 // TestSetResultInfo tests the GinServer.setResultInfo method.
 func TestSetResultInfo(t *testing.T) {
 	server := &GinServer{
@@ -808,22 +610,6 @@ func TestPrepareQuery(t *testing.T) {
 			wantPref:     "all",
 		},
 		{
-			name:       "empty address",
-			address:    "",
-			category:   "all",
-			pref:       "all",
-			wantOk:     false,
-			wantStatus: http.StatusBadRequest,
-		},
-		{
-			name:       "whitespace only address",
-			address:    "   ",
-			category:   "all",
-			pref:       "all",
-			wantOk:     false,
-			wantStatus: http.StatusBadRequest,
-		},
-		{
 			name:       "invalid category",
 			address:    "東京都",
 			category:   "invalid",
@@ -845,8 +631,10 @@ func TestPrepareQuery(t *testing.T) {
 			var gotOk bool
 
 			router.GET("/test", func(c *gin.Context) {
-				gotQuery, gotOk = server.prepareQuery(
-					c, tt.address, tt.category, tt.pref, 1)
+				gotQuery, gotOk = server.prepareQuery(c, addressRequest{
+					Category: tt.category, Pref: tt.pref, Limit: 1,
+					Address: tt.address,
+				})
 				if gotOk {
 					c.JSON(http.StatusOK, gin.H{"status": "ok"})
 				}
@@ -996,6 +784,18 @@ func TestNormalizeHandler_Integration(t *testing.T) {
 			query:          "?address=%20%20%20",
 			wantStatus:     http.StatusBadRequest,
 			wantErrorField: true,
+		},
+		{
+			name:           "comment only address",
+			query:          "?address=%2F%2F%20memo",
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+		},
+		{
+			name:       "comment does not count toward the length",
+			query:      "?address=東京都千代田区紀尾井町1番3号%20%2F%2F%20" + makeAddressString(normalize.MaxAddressLength),
+			wantStatus: http.StatusOK,
+			wantOutput: "東京都千代田区紀尾井町1-3",
 		},
 	}
 
@@ -1192,6 +992,13 @@ func TestGeocodeHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusBadRequest,
 			wantErrorField: true,
 		},
+		{
+			name:           "empty address after normalization maps to 400",
+			query:          "?address=%2F%2F&category=all",
+			mockErr:        normalize.ErrEmptyAddress,
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1273,6 +1080,13 @@ func TestMatchHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusServiceUnavailable,
 			wantErrorField: true,
 		},
+		{
+			name:           "address too long maps to 400",
+			query:          "?address=東京都&category=all",
+			mockErr:        normalize.ErrAddressTooLong,
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1343,6 +1157,26 @@ func TestReverseHandler_Integration(t *testing.T) {
 			wantErrorField: true,
 		},
 		{
+			name:           "empty lat",
+			query:          "?lat=&lon=139.6503&category=all",
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+		},
+		{
+			name:           "blank lon",
+			query:          "?lat=35.6762&lon=%20&category=all",
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+		},
+		{
+			name:  "lat and lon of 0",
+			query: "?lat=0&lon=0&category=all",
+			mockResponse: &model.ReverseResponse{
+				Type: "FeatureCollection",
+			},
+			wantStatus: http.StatusOK,
+		},
+		{
 			name:           "invalid category",
 			query:          "?lat=35.6762&lon=139.6503&category=invalid",
 			wantStatus:     http.StatusBadRequest,
@@ -1374,6 +1208,14 @@ func TestReverseHandler_Integration(t *testing.T) {
 			wantStatus:     http.StatusBadRequest,
 			wantErrorField: true,
 			wantMessage:    "unknown category: bogus",
+		},
+		{
+			name:           "invalid coordinates map to 400",
+			query:          "?lat=NaN&lon=139.6503&category=all",
+			mockErr:        fmt.Errorf("%w: latitude out of range", util.ErrInvalidCoordinates),
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: true,
+			wantMessage:    "invalid coordinates: latitude out of range",
 		},
 	}
 

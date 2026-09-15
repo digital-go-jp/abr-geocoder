@@ -93,7 +93,7 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 		"pref", cacheCfg.EnabledPref,
 		"category", cacheCfg.EnabledCategory)
 
-	category, pref, err := validateOptions(opts, cacheCfg.EnabledCategory, cacheCfg.EnabledPref)
+	category, pref, err := validate.ValidateOptions(opts.Category, opts.Pref, opts.Limit, cacheCfg.EnabledCategory, cacheCfg.EnabledPref)
 	if err != nil {
 		setup.Cleanup()
 		return nil, err
@@ -156,28 +156,6 @@ func registerCommonFlags(cmd *cobra.Command, opts *processorOptions) {
 	cmd.Flags().BoolVarP(&opts.Quiet, "quiet", "q", false, "Suppress progress output")
 	_ = cmd.MarkFlagRequired("input")
 	_ = cmd.MarkFlagRequired("output")
-}
-
-// validateOptions validates the category, pref and limit options against the
-// cache configuration, returning the resolved category and pref. Both
-// validate.ValidateCategory and validate.ValidatePref fall back to the
-// enabled value when the corresponding flag is empty.
-func validateOptions(opts processorOptions, enabledCategory, enabledPref string) (model.Category, string, error) {
-	category, err := validate.ValidateCategory(opts.Category, enabledCategory)
-	if err != nil {
-		return "", "", err
-	}
-
-	pref, err := validate.ValidatePref(opts.Pref, enabledPref)
-	if err != nil {
-		return "", "", err
-	}
-
-	if err := validate.ValidateLimit(opts.Limit); err != nil {
-		return "", "", err
-	}
-
-	return category, pref, nil
 }
 
 // newDefaultProcessor creates a ParallelProcessor with standard settings.

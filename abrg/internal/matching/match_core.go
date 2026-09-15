@@ -53,7 +53,10 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 		return nil, fmt.Errorf("%w: %s", ErrUnknownCategory, query.Category)
 	}
 
-	normalizedAddr := normalize.BasicNormalize(query.Address)
+	normalizedAddr, err := normalize.BasicNormalizeInput(query.Address)
+	if err != nil {
+		return nil, err
+	}
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
 
 	results, err := n.matchNormalized(ctx, query, normalizedAddr, addressType, false)

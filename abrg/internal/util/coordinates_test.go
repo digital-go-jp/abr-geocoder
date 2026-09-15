@@ -1,6 +1,8 @@
 package util
 
 import (
+	"errors"
+	"math"
 	"slices"
 	"testing"
 )
@@ -62,6 +64,8 @@ func TestValidateCoordinates(t *testing.T) {
 		{name: "longitude too low", lon: -181, lat: 35, wantErr: true},
 		{name: "latitude too high", lon: 139, lat: 91, wantErr: true},
 		{name: "latitude too low", lon: 139, lat: -91, wantErr: true},
+		{name: "longitude NaN", lon: math.NaN(), lat: 35, wantErr: true},
+		{name: "latitude NaN", lon: 139, lat: math.NaN(), wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -69,6 +73,9 @@ func TestValidateCoordinates(t *testing.T) {
 			err := ValidateCoordinates(tt.lon, tt.lat)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateCoordinates(%v, %v) error = %v, wantErr %v", tt.lon, tt.lat, err, tt.wantErr)
+			}
+			if err != nil && !errors.Is(err, ErrInvalidCoordinates) {
+				t.Errorf("ValidateCoordinates(%v, %v) error = %v, want it to match ErrInvalidCoordinates", tt.lon, tt.lat, err)
 			}
 		})
 	}

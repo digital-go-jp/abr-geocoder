@@ -29,8 +29,8 @@ func categoryCompatible(category, enabledCategory string) error {
 	return nil
 }
 
-// ValidateCategory validates category parameter and returns default if empty.
-func ValidateCategory(categoryStr, enabledCategory string) (model.Category, error) {
+// validateCategory validates category parameter and returns default if empty.
+func validateCategory(categoryStr, enabledCategory string) (model.Category, error) {
 	if categoryStr == "" {
 		categoryStr = enabledCategory
 	}
@@ -43,8 +43,8 @@ func ValidateCategory(categoryStr, enabledCategory string) (model.Category, erro
 	return category, nil
 }
 
-// ValidatePref validates pref parameter and returns default if empty.
-func ValidatePref(prefStr, enabledPref string) (string, error) {
+// validatePref validates pref parameter and returns default if empty.
+func validatePref(prefStr, enabledPref string) (string, error) {
 	if prefStr == "" {
 		prefStr = enabledPref
 	}
@@ -65,16 +65,34 @@ func ValidatePref(prefStr, enabledPref string) (string, error) {
 	return prefStr, nil
 }
 
+// ValidateOptions validates the category, pref and limit of a query against the cache configuration.
+// It returns the category and pref to query with, falling back to the enabled values when they are empty.
+func ValidateOptions(category, pref string, limit int, enabledCategory, enabledPref string) (model.Category, string, error) {
+	resolvedCategory, err := validateCategory(category, enabledCategory)
+	if err != nil {
+		return "", "", err
+	}
+
+	resolvedPref, err := validatePref(pref, enabledPref)
+	if err != nil {
+		return "", "", err
+	}
+
+	if err := validateLimit(limit); err != nil {
+		return "", "", err
+	}
+
+	return resolvedCategory, resolvedPref, nil
+}
+
 // MinLimit and MaxLimit bound the number of results a single query may return.
-// The gin binding tag on baseRequest.Limit in internal/api declares the same
-// range and cannot reference these constants, since struct tags are literals.
 const (
 	MinLimit = 1
 	MaxLimit = 5
 )
 
-// ValidateLimit validates that limit is within the supported range.
-func ValidateLimit(limit int) error {
+// validateLimit validates that limit is within the supported range.
+func validateLimit(limit int) error {
 	if limit < MinLimit || limit > MaxLimit {
 		return fmt.Errorf("invalid limit '%d': must be between %d and %d", limit, MinLimit, MaxLimit)
 	}

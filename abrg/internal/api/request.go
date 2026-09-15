@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -16,14 +17,12 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/validate"
 )
 
-// baseRequest contains common fields for all requests. The category list and
-// the limit range restate model.Categories and validate.MinLimit/MaxLimit,
-// because binding tags must be literals; binding_tags_test.go fails if they
-// drift apart.
+// baseRequest contains common fields for all requests.
+// validate.ValidateOptions checks their values, as it does for the CLI.
 type baseRequest struct {
-	Category string `form:"category" binding:"omitempty,oneof=all basic rsdtdsp parcel"`
-	Pref     string `form:"pref" binding:"omitempty"`
-	Limit    int    `form:"limit,default=1" binding:"min=1,max=5"`
+	Category string `form:"category"`
+	Pref     string `form:"pref"`
+	Limit    int    `form:"limit,default=1"`
 }
 
 // addressRequest represents address-based (match/geocode) request parameters.
@@ -32,14 +31,22 @@ type addressRequest struct {
 	Address string `form:"address" binding:"required"`
 }
 
-// reverseRequest represents reverse geocoding request parameters. The lat/lon
-// bounds restate util.MinLat/MaxLat/MinLon/MaxLon for the same reason as
-// baseRequest's binding tags: struct tags must be literals, and
-// binding_tags_test.go fails if they drift apart.
+// reverseRequest represents reverse geocoding request parameters.
+// Lat and Lon are strings because binding reads an empty number as 0.
+// parseCoordinate converts them, and reverse.Reverse checks their range.
 type reverseRequest struct {
 	baseRequest
-	Lat float64 `form:"lat" binding:"required,min=-90,max=90"`
-	Lon float64 `form:"lon" binding:"required,min=-180,max=180"`
+	Lat string `form:"lat" binding:"required"`
+	Lon string `form:"lon" binding:"required"`
+}
+
+// parseCoordinate parses the lat or lon parameter named name.
+func parseCoordinate(name, value string) (float64, error) {
+	v, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s: %q", name, value)
+	}
+	return v, nil
 }
 
 // normalizeRequest represents address standardization request parameters.
@@ -47,32 +54,9 @@ type normalizeRequest struct {
 	Address string `form:"address" binding:"required"`
 }
 
-const MaxAddressLength = 100
-
-// validateAddress checks if address is not empty or whitespace only, and not too long.
-func validateAddress(address string) error {
-	if strings.TrimSpace(address) == "" {
-		return errors.New("address cannot be empty or whitespace only")
-	}
-	if len([]rune(address)) > MaxAddressLength {
-		return fmt.Errorf("address too long: max %d characters", MaxAddressLength)
-	}
-	return nil
-}
-
-// validateParams validates category and pref parameters.
-func (s *GinServer) validateParams(category, pref string) (model.Category, string, error) {
-	validatedCategory, err := validate.ValidateCategory(category, s.enabledCategory)
-	if err != nil {
-		return "", "", err
-	}
-
-	validatedPref, err := validate.ValidatePref(pref, s.enabledPref)
-	if err != nil {
-		return "", "", err
-	}
-
-	return validatedCategory, validatedPref, nil
+// validateOptions checks the request options against the cache configuration.
+func (s *GinServer) validateOptions(req baseRequest) (model.Category, string, error) {
+	return validate.ValidateOptions(req.Category, req.Pref, req.Limit, s.enabledCategory, s.enabledPref)
 }
 
 func errorResponse(message string) gin.H {
@@ -139,29 +123,25 @@ func sendGeoJSON(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, data)
 }
 
-// prepareQuery validates the request params, records them for structured
+// prepareQuery validates the request options, records them for structured
 // logging, and builds the shared MatchQuery. It returns ok=false after writing
 // an error response when validation fails.
-func (s *GinServer) prepareQuery(c *gin.Context, address, categoryStr, prefStr string, limit int) (model.MatchQuery, bool) {
-	if err := validateAddress(address); err != nil {
-		sendBadRequest(c, err.Error())
-		return model.MatchQuery{}, false
-	}
-
-	category, pref, err := s.validateParams(categoryStr, prefStr)
+// The matcher validates the address itself.
+func (s *GinServer) prepareQuery(c *gin.Context, req addressRequest) (model.MatchQuery, bool) {
+	category, pref, err := s.validateOptions(req.baseRequest)
 	if err != nil {
 		sendBadRequest(c, err.Error())
 		return model.MatchQuery{}, false
 	}
 
-	c.Set(ctxKeyAddress, address)
+	c.Set(ctxKeyAddress, req.Address)
 	c.Set(ctxKeyCategory, string(category))
 	c.Set(ctxKeyPref, pref)
 
 	return model.MatchQuery{
-		Address:  address,
+		Address:  req.Address,
 		Category: category,
-		Limit:    limit,
+		Limit:    req.Limit,
 		Pref:     pref,
 	}, true
 }

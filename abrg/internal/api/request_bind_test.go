@@ -29,22 +29,13 @@ func TestFormatBindError_UsesFormTagNames(t *testing.T) {
 			want: "invalid parameters: address: required",
 		},
 		{
-			name:  "limit out of range",
-			query: "/x?address=a&limit=9",
-			bind: func(c *gin.Context) error {
-				var req addressRequest
-				return c.ShouldBindQuery(&req)
-			},
-			want: "invalid parameters: limit: max",
-		},
-		{
-			name:  "lat out of range",
-			query: "/x?lat=99&lon=10",
+			name:  "missing lat",
+			query: "/x?lon=10",
 			bind: func(c *gin.Context) error {
 				var req reverseRequest
 				return c.ShouldBindQuery(&req)
 			},
-			want: "invalid parameters: lat: max",
+			want: "invalid parameters: lat: required",
 		},
 	}
 
