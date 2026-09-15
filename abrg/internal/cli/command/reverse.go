@@ -11,7 +11,6 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/reverse"
-	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // NewReverseCmd creates a new reverse geocoding command.
@@ -52,7 +51,7 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 			return nil, err
 		}
 
-		return runTimed(setup, func() (*model.ReverseResponse, error) {
+		return withResultInfo(setup, func() (*model.ReverseResponse, error) {
 			return reverser.Reverse(ctx, model.ReverseQuery{
 				Lon:      lon,
 				Lat:      lat,
@@ -79,10 +78,6 @@ func parseCoordinates(line string) (lon, lat float64, err error) {
 
 	if lat, err = strconv.ParseFloat(strings.TrimSpace(latStr), 64); err != nil {
 		return 0, 0, fmt.Errorf("invalid latitude: %w", err)
-	}
-
-	if err = util.ValidateCoordinates(lon, lat); err != nil {
-		return 0, 0, err
 	}
 
 	return lon, lat, nil

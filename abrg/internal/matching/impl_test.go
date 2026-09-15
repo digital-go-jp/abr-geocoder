@@ -3,10 +3,12 @@ package matching
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 
@@ -335,5 +337,26 @@ func TestNormalizeByCategoryUnknownCategory(t *testing.T) {
 	_, err := n.normalizeByCategory(context.Background(), &normalizeContext{}, model.Category("bogus"))
 	if !errors.Is(err, ErrUnknownCategory) {
 		t.Errorf("normalizeByCategory(bogus) error = %v, want it to match ErrUnknownCategory", err)
+	}
+}
+
+func TestMatchRejectsInvalidAddress(t *testing.T) {
+	tests := []struct {
+		name    string
+		address string
+		wantErr error
+	}{
+		{name: "comment only", address: "// memo", wantErr: normalize.ErrEmptyAddress},
+		{name: "too long", address: strings.Repeat("あ", normalize.MaxAddressLength+1), wantErr: normalize.ErrAddressTooLong},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := &Impl{}
+			_, err := n.Match(t.Context(), model.MatchQuery{Address: tt.address, Category: model.CategoryBasic})
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("Match(%q) error = %v, want %v", tt.address, err, tt.wantErr)
+			}
+		})
 	}
 }

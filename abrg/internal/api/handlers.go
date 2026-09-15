@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/gin-gonic/gin"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/reverse"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // logHandlerError logs a failed handler request with its parameters.
@@ -28,23 +30,29 @@ func queryLogParams(q model.MatchQuery) []any {
 }
 
 // queryErrors are the sentinels a query pipeline reports for client-visible
-// failures. Each pipeline declares its own pair.
+// failures. Each pipeline declares its own set.
 type queryErrors struct {
-	unknownCategory error
+	badRequest      []error
 	dataUnavailable error
 }
 
 var (
-	matchErrors   = queryErrors{matching.ErrUnknownCategory, matching.ErrDataUnavailable}
-	reverseErrors = queryErrors{reverse.ErrUnknownCategory, reverse.ErrDataUnavailable}
+	matchErrors = queryErrors{
+		badRequest:      []error{matching.ErrUnknownCategory, normalize.ErrEmptyAddress, normalize.ErrAddressTooLong},
+		dataUnavailable: matching.ErrDataUnavailable,
+	}
+	reverseErrors = queryErrors{
+		badRequest:      []error{reverse.ErrUnknownCategory, util.ErrInvalidCoordinates},
+		dataUnavailable: reverse.ErrDataUnavailable,
+	}
 )
 
-// sendQueryError maps a pipeline error to its response: an unknown category is
-// 400, data missing from the cache is 503, anything else is logged and
-// answered with 500.
+// sendQueryError maps a pipeline error to its response: invalid input is 400,
+// data missing from the cache is 503, anything else is logged and answered
+// with 500.
 func sendQueryError(c *gin.Context, sentinels queryErrors, msg, event string, err error, params ...any) {
 	switch {
-	case errors.Is(err, sentinels.unknownCategory):
+	case slices.ContainsFunc(sentinels.badRequest, func(target error) bool { return errors.Is(err, target) }):
 		sendBadRequest(c, err.Error())
 	case errors.Is(err, sentinels.dataUnavailable):
 		sendServiceUnavailable(c, err.Error())
@@ -71,7 +79,7 @@ func (s *GinServer) GeocodeHandler(c *gin.Context) {
 		return
 	}
 
-	query, ok := s.prepareQuery(c, req.Address, req.Category, req.Pref, req.Limit)
+	query, ok := s.prepareQuery(c, req)
 	if !ok {
 		return
 	}
@@ -101,28 +109,38 @@ func (s *GinServer) ReverseHandler(c *gin.Context) {
 		return
 	}
 
-	category, pref, err := s.validateParams(req.Category, req.Pref)
+	category, pref, err := s.validateOptions(req.baseRequest)
+	if err != nil {
+		sendBadRequest(c, err.Error())
+		return
+	}
+	lon, err := parseCoordinate("lon", req.Lon)
+	if err != nil {
+		sendBadRequest(c, err.Error())
+		return
+	}
+	lat, err := parseCoordinate("lat", req.Lat)
 	if err != nil {
 		sendBadRequest(c, err.Error())
 		return
 	}
 
 	// Set request params for structured logging
-	c.Set(ctxKeyLat, req.Lat)
-	c.Set(ctxKeyLon, req.Lon)
+	c.Set(ctxKeyLat, lat)
+	c.Set(ctxKeyLon, lon)
 	c.Set(ctxKeyCategory, string(category))
 	c.Set(ctxKeyPref, pref)
 
 	result, err := s.reverseGeocoder.Reverse(c.Request.Context(), model.ReverseQuery{
-		Lon:      req.Lon,
-		Lat:      req.Lat,
+		Lon:      lon,
+		Lat:      lat,
 		Category: category,
 		Limit:    req.Limit,
 		Pref:     pref,
 	})
 	if err != nil {
 		sendQueryError(c, reverseErrors, "reverse geocode request failed", "reverse", err,
-			"lon", req.Lon, "lat", req.Lat, "pref", pref, "category", category, "limit", req.Limit)
+			"lon", lon, "lat", lat, "pref", pref, "category", category, "limit", req.Limit)
 		return
 	}
 
@@ -143,7 +161,7 @@ func (s *GinServer) MatchHandler(c *gin.Context) {
 		return
 	}
 
-	query, ok := s.prepareQuery(c, req.Address, req.Category, req.Pref, req.Limit)
+	query, ok := s.prepareQuery(c, req)
 	if !ok {
 		return
 	}
@@ -170,12 +188,11 @@ func (s *GinServer) NormalizeHandler(c *gin.Context) {
 		return
 	}
 
-	if err := validateAddress(req.Address); err != nil {
+	output, addressType, err := normalize.NormalizeAddressText(req.Address)
+	if err != nil {
 		sendBadRequest(c, err.Error())
 		return
 	}
-
-	output, addressType := normalize.NormalizeAddressText(req.Address)
 	c.JSON(http.StatusOK, model.NormalizeResponse{
 		Input:  req.Address,
 		Output: output,

@@ -1,7 +1,6 @@
 package command
 
 import (
-	"bufio"
 	"context"
 	"database/sql"
 	"errors"
@@ -10,7 +9,6 @@ import (
 	"os"
 	"runtime"
 	"slices"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -21,7 +19,6 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
-	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/validate"
 )
 
@@ -93,7 +90,7 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 		"pref", cacheCfg.EnabledPref,
 		"category", cacheCfg.EnabledCategory)
 
-	category, pref, err := validateOptions(opts, cacheCfg.EnabledCategory, cacheCfg.EnabledPref)
+	category, pref, err := validate.ValidateOptions(opts.Category, opts.Pref, opts.Limit, cacheCfg.EnabledCategory, cacheCfg.EnabledPref)
 	if err != nil {
 		setup.Cleanup()
 		return nil, err
@@ -126,7 +123,9 @@ func setupProcessor(ctx context.Context, opts processorOptions, taskName string,
 	setup.OutFile = outFile
 	setup.cleanup = append(setup.cleanup, func() { _ = outFile.Close() })
 
-	if monitor := progress.NewConsoleIfEnabled(opts.Quiet); monitor != nil {
+	// Counting the lines reads the input once more,
+	// which would consume a pipe such as /dev/stdin before it is processed.
+	if monitor := progress.NewConsoleIfEnabled(opts.Quiet); monitor != nil && isRegularFile(inFile) {
 		totalLines, err := countLines(opts.InputFile)
 		if err != nil {
 			setup.Cleanup()
@@ -158,28 +157,6 @@ func registerCommonFlags(cmd *cobra.Command, opts *processorOptions) {
 	_ = cmd.MarkFlagRequired("output")
 }
 
-// validateOptions validates the category, pref and limit options against the
-// cache configuration, returning the resolved category and pref. Both
-// validate.ValidateCategory and validate.ValidatePref fall back to the
-// enabled value when the corresponding flag is empty.
-func validateOptions(opts processorOptions, enabledCategory, enabledPref string) (model.Category, string, error) {
-	category, err := validate.ValidateCategory(opts.Category, enabledCategory)
-	if err != nil {
-		return "", "", err
-	}
-
-	pref, err := validate.ValidatePref(opts.Pref, enabledPref)
-	if err != nil {
-		return "", "", err
-	}
-
-	if err := validate.ValidateLimit(opts.Limit); err != nil {
-		return "", "", err
-	}
-
-	return category, pref, nil
-}
-
 // newDefaultProcessor creates a ParallelProcessor with standard settings.
 func newDefaultProcessor[R any](setup *processorSetup, process processFunc[R]) *parallelProcessor[R] {
 	return &parallelProcessor[R]{
@@ -190,6 +167,11 @@ func newDefaultProcessor[R any](setup *processorSetup, process processFunc[R]) *
 	}
 }
 
+func isRegularFile(f *os.File) bool {
+	info, err := f.Stat()
+	return err == nil && info.Mode().IsRegular()
+}
+
 func countLines(filename string) (int, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -197,7 +179,7 @@ func countLines(filename string) (int, error) {
 	}
 	defer func() { _ = file.Close() }()
 
-	scanner := bufio.NewScanner(file)
+	scanner := newLineScanner(file)
 	count := 0
 	for scanner.Scan() {
 		if len(scanner.Bytes()) != 0 {
@@ -208,18 +190,16 @@ func countLines(filename string) (int, error) {
 }
 
 // resultInfoHaver is implemented by response types with a ResultInfo field,
-// so runTimed can fill in duration and server metadata generically.
+// so withResultInfo can fill in server metadata generically.
 type resultInfoHaver interface {
 	ResultInfoPtr() *model.ResultInfo
 }
 
-// runTimed calls fn and, when it returns a non-nil result, records the
-// elapsed time and server metadata into the result's ResultInfo.
-func runTimed[R resultInfoHaver](setup *processorSetup, fn func() (R, error)) (R, error) {
-	start := time.Now()
+// withResultInfo calls fn and, when it returns a non-nil result, records the
+// server metadata into the result's ResultInfo.
+func withResultInfo[R resultInfoHaver](setup *processorSetup, fn func() (R, error)) (R, error) {
 	result, err := fn()
 	if info := result.ResultInfoPtr(); info != nil {
-		info.DurationMs = util.DurationMs(time.Since(start))
 		setup.setResultInfo(info)
 	}
 	return result, err

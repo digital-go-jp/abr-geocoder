@@ -378,11 +378,11 @@ components:
       description: |
         処理する住所。
         UTF-8のパーセントエンコーディングにも対応。
-        最大100文字。
+        前後の引用符、`//` と `/* */` のコメント、表示されない文字を取り除いた後で最大100文字。
+        取り除いた結果が空の場合は400を返す。
       required: true
       schema:
         type: string
-        maxLength: 100
         example: "東京都千代田区紀尾井町1-3 東京ガーデンテラス紀尾井町 19階、20階"
     limit:
       name: limit

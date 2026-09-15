@@ -95,13 +95,13 @@ func TestValidateCategory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ValidateCategory(tt.categoryStr, tt.enabledCategory)
+			got, err := validateCategory(tt.categoryStr, tt.enabledCategory)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateCategory() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("validateCategory() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.wantCategory {
-				t.Errorf("ValidateCategory() = %v, want %v", got, tt.wantCategory)
+				t.Errorf("validateCategory() = %v, want %v", got, tt.wantCategory)
 			}
 		})
 	}
@@ -197,13 +197,13 @@ func TestValidatePref(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ValidatePref(tt.prefStr, tt.enabledPref)
+			got, err := validatePref(tt.prefStr, tt.enabledPref)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePref() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("validatePref() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.wantPref {
-				t.Errorf("ValidatePref() = %v, want %v", got, tt.wantPref)
+				t.Errorf("validatePref() = %v, want %v", got, tt.wantPref)
 			}
 		})
 	}
@@ -274,9 +274,91 @@ func TestValidateLimit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateLimit(tt.limit)
+			err := validateLimit(tt.limit)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateLimit(%d) error = %v, wantErr %v", tt.limit, err, tt.wantErr)
+				t.Errorf("validateLimit(%d) error = %v, wantErr %v", tt.limit, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateOptions(t *testing.T) {
+	tests := []struct {
+		name            string
+		category        string
+		pref            string
+		limit           int
+		enabledCategory string
+		enabledPref     string
+		wantCategory    model.Category
+		wantPref        string
+		wantErr         bool
+	}{
+		{
+			name:            "omitted options fall back to the cache config",
+			limit:           1,
+			enabledCategory: "all",
+			enabledPref:     "all",
+			wantCategory:    model.CategoryAll,
+			wantPref:        "all",
+		},
+		{
+			name:            "omitted pref falls back to a single prefecture",
+			limit:           1,
+			enabledCategory: "all",
+			enabledPref:     "13",
+			wantCategory:    model.CategoryAll,
+			wantPref:        "13",
+		},
+		{
+			name:            "explicit options are kept",
+			category:        "basic",
+			pref:            "13",
+			limit:           1,
+			enabledCategory: "all",
+			enabledPref:     "all",
+			wantCategory:    model.CategoryBasic,
+			wantPref:        "13",
+		},
+		{
+			name:            "unknown category is rejected",
+			category:        "city",
+			limit:           1,
+			enabledCategory: "all",
+			enabledPref:     "all",
+			wantErr:         true,
+		},
+		{
+			name:            "invalid pref is rejected",
+			pref:            "99",
+			limit:           1,
+			enabledCategory: "all",
+			enabledPref:     "all",
+			wantErr:         true,
+		},
+		{
+			name:            "out-of-range limit is rejected",
+			limit:           0,
+			enabledCategory: "all",
+			enabledPref:     "all",
+			wantErr:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			category, pref, err := ValidateOptions(tt.category, tt.pref, tt.limit, tt.enabledCategory, tt.enabledPref)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateOptions() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if category != tt.wantCategory {
+				t.Errorf("category = %q, want %q", category, tt.wantCategory)
+			}
+			if pref != tt.wantPref {
+				t.Errorf("pref = %q, want %q", pref, tt.wantPref)
 			}
 		})
 	}

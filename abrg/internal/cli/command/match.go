@@ -33,7 +33,7 @@ func runMatch(ctx context.Context, opts processorOptions) error {
 	defer setup.Cleanup()
 
 	p := newDefaultProcessor(setup, func(ctx context.Context, address string) (*model.MatchResponse, error) {
-		return runTimed(setup, func() (*model.MatchResponse, error) {
+		return withResultInfo(setup, func() (*model.MatchResponse, error) {
 			return setup.Matcher.Match(ctx, model.MatchQuery{
 				Address:  address,
 				Category: setup.Category,

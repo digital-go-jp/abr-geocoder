@@ -58,6 +58,10 @@ func (g *ReverseGeocoder) Reverse(ctx context.Context, query model.ReverseQuery)
 		return nil, err
 	}
 
+	if err := util.ValidateCoordinates(query.Lon, query.Lat); err != nil {
+		return nil, err
+	}
+
 	if query.Limit <= 0 {
 		query.Limit = 1
 	}

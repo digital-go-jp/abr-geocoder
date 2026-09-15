@@ -161,26 +161,6 @@ func TestNormalizeAddressText(t *testing.T) {
 			expectedType: model.NormalizeCategoryParcel,
 		},
 
-		// Edge cases
-		{
-			name:         "empty string",
-			input:        "",
-			expectedAddr: "",
-			expectedType: model.NormalizeCategoryUnknown,
-		},
-		{
-			name:         "only spaces",
-			input:        "   　　　   ",
-			expectedAddr: "",
-			expectedType: model.NormalizeCategoryUnknown,
-		},
-		{
-			name:         "only comment",
-			input:        "/* comment */",
-			expectedAddr: "",
-			expectedType: model.NormalizeCategoryUnknown,
-		},
-
 		// Real-world cases
 		{
 			name:         "real case - saitama yoshikawa",
@@ -396,7 +376,10 @@ func TestNormalizeAddressText(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, addressType := NormalizeAddressText(tt.input)
+			result, addressType, err := NormalizeAddressText(tt.input)
+			if err != nil {
+				t.Fatalf("NormalizeAddressText(%q) error = %v", tt.input, err)
+			}
 
 			if result != tt.expectedAddr {
 				t.Errorf("NormalizeAddressText(%q) address = %q, want %q", tt.input, result, tt.expectedAddr)
@@ -463,7 +446,11 @@ func TestNormalizeBasicNormalized(t *testing.T) {
 			if tt.usePreComputed {
 				result, addressType = NormalizeBasicNormalized(BasicNormalize(tt.input))
 			} else {
-				result, addressType = NormalizeAddressText(tt.input)
+				var err error
+				result, addressType, err = NormalizeAddressText(tt.input)
+				if err != nil {
+					t.Fatalf("NormalizeAddressText(%q) error = %v", tt.input, err)
+				}
 			}
 
 			if result != tt.expectedAddr {
@@ -475,7 +462,7 @@ func TestNormalizeBasicNormalized(t *testing.T) {
 			}
 
 			// NormalizeAddressText and the two-step form must agree
-			textResult, textType := NormalizeAddressText(tt.input)
+			textResult, textType, _ := NormalizeAddressText(tt.input)
 			preResult, preType := NormalizeBasicNormalized(BasicNormalize(tt.input))
 
 			if textResult != preResult {
@@ -500,7 +487,7 @@ func BenchmarkNormalizeAddressText(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run("input_"+tc[:min(20, len(tc))], func(b *testing.B) {
 			for b.Loop() {
-				NormalizeAddressText(tc)
+				_, _, _ = NormalizeAddressText(tc)
 			}
 		})
 	}
