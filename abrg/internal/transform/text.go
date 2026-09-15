@@ -5,28 +5,29 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
-// The steps are pure functions with no mutable state, so the pipelines are
-// safe to share as package-level vars.
+// The steps are pure functions with no mutable state,
+// so the pipelines are safe to share as package-level vars.
 var (
-	// basicNormalizedSteps handles text that BasicNormalize already ran on, so
-	// StandardizeSpecialChars, NFKCNormalize and NormalizeDashes are omitted.
+	// basicNormalizedSteps handles text that BasicNormalize and StandardizeSpecialChars already ran on,
+	// so it leaves out the steps those cover.
 	basicNormalizedSteps = []normalize.TransformStep{
 		util.RemoveOazaAza,
 		kanjiNoToHyphen,
 		hiraganaToKatakana,
 		AddColon,
 		KanjiToArabic,
-		// expandSapporoJou must run after KanjiToArabic because its regex
-		// matches Arabic digits only (e.g. 北3西1), so kanji input like
-		// 北三西一 needs to be converted to 北3西1 first.
+		// expandSapporoJou must run after KanjiToArabic
+		// because its regex matches Arabic digits only (e.g. 北3西1),
+		// so kanji input like 北三西一 needs to be converted to 北3西1 first.
 		expandSapporoJou,
 		ChomeToSymbol,
 		normalize.NormalizeSpaces,
 	}
 
-	// dbSteps handles database records (oaza_cho, koaza, etc.). They are place
-	// names with no trailing address number, so AddColon is omitted.
+	// dbSteps handles database records (oaza_cho, koaza, etc.).
+	// They are place names with no trailing address number, so AddColon is omitted.
 	dbSteps = []normalize.TransformStep{
+		normalize.RemoveDefaultIgnorable,
 		StandardizeSpecialChars,
 		normalize.NFKCNormalize,
 		normalize.NormalizeDashes,
