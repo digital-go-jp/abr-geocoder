@@ -62,8 +62,7 @@ func nearestScan(table, alias, cols, prefClause string, params SpatialParams) st
 	return fmt.Sprintf(`
 		SELECT
 			%[3]s,
-			%[2]s.lon,
-			%[2]s.lat,
+			`+coordColumns+`,
 			%[4]s AS distance
 		FROM %[1]s %[2]s
 		WHERE 1=1

@@ -27,9 +27,11 @@ func cosLat(lat float64) float64 {
 // distanceExpr is a SQL expression for the distance in metres from alias to
 // (lon, lat). It is a planar approximation, within 0.9 m of the great-circle
 // distance anywhere in Japan.
+// The columns are cast to DOUBLE first: arithmetic with a FLOAT column rounds
+// the query point to a float32 as well.
 func distanceExpr(alias string, lon, lat float64) string {
 	return fmt.Sprintf(
-		"sqrt(pow((%[1]s.lon - %[2]f) * %[4]f * %[5]f, 2) + pow((%[1]s.lat - %[3]f) * %[4]f, 2))",
+		"sqrt(pow((%[1]s.lon::DOUBLE - %[2]f) * %[4]f * %[5]f, 2) + pow((%[1]s.lat::DOUBLE - %[3]f) * %[4]f, 2))",
 		alias, lon, lat, metersPerLatDegree, cosLat(lat),
 	)
 }

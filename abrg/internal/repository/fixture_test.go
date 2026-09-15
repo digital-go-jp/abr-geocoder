@@ -129,8 +129,8 @@ func TestFindResidentialBestMatch_Fixture(t *testing.T) {
 			t.Errorf("rsdt fields = %s/%s/%s/%s, want all nil",
 				strVal(result.RsdtID), strVal(result.RsdtNum), strVal(result.Rsdt2ID), strVal(result.RsdtNum2))
 		}
-		if result.Lon == nil || result.Lat == nil || !almostEqual(*result.Lon, 139.7351) || !almostEqual(*result.Lat, 35.6814) {
-			t.Errorf("Lon/Lat = %v/%v, want ~139.7351/~35.6814", result.Lon, result.Lat)
+		if result.Lon == nil || result.Lat == nil || !storedFloat(*result.Lon, 139.7351) || !storedFloat(*result.Lat, 35.6814) {
+			t.Errorf("Lon/Lat = %v/%v, want %v/%v", result.Lon, result.Lat, float64(float32(139.7351)), float64(float32(35.6814)))
 		}
 	})
 
@@ -208,8 +208,8 @@ func TestFindParcelExact_Fixture(t *testing.T) {
 		if result.PrcNum2 != nil || result.PrcNum3 != nil {
 			t.Errorf("PrcNum2/PrcNum3 = %s/%s, want nil", strVal(result.PrcNum2), strVal(result.PrcNum3))
 		}
-		if result.Lon == nil || result.Lat == nil || !almostEqual(*result.Lon, 139.7351) {
-			t.Errorf("Lon/Lat = %v/%v, want ~139.7351/~35.6814", result.Lon, result.Lat)
+		if result.Lon == nil || result.Lat == nil || !storedFloat(*result.Lon, 139.7351) || !storedFloat(*result.Lat, 35.6814) {
+			t.Errorf("Lon/Lat = %v/%v, want %v/%v", result.Lon, result.Lat, float64(float32(139.7351)), float64(float32(35.6814)))
 		}
 	})
 
@@ -266,6 +266,9 @@ func TestFindNearestResidential_Fixture(t *testing.T) {
 	first := results[0]
 	if first.LgCode != fixtureLgCode || first.MachiazaID != fixtureMachiazaID {
 		t.Errorf("first LgCode/MachiazaID = %q/%q, want %q/%q", first.LgCode, first.MachiazaID, fixtureLgCode, fixtureMachiazaID)
+	}
+	if !storedFloat(first.Lon, 139.7351) || !storedFloat(first.Lat, 35.6814) {
+		t.Errorf("first Lon/Lat = %v/%v, want %v/%v", first.Lon, first.Lat, float64(float32(139.7351)), float64(float32(35.6814)))
 	}
 	if strVal(first.BlkNum) != "1" || first.RsdtNum != nil || first.RsdtNum2 != nil {
 		t.Errorf("first BlkNum/RsdtNum/RsdtNum2 = %s/%s/%s, want 1/nil/nil",
@@ -324,6 +327,9 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 	}
 
 	first := results[0]
+	if !storedFloat(first.Lon, 139.7351) || !storedFloat(first.Lat, 35.6814) {
+		t.Errorf("first Lon/Lat = %v/%v, want %v/%v", first.Lon, first.Lat, float64(float32(139.7351)), float64(float32(35.6814)))
+	}
 	if strVal(first.PrcNum1) != "10" || first.PrcNum2 != nil || first.PrcNum3 != nil {
 		t.Errorf("first PrcNum1/2/3 = %s/%s/%s, want 10/nil/nil",
 			strVal(first.PrcNum1), strVal(first.PrcNum2), strVal(first.PrcNum3))

@@ -98,6 +98,45 @@ func TestDistanceExprMatchesGreatCircle(t *testing.T) {
 	}
 }
 
+func TestDistanceExprDoesNotRoundTheQueryPoint(t *testing.T) {
+	// The query point falls between float32 values. Rounded to one, b becomes
+	// the nearer point.
+	const qLon, qLat = 139.735009, 35.681403
+	a := [2]float64{139.735, 35.681396}
+	b := [2]float64{139.735031, 35.681404}
+	db := newPointsDB(t, [][2]float64{a, b})
+
+	query := fmt.Sprintf("SELECT p.lon, p.lat, %s AS d FROM p ORDER BY d", distanceExpr("p", qLon, qLat))
+	rows, err := db.QueryContext(context.Background(), query)
+	if err != nil {
+		t.Fatalf("query %s: %v", query, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var nearest []float32
+	for rows.Next() {
+		var lon, lat float32
+		var got float64
+		if err := rows.Scan(&lon, &lat, &got); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		want := math.Hypot(
+			(float64(lon)-qLon)*metersPerLatDegree*cosLat(qLat),
+			(float64(lat)-qLat)*metersPerLatDegree,
+		)
+		if diff := math.Abs(got - want); diff > 1e-3 {
+			t.Errorf("distance to (%v, %v) = %.6f m, want %.6f m", lon, lat, got, want)
+		}
+		nearest = append(nearest, lon)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows: %v", err)
+	}
+	if len(nearest) != 2 || nearest[0] != float32(a[0]) {
+		t.Errorf("longitudes nearest first = %v, want %v first", nearest, float32(a[0]))
+	}
+}
+
 func TestWithinRadiusExprSelectsTheRadiusInEveryDirection(t *testing.T) {
 	const qLon, qLat = kioichoLon, kioichoLat
 	const radius = 1000.0

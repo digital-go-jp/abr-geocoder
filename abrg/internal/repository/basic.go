@@ -15,7 +15,7 @@ import (
 // scans them.
 const basicColumns = `normalized_address, lg_code, machiaza_id, rsdt_addr_flg,
 	pref, county, city, ward, kyoto_st, oaza_cho, chome, koaza, machiaza_dist,
-	has_chome, parcel_count, rsdtdsp_count, lon, lat`
+	has_chome, parcel_count, rsdtdsp_count, ` + coordColumns
 
 // FindBasicByAddress searches cache_machiaza by normalized_address.
 func (r *DB) FindBasicByAddress(ctx context.Context, params BasicSearchParams) ([]BasicResult, error) {

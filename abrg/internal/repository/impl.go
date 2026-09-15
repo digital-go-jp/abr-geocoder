@@ -14,6 +14,10 @@ type DB struct {
 	db *sql.DB
 }
 
+// coordColumns selects lon and lat as DOUBLE. Scanning a FLOAT into a float64
+// goes through its shortest decimal form, which drops digits of the stored value.
+const coordColumns = "lon::DOUBLE AS lon, lat::DOUBLE AS lat"
+
 func NewRepository(db *sql.DB) *DB {
 	return &DB{db: db}
 }
@@ -83,7 +87,7 @@ func (r *DB) Coordinates(ctx context.Context, lgCode, machiazaID string) ([]floa
 
 func (r *DB) queryBasicCoordinates(ctx context.Context, lgCode, machiazaID string) ([]float64, model.MatchLevel) {
 	query := `
-		SELECT lon, lat
+		SELECT ` + coordColumns + `
 		FROM cache_machiaza
 		WHERE lg_code = ?
 		AND machiaza_id = ?
@@ -103,7 +107,7 @@ func (r *DB) queryBasicCoordinates(ctx context.Context, lgCode, machiazaID strin
 
 func (r *DB) queryCityCoordinates(ctx context.Context, lgCode string) ([]float64, model.MatchLevel) {
 	query := `
-		SELECT lon, lat
+		SELECT ` + coordColumns + `
 		FROM cache_city
 		WHERE lg_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
 		LIMIT 1
@@ -116,7 +120,7 @@ func (r *DB) queryCityCoordinates(ctx context.Context, lgCode string) ([]float64
 
 func (r *DB) queryPrefectureByLgCode(ctx context.Context, lgCode string) ([]float64, model.MatchLevel) {
 	query := `
-		SELECT lon, lat
+		SELECT ` + coordColumns + `
 		FROM cache_pref
 		WHERE lg_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
 		LIMIT 1
@@ -129,7 +133,7 @@ func (r *DB) queryPrefectureByLgCode(ctx context.Context, lgCode string) ([]floa
 
 func (r *DB) queryPrefectureCoordinates(ctx context.Context, prefCode string) ([]float64, model.MatchLevel) {
 	query := `
-		SELECT lon, lat
+		SELECT ` + coordColumns + `
 		FROM cache_pref
 		WHERE pref_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
 		LIMIT 1
