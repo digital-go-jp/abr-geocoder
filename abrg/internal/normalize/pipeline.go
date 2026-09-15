@@ -1,9 +1,5 @@
-// Package normalize provides basic text normalization functions for address processing.
-// It includes functions for removing quotes, variation selectors (SVS/IVS),
-// comments, normalizing whitespace, NFKC normalization, and dash standardization.
-//
-// The main entry point is BasicNormalize, which applies all common normalizations
-// in the correct order and returns a reusable result for downstream processing.
+// Package normalize normalizes the characters of an address before matching.
+// The main entry point is BasicNormalize.
 package normalize
 
 import "regexp"
@@ -11,14 +7,14 @@ import "regexp"
 // TransformStep is a function that transforms a string and reports whether it changed.
 type TransformStep func(string) (string, bool)
 
-// ReplaceRule pairs a pattern with its replacement. Rules in a table apply
-// in declaration order; the order is part of the normalization spec.
+// ReplaceRule pairs a pattern with its replacement.
+// Rules in a table apply in declaration order.
+// The order is part of the normalization spec.
 type ReplaceRule struct {
 	Re   *regexp.Regexp
 	Repl string
 }
 
-// applyRules applies every rule to s in order.
 func applyRules(s string, rules []ReplaceRule) string {
 	for _, r := range rules {
 		s = r.Re.ReplaceAllString(s, r.Repl)
@@ -26,8 +22,7 @@ func applyRules(s string, rules []ReplaceRule) string {
 	return s
 }
 
-// ApplyFirstMatch applies the first rule that changes s and reports whether
-// any rule matched.
+// ApplyFirstMatch applies the first rule that changes s and reports whether any rule matched.
 func ApplyFirstMatch(s string, rules []ReplaceRule) (string, bool) {
 	for _, r := range rules {
 		if next := r.Re.ReplaceAllString(s, r.Repl); next != s {
@@ -37,6 +32,7 @@ func ApplyFirstMatch(s string, rules []ReplaceRule) (string, bool) {
 	return s, false
 }
 
+// ApplySteps applies steps to s in order and reports whether any step changed it.
 func ApplySteps(s string, steps []TransformStep) (string, bool) {
 	var changed bool
 	for _, step := range steps {
@@ -48,16 +44,18 @@ func ApplySteps(s string, steps []TransformStep) (string, bool) {
 	return s, changed
 }
 
+// basicNormalizeSteps runs RemoveDefaultIgnorable first so that removeQuotes sees a quote that follows a BOM.
 var basicNormalizeSteps = []TransformStep{
+	RemoveDefaultIgnorable,
 	removeQuotes,
-	removeVS,
 	NormalizeSpaces,
 	removeComments,
 	NFKCNormalize,
 	NormalizeDashes,
 }
 
-// Result is reused by both standardize and transform, avoiding redundant processing.
+// BasicNormalize removes invisible characters, surrounding quotes and // or /* */ comments from s,
+// collapses whitespace, and applies NFKC and dash normalization.
 func BasicNormalize(s string) string {
 	if s == "" {
 		return s
