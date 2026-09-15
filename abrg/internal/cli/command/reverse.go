@@ -51,7 +51,7 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 			return nil, err
 		}
 
-		return runTimed(setup, func() (*model.ReverseResponse, error) {
+		return withResultInfo(setup, func() (*model.ReverseResponse, error) {
 			return reverser.Reverse(ctx, model.ReverseQuery{
 				Lon:      lon,
 				Lat:      lat,

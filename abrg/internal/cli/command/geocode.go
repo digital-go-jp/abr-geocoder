@@ -34,7 +34,7 @@ func runGeocode(ctx context.Context, opts processorOptions) error {
 	defer setup.Cleanup()
 
 	p := newDefaultProcessor(setup, func(ctx context.Context, address string) (*model.GeocodeResponse, error) {
-		return runTimed(setup, func() (*model.GeocodeResponse, error) {
+		return withResultInfo(setup, func() (*model.GeocodeResponse, error) {
 			return matching.Geocode(ctx, setup.Matcher, setup.Repo, model.MatchQuery{
 				Address:  address,
 				Category: setup.Category,

@@ -9,7 +9,6 @@ import (
 	"os"
 	"runtime"
 	"slices"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -20,7 +19,6 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
-	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/validate"
 )
 
@@ -192,18 +190,16 @@ func countLines(filename string) (int, error) {
 }
 
 // resultInfoHaver is implemented by response types with a ResultInfo field,
-// so runTimed can fill in duration and server metadata generically.
+// so withResultInfo can fill in server metadata generically.
 type resultInfoHaver interface {
 	ResultInfoPtr() *model.ResultInfo
 }
 
-// runTimed calls fn and, when it returns a non-nil result, records the
-// elapsed time and server metadata into the result's ResultInfo.
-func runTimed[R resultInfoHaver](setup *processorSetup, fn func() (R, error)) (R, error) {
-	start := time.Now()
+// withResultInfo calls fn and, when it returns a non-nil result, records the
+// server metadata into the result's ResultInfo.
+func withResultInfo[R resultInfoHaver](setup *processorSetup, fn func() (R, error)) (R, error) {
 	result, err := fn()
 	if info := result.ResultInfoPtr(); info != nil {
-		info.DurationMs = util.DurationMs(time.Since(start))
 		setup.setResultInfo(info)
 	}
 	return result, err
