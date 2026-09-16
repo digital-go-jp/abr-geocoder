@@ -135,7 +135,7 @@ Use --force to skip change detection and import immediately.`,
 		}),
 	}
 
-	cmd.Flags().BoolVarP(&opts.DryRun, "dry-run", "d", false, "Show what would be imported without making changes")
+	cmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Show what would be imported without making changes")
 	cmd.Flags().BoolVarP(&opts.Force, "force", "f", false, "Force import without change detection")
 	cmd.Flags().BoolVarP(&opts.Verbose, "verbose", "v", false, "Show detailed file list (with --dry-run)")
 	cmd.Flags().BoolVarP(&opts.Quiet, "quiet", "q", false, "Suppress progress output")
