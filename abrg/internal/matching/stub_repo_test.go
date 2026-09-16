@@ -10,7 +10,7 @@ package matching
 //   - Binary: the abrg CLI built from the commit that last updated the expectations.
 //   - Expected JSON: the features array of
 //     printf '<address>\n' > in.txt &&
-//     CACHE_PATH=$HOME/.abrg/cache/abrg.duckdb \
+//     ABRG_CACHE_PATH=$HOME/.abrg/cache/abrg.duckdb \
 //       ./abrg match -q -c <category> -i in.txt -o out.json
 //     (geocode cases use ./abrg geocode with the same flags).
 //   - Fixture rows: the same cache queried read-only with the duckdb CLI

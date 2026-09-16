@@ -39,7 +39,7 @@ func newShowConfigCmd() *cobra.Command {
   abrdb show config
 
   # To change configuration, re-run initialization
-  abrdb init --force --pref 13 --category basic`,
+  abrdb init --yes --pref 13 --category basic`,
 		RunE: WithServices(func(ctx context.Context, sc *ServiceContainer) error {
 			return runShowConfig(ctx, sc.QueryExecutor)
 		}),

@@ -20,7 +20,7 @@ import (
 //     現行町字が完全一致（丁目は漢数字/算用数字の正規化一致）で machiaza_detail
 //     まで解決する。
 //
-// 注: status_flg=0 を含む cache を要する（CACHE_PATH）。
+// 注: status_flg=0 を含む cache を要する（ABRG_CACHE_PATH）。
 func TestIssue245(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{

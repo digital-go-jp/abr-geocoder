@@ -16,8 +16,9 @@ import (
 // API that uses no credentials.
 const DefaultCORSAllowOrigin = "*"
 
-// HTTP server timeouts. They sit below the 29 second limit API Gateway applies
-// to an integration, so a request that stalls fails at the server first.
+// HTTP server timeouts. Read covers the headers and the body of a request,
+// which are small, so it is the shortest; write leaves room for a large
+// response, and idle keeps a connection open between requests.
 const (
 	readTimeout  = 10 * time.Second
 	writeTimeout = 30 * time.Second
