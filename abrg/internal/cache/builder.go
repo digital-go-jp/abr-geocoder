@@ -3,7 +3,9 @@ package cache
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"regexp"
@@ -23,6 +25,10 @@ import (
 func Build(ctx context.Context, cachePath string) error {
 	startTime := time.Now()
 	phaseSec := make(map[string]float64)
+
+	if err := removeCacheFiles(cachePath); err != nil {
+		return err
+	}
 
 	openStart := time.Now()
 	conn, err := duckdb.Open(cachePath)
@@ -55,6 +61,18 @@ func Build(ctx context.Context, cachePath string) error {
 		"total_sec", totalSec,
 		"category_sec", phaseSec,
 	)
+	return nil
+}
+
+// removeCacheFiles deletes the file at cachePath and its WAL. Build starts from
+// an empty file because schema setup creates only the tables that are missing,
+// so a file left by an earlier or killed build would keep its old tables.
+func removeCacheFiles(cachePath string) error {
+	for _, p := range []string{cachePath, cachePath + ".wal"} {
+		if err := os.Remove(p); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("remove previous cache file: %w", err)
+		}
+	}
 	return nil
 }
 
