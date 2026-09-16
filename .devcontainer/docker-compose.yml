@@ -29,9 +29,9 @@ services:
       # ABRDB_CATEGORY: basic
       # ABRDB_POS: false
       # abrg: DuckDBキャッシュ (デフォルト: ~/.abrg/cache/abrg.duckdb)
-      # CACHE_PATH: /root/.abrg/cache/abrg.duckdb
+      # ABRG_CACHE_PATH: /root/.abrg/cache/abrg.duckdb
       # Server
-      PORT: 3000
+      ABRG_HTTP_PORT: 3000
       GIN_MODE: debug
       # Logging
       LOG_LEVEL: debug

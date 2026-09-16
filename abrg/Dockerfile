@@ -33,7 +33,7 @@ COPY --from=builder /build/abrg/abrg /app/abrg
 
 EXPOSE 3000
 
-ENV PORT=3000
+ENV ABRG_HTTP_PORT=3000
 
 ENTRYPOINT ["/app/abrg"]
 CMD ["serve"]
