@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
@@ -16,6 +15,15 @@ import (
 // DefaultCORSAllowOrigin allows every origin, which suits a public read-only
 // API that uses no credentials.
 const DefaultCORSAllowOrigin = "*"
+
+// HTTP server timeouts. Read covers the headers and the body of a request,
+// which are small, so it is the shortest; write leaves room for a large
+// response, and idle keeps a connection open between requests.
+const (
+	readTimeout  = 10 * time.Second
+	writeTimeout = 30 * time.Second
+	idleTimeout  = 60 * time.Second
+)
 
 // splitOrigins turns the configured value into the origins the CORS middleware
 // matches against. Commas separate them, so more than one frontend can be
@@ -54,8 +62,7 @@ type ServerConfig struct {
 	Host             string
 	Port             string
 	CORSAllowOrigins []string
-	// HTTP server timeouts, tunable to match the idle settings of a fronting
-	// ALB or API Gateway. ReadTimeout also serves as the header read timeout.
+	// HTTP server timeouts. ReadTimeout also serves as the header read timeout.
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
@@ -77,31 +84,15 @@ func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
 			Host:             env.GetEnv("ABRG_HTTP_HOST", ""),
-			Port:             env.GetEnv("PORT", "3000"),
-			CORSAllowOrigins: splitOrigins(env.GetEnv("CORS_ALLOW_ORIGIN", DefaultCORSAllowOrigin)),
-			ReadTimeout:      durationEnv("ABRG_HTTP_READ_TIMEOUT", 10*time.Second),
-			WriteTimeout:     durationEnv("ABRG_HTTP_WRITE_TIMEOUT", 30*time.Second),
-			IdleTimeout:      durationEnv("ABRG_HTTP_IDLE_TIMEOUT", 60*time.Second),
+			Port:             env.GetEnv("ABRG_HTTP_PORT", "3000"),
+			CORSAllowOrigins: splitOrigins(env.GetEnv("ABRG_CORS_ALLOW_ORIGIN", DefaultCORSAllowOrigin)),
+			ReadTimeout:      readTimeout,
+			WriteTimeout:     writeTimeout,
+			IdleTimeout:      idleTimeout,
 		},
 		Cache: cacheConfig{
 			Path:          env.GetEnv(duckdb.EnvCachePath, defaultCachePath()),
 			DuckDBThreads: env.GetEnv("ABRG_DUCKDB_THREADS", "2"),
 		},
 	}
-}
-
-// durationEnv reads a Go duration string ("10s", "1m30s") from the named
-// environment variable. Unset, invalid, or non-positive values fall back to
-// the default.
-func durationEnv(name string, def time.Duration) time.Duration {
-	v, ok := os.LookupEnv(name)
-	if !ok || v == "" {
-		return def
-	}
-	d, err := time.ParseDuration(v)
-	if err != nil || d <= 0 {
-		slog.Warn("ignoring invalid duration setting", "event", "config", "env", name, "value", v)
-		return def
-	}
-	return d
 }

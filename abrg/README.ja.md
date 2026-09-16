@@ -65,19 +65,16 @@ API 仕様: [openapi/openapi.yml](openapi/openapi.yml)
 | 変数名 | デフォルト | 説明 |
 |--------|----------|------|
 | `ABRG_HTTP_HOST` | すべてのインターフェース | 待ち受けるアドレス。`127.0.0.1` を指定すると同じ PC からのみ接続できる |
-| `PORT` | `3000` | サーバーポート |
-| `CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDB キャッシュファイルのパス |
+| `ABRG_HTTP_PORT` | `3000` | サーバーポート |
+| `ABRG_CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDB キャッシュファイルのパス。`--cache` が優先される |
 | `ABRG_DUCKDB_THREADS` | `2` | DuckDB のクエリ内並列数の上限（`0` で DuckDB 既定＝コア数） |
-| `CORS_ALLOW_ORIGIN` | `*` | CORS 許可オリジン。カンマ区切りで複数指定できる |
-| `ABRG_HTTP_READ_TIMEOUT` | `10s` | HTTP サーバーの読み取りタイムアウト（Go duration 形式） |
-| `ABRG_HTTP_WRITE_TIMEOUT` | `30s` | HTTP サーバーの書き込みタイムアウト |
-| `ABRG_HTTP_IDLE_TIMEOUT` | `60s` | HTTP サーバーのアイドルタイムアウト |
+| `ABRG_CORS_ALLOW_ORIGIN` | `*` | CORS 許可オリジン。カンマ区切りで複数指定できる |
 | `LOG_LEVEL` | `INFO` | ログレベル（`DEBUG`, `INFO`, `WARN`, `ERROR`） |
 | `LOG_FORMAT` | `auto` | ログ形式（`json` または `text`、未指定時は TTY 自動判定） |
 
 例：
 ```bash
-PORT=8080 CACHE_PATH=/data/cache.duckdb LOG_LEVEL=DEBUG ./abrg serve
+ABRG_HTTP_PORT=8080 ABRG_CACHE_PATH=/data/cache.duckdb LOG_LEVEL=DEBUG ./abrg serve
 ```
 
 ## CLI ツール
@@ -85,6 +82,7 @@ PORT=8080 CACHE_PATH=/data/cache.duckdb LOG_LEVEL=DEBUG ./abrg serve
 `match`、`geocode`、`reverse` は共通のオプションを持ちます。
 
 共通オプション:
+- `--cache` - DuckDB キャッシュファイルのパス。省略時は `ABRG_CACHE_PATH`、それも無ければ `~/.abrg/cache/abrg.duckdb`
 - `-i, --input` - 入力パス（必須）
 - `-o, --output` - 出力パス（必須）
 - `-c, --category` - 対象カテゴリ（all, basic, rsdtdsp, parcel）。省略時はキャッシュの `enabled_category` 設定に従う

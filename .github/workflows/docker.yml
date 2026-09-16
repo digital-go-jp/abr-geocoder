@@ -44,7 +44,7 @@ jobs:
         run: docker compose up -d postgres
 
       - name: Initialise the database
-        run: docker compose run --rm abrdb_app init --pref 13 --category basic --force
+        run: docker compose run --rm abrdb_app init --pref 13 --category basic --yes
 
       # abrdb runs as a nonroot user, so a named volume over its download
       # directory is only writable when the image creates that directory first.

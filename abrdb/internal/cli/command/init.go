@@ -25,7 +25,7 @@ type InitOptions struct {
 	Pref      string
 	Category  string
 	EnablePos bool
-	Force     bool   // Skip confirmation for existing data
+	Yes       bool   // Skip confirmation for existing data
 	Profile   string // Embedded import config profile name
 }
 
@@ -71,11 +71,11 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	// Flags with environment variable defaults (flag > env > default)
-	cmd.Flags().StringVar(&opts.Pref, "pref",
+	cmd.Flags().StringVarP(&opts.Pref, "pref", "p",
 		env.GetEnv("ABRDB_PREF", "all"),
 		"Prefecture code to process ('all' for all prefectures or 1-47). Env: ABRDB_PREF")
 
-	cmd.Flags().StringVar(&opts.Category, "category",
+	cmd.Flags().StringVarP(&opts.Category, "category", "c",
 		env.GetEnv("ABRDB_CATEGORY", "basic"),
 		"Data category group (basic, rsdtdsp, parcel, or all). Env: ABRDB_CATEGORY")
 
@@ -83,7 +83,7 @@ func NewInitCmd() *cobra.Command {
 		env.GetEnv("ABRDB_POS", "false") == "true",
 		"Enable position data processing. Env: ABRDB_POS")
 
-	cmd.Flags().BoolVar(&opts.Force, "force", false, "Skip confirmation prompt for existing data")
+	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Skip the confirmation prompt for existing data")
 
 	cmd.Flags().StringVar(&opts.Profile, "profile",
 		env.GetEnv("ABRDB_PROFILE", schema.DefaultProfile),
@@ -103,7 +103,7 @@ func runInit(ctx context.Context, executor *db.QueryExecutor, migrator interface
 		return fmt.Errorf("parse category: %w", err)
 	}
 
-	if !opts.Force {
+	if !opts.Yes {
 		hasData, err := config.CheckExistingData(ctx, executor)
 		if err != nil {
 			return fmt.Errorf("check existing data: %w", err)

@@ -26,7 +26,7 @@ func saveEnvVars(t *testing.T, keys []string) {
 }
 
 func TestLoad(t *testing.T) {
-	envKeys := []string{"PORT", "CACHE_PATH", "CORS_ALLOW_ORIGIN"}
+	envKeys := []string{"ABRG_HTTP_PORT", "ABRG_CACHE_PATH", "ABRG_CORS_ALLOW_ORIGIN"}
 	saveEnvVars(t, envKeys)
 
 	tests := []struct {
@@ -46,9 +46,9 @@ func TestLoad(t *testing.T) {
 		{
 			name: "uses env vars when set",
 			envVars: map[string]string{
-				"PORT":              "8080",
-				"CACHE_PATH":        "/tmp/cache.duckdb",
-				"CORS_ALLOW_ORIGIN": "https://example.com",
+				"ABRG_HTTP_PORT":         "8080",
+				"ABRG_CACHE_PATH":        "/tmp/cache.duckdb",
+				"ABRG_CORS_ALLOW_ORIGIN": "https://example.com",
 			},
 			wantPort:             "8080",
 			wantCachePath:        "/tmp/cache.duckdb",
@@ -57,7 +57,7 @@ func TestLoad(t *testing.T) {
 		{
 			name: "partial env - only PORT set",
 			envVars: map[string]string{
-				"PORT": "9000",
+				"ABRG_HTTP_PORT": "9000",
 			},
 			wantPort:             "9000",
 			wantCachePath:        defaultCachePath(),
@@ -111,7 +111,7 @@ func TestServerConfigAddr(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("PORT", "3000")
+			t.Setenv("ABRG_HTTP_PORT", "3000")
 			t.Setenv("ABRG_HTTP_HOST", tt.host)
 
 			if got := Load().Server.Addr(); got != tt.want {
@@ -125,7 +125,7 @@ func TestServerConfigAddr(t *testing.T) {
 // than one frontend be allowed, and the values that must not leave the list
 // empty: the middleware rejects a configuration allowing no origin at all.
 func TestLoadCORSAllowOrigins(t *testing.T) {
-	saveEnvVars(t, []string{"CORS_ALLOW_ORIGIN"})
+	saveEnvVars(t, []string{"ABRG_CORS_ALLOW_ORIGIN"})
 
 	tests := []struct {
 		name  string
@@ -162,9 +162,9 @@ func TestLoadCORSAllowOrigins(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.value == "" {
-				_ = os.Unsetenv("CORS_ALLOW_ORIGIN")
+				_ = os.Unsetenv("ABRG_CORS_ALLOW_ORIGIN")
 			} else {
-				t.Setenv("CORS_ALLOW_ORIGIN", tt.value)
+				t.Setenv("ABRG_CORS_ALLOW_ORIGIN", tt.value)
 			}
 
 			got := Load().Server.CORSAllowOrigins
@@ -175,69 +175,16 @@ func TestLoadCORSAllowOrigins(t *testing.T) {
 	}
 }
 
-// TestLoad_HTTPTimeouts pins the timeout defaults and the duration-string
-// override path.
+// TestLoad_HTTPTimeouts pins the timeout values the server runs with.
 func TestLoad_HTTPTimeouts(t *testing.T) {
-	envKeys := []string{"ABRG_HTTP_READ_TIMEOUT", "ABRG_HTTP_WRITE_TIMEOUT", "ABRG_HTTP_IDLE_TIMEOUT"}
-	saveEnvVars(t, envKeys)
-
-	tests := []struct {
-		name      string
-		env       map[string]string
-		wantRead  time.Duration
-		wantWrite time.Duration
-		wantIdle  time.Duration
-	}{
-		{
-			name:      "defaults are 10s, 30s, and 60s",
-			env:       map[string]string{},
-			wantRead:  10 * time.Second,
-			wantWrite: 30 * time.Second,
-			wantIdle:  60 * time.Second,
-		},
-		{
-			name: "duration strings override each timeout",
-			env: map[string]string{
-				"ABRG_HTTP_READ_TIMEOUT":  "5s",
-				"ABRG_HTTP_WRITE_TIMEOUT": "1m30s",
-				"ABRG_HTTP_IDLE_TIMEOUT":  "2m",
-			},
-			wantRead:  5 * time.Second,
-			wantWrite: 90 * time.Second,
-			wantIdle:  2 * time.Minute,
-		},
-		{
-			name: "invalid and non-positive values fall back",
-			env: map[string]string{
-				"ABRG_HTTP_READ_TIMEOUT":  "fast",
-				"ABRG_HTTP_WRITE_TIMEOUT": "-3s",
-				"ABRG_HTTP_IDLE_TIMEOUT":  "0",
-			},
-			wantRead:  10 * time.Second,
-			wantWrite: 30 * time.Second,
-			wantIdle:  60 * time.Second,
-		},
+	cfg := Load()
+	if cfg.Server.ReadTimeout != 10*time.Second {
+		t.Errorf("ReadTimeout = %v, want %v", cfg.Server.ReadTimeout, 10*time.Second)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			for _, key := range envKeys {
-				_ = os.Unsetenv(key)
-			}
-			for key, val := range tt.env {
-				t.Setenv(key, val)
-			}
-
-			cfg := Load()
-			if cfg.Server.ReadTimeout != tt.wantRead {
-				t.Errorf("ReadTimeout = %v, want %v", cfg.Server.ReadTimeout, tt.wantRead)
-			}
-			if cfg.Server.WriteTimeout != tt.wantWrite {
-				t.Errorf("WriteTimeout = %v, want %v", cfg.Server.WriteTimeout, tt.wantWrite)
-			}
-			if cfg.Server.IdleTimeout != tt.wantIdle {
-				t.Errorf("IdleTimeout = %v, want %v", cfg.Server.IdleTimeout, tt.wantIdle)
-			}
-		})
+	if cfg.Server.WriteTimeout != 30*time.Second {
+		t.Errorf("WriteTimeout = %v, want %v", cfg.Server.WriteTimeout, 30*time.Second)
+	}
+	if cfg.Server.IdleTimeout != 60*time.Second {
+		t.Errorf("IdleTimeout = %v, want %v", cfg.Server.IdleTimeout, 60*time.Second)
 	}
 }

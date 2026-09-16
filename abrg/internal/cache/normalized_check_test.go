@@ -133,7 +133,7 @@ func TestNormalizationCheck_NotAppliedToCLIEntryPoint(t *testing.T) {
 
 	t.Setenv(duckdb.EnvCachePath, path)
 
-	c, err := NewDuckDBCache(t.Context())
+	c, err := NewDuckDBCache(t.Context(), "")
 	if err != nil {
 		t.Fatalf("NewDuckDBCache() error = %v, want nil: the CLI path must not verify", err)
 	}
