@@ -34,7 +34,9 @@ cat "$INPUT" "$VARIANTS" > "$INPUT_COMBINED"
 best_mean="" best_line=""
 for _ in $(seq "$REPS"); do
   out=$(mktemp)
-  GOMAXPROCS=1 ABRG_CACHE_PATH="$CACHE" "$BIN" match -q -i "$INPUT_COMBINED" -o "$out"
+  # CACHE_PATH is the name abrg read before 3.0.52; the base binary of a
+  # comparison can still be that old, so both names carry the same path.
+  GOMAXPROCS=1 CACHE_PATH="$CACHE" ABRG_CACHE_PATH="$CACHE" "$BIN" match -q -i "$INPUT_COMBINED" -o "$out"
   line=$(grep -oE 'duration_ms":[0-9.]+' "$out" | cut -d: -f2 | sort -n | awk '
     {v[NR]=$1; s+=$1}
     END{n=NR; if(n==0){print "mean_ms=0 p50_ms=0 p90_ms=0 p99_ms=0 n=0"; exit}
