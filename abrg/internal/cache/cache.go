@@ -30,10 +30,11 @@ type DuckDBCache struct {
 	lookups Lookups // In-memory lookup tables, filled by the build* methods
 }
 
-// NewDuckDBCache opens the cache built by `abrg cache build` at the path from config.
-func NewDuckDBCache(ctx context.Context) (*DuckDBCache, error) {
+// NewDuckDBCache opens the cache built by `abrg cache build`. flagPath is the
+// --cache value and wins over the configured path when it is not empty.
+func NewDuckDBCache(ctx context.Context, flagPath string) (*DuckDBCache, error) {
 	cfg := config.Load()
-	cachePath := duckdb.ResolvePath("", cfg.Cache.Path)
+	cachePath := duckdb.ResolvePath(flagPath, cfg.Cache.Path)
 	return newDuckDBCache(ctx, cachePath, cfg.Cache.DuckDBThreads)
 }
 

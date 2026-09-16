@@ -12,10 +12,12 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
 )
 
-// registerCacheFlag registers the shared -c/--cache flag used by every
-// command that reads or builds the DuckDB cache.
+// registerCacheFlag registers the shared --cache flag used by every command
+// that reads or builds the DuckDB cache. It has no short form: -c is the
+// category on the commands that take one.
 func registerCacheFlag(cmd *cobra.Command, cachePath *string) {
-	cmd.Flags().StringVarP(cachePath, "cache", "c", "", "Cache file path (default: ~/.abrg/cache/abrg.duckdb)")
+	cmd.Flags().StringVar(cachePath, "cache", "",
+		fmt.Sprintf("Cache file path (default: ~/.abrg/cache/abrg.duckdb). Env: %s", duckdb.EnvCachePath))
 }
 
 // resolveCachePath resolves the cache path from flag or config.
@@ -24,7 +26,7 @@ func resolveCachePath(flagValue string) (string, error) {
 	cfg := config.Load()
 	path := duckdb.ResolvePath(flagValue, cfg.Cache.Path)
 	if path == "" {
-		return "", fmt.Errorf("cache file path required: use -c/--cache flag or set %s environment variable", duckdb.EnvCachePath)
+		return "", fmt.Errorf("cache file path required: use --cache flag or set %s environment variable", duckdb.EnvCachePath)
 	}
 	return path, nil
 }

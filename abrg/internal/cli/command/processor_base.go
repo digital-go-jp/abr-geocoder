@@ -29,6 +29,7 @@ const defaultBufferSize = 1000
 type processorOptions struct {
 	InputFile  string
 	OutputFile string
+	CachePath  string
 	Category   string
 	Pref       string
 	Limit      int
@@ -70,7 +71,7 @@ type processorNeeds struct {
 func setupProcessor(ctx context.Context, opts processorOptions, taskName string, needs processorNeeds) (*processorSetup, error) {
 	setup := &processorSetup{}
 
-	dbCache, err := cache.NewDuckDBCache(ctx)
+	dbCache, err := cache.NewDuckDBCache(ctx, opts.CachePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize cache: %w", err)
 	}
@@ -153,6 +154,7 @@ func registerCommonFlags(cmd *cobra.Command, opts *processorOptions) {
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "l", validate.MinLimit,
 		fmt.Sprintf("Maximum results per address (%d-%d)", validate.MinLimit, validate.MaxLimit))
 	cmd.Flags().BoolVarP(&opts.Quiet, "quiet", "q", false, "Suppress progress output")
+	registerCacheFlag(cmd, &opts.CachePath)
 	_ = cmd.MarkFlagRequired("input")
 	_ = cmd.MarkFlagRequired("output")
 }

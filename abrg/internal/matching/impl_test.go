@@ -286,7 +286,7 @@ func TestBuildParcelSearchAddr(t *testing.T) {
 }
 
 func BenchmarkNormalize(b *testing.B) {
-	c, err := cache.NewDuckDBCache(b.Context())
+	c, err := cache.NewDuckDBCache(b.Context(), "")
 	if err != nil {
 		b.Skipf("Failed to create cache: %v", err)
 	}

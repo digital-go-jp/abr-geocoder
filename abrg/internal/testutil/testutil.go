@@ -13,7 +13,7 @@ import (
 // built from the shared DuckDB cache.
 func NewCacheOnce[T any](build func(c *cache.DuckDBCache) (T, error)) func() (T, error) {
 	return sync.OnceValues(func() (T, error) {
-		c, err := cache.NewDuckDBCache(context.Background())
+		c, err := cache.NewDuckDBCache(context.Background(), "")
 		if err != nil {
 			var zero T
 			return zero, err
