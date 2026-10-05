@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
 
-	"abrdb/internal/infra/api"
-	"abrdb/internal/infra/config"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/api"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/config"
 )
 
 // ServiceContainer holds all shared services for commands

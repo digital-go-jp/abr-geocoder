@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"abrg/internal/matching/levenshtein"
-	"abrg/internal/matching/unmatched"
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/levenshtein"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/unmatched"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // queryPrefectureRecord queries DB for prefecture record by pref_code.

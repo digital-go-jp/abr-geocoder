@@ -1,8 +1,9 @@
 package issues
 
 import (
-	"abrg/internal/model"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue44 tests hyphen variation handling in address separators

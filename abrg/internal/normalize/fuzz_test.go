@@ -45,7 +45,7 @@ func FuzzNormalizeAddressText(f *testing.F) {
 	}
 
 	f.Fuzz(func(t *testing.T, s string) {
-		out, _ := NormalizeAddressText(s)
+		out, _, _ := NormalizeAddressText(s)
 		// If input is valid UTF-8, output must also be valid UTF-8
 		if utf8.ValidString(s) && !utf8.ValidString(out) {
 			t.Errorf("valid UTF-8 input produced invalid UTF-8 output: %q -> %q", s, out)

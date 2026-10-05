@@ -1,8 +1,9 @@
 package issues
 
 import (
-	"abrg/internal/model"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue122 tests addresses without oaza but with koaza

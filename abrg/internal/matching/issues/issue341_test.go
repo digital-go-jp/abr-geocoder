@@ -3,7 +3,7 @@ package issues
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue341 covers municipality names that contain a kanji numeral, given

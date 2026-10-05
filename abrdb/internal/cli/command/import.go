@@ -13,16 +13,16 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abr.local/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/progress"
 
-	"abrdb/internal/config"
-	"abrdb/internal/infra/duckdb"
-	"abrdb/internal/infra/postgres"
-	"abrdb/internal/model"
-	"abrdb/internal/schema"
-	"abrdb/internal/service/catalog"
-	"abrdb/internal/service/download"
-	"abrdb/internal/service/importer"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/config"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/postgres"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/service/catalog"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/service/download"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/service/importer"
 )
 
 // ChangesPendingError reports that a dry-run found changes to import. It is a
@@ -135,7 +135,7 @@ Use --force to skip change detection and import immediately.`,
 		}),
 	}
 
-	cmd.Flags().BoolVarP(&opts.DryRun, "dry-run", "d", false, "Show what would be imported without making changes")
+	cmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Show what would be imported without making changes")
 	cmd.Flags().BoolVarP(&opts.Force, "force", "f", false, "Force import without change detection")
 	cmd.Flags().BoolVarP(&opts.Verbose, "verbose", "v", false, "Show detailed file list (with --dry-run)")
 	cmd.Flags().BoolVarP(&opts.Quiet, "quiet", "q", false, "Suppress progress output")

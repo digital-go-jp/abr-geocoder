@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"abr.local/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/progress"
 	"golang.org/x/sync/errgroup"
 )
 

@@ -17,17 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: [abrg, abrdb, common]
+        dir: [abrg, abrdb, common]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version: '1.27.x'
           cache: true
-      - name: Build ${{ matrix.module }}
-        run: cd ${{ matrix.module }} && make build
-      - name: Test ${{ matrix.module }}
-        run: cd ${{ matrix.module }} && make test
+      - name: Build ${{ matrix.dir }}
+        run: cd ${{ matrix.dir }} && make build
+      - name: Test ${{ matrix.dir }}
+        run: cd ${{ matrix.dir }} && make test
 
   # Runs the abrdb tests that need a real PostgreSQL (advisory lock
   # acquisition, contention, and release). ABRDB_TEST_REQUIRE_DB turns an
@@ -70,55 +70,46 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: [abrg, abrdb, common]
+        dir: [abrg, abrdb, common]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version: '1.27.x'
           cache: true
-      - name: go mod verify / go vet ${{ matrix.module }}
-        run: cd ${{ matrix.module }} && go mod verify && go vet ./...
+      - name: go vet ${{ matrix.dir }}
+        run: cd ${{ matrix.dir }} && go vet ./...
       - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.13.2
-          working-directory: ${{ matrix.module }}
+          working-directory: ${{ matrix.dir }}
       # Go 1.26 `go fix` bundles the modernize suite; -diff exits non-zero on any change.
-      - name: modernize ${{ matrix.module }}
-        run: cd ${{ matrix.module }} && go fix -diff ./...
+      - name: modernize ${{ matrix.dir }}
+        run: cd ${{ matrix.dir }} && go fix -diff ./...
+
+  go-mod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache: true
+      - name: go mod tidy / go mod verify
+        run: go mod tidy -diff && go mod verify
 
   vuln:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: [abrg, abrdb, common]
+        dir: [abrg, abrdb, common]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version: '1.27.x'
           cache: true
-      # Version pinned via each module's go.mod tool directive, so local and
-      # CI runs use the same scanner.
-      - name: govulncheck ${{ matrix.module }}
-        run: cd ${{ matrix.module }} && go tool govulncheck ./...
-
-  # The tool directive is per-module; this job fails when the three modules
-  # pin different govulncheck versions.
-  vuln-version-consistency:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version: '1.27.x'
-          cache: true
-      - name: check govulncheck version is identical across modules
-        run: |
-          for m in abrg abrdb common; do
-            (cd "$m" && go list -m -f '{{.Version}}' golang.org/x/vuln)
-          done | sort -u | tee versions.txt
-          if [ "$(wc -l < versions.txt)" -ne 1 ]; then
-            echo "::error::golang.org/x/vuln versions differ across modules"
-            exit 1
-          fi
+      # Version pinned via the go.mod tool directive, so local and CI runs use
+      # the same scanner.
+      - name: govulncheck ${{ matrix.dir }}
+        run: cd ${{ matrix.dir }} && go tool govulncheck ./...

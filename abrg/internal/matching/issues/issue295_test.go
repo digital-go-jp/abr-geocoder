@@ -1,8 +1,9 @@
 package issues
 
 import (
-	"abrg/internal/model"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue295 covers chome input on machiaza whose own name ends in a numeral

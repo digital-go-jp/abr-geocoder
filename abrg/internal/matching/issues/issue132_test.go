@@ -1,8 +1,9 @@
 package issues
 
 import (
-	"abrg/internal/model"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue132 tests full-width space normalization in addresses

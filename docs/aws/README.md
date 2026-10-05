@@ -392,6 +392,8 @@ aws stepfunctions start-execution \
 
 `rebuild_cache_only` はキャッシュ構築とサービス再起動だけを実行します。変更内容で場合分けせず、abrg のイメージを push したら常に続けて実行してください。abrg はキャッシュのスキーマ版と正規化の整合を起動時に検証し、どちらかが一致しないと起動を拒否します（`abrg/README.ja.md` 参照）。順序が逆になると、新しいタスクが旧キャッシュを読めずに起動失敗を繰り返します。
 
+タスク定義は `:latest` を指すため、イメージを push した時点でサービスの再起動だけでも新しいバイナリが動きます。環境変数の名前が変わるリリースでは、`terraform apply` を飛ばすとタスク定義が古い名前のまま残り、新しいバイナリがそれを読めずに起動に失敗します。イメージの push と apply は必ずセットで行ってください。
+
 abrdb の取り込みロジックが変わるリリースでは、キャッシュだけでなく取り込み済みデータの作り直しが必要です。`{"force": true}` は差分チェックを飛ばして全件を取り込み直し、そのままキャッシュ構築とサービス再起動まで続けます。
 
 ```bash
@@ -418,9 +420,9 @@ aws stepfunctions start-execution \
 # 1. 新イメージをビルド・プッシュ（「イメージ更新」参照）
 
 # 2. init で DB をリセット＋新しい取り込み設定を保存
-#    （--force は「既存データを削除します」確認プロンプトをスキップする）
+#    （--yes は「既存データを削除します」確認プロンプトをスキップする）
 aws ecs run-task --cluster $ECS_CLUSTER --task-definition abrdb-import --launch-type FARGATE \
-  --overrides '{"containerOverrides":[{"name":"abrdb","command":["init","--force"]}]}' \
+  --overrides '{"containerOverrides":[{"name":"abrdb","command":["init","--yes"]}]}' \
   --network-configuration "{\"awsvpcConfiguration\":{\"subnets\":$SUBNET_JSON,\"securityGroups\":[\"$ECS_SG\"],\"assignPublicIp\":\"DISABLED\"}}"
 
 # 3. 全件取り込み（init 直後は catalog が空なので通常の import で全件ロードされる）

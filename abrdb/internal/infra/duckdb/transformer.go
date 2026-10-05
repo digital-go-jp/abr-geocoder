@@ -5,9 +5,9 @@ import (
 	"slices"
 	"strings"
 
-	"abr.local/common/db"
+	"github.com/digital-go-jp/abr-geocoder/common/db"
 
-	"abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
 )
 
 // columnSpec represents a SELECT expression and its alias.

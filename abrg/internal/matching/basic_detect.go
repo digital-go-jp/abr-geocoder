@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"abrg/internal/char"
-	"abrg/internal/model"
-	"abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 )
 
 // detectBasicResultsWithBasic detects basic-level results using NormalizeBasicNormalized output.

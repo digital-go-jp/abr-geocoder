@@ -1,8 +1,9 @@
 package issues
 
 import (
-	"abrg/internal/model"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestIssue123 tests forward matching issue when town names are prefixes of other town names

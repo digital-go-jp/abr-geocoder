@@ -3,7 +3,7 @@ package repository
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 func TestBuildIDs_ValidatesLengths(t *testing.T) {

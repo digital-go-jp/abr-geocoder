@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abr.local/common/version"
+	"github.com/digital-go-jp/abr-geocoder/common/version"
 )
 
 // NewVersionCmd creates a new version command

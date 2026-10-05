@@ -8,10 +8,10 @@ import (
 	"io/fs"
 	"os"
 
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 )
 
-const EnvCachePath = "CACHE_PATH"
+const EnvCachePath = "ABRG_CACHE_PATH"
 
 const (
 	tableMachiaza = "cache_machiaza"

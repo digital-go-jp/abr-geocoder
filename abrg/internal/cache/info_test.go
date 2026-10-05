@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
 // TestInfo_SizeMB tests the SizeMB method of Info.

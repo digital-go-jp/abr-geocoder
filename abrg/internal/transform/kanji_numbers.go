@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 var (

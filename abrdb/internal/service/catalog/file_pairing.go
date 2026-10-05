@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"abrdb/internal/model"
-	"abrdb/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/util"
 )
 
 // ParseFileInfo parses file information from filename

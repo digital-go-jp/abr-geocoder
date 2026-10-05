@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"math"
 )
@@ -29,13 +30,18 @@ func RoundCoordinates(coords []float64) {
 	}
 }
 
+// ErrInvalidCoordinates reports a longitude or latitude that is out of range or NaN.
+var ErrInvalidCoordinates = errors.New("invalid coordinates")
+
 // ValidateCoordinates validates that lon is in [MinLon, MaxLon] and lat is in [MinLat, MaxLat].
+// The error it returns matches ErrInvalidCoordinates.
 func ValidateCoordinates(lon, lat float64) error {
-	if lon < MinLon || lon > MaxLon {
-		return fmt.Errorf("longitude out of range [%g, %g]: %f", MinLon, MaxLon, lon)
+	// A NaN compares false against both bounds, so it is checked on its own.
+	if math.IsNaN(lon) || lon < MinLon || lon > MaxLon {
+		return fmt.Errorf("%w: longitude out of range [%g, %g]: %f", ErrInvalidCoordinates, MinLon, MaxLon, lon)
 	}
-	if lat < MinLat || lat > MaxLat {
-		return fmt.Errorf("latitude out of range [%g, %g]: %f", MinLat, MaxLat, lat)
+	if math.IsNaN(lat) || lat < MinLat || lat > MaxLat {
+		return fmt.Errorf("%w: latitude out of range [%g, %g]: %f", ErrInvalidCoordinates, MinLat, MaxLat, lat)
 	}
 	return nil
 }

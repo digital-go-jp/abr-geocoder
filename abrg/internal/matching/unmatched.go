@@ -3,9 +3,9 @@ package matching
 import (
 	"strings"
 
-	"abrg/internal/matching/levenshtein"
-	"abrg/internal/matching/unmatched"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/levenshtein"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/unmatched"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 func setUnmatchedAddress(result *model.MatchedResult, normalizedAddr, adjustedSearchAddr string) {

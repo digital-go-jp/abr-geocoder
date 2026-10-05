@@ -3,8 +3,8 @@ package matching
 import (
 	"testing"
 
-	"abrg/internal/model"
-	"abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
 )
 
 func TestAdjustMachiazaIDForChome(t *testing.T) {

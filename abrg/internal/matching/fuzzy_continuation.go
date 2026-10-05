@@ -3,9 +3,9 @@ package matching
 import (
 	"strings"
 
-	"abrg/internal/model"
-	"abrg/internal/transform"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // maxTownTypos is the number of single-character substitutions tolerated in a

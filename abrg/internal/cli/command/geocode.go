@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrg/internal/matching"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // NewGeocodeCmd creates a new geocode command.
@@ -34,7 +34,7 @@ func runGeocode(ctx context.Context, opts processorOptions) error {
 	defer setup.Cleanup()
 
 	p := newDefaultProcessor(setup, func(ctx context.Context, address string) (*model.GeocodeResponse, error) {
-		return runTimed(setup, func() (*model.GeocodeResponse, error) {
+		return withResultInfo(setup, func() (*model.GeocodeResponse, error) {
 			return matching.Geocode(ctx, setup.Matcher, setup.Repo, model.MatchQuery{
 				Address:  address,
 				Category: setup.Category,

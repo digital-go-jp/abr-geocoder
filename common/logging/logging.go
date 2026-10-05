@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"abr.local/common/env"
-	"abr.local/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/env"
+	"github.com/digital-go-jp/abr-geocoder/common/progress"
 )
 
 // NewFromEnv builds a slog.Logger from environment variables.

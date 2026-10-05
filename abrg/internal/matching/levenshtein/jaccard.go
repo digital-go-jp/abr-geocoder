@@ -3,7 +3,7 @@ package levenshtein
 import (
 	"strings"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // SelectBestByJaccard selects the result with highest jaccard similarity to originalAddr.

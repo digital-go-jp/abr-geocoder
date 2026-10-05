@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // tryTwoStageResidential attempts residential normalization using TwoStageSearch.

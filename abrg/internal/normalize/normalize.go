@@ -3,14 +3,20 @@ package normalize
 import (
 	"strings"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // NormalizeAddressText standardizes the given address string with minimal transformations
 // and detects the address type.
 // This function is for user-facing output (API responses).
-func NormalizeAddressText(s string) (string, model.NormalizeCategory) {
-	return NormalizeBasicNormalized(BasicNormalize(s))
+// It returns ErrEmptyAddress or ErrAddressTooLong when the address cannot be matched.
+func NormalizeAddressText(s string) (string, model.NormalizeCategory, error) {
+	basic, err := BasicNormalizeInput(s)
+	if err != nil {
+		return "", "", err
+	}
+	out, addressType := NormalizeBasicNormalized(basic)
+	return out, addressType, nil
 }
 
 // NormalizeBasicNormalized standardizes an address that has already been

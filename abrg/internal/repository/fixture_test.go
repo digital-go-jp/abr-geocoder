@@ -4,25 +4,22 @@ import (
 	"context"
 	"testing"
 
-	"abr.local/common/duck"
+	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
-	"abrg/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
-// The tests in this file run the residential/parcel queries against a small
-// in-memory DuckDB built from schema.InitSchemaSQL with hand-inserted rows,
-// so the row scan paths (NULL conversion, match conditions, match levels) are
-// exercised with actual data. The quickstart cache cannot cover these because
-// it is a basic-category cache without cache_rsdtdsp and cache_parcel.
+// The tests in this file run the residential and parcel queries against an
+// in-memory DuckDB with hand-inserted rows, because the quickstart cache has no
+// cache_rsdtdsp or cache_parcel.
 
 const (
 	fixtureLgCode     = "131016"
 	fixtureMachiazaID = "0001000"
 )
 
-// createCategoryTablesSQL creates the category tables for tests. At build
-// time these tables come from the CTAS statements in cache/sql.go, not from
-// schema.InitSchemaSQL; the column shape here mirrors the CTAS output.
+// createCategoryTablesSQL mirrors the tables the CTAS statements in cache/sql.go
+// build, which schema.InitSchemaSQL does not create.
 const createCategoryTablesSQL = `
 CREATE TABLE cache_rsdtdsp (
 	pref_code SMALLINT,
@@ -34,7 +31,8 @@ CREATE TABLE cache_rsdtdsp (
 	blk_num VARCHAR,
 	rsdt_num VARCHAR,
 	rsdt_num2 VARCHAR,
-	geom GEOMETRY
+	lon FLOAT,
+	lat FLOAT
 );
 CREATE TABLE cache_parcel (
 	pref_code SMALLINT,
@@ -44,7 +42,8 @@ CREATE TABLE cache_parcel (
 	prc_num1 VARCHAR,
 	prc_num2 VARCHAR,
 	prc_num3 VARCHAR,
-	geom GEOMETRY
+	lon FLOAT,
+	lat FLOAT
 );
 `
 
@@ -57,10 +56,6 @@ func newFixtureRepo(t *testing.T) *DB {
 		t.Fatalf("open in-memory duckdb: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-
-	if err := duck.LoadExtension(ctx, db, "spatial"); err != nil {
-		t.Fatalf("load spatial extension: %v", err)
-	}
 
 	initSQL, err := schema.InitSchemaSQL()
 	if err != nil {
@@ -77,24 +72,24 @@ func newFixtureRepo(t *testing.T) *DB {
 		`INSERT INTO cache_machiaza
 			(pref_code, lg_code, machiaza_id, rsdt_addr_flg, pref, county, city, ward,
 			 kyoto_st, oaza_cho, chome, koaza, machiaza_dist, wake_num_flg,
-			 normalized_address, has_chome, parcel_count, rsdtdsp_count, geom)
+			 normalized_address, has_chome, parcel_count, rsdtdsp_count, lon, lat)
 		 VALUES (13, '131016', '0001000', 1, '東京都', NULL, '千代田区', NULL,
 			 NULL, '紀尾井町', NULL, NULL, NULL, 0,
-			 '1000代田区紀尾井町', FALSE, 3, 3, ST_Point(139.7350, 35.6814))`,
+			 '1000代田区紀尾井町', FALSE, 3, 3, 139.7350, 35.6814)`,
 		// Block-only row, then rows with rsdt_num and rsdt_num2, each slightly
 		// farther from the fixture point so distance ordering is deterministic.
 		`INSERT INTO cache_rsdtdsp
-			(pref_code, lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id, blk_num, rsdt_num, rsdt_num2, geom)
+			(pref_code, lg_code, machiaza_id, blk_id, rsdt_id, rsdt2_id, blk_num, rsdt_num, rsdt_num2, lon, lat)
 		 VALUES
-			(13, '131016', '0001000', '001', NULL, NULL, '1', NULL, NULL, ST_Point(139.7351, 35.6814)),
-			(13, '131016', '0001000', '001', '002', NULL, '1', '2', NULL, ST_Point(139.7352, 35.6814)),
-			(13, '131016', '0001000', '001', '002', '00003', '1', '2', '3', ST_Point(139.7353, 35.6814))`,
+			(13, '131016', '0001000', '001', NULL, NULL, '1', NULL, NULL, 139.7351, 35.6814),
+			(13, '131016', '0001000', '001', '002', NULL, '1', '2', NULL, 139.7352, 35.6814),
+			(13, '131016', '0001000', '001', '002', '00003', '1', '2', '3', 139.7353, 35.6814)`,
 		`INSERT INTO cache_parcel
-			(pref_code, lg_code, machiaza_id, prc_id, prc_num1, prc_num2, prc_num3, geom)
+			(pref_code, lg_code, machiaza_id, prc_id, prc_num1, prc_num2, prc_num3, lon, lat)
 		 VALUES
-			(13, '131016', '0001000', '000000010', '10', NULL, NULL, ST_Point(139.7351, 35.6814)),
-			(13, '131016', '0001000', '000000010000002', '10', '2', NULL, ST_Point(139.7352, 35.6814)),
-			(13, '131016', '0001000', '000000010000002000003', '10', '2', '3', ST_Point(139.7353, 35.6814))`,
+			(13, '131016', '0001000', '000000010', '10', NULL, NULL, 139.7351, 35.6814),
+			(13, '131016', '0001000', '000000010000002', '10', '2', NULL, 139.7352, 35.6814),
+			(13, '131016', '0001000', '000000010000002000003', '10', '2', '3', 139.7353, 35.6814)`,
 	}
 	for _, stmt := range fixtures {
 		if _, err := db.ExecContext(ctx, stmt); err != nil {
@@ -134,8 +129,8 @@ func TestFindResidentialBestMatch_Fixture(t *testing.T) {
 			t.Errorf("rsdt fields = %s/%s/%s/%s, want all nil",
 				strVal(result.RsdtID), strVal(result.RsdtNum), strVal(result.Rsdt2ID), strVal(result.RsdtNum2))
 		}
-		if result.Lon == nil || result.Lat == nil || !almostEqual(*result.Lon, 139.7351) || !almostEqual(*result.Lat, 35.6814) {
-			t.Errorf("Lon/Lat = %v/%v, want ~139.7351/~35.6814", result.Lon, result.Lat)
+		if result.Lon == nil || result.Lat == nil || !storedFloat(*result.Lon, 139.7351) || !storedFloat(*result.Lat, 35.6814) {
+			t.Errorf("Lon/Lat = %v/%v, want %v/%v", result.Lon, result.Lat, float64(float32(139.7351)), float64(float32(35.6814)))
 		}
 	})
 
@@ -213,8 +208,8 @@ func TestFindParcelExact_Fixture(t *testing.T) {
 		if result.PrcNum2 != nil || result.PrcNum3 != nil {
 			t.Errorf("PrcNum2/PrcNum3 = %s/%s, want nil", strVal(result.PrcNum2), strVal(result.PrcNum3))
 		}
-		if result.Lon == nil || result.Lat == nil || !almostEqual(*result.Lon, 139.7351) {
-			t.Errorf("Lon/Lat = %v/%v, want ~139.7351/~35.6814", result.Lon, result.Lat)
+		if result.Lon == nil || result.Lat == nil || !storedFloat(*result.Lon, 139.7351) || !storedFloat(*result.Lat, 35.6814) {
+			t.Errorf("Lon/Lat = %v/%v, want %v/%v", result.Lon, result.Lat, float64(float32(139.7351)), float64(float32(35.6814)))
 		}
 	})
 
@@ -259,7 +254,7 @@ func TestFindNearestResidential_Fixture(t *testing.T) {
 	repo := newFixtureRepo(t)
 	ctx := context.Background()
 
-	results, err := repo.FindNearestResidential(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Radius: 0.009})
+	results, err := repo.FindNearestResidential(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Radius: 1000})
 	if err != nil {
 		t.Fatalf("FindNearestResidential() error = %v", err)
 	}
@@ -271,6 +266,9 @@ func TestFindNearestResidential_Fixture(t *testing.T) {
 	first := results[0]
 	if first.LgCode != fixtureLgCode || first.MachiazaID != fixtureMachiazaID {
 		t.Errorf("first LgCode/MachiazaID = %q/%q, want %q/%q", first.LgCode, first.MachiazaID, fixtureLgCode, fixtureMachiazaID)
+	}
+	if !storedFloat(first.Lon, 139.7351) || !storedFloat(first.Lat, 35.6814) {
+		t.Errorf("first Lon/Lat = %v/%v, want %v/%v", first.Lon, first.Lat, float64(float32(139.7351)), float64(float32(35.6814)))
 	}
 	if strVal(first.BlkNum) != "1" || first.RsdtNum != nil || first.RsdtNum2 != nil {
 		t.Errorf("first BlkNum/RsdtNum/RsdtNum2 = %s/%s/%s, want 1/nil/nil",
@@ -296,7 +294,7 @@ func TestFindNearestResidential_Fixture(t *testing.T) {
 	}
 
 	t.Run("point beyond radius returns empty", func(t *testing.T) {
-		results, err := repo.FindNearestResidential(ctx, SpatialParams{Lon: 135.5023, Lat: 34.6937, Limit: 3, Radius: 0.009})
+		results, err := repo.FindNearestResidential(ctx, SpatialParams{Lon: 135.5023, Lat: 34.6937, Limit: 3, Radius: 1000})
 		if err != nil {
 			t.Fatalf("FindNearestResidential() error = %v", err)
 		}
@@ -306,7 +304,7 @@ func TestFindNearestResidential_Fixture(t *testing.T) {
 	})
 
 	t.Run("prefecture filter mismatch returns empty", func(t *testing.T) {
-		results, err := repo.FindNearestResidential(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Pref: "14", Radius: 0.009})
+		results, err := repo.FindNearestResidential(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Pref: "14", Radius: 1000})
 		if err != nil {
 			t.Fatalf("FindNearestResidential() error = %v", err)
 		}
@@ -320,7 +318,7 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 	repo := newFixtureRepo(t)
 	ctx := context.Background()
 
-	results, err := repo.FindNearestParcel(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Radius: 0.009})
+	results, err := repo.FindNearestParcel(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Radius: 1000})
 	if err != nil {
 		t.Fatalf("FindNearestParcel() error = %v", err)
 	}
@@ -329,6 +327,9 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 	}
 
 	first := results[0]
+	if !storedFloat(first.Lon, 139.7351) || !storedFloat(first.Lat, 35.6814) {
+		t.Errorf("first Lon/Lat = %v/%v, want %v/%v", first.Lon, first.Lat, float64(float32(139.7351)), float64(float32(35.6814)))
+	}
 	if strVal(first.PrcNum1) != "10" || first.PrcNum2 != nil || first.PrcNum3 != nil {
 		t.Errorf("first PrcNum1/2/3 = %s/%s/%s, want 10/nil/nil",
 			strVal(first.PrcNum1), strVal(first.PrcNum2), strVal(first.PrcNum3))
@@ -346,7 +347,7 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 	}
 
 	t.Run("point beyond radius returns empty", func(t *testing.T) {
-		results, err := repo.FindNearestParcel(ctx, SpatialParams{Lon: 135.5023, Lat: 34.6937, Limit: 3, Radius: 0.009})
+		results, err := repo.FindNearestParcel(ctx, SpatialParams{Lon: 135.5023, Lat: 34.6937, Limit: 3, Radius: 1000})
 		if err != nil {
 			t.Fatalf("FindNearestParcel() error = %v", err)
 		}
@@ -356,7 +357,7 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 	})
 
 	t.Run("prefecture filter mismatch returns empty", func(t *testing.T) {
-		results, err := repo.FindNearestParcel(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Pref: "14", Radius: 0.009})
+		results, err := repo.FindNearestParcel(ctx, SpatialParams{Lon: 139.7350, Lat: 35.6814, Limit: 3, Pref: "14", Radius: 1000})
 		if err != nil {
 			t.Fatalf("FindNearestParcel() error = %v", err)
 		}

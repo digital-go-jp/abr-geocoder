@@ -296,10 +296,10 @@ resource "aws_ecs_task_definition" "abrg" {
       ]
 
       environment = [
-        { name = "PORT", value = "3000" },
+        { name = "ABRG_HTTP_PORT", value = "3000" },
         { name = "GIN_MODE", value = "release" },
-        { name = "CACHE_PATH", value = "/tmp/abrg.duckdb" },
-        { name = "CORS_ALLOW_ORIGIN", value = var.cors_allow_origin }
+        { name = "ABRG_CACHE_PATH", value = "/tmp/abrg.duckdb" },
+        { name = "ABRG_CORS_ALLOW_ORIGIN", value = var.cors_allow_origin }
       ]
 
       # Use ephemeral storage instead of tmpfs (cache file is ~6 GB)

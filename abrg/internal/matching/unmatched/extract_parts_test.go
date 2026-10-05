@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 func TestExtractUnmatchedParts(t *testing.T) {

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"abrdb/internal/model"
-	"abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
 )
 
 // --- fakes ---

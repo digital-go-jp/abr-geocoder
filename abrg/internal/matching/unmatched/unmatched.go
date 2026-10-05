@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 
-	"abrg/internal/char"
-	"abrg/internal/model"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // CreateUnmatchedResult creates a result with the entire address as unmatched.

@@ -3,7 +3,7 @@ package matching
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 func TestIsPureSubstitution(t *testing.T) {

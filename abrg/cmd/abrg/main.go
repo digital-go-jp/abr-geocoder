@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abr.local/common/logging"
+	"github.com/digital-go-jp/abr-geocoder/common/logging"
 
-	"abrg/internal/cli/command"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cli/command"
 )
 
 func main() {
@@ -27,6 +27,10 @@ func main() {
 		Long: `ABR Geocoder Server is a geocoding service that provides
 address normalization, geocoding, and reverse geocoding APIs
 for Japanese addresses using the Address Base Registry (ABR).`,
+		// Flags are parsed before this runs, so a mistyped flag still prints the usage.
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+			cmd.SilenceUsage = true
+		},
 	}
 
 	rootCmd.AddCommand(

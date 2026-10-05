@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"abrdb/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/util"
 )
 
 // TestDSNWithPoolSize pins the rule documented on dsnWithPoolSize.

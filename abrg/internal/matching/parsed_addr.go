@@ -4,8 +4,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"abrg/internal/char"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // parsedAddress represents a structured version of the searchAddr string.

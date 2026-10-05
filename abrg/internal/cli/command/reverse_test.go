@@ -32,6 +32,13 @@ func TestParseCoordinates(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "invisible characters such as a BOM",
+			input:   "\uFEFF139.7369,\u200B35.6812",
+			wantLon: 139.7369,
+			wantLat: 35.6812,
+			wantErr: false,
+		},
+		{
 			name:    "empty string",
 			input:   "",
 			wantErr: true,
@@ -54,16 +61,6 @@ func TestParseCoordinates(t *testing.T) {
 		{
 			name:    "invalid latitude",
 			input:   "139.7369,xyz",
-			wantErr: true,
-		},
-		{
-			name:    "longitude out of range",
-			input:   "181,35",
-			wantErr: true,
-		},
-		{
-			name:    "latitude out of range",
-			input:   "139,91",
 			wantErr: true,
 		},
 	}

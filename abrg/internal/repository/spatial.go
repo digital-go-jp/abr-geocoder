@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // prefFilter returns a prefecture filter clause for SQL.
@@ -22,17 +22,14 @@ func prefFilter(alias, pref string) (string, error) {
 	return fmt.Sprintf("AND %s.pref_code = %d", alias, code), nil
 }
 
-// Every reverse query orders by distance and then by lg_code and machiaza_id.
-// The tie-break is what makes the result reproducible: several machiaza can sit
-// on one coordinate (Kyoto street names, for one), and with distance as the only
-// key the parallel scan decides which of the tied rows LIMIT keeps, so the same
-// coordinate can answer with a different address on each run.
+// Every reverse query orders by distance, then lg_code and machiaza_id, so the
+// result is reproducible: several machiaza can sit on one coordinate (Kyoto
+// street names, for one), and with distance alone the parallel scan decides
+// which tied row LIMIT keeps.
 //
-// For cache_machiaza that pair is the primary key, so the order is total. For
-// the detail tables it orders down to the machiaza only; adding the rows' own
-// ids would make it total there too, but sorting the candidate set on those
-// high-cardinality columns costs several times the query time, and the ties it
-// would resolve are between detail rows of a single machiaza.
+// The detail tables are not also ordered by their own ids: sorting on those
+// high-cardinality columns is costly, and the ties left are between rows of a
+// single machiaza.
 
 // reverseAddrColumns are the address columns every reverse result carries, in
 // the order reverseBaseScan.appendAddrPtrs scans them. They always come from
@@ -48,58 +45,52 @@ func qualifyColumns(alias string, cols []string) string {
 	return strings.Join(out, ", ")
 }
 
-// FindNearestBasic finds the nearest basic (town-level) addresses using spatial queries.
-// Note: Values are embedded directly in SQL because DuckDB R-Tree requires constants
-// known at query planning time for index optimization.
+// FindNearestBasic finds the nearest basic (town-level) addresses.
 func (r *DB) FindNearestBasic(ctx context.Context, params SpatialParams) ([]ReverseBaseFields, error) {
 	pf, err := prefFilter("b", params.Pref)
 	if err != nil {
 		return nil, err
 	}
-	query := fmt.Sprintf(`
-		SELECT
-			`+reverseAddrColumns+`,
-			b.rsdt_addr_flg,
-			b.lg_code,
-			b.machiaza_id,
-			ST_X(b.geom) AS lon,
-			ST_Y(b.geom) AS lat,
-			ST_Distance_Sphere(b.geom, ST_Point(%f, %f)) AS distance
-		FROM cache_machiaza b
-		WHERE 1=1
-			%s
-			AND ST_Intersects(b.geom, ST_Buffer(ST_Point(%f, %f), %f))
-		ORDER BY distance, b.lg_code, b.machiaza_id
-		LIMIT %d
-	`, params.Lon, params.Lat, pf, params.Lon, params.Lat, params.Radius, params.Limit)
+	query := nearestScan("cache_machiaza", "b",
+		reverseAddrColumns+", b.rsdt_addr_flg, b.lg_code, b.machiaza_id", pf, params)
 
 	return queryRows(ctx, r.db, query, nil, params.Limit, scanBasicResult)
 }
 
-// nearestDetailQuery builds the spatial query for a detail table (rsdtdsp or
-// parcel). The CTE applies LIMIT before the JOIN so only the matched rows are
-// joined back to cache_machiaza. detailCols are the table's own id and number
-// columns, selected in the order the row scanner expects.
-func nearestDetailQuery(table, alias string, detailCols []string, prefClause string, params SpatialParams) string {
+// nearestScan selects cols, lon, lat and distance from table, nearest first.
+func nearestScan(table, alias, cols, prefClause string, params SpatialParams) string {
 	return fmt.Sprintf(`
-		WITH nearest AS (
-			SELECT
-				%[2]s.lg_code,
-				%[2]s.machiaza_id,
-				%[3]s,
-				ST_X(%[2]s.geom) AS lon,
-				ST_Y(%[2]s.geom) AS lat,
-				ST_Distance_Sphere(%[2]s.geom, ST_Point(%[5]f, %[6]f)) AS distance
-			FROM %[1]s %[2]s
-			WHERE 1=1
-				%[7]s
-				AND ST_Intersects(%[2]s.geom, ST_Buffer(ST_Point(%[5]f, %[6]f), %[8]f))
-			ORDER BY distance, %[2]s.lg_code, %[2]s.machiaza_id
-			LIMIT %[9]d
-		)
+		SELECT
+			%[3]s,
+			`+coordColumns+`,
+			%[4]s AS distance
+		FROM %[1]s %[2]s
+		WHERE 1=1
+			%[5]s
+			AND %[6]s
+		ORDER BY distance, %[2]s.lg_code, %[2]s.machiaza_id
+		LIMIT %[7]d
+	`,
+		table,
+		alias,
+		cols,
+		distanceExpr(alias, params.Lon, params.Lat),
+		prefClause,
+		withinRadiusExpr(alias, params.Lon, params.Lat, params.Radius),
+		params.Limit,
+	)
+}
+
+// nearestDetailQuery builds the query for cache_rsdtdsp or cache_parcel. It
+// limits the rows before joining cache_machiaza. detailCols are in the order
+// the row scanner expects.
+func nearestDetailQuery(table, alias string, detailCols []string, prefClause string, params SpatialParams) string {
+	cols := alias + ".lg_code, " + alias + ".machiaza_id, " + qualifyColumns(alias, detailCols)
+	return fmt.Sprintf(`
+		WITH nearest AS (%s)
 		SELECT
 			`+reverseAddrColumns+`,
-			%[4]s,
+			%s,
 			b.rsdt_addr_flg,
 			n.lg_code,
 			n.machiaza_id,
@@ -109,20 +100,10 @@ func nearestDetailQuery(table, alias string, detailCols []string, prefClause str
 		FROM nearest n
 		LEFT JOIN cache_machiaza b ON n.lg_code = b.lg_code AND n.machiaza_id = b.machiaza_id
 		ORDER BY n.distance, n.lg_code, n.machiaza_id
-	`,
-		table,
-		alias,
-		qualifyColumns(alias, detailCols),
-		qualifyColumns("n", detailCols),
-		params.Lon,
-		params.Lat,
-		prefClause,
-		params.Radius,
-		params.Limit,
-	)
+	`, nearestScan(table, alias, cols, prefClause, params), qualifyColumns("n", detailCols))
 }
 
-// FindNearestResidential finds the nearest residential addresses using spatial queries.
+// FindNearestResidential finds the nearest residential addresses.
 func (r *DB) FindNearestResidential(ctx context.Context, params SpatialParams) ([]ReverseResidentialResult, error) {
 	pf, err := prefFilter("r", params.Pref)
 	if err != nil {
@@ -134,7 +115,7 @@ func (r *DB) FindNearestResidential(ctx context.Context, params SpatialParams) (
 	return queryRows(ctx, r.db, query, nil, params.Limit, scanResidentialResult)
 }
 
-// FindNearestParcel finds the nearest parcel addresses using spatial queries.
+// FindNearestParcel finds the nearest parcel addresses.
 func (r *DB) FindNearestParcel(ctx context.Context, params SpatialParams) ([]ReverseParcelResult, error) {
 	pf, err := prefFilter("p", params.Pref)
 	if err != nil {
@@ -146,7 +127,7 @@ func (r *DB) FindNearestParcel(ctx context.Context, params SpatialParams) ([]Rev
 	return queryRows(ctx, r.db, query, nil, params.Limit, scanParcelResult)
 }
 
-// reverseBaseScan holds scan variables for the common address fields in spatial queries.
+// reverseBaseScan holds scan variables for the common address fields in reverse queries.
 type reverseBaseScan struct {
 	pref, county, city, ward       sql.Null[string]
 	kyotoSt, oazaCho, chome, koaza sql.Null[string]
@@ -155,14 +136,12 @@ type reverseBaseScan struct {
 	lon, lat, distance             float64
 }
 
-// appendAddrPtrs appends scan destination pointers for the 9 address columns
-// (pref through machiaza_dist) to dst.
+// appendAddrPtrs appends scan destinations for reverseAddrColumns to dst.
 func (v *reverseBaseScan) appendAddrPtrs(dst []any) []any {
 	return append(dst, &v.pref, &v.county, &v.city, &v.ward, &v.kyotoSt, &v.oazaCho, &v.chome, &v.koaza, &v.machiazaDist)
 }
 
-// appendTailPtrs appends scan destination pointers for the 6 trailing columns
-// (rsdt_addr_flg through distance) to dst.
+// appendTailPtrs appends scan destinations for rsdt_addr_flg through distance to dst.
 func (v *reverseBaseScan) appendTailPtrs(dst []any) []any {
 	return append(dst, &v.rsdtAddrFlg, &v.lgCode, &v.machiazaID, &v.lon, &v.lat, &v.distance)
 }

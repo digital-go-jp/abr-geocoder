@@ -1,8 +1,9 @@
 package matchlevel
 
 import (
-	"abrg/internal/model"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 func TestDetermineMatchLevel(t *testing.T) {

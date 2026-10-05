@@ -145,9 +145,9 @@ func TestRunInit_ValidatesBeforeMigrations(t *testing.T) {
 		name string
 		opts InitOptions
 	}{
-		{"invalid pref", InitOptions{Pref: "99", Category: "basic", Force: true}},
-		{"non-numeric pref", InitOptions{Pref: "abc", Category: "basic", Force: true}},
-		{"invalid category", InitOptions{Pref: "13", Category: "bogus", Force: true}},
+		{"invalid pref", InitOptions{Pref: "99", Category: "basic", Yes: true}},
+		{"non-numeric pref", InitOptions{Pref: "abc", Category: "basic", Yes: true}},
+		{"invalid category", InitOptions{Pref: "13", Category: "bogus", Yes: true}},
 	}
 
 	for _, tt := range tests {
@@ -169,7 +169,7 @@ func TestRunInit_ValidatesBeforeMigrations(t *testing.T) {
 func TestRunInit_MigrationErrorAfterValidation(t *testing.T) {
 	sentinel := errors.New("migration boom")
 	m := &fakeMigrator{err: sentinel}
-	err := runInit(t.Context(), nil, m, &InitOptions{Pref: "13", Category: "basic", Force: true})
+	err := runInit(t.Context(), nil, m, &InitOptions{Pref: "13", Category: "basic", Yes: true})
 	if !errors.Is(err, sentinel) {
 		t.Fatalf("runInit() = %v, want wrapped %v", err, sentinel)
 	}

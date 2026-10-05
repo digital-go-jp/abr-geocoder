@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"slices"
 
-	"abr.local/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/progress"
 
-	"abrdb/internal/infra/api"
-	"abrdb/internal/model"
-	"abrdb/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/api"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/util"
 )
 
 // catalogStore tracks the download and pending-import state of catalog files.

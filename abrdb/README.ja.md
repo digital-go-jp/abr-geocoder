@@ -20,19 +20,19 @@ abrdb init [options]
 ```
 
 オプション:
-- `--pref` - 都道府県コード（default: all）。1-47の数値または `all`
-- `--category` - データカテゴリ（default: basic）
+- `-p, --pref` - 都道府県コード（default: all）。1-47の数値または `all`
+- `-c, --category` - データカテゴリ（default: basic）
   - `basic`: 都道府県・市区町村・町字
   - `rsdtdsp`: basic + 住居表示
   - `parcel`: basic + 地番
   - `all`: すべて
 - `--pos=true/false` - 座標を有効化（default: false）
-- `--force` - 確認プロンプトをスキップ
+- `-y, --yes` - 確認プロンプトをスキップ
 - `--profile` - 設定プロファイル（default: `default`、[設定プロファイル](#設定プロファイル)参照）
 
 環境変数（フラグより優先度が低い）:
-- `ABRDB_PREF` - `--pref` と同等
-- `ABRDB_CATEGORY` - `--category` と同等
+- `ABRDB_PREF` - `-p, --pref` と同等
+- `ABRDB_CATEGORY` - `-c, --category` と同等
 - `ABRDB_POS` - `--pos` と同等（`true`/`false`）
 - `ABRDB_PROFILE` - `--profile` と同等
 
@@ -57,7 +57,7 @@ abrdb import [options]
 ```
 
 オプション:
-- `-d, --dry-run` - 実際にはインポートせず、対象を表示
+- `--dry-run` - 実際にはインポートせず、対象を表示
 - `-f, --force` - 変更検出をスキップして強制インポート
 - `-q, --quiet` - 進捗表示を抑制
 - `-v, --verbose` - 詳細なファイル一覧を表示（--dry-run 時）

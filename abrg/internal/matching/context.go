@@ -1,6 +1,6 @@
 package matching
 
-import "abrg/internal/model"
+import "github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 
 // normalizeInput holds immutable input data for normalization.
 // These values are set once at the start and never modified during processing.

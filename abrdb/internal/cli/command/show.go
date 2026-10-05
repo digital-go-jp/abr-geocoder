@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrdb/internal/infra/db"
-	"abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
 )
 
 // NewShowCmd creates a new show command
@@ -39,7 +39,7 @@ func newShowConfigCmd() *cobra.Command {
   abrdb show config
 
   # To change configuration, re-run initialization
-  abrdb init --force --pref 13 --category basic`,
+  abrdb init --yes --pref 13 --category basic`,
 		RunE: WithServices(func(ctx context.Context, sc *ServiceContainer) error {
 			return runShowConfig(ctx, sc.QueryExecutor)
 		}),

@@ -3,7 +3,7 @@ package util
 import (
 	"strings"
 
-	"abrg/internal/char"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 )
 
 // IsKanjiNumeral reports whether r is a kanji numeral, either plain

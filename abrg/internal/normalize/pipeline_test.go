@@ -24,9 +24,9 @@ func TestBasicNormalize(t *testing.T) {
 			want:  "東京都千代田区",
 		},
 		{
-			name:  "removes variation selectors",
-			input: "愛媛\U000E0103県", // 愛媛 + variation selector + 県
-			want:  "愛媛県",
+			name:  "removes a leading BOM before the surrounding quotes",
+			input: "\uFEFF\"東京都千代田区\"",
+			want:  "東京都千代田区",
 		},
 		{
 			name:  "standardizes spaces",
@@ -87,17 +87,13 @@ func TestBasicNormalize(t *testing.T) {
 }
 
 func TestBasicNormalize_Pipeline(t *testing.T) {
-	// Test that BasicNormalize applies all transformations in the correct order
-	// This is important because some transformations depend on others
-
-	// Input with multiple issues that need to be fixed in a specific order
 	input := `"　東京都１−２　"` // quotes, full-width spaces, full-width number, en-dash
 
 	result := BasicNormalize(input)
 
 	// After all transformations:
-	// 1. removeQuotes: 　東京都１−２
-	// 2. removeVS: (no change)
+	// 1. RemoveDefaultIgnorable: (no change)
+	// 2. removeQuotes: 　東京都１−２
 	// 3. NormalizeSpaces: 東京都１−２ (trims and normalizes spaces)
 	// 4. removeComments: (no change)
 	// 5. NFKCNormalize: 東京都1−2 (full-width to half-width)

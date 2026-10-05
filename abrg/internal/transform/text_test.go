@@ -1,6 +1,10 @@
 package transform
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
+)
 
 func TestTextForBasicNormalized(t *testing.T) {
 	tests := []struct {
@@ -24,14 +28,14 @@ func TestTextForBasicNormalized(t *testing.T) {
 		{
 			name:    "skips StandardizeSpecialChars - keeps 塩竈",
 			input:   "塩竈市",
-			want:    "塩竈市", // 竈 is NOT converted because StandardizeSpecialChars is skipped
+			want:    "塩竈市",
 			changed: false,
 		},
 		{
 			name:    "skips NFKC - keeps full-width numbers",
-			input:   "千代田区１-３",    // Full-width numbers should remain (NFKC skipped)
-			want:    "1000代田区１-３", // Kanji千converted to 1000; full-width numbers are kept because NFKC is skipped
-			changed: true,         // Changed because千is converted
+			input:   "千代田区１-３",
+			want:    "1000代田区１-３",
+			changed: true,
 		},
 		{
 			name:    "with colon - address numbers",
@@ -85,10 +89,9 @@ func TestTextForBasicNormalized(t *testing.T) {
 	}
 }
 
-// TestTextForDB pins the dbSteps pipeline that cache build runs as the
-// normalize_text_go UDF. Every input is a real cache_machiaza row concatenated
-// the way normalizedExpr concatenates it, so the want value is the
-// normalized_address the cache actually stores.
+// TestTextForDB pins the dbSteps pipeline that cache build runs as the normalize_text_go UDF.
+// Every input is a real cache_machiaza row concatenated the way normalizedExpr concatenates it,
+// so the want value is the normalized_address the cache actually stores.
 func TestTextForDB(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -119,8 +122,8 @@ func TestTextForDB(t *testing.T) {
 			changed: true,
 		},
 		{
-			// The prolonged sound mark converts only between digits, which is
-			// why 公団アパート above keeps its ー.
+			// The prolonged sound mark converts only between digits,
+			// which is why 公団アパート above keeps its ー.
 			name:    "prolonged sound mark between digits becomes a hyphen",
 			step:    "NormalizeDashes",
 			input:   "知立市知立駅周17ー1街区", // lg_code 232254 / machiaza_id 0057000
@@ -156,8 +159,8 @@ func TestTextForDB(t *testing.T) {
 			changed: true,
 		},
 		{
-			// AddColon is deliberately absent from dbSteps, so a trailing
-			// number stays attached to the place name.
+			// AddColon is deliberately absent from dbSteps,
+			// so a trailing number stays attached to the place name.
 			name:    "no colon is inserted",
 			step:    "AddColon is not in dbSteps",
 			input:   "知立市知立駅周17ー1街区",
@@ -186,10 +189,10 @@ func TestTextForDB(t *testing.T) {
 	}
 }
 
-// A cache record and a query reach each other only where the two pipelines
-// agree, so NormalizeSpaces has to sit in both. No oaza_cho or koaza in the
-// cache holds whitespace today, which is why the step is pinned by the
-// agreement rather than by a row.
+// A cache record and a query reach each other only where the two pipelines agree,
+// so NormalizeSpaces has to sit in both.
+// No oaza_cho or koaza in the cache holds whitespace today,
+// which is why the step is pinned by the agreement rather than by a row.
 func TestSpaceCollapsingIsTheSameOnBothPipelines(t *testing.T) {
 	for _, in := range []string{
 		"倉敷市児島下の町　9丁目",
@@ -200,6 +203,22 @@ func TestSpaceCollapsingIsTheSameOnBothPipelines(t *testing.T) {
 		if db != basic {
 			t.Errorf("TextForDB(%q) = %q, TextForBasicNormalized = %q; the pipelines must collapse spaces alike",
 				in, db, basic)
+		}
+	}
+}
+
+// No name in the cache holds a Default_Ignorable_Code_Point today,
+// so this checks that both pipelines remove them alike.
+func TestDefaultIgnorableRemovalIsTheSameOnBothPipelines(t *testing.T) {
+	for _, in := range []string{
+		"愛媛\U000E0103県松山市",
+		"\uFEFF東京都\u200B港区",
+	} {
+		db, _ := TextForDB(in)
+		query, _ := TextForBasicNormalized(normalize.BasicNormalize(in))
+		if db != query {
+			t.Errorf("TextForDB(%q) = %q, query side = %q; the pipelines must remove invisible characters alike",
+				in, db, query)
 		}
 	}
 }

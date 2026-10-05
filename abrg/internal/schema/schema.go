@@ -9,20 +9,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// cacheSchema represents the full cache schema configuration.
+// cacheSchema is the parsed cache_schema.yaml.
 type cacheSchema struct {
 	Version int                     `yaml:"version"`
 	Tables  map[string]*tableConfig `yaml:"tables"`
 }
 
-// tableConfig represents a single table configuration.
 type tableConfig struct {
-	Columns        []columnConfig `yaml:"columns"`
-	Indexes        []indexConfig  `yaml:"indexes"`
-	SpatialIndexes []indexConfig  `yaml:"spatial_indexes"`
+	Columns []columnConfig `yaml:"columns"`
+	Indexes []indexConfig  `yaml:"indexes"`
 }
 
-// columnConfig represents a column definition.
 type columnConfig struct {
 	Name        string `yaml:"name"`
 	Type        string `yaml:"type"`
@@ -30,11 +27,9 @@ type columnConfig struct {
 	Constraints string `yaml:"constraints,omitempty"`
 }
 
-// indexConfig represents an index definition.
 type indexConfig struct {
 	Name    string   `yaml:"name"`
-	Column  string   `yaml:"column,omitempty"`  // for spatial indexes
-	Columns []string `yaml:"columns,omitempty"` // for regular indexes
+	Columns []string `yaml:"columns"`
 }
 
 var loadSchemaOnce = sync.OnceValues(func() (*cacheSchema, error) {
@@ -45,16 +40,14 @@ var loadSchemaOnce = sync.OnceValues(func() (*cacheSchema, error) {
 	return &schema, nil
 })
 
-// loadSchema loads and parses the embedded cache schema.
-// Thread-safe and cached after first call.
+// loadSchema returns the embedded cache schema, parsed once.
 func loadSchema() (*cacheSchema, error) {
 	return loadSchemaOnce()
 }
 
-// Version returns the cache schema version declared in cache_schema.yaml.
-// It is written to cache_config at build time and checked when a cache is
-// opened, so a cache built for a different schema fails fast instead of
-// surfacing as SQL errors at query time.
+// Version returns the schema version in cache_schema.yaml. It is written to
+// cache_config at build time and checked on open, so a cache built for another
+// schema fails fast instead of causing SQL errors at query time.
 func Version() (int, error) {
 	s, err := loadSchema()
 	if err != nil {
@@ -63,7 +56,7 @@ func Version() (int, error) {
 	return s.Version, nil
 }
 
-// generateCreateTableSQL generates CREATE TABLE SQL for a table.
+// generateCreateTableSQL returns the CREATE TABLE statement for tableName.
 func (t *tableConfig) generateCreateTableSQL(tableName string) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "CREATE TABLE IF NOT EXISTS %s (\n", tableName)
@@ -86,21 +79,12 @@ func (t *tableConfig) generateCreateTableSQL(tableName string) string {
 	return sb.String()
 }
 
-// generateIndexSQL generates CREATE INDEX SQL for regular indexes.
+// generateIndexSQL returns the CREATE INDEX statements for tableName.
 func (t *tableConfig) generateIndexSQL(tableName string) string {
 	var sb strings.Builder
 	for _, idx := range t.Indexes {
 		cols := strings.Join(idx.Columns, ", ")
 		fmt.Fprintf(&sb, "CREATE INDEX IF NOT EXISTS %s ON %s(%s);\n", idx.Name, tableName, cols)
-	}
-	return sb.String()
-}
-
-// generateSpatialIndexSQL generates CREATE INDEX SQL for spatial indexes.
-func (t *tableConfig) generateSpatialIndexSQL(tableName string) string {
-	var sb strings.Builder
-	for _, idx := range t.SpatialIndexes {
-		fmt.Fprintf(&sb, "CREATE INDEX IF NOT EXISTS %s ON %s USING RTREE(%s);\n", idx.Name, tableName, idx.Column)
 	}
 	return sb.String()
 }

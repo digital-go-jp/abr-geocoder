@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"abrg/internal/cache"
-	"abrg/internal/model"
-	"abrg/internal/normalize"
-	"abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
 )
 
 // failingQuerier fails every repository query.

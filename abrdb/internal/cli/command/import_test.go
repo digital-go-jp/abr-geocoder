@@ -6,11 +6,11 @@ import (
 	"slices"
 	"testing"
 
-	"abrdb/internal/config"
-	"abrdb/internal/infra/postgres"
-	"abrdb/internal/model"
-	"abrdb/internal/schema"
-	"abrdb/internal/service/catalog"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/config"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/postgres"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/schema"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/service/catalog"
 )
 
 // fakeCatalog is a catalogAPI stub whose scan results are fixed per test case.

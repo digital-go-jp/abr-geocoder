@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"abrg/internal/cache"
-	"abrg/internal/repository"
-	"abrg/internal/testutil"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/testutil"
 )
 
 var initTestCache = testutil.NewCacheOnce(func(c *cache.DuckDBCache) (*cache.DuckDBCache, error) {

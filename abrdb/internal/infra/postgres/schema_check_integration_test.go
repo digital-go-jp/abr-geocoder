@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
 )
 
 // newIntegrationExecutor connects to the PostgreSQL configured via the DB_*

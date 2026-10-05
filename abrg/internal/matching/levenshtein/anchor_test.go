@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"abrg/internal/model"
-	"abrg/internal/repository"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // recordingQuerier reports a fixed set of candidate cities and records the

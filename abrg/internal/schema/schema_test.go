@@ -13,11 +13,10 @@ func TestLoadSchema(t *testing.T) {
 		t.Fatalf("loadSchema() error = %v", err)
 	}
 
-	if schema.Version != 3 {
-		t.Errorf("schema.Version = %d, want 3", schema.Version)
+	if schema.Version != 4 {
+		t.Errorf("schema.Version = %d, want 4", schema.Version)
 	}
 
-	// Check tables exist
 	expectedTables := []string{"cache_machiaza", "cache_city", "cache_pref", "cache_config"}
 	for _, tableName := range expectedTables {
 		if _, ok := schema.Tables[tableName]; !ok {
@@ -25,8 +24,7 @@ func TestLoadSchema(t *testing.T) {
 		}
 	}
 
-	// Category tables are created at build time by CTAS (cache/sql.go), not
-	// declared in the YAML schema.
+	// Category tables are created by CTAS in cache/sql.go, not declared in YAML.
 	for _, tableName := range []string{"cache_rsdtdsp", "cache_parcel"} {
 		if _, ok := schema.Tables[tableName]; ok {
 			t.Errorf("schema.Tables[%q] found, category tables must not be declared in YAML", tableName)
@@ -49,8 +47,8 @@ func Test_generateCreateTableSQL(t *testing.T) {
 	if !strings.Contains(sql, "pref_code SMALLINT") {
 		t.Error("SQL should contain pref_code column")
 	}
-	if !strings.Contains(sql, "geom GEOMETRY") {
-		t.Error("SQL should contain geom column")
+	if !strings.Contains(sql, "lon FLOAT") || !strings.Contains(sql, "lat FLOAT") {
+		t.Error("SQL should contain lon and lat columns")
 	}
 }
 
@@ -71,30 +69,12 @@ func Test_generateIndexSQL(t *testing.T) {
 	}
 }
 
-func Test_generateSpatialIndexSQL(t *testing.T) {
-	schema, err := loadSchema()
-	if err != nil {
-		t.Fatalf("loadSchema() error = %v", err)
-	}
-
-	table := schema.Tables["cache_machiaza"]
-	sql := table.generateSpatialIndexSQL("cache_machiaza")
-
-	if !strings.Contains(sql, "USING RTREE") {
-		t.Error("SQL should contain USING RTREE for spatial index")
-	}
-	if !strings.Contains(sql, "idx_machiaza_geom") {
-		t.Error("SQL should contain idx_machiaza_geom index")
-	}
-}
-
 func TestInitSchemaSQL(t *testing.T) {
 	sql, err := InitSchemaSQL()
 	if err != nil {
 		t.Fatalf("InitSchemaSQL() error = %v", err)
 	}
 
-	// Should contain CREATE TABLE for all tables
 	if !strings.Contains(sql, "cache_machiaza") {
 		t.Error("InitSchemaSQL should contain cache_machiaza")
 	}
@@ -104,8 +84,7 @@ func TestInitSchemaSQL(t *testing.T) {
 	if !strings.Contains(sql, "cache_pref") {
 		t.Error("InitSchemaSQL should contain cache_pref")
 	}
-	// Category tables come from CTAS at build time; the init SQL must not
-	// create (or clear) them.
+	// Category tables come from CTAS at build time, so the init SQL must not touch them.
 	if strings.Contains(sql, "cache_rsdtdsp") {
 		t.Error("InitSchemaSQL should not contain cache_rsdtdsp")
 	}
@@ -113,7 +92,6 @@ func TestInitSchemaSQL(t *testing.T) {
 		t.Error("InitSchemaSQL should not contain cache_parcel")
 	}
 
-	// Should contain DELETE statements
 	if !strings.Contains(sql, "DELETE FROM cache_machiaza") {
 		t.Error("InitSchemaSQL should contain DELETE FROM cache_machiaza")
 	}
@@ -129,19 +107,6 @@ func TestGetCreateIndexesSQL(t *testing.T) {
 	}
 	if !strings.Contains(sql, "CREATE INDEX") {
 		t.Error("GetCreateIndexesSQL should contain CREATE INDEX")
-	}
-}
-
-func TestGetCreateSpatialIndexesSQL(t *testing.T) {
-	sql, err := GetCreateSpatialIndexesSQL()
-	if err != nil {
-		t.Fatalf("GetCreateSpatialIndexesSQL() error = %v", err)
-	}
-	if sql == "" {
-		t.Error("GetCreateSpatialIndexesSQL should not return empty")
-	}
-	if !strings.Contains(sql, "RTREE") {
-		t.Error("GetCreateSpatialIndexesSQL should contain RTREE")
 	}
 }
 
@@ -197,10 +162,10 @@ func TestInsertMachiazaColumnCount(t *testing.T) {
 	table := schema.Tables["cache_machiaza"]
 	colCount := len(table.Columns)
 
-	// The INSERT INTO cache_machiaza SQL in sql.go must have an explicit column list
-	// that matches the YAML schema. This test validates the column count.
-	if colCount != 19 {
-		t.Errorf("cache_machiaza column count = %d, want 19", colCount)
+	// The explicit column list of INSERT INTO cache_machiaza in cache/sql.go must
+	// match the YAML schema.
+	if colCount != 20 {
+		t.Errorf("cache_machiaza column count = %d, want 20", colCount)
 	}
 }
 
@@ -216,8 +181,8 @@ func TestCacheCityColumnCount(t *testing.T) {
 	}
 
 	colCount := len(table.Columns)
-	if colCount != 8 {
-		t.Errorf("cache_city column count = %d, want 8", colCount)
+	if colCount != 9 {
+		t.Errorf("cache_city column count = %d, want 9", colCount)
 	}
 }
 
@@ -233,7 +198,7 @@ func TestCachePrefColumnCount(t *testing.T) {
 	}
 
 	colCount := len(table.Columns)
-	if colCount != 5 {
-		t.Errorf("cache_pref column count = %d, want 5", colCount)
+	if colCount != 6 {
+		t.Errorf("cache_pref column count = %d, want 6", colCount)
 	}
 }

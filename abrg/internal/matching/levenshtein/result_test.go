@@ -3,7 +3,7 @@ package levenshtein
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 func TestExtractSearchNumbers(t *testing.T) {

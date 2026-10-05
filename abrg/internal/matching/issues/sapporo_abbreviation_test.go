@@ -3,7 +3,7 @@ package issues
 import (
 	"testing"
 
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
 // TestSapporoAbbreviation covers the Sapporo grid written without 条, where

@@ -5,12 +5,9 @@ FROM golang:1.27-trixie AS builder
 WORKDIR /build
 
 # Copy go mod files first for better caching
-COPY common/go.mod ./common/
-COPY abrdb/go.mod abrdb/go.sum ./abrdb/
-WORKDIR /build/abrdb
+COPY go.mod go.sum ./
 RUN go mod download
 
-WORKDIR /build
 COPY common/ ./common/
 COPY abrdb/ ./abrdb/
 WORKDIR /build/abrdb
@@ -21,7 +18,7 @@ WORKDIR /build/abrdb
 ARG COMMIT=none
 RUN VERSION=$(cat VERSION) && \
     CGO_ENABLED=1 \
-    go build -ldflags="-w -s -X abr.local/common/version.Version=${VERSION} -X abr.local/common/version.Commit=${COMMIT}" -o abrdb ./cmd/abrdb
+    go build -ldflags="-w -s -X github.com/digital-go-jp/abr-geocoder/common/version.Version=${VERSION} -X github.com/digital-go-jp/abr-geocoder/common/version.Commit=${COMMIT}" -o abrdb ./cmd/abrdb
 
 RUN mkdir /empty
 

@@ -6,14 +6,14 @@ import (
 	"sync"
 	"testing"
 
-	"abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
 )
 
 // NewCacheOnce returns a lazily-initialized, cached constructor for a value
 // built from the shared DuckDB cache.
 func NewCacheOnce[T any](build func(c *cache.DuckDBCache) (T, error)) func() (T, error) {
 	return sync.OnceValues(func() (T, error) {
-		c, err := cache.NewDuckDBCache(context.Background())
+		c, err := cache.NewDuckDBCache(context.Background(), "")
 		if err != nil {
 			var zero T
 			return zero, err

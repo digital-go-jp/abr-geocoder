@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"abrg/internal/model"
-	"abrg/internal/reverse"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/reverse"
 )
 
 // NewReverseCmd creates a new reverse geocoding command.
@@ -42,8 +42,8 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 	}
 	defer setup.Cleanup()
 
-	// Data availability follows the cache build configuration; the presence
-	// of the category tables themselves is verified at cache open.
+	// Data availability follows the cache build configuration.
+	// The category tables themselves are checked for when the cache is opened.
 	reverser := reverse.NewReverseGeocoder(setup.Repo, setup.CacheCfg.HasResidential(), setup.CacheCfg.HasParcel())
 	p := newDefaultProcessor(setup, func(ctx context.Context, line string) (*model.ReverseResponse, error) {
 		lon, lat, err := parseCoordinates(line)
@@ -51,7 +51,7 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 			return nil, err
 		}
 
-		return runTimed(setup, func() (*model.ReverseResponse, error) {
+		return withResultInfo(setup, func() (*model.ReverseResponse, error) {
 			return reverser.Reverse(ctx, model.ReverseQuery{
 				Lon:      lon,
 				Lat:      lat,
@@ -64,9 +64,10 @@ func runReverse(ctx context.Context, opts processorOptions) error {
 	return p.Run(ctx, setup.InFile, setup.OutFile)
 }
 
-// parseCoordinates parses a "lon,lat" string into float64 values.
+// parseCoordinates parses a "lon,lat" string into float64 values, ignoring invisible characters such as a BOM.
 func parseCoordinates(line string) (lon, lat float64, err error) {
-	lonStr, latStr, found := strings.Cut(strings.TrimSpace(line), ",")
+	cleaned, _ := normalize.RemoveDefaultIgnorable(line)
+	lonStr, latStr, found := strings.Cut(strings.TrimSpace(cleaned), ",")
 	if !found {
 		return 0, 0, fmt.Errorf("expected 'lon,lat' format, got %q", line)
 	}
@@ -77,10 +78,6 @@ func parseCoordinates(line string) (lon, lat float64, err error) {
 
 	if lat, err = strconv.ParseFloat(strings.TrimSpace(latStr), 64); err != nil {
 		return 0, 0, fmt.Errorf("invalid latitude: %w", err)
-	}
-
-	if err = util.ValidateCoordinates(lon, lat); err != nil {
-		return 0, 0, err
 	}
 
 	return lon, lat, nil

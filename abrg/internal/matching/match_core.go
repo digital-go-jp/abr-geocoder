@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"time"
 
-	"abrg/internal/matching/unmatched"
-	"abrg/internal/model"
-	"abrg/internal/normalize"
-	"abrg/internal/util"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/unmatched"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // Match processes an address and returns matching results against ABR data.
@@ -53,7 +53,10 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 		return nil, fmt.Errorf("%w: %s", ErrUnknownCategory, query.Category)
 	}
 
-	normalizedAddr := normalize.BasicNormalize(query.Address)
+	normalizedAddr, err := normalize.BasicNormalizeInput(query.Address)
+	if err != nil {
+		return nil, err
+	}
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
 
 	results, err := n.matchNormalized(ctx, query, normalizedAddr, addressType, false)

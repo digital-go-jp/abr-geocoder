@@ -6,16 +6,19 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 
-	"abr.local/common/version"
+	"github.com/digital-go-jp/abr-geocoder/common/version"
 
-	"abrg/internal/api"
-	"abrg/internal/cache"
-	"abrg/internal/infra/config"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/api"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/config"
 )
 
 // NewServerCmd creates a new server command.
@@ -63,6 +66,11 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		"pref", cacheCfg.EnabledPref,
 		"pos", cacheCfg.PosEnabled())
 
+	// Gin's default debug mode prints plain-text lines among the JSON logs.
+	if os.Getenv(gin.EnvGinMode) == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	server := api.NewGinServer(api.ServerConfig{
 		APIVersion:       version.Version,
 		CORSAllowOrigins: cfg.Server.CORSAllowOrigins,
@@ -76,7 +84,7 @@ func runServer(ctx context.Context, cacheFlag string) error {
 	}()
 
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%s", cfg.Server.Port),
+		Addr:              cfg.Server.Addr(),
 		Handler:           server.Handler(),
 		ReadHeaderTimeout: cfg.Server.ReadTimeout,
 		ReadTimeout:       cfg.Server.ReadTimeout,
@@ -89,11 +97,20 @@ func runServer(ctx context.Context, cacheFlag string) error {
 
 // runHTTPServer runs an http.Server until ctx is cancelled, then performs
 // a graceful shutdown with a bounded timeout.
+// It logs the address it accepts connections on once it is listening,
+// so that log marks the point where the server can be called.
 func runHTTPServer(ctx context.Context, srv *http.Server) error {
+	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", srv.Addr)
+	if err != nil {
+		return fmt.Errorf("server failed to start: %w", err)
+	}
+	slog.Info("server started", "event", "server_start", "addr", ln.Addr().String())
+
 	errChan := make(chan error, 1)
+	serveDone := make(chan struct{})
 	go func() {
-		slog.Info("server started", "event", "server_start", "addr", srv.Addr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		defer close(serveDone)
+		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errChan <- err
 		}
 	}()
@@ -102,7 +119,7 @@ func runHTTPServer(ctx context.Context, srv *http.Server) error {
 	case <-ctx.Done():
 		slog.Info("received shutdown signal", "event", "shutdown_signal", "cause", context.Cause(ctx))
 	case err := <-errChan:
-		return fmt.Errorf("server failed to start: %w", err)
+		return fmt.Errorf("server failed: %w", err)
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
@@ -111,6 +128,10 @@ func runHTTPServer(ctx context.Context, srv *http.Server) error {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("graceful shutdown failed: %w", err)
 	}
+
+	// Shutdown only closes the listeners Serve has registered,
+	// so a cancellation during startup frees the port once Serve returns.
+	<-serveDone
 
 	slog.Info("server stopped", "event", "server_stop")
 	return nil

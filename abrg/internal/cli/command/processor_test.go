@@ -1,13 +1,19 @@
 package command
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
 )
 
 // TestResult is a simple result type for testing.
@@ -281,5 +287,57 @@ func TestErrorResponse_JSON(t *testing.T) {
 	}
 	if parsed.Input != resp.Input {
 		t.Errorf("Input mismatch: got %q, want %q", parsed.Input, resp.Input)
+	}
+}
+
+func TestParallelProcessor_Run_SkipsEmptyAddresses(t *testing.T) {
+	var buf bytes.Buffer
+	p := &parallelProcessor[TestResult]{
+		Process: func(ctx context.Context, address string) (TestResult, error) {
+			if address == "// memo" {
+				return TestResult{}, normalize.ErrEmptyAddress
+			}
+			return TestResult{Address: address}, nil
+		},
+		Workers:    2,
+		BufferSize: 10,
+	}
+
+	if err := p.Run(t.Context(), strings.NewReader("address1\n// memo\naddress2\n"), &buf); err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+
+	want := "{\"address\":\"address1\",\"result\":\"\"}\n{\"address\":\"address2\",\"result\":\"\"}\n"
+	if got := buf.String(); got != want {
+		t.Errorf("output = %q, want %q", got, want)
+	}
+}
+
+func TestParallelProcessor_Run_LineTooLong(t *testing.T) {
+	p := &parallelProcessor[TestResult]{
+		Process: func(ctx context.Context, address string) (TestResult, error) {
+			return TestResult{Address: address}, nil
+		},
+		Workers:    1,
+		BufferSize: 10,
+	}
+
+	input := "address1\n" + strings.Repeat("a", bufio.MaxScanTokenSize) + "\n"
+	err := p.Run(t.Context(), strings.NewReader(input), io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "input line 2 ") {
+		t.Errorf("Run() error = %v, want it to name input line 2", err)
+	}
+}
+
+func TestCountLines_LineTooLong(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "input.txt")
+	input := "address1\n" + strings.Repeat("a", bufio.MaxScanTokenSize) + "\n"
+	if err := os.WriteFile(path, []byte(input), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := countLines(path)
+	if err == nil || !strings.Contains(err.Error(), "input line 2 ") {
+		t.Errorf("countLines() error = %v, want it to name input line 2", err)
 	}
 }

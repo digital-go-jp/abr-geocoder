@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	commondb "abr.local/common/db"
+	commondb "github.com/digital-go-jp/abr-geocoder/common/db"
 )
 
 // configKeyAnalyzePending is the abrdb_config key holding the JSON array of

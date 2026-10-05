@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"abrdb/internal/cli/command"
-	"abrdb/internal/infra/db"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/cli/command"
+	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/db"
 )
 
 // TestMain doubles as the subprocess entry point for the exit code contract

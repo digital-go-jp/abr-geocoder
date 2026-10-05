@@ -6,36 +6,32 @@ import (
 	"path/filepath"
 	"testing"
 
-	"abr.local/common/duck"
-
-	"abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
 )
 
-// The tests in this file run the real build SQL (CTAS, machiaza insert,
-// indexes, config save) for every enabled_category against a small in-memory
-// database attached as pg, mirroring the mt_* columns the build reads. This
-// pins that single-category builds work without the tables of the other
-// categories existing.
+// The tests in this file run the real build SQL for every enabled_category
+// against a small in-memory database attached as pg, checking that a
+// single-category build works without the other categories' cache tables.
 
 // fakePGSourceSQL creates the attached pg database schema with one city
 // (131016), one residential machiaza (0001000, rsdt_addr_flg=1, one block)
 // and one parcel machiaza (0002000, rsdt_addr_flg=0, one parcel).
 const fakePGSourceSQL = `
 CREATE SCHEMA pg.public;
-CREATE TABLE pg.public.mt_pref_unified (lg_code VARCHAR, pref VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
-CREATE TABLE pg.public.mt_city_unified (lg_code VARCHAR, county VARCHAR, city VARCHAR, ward VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
+CREATE TABLE pg.public.mt_pref_unified (lg_code VARCHAR, pref VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
+CREATE TABLE pg.public.mt_city_unified (lg_code VARCHAR, county VARCHAR, city VARCHAR, ward VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
 CREATE TABLE pg.public.mt_town_unified (
 	lg_code VARCHAR, machiaza_id VARCHAR, rsdt_addr_flg INTEGER, koaza_aka_code INTEGER,
 	oaza_cho VARCHAR, chome VARCHAR, koaza VARCHAR, machiaza_dist VARCHAR, wake_num_flg INTEGER,
-	rep_lon DOUBLE, rep_lat DOUBLE);
+	rep_lon FLOAT, rep_lat FLOAT);
 CREATE TABLE pg.public.mt_rsdtdsp_blk_unified (
-	lg_code VARCHAR, machiaza_id VARCHAR, blk_id VARCHAR, blk_num VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
+	lg_code VARCHAR, machiaza_id VARCHAR, blk_id VARCHAR, blk_num VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
 CREATE TABLE pg.public.mt_rsdtdsp_rsdt_unified (
 	lg_code VARCHAR, machiaza_id VARCHAR, blk_id VARCHAR, rsdt_id VARCHAR, rsdt2_id VARCHAR,
-	rsdt_num VARCHAR, rsdt_num2 VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
+	rsdt_num VARCHAR, rsdt_num2 VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
 CREATE TABLE pg.public.mt_parcel_unified (
 	lg_code VARCHAR, machiaza_id VARCHAR, prc_id VARCHAR,
-	prc_num1 VARCHAR, prc_num2 VARCHAR, prc_num3 VARCHAR, rep_lon DOUBLE, rep_lat DOUBLE);
+	prc_num1 VARCHAR, prc_num2 VARCHAR, prc_num3 VARCHAR, rep_lon FLOAT, rep_lat FLOAT);
 
 INSERT INTO pg.public.mt_pref_unified VALUES ('130001', '東京都', 139.6917, 35.6895);
 INSERT INTO pg.public.mt_city_unified VALUES ('131016', NULL, '千代田区', NULL, 139.7536, 35.6940);
@@ -60,9 +56,6 @@ func newCategoryBuildCache(t *testing.T, category string) (string, *sql.DB) {
 	}
 	t.Cleanup(func() { _ = conn.Close() })
 
-	if err := duck.LoadExtension(ctx, conn, "spatial"); err != nil {
-		t.Fatalf("load spatial extension: %v", err)
-	}
 	if err := registerUDF(ctx, conn); err != nil {
 		t.Fatalf("register UDF: %v", err)
 	}
@@ -117,9 +110,9 @@ func TestBuildCacheTables_Categories(t *testing.T) {
 				}
 			}
 
-			// The machiaza counts reflect only the categories that were built:
-			// the residential machiaza has 2 rsdtdsp rows (block-only row plus
-			// block+rsdt row), the parcel machiaza has 1 parcel row.
+			// Counts cover only the built categories: the residential machiaza
+			// has 2 rsdtdsp rows (block-only and block+rsdt), the parcel
+			// machiaza has 1 parcel row.
 			wantCount := func(built bool, rows int) int {
 				if built {
 					return rows
@@ -147,9 +140,8 @@ func TestBuildCacheTables_Categories(t *testing.T) {
 				t.Errorf("parcel_count = %d, want %d", parcelCount, want)
 			}
 
-			// The built cache passes the open-time version and integrity
-			// checks. The build connection must close first: a read-only open
-			// cannot coexist with the read-write one.
+			// The built cache passes the open-time checks. The read-write
+			// connection must close first; a read-only open cannot coexist with it.
 			if err := conn.Close(); err != nil {
 				t.Fatalf("close build connection: %v", err)
 			}

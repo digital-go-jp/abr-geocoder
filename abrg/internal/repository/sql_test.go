@@ -2,26 +2,21 @@ package repository
 
 import (
 	"context"
-	"math"
 	"sync"
 	"testing"
 
-	"abrg/internal/cache"
-	"abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
-// The tests in this file run the repository SQL against the committed
-// quickstart cache (Tokyo, basic category, pos enabled) so that queries and
-// scan code are exercised without a full nationwide cache. The cache has no
-// cache_rsdtdsp / cache_parcel tables; the residential/parcel queries are
-// covered by fixture_test.go (empty-result paths included), and requests for
-// unavailable categories are stopped before the repository by category
-// validation and the reverse availability guard.
+// The tests in this file run against the committed quickstart cache (Tokyo,
+// basic category, pos enabled). It has no cache_rsdtdsp or cache_parcel:
+// fixture_test.go covers those queries, and requests for categories a cache
+// lacks are rejected before they reach the repository.
 const quickstartCachePath = "../../../quickstart/tokyo_basic.duckdb"
 
-// Kioicho, Chiyoda-ku in the quickstart cache. normalized_address stores the
-// search-normalized form where kanji numerals are converted to digits
-// (千代田区 → 1000代田区).
+// Kioicho, Chiyoda-ku in the quickstart cache. normalized_address has kanji
+// numerals converted to digits (千代田区 → 1000代田区).
 const (
 	kioichoAddr       = "1000代田区紀尾井町"
 	chiyodaLgCode     = "131016"
@@ -38,9 +33,8 @@ var initTestRepo = sync.OnceValues(func() (*DB, error) {
 	return NewRepository(c.DB()), nil
 })
 
-// setupRepo opens the quickstart cache. The file is tracked in Git, so a
-// failure to open it is a real regression and fails the test instead of
-// skipping.
+// setupRepo opens the quickstart cache. The file is tracked in Git, so failing
+// to open it fails the test.
 func setupRepo(t *testing.T) *DB {
 	t.Helper()
 	repo, err := initTestRepo()
@@ -50,8 +44,22 @@ func setupRepo(t *testing.T) *DB {
 	return repo
 }
 
-func almostEqual(got, want float64) bool {
-	return math.Abs(got-want) < 1e-4
+// storedFloat reports whether got is want as a FLOAT column stores it, with no
+// further rounding on the way out.
+func storedFloat(got, want float64) bool {
+	return got == float64(float32(want))
+}
+
+// storedCoordinates reads lon and lat of the first row of table matching where,
+// bypassing the repository's queries.
+func storedCoordinates(t *testing.T, repo *DB, table, where string, args ...any) []float64 {
+	t.Helper()
+	var lon, lat float32
+	query := "SELECT lon, lat FROM " + table + " WHERE " + where + " LIMIT 1"
+	if err := repo.db.QueryRowContext(context.Background(), query, args...).Scan(&lon, &lat); err != nil {
+		t.Fatalf("query %s: %v", query, err)
+	}
+	return []float64{float64(lon), float64(lat)}
 }
 
 func TestFindBasicByAddress(t *testing.T) {
@@ -79,8 +87,8 @@ func TestFindBasicByAddress(t *testing.T) {
 		if r.HasChome {
 			t.Error("HasChome = true, want false")
 		}
-		if r.Lon == nil || r.Lat == nil || !almostEqual(*r.Lon, kioichoLon) || !almostEqual(*r.Lat, kioichoLat) {
-			t.Errorf("Lon/Lat = %v/%v, want ~%f/~%f", r.Lon, r.Lat, kioichoLon, kioichoLat)
+		if r.Lon == nil || r.Lat == nil || !storedFloat(*r.Lon, kioichoLon) || !storedFloat(*r.Lat, kioichoLat) {
+			t.Errorf("Lon/Lat = %v/%v, want %v/%v", r.Lon, r.Lat, float64(float32(kioichoLon)), float64(float32(kioichoLat)))
 		}
 	})
 
@@ -207,8 +215,9 @@ func TestFindCityByAddress(t *testing.T) {
 		if result.City != "千代田区" || result.Pref != "東京都" {
 			t.Errorf("City/Pref = %q/%q, want 千代田区/東京都", result.City, result.Pref)
 		}
-		if result.Lon == nil || result.Lat == nil {
-			t.Errorf("Lon/Lat = %v/%v, want coordinates", result.Lon, result.Lat)
+		want := storedCoordinates(t, repo, "cache_city", "lg_code = ?", chiyodaLgCode)
+		if result.Lon == nil || result.Lat == nil || *result.Lon != want[0] || *result.Lat != want[1] {
+			t.Errorf("Lon/Lat = %v/%v, want %v", result.Lon, result.Lat, want)
 		}
 	})
 
@@ -365,8 +374,8 @@ func TestCoordinates(t *testing.T) {
 		if level != model.MatchLevelMachiaza {
 			t.Errorf("Coordinates() level = %q, want %q", level, model.MatchLevelMachiaza)
 		}
-		if !almostEqual(coords[0], kioichoLon) || !almostEqual(coords[1], kioichoLat) {
-			t.Errorf("Coordinates() = %v, want ~[%f %f]", coords, kioichoLon, kioichoLat)
+		if !storedFloat(coords[0], kioichoLon) || !storedFloat(coords[1], kioichoLat) {
+			t.Errorf("Coordinates() = %v, want [%v %v]", coords, float64(float32(kioichoLon)), float64(float32(kioichoLat)))
 		}
 	})
 
@@ -378,6 +387,9 @@ func TestCoordinates(t *testing.T) {
 		if level != model.MatchLevelCity {
 			t.Errorf("Coordinates() level = %q, want %q", level, model.MatchLevelCity)
 		}
+		if want := storedCoordinates(t, repo, "cache_city", "lg_code = ?", chiyodaLgCode); coords[0] != want[0] || coords[1] != want[1] {
+			t.Errorf("Coordinates() = %v, want %v", coords, want)
+		}
 	})
 
 	t.Run("city fallback for unknown machiaza id", func(t *testing.T) {
@@ -388,6 +400,9 @@ func TestCoordinates(t *testing.T) {
 		if level != model.MatchLevelCity {
 			t.Errorf("Coordinates() level = %q, want %q", level, model.MatchLevelCity)
 		}
+		if want := storedCoordinates(t, repo, "cache_city", "lg_code = ?", chiyodaLgCode); coords[0] != want[0] || coords[1] != want[1] {
+			t.Errorf("Coordinates() = %v, want %v", coords, want)
+		}
 	})
 
 	t.Run("prefecture fallback for unknown city", func(t *testing.T) {
@@ -397,6 +412,22 @@ func TestCoordinates(t *testing.T) {
 		}
 		if level != model.MatchLevelPrefecture {
 			t.Errorf("Coordinates() level = %q, want %q", level, model.MatchLevelPrefecture)
+		}
+		if want := storedCoordinates(t, repo, "cache_pref", "pref_code = ?", "13"); coords[0] != want[0] || coords[1] != want[1] {
+			t.Errorf("Coordinates() = %v, want %v", coords, want)
+		}
+	})
+
+	t.Run("prefecture by its lg_code", func(t *testing.T) {
+		coords, level := repo.Coordinates(ctx, "130001", "")
+		if coords == nil {
+			t.Fatal("Coordinates() = nil, want coordinates")
+		}
+		if level != model.MatchLevelPrefecture {
+			t.Errorf("Coordinates() level = %q, want %q", level, model.MatchLevelPrefecture)
+		}
+		if want := storedCoordinates(t, repo, "cache_pref", "lg_code = ?", "130001"); coords[0] != want[0] || coords[1] != want[1] {
+			t.Errorf("Coordinates() = %v, want %v", coords, want)
 		}
 	})
 
@@ -413,7 +444,7 @@ func TestFindNearestBasic(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("nearest to kioicho point", func(t *testing.T) {
-		results, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Radius: 0.009})
+		results, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Radius: 1000})
 		if err != nil {
 			t.Fatalf("FindNearestBasic() error = %v", err)
 		}
@@ -424,13 +455,16 @@ func TestFindNearestBasic(t *testing.T) {
 		if first.LgCode != chiyodaLgCode || first.MachiazaID != kioichoMachiazaID {
 			t.Errorf("first result = %q/%q, want %q/%q", first.LgCode, first.MachiazaID, chiyodaLgCode, kioichoMachiazaID)
 		}
+		if !storedFloat(first.Lon, kioichoLon) || !storedFloat(first.Lat, kioichoLat) {
+			t.Errorf("first result Lon/Lat = %v/%v, want %v/%v", first.Lon, first.Lat, float64(float32(kioichoLon)), float64(float32(kioichoLat)))
+		}
 		if first.Distance > 1.0 {
 			t.Errorf("first result Distance = %f, want < 1.0", first.Distance)
 		}
 	})
 
 	t.Run("prefecture filter excludes results", func(t *testing.T) {
-		results, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Pref: "14", Radius: 0.009})
+		results, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Pref: "14", Radius: 1000})
 		if err != nil {
 			t.Fatalf("FindNearestBasic() error = %v", err)
 		}
@@ -440,7 +474,7 @@ func TestFindNearestBasic(t *testing.T) {
 	})
 
 	t.Run("invalid prefecture code is an error", func(t *testing.T) {
-		_, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Pref: "abc", Radius: 0.009})
+		_, err := repo.FindNearestBasic(ctx, SpatialParams{Lon: kioichoLon, Lat: kioichoLat, Limit: 3, Pref: "abc", Radius: 1000})
 		if err == nil {
 			t.Error("FindNearestBasic() error = nil, want error")
 		}
