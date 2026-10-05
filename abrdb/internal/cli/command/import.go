@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/digital-go-jp/abr-geocoder/common/progress"
+	"github.com/digital-go-jp/abr-geocoder/common/version"
 
 	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/config"
 	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/infra/duckdb"
@@ -323,7 +324,9 @@ func runImportWithChangeDetection(
 // orphan pos files. The warning comes after the pipeline so orphans first
 // registered by this run's catalog scan are reported now rather than on the
 // next run. force is taken from opts, which the caller has already used to
-// choose between the force and change-detection paths.
+// choose between the force and change-detection paths. A run that imported
+// data records its abrdb version, which abrg copies into the cache and
+// reports as db_version.
 func runImportPipeline(
 	ctx context.Context,
 	sc *ServiceContainer,
@@ -347,8 +350,14 @@ func runImportPipeline(
 	}
 	defer func() { _ = services.etl.Close() }()
 
-	if err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork, opts.Force); err != nil {
+	imported, err := executeImportPipeline(ctx, catalogService, services.download, services.importer, s3Prefixes, enabledCategory, hasPendingWork, opts.Force)
+	if err != nil {
 		return err
+	}
+	if imported {
+		if err := postgres.SaveVersion(ctx, sc.QueryExecutor, version.Version); err != nil {
+			return fmt.Errorf("save application version: %w", err)
+		}
 	}
 	warnOrphanPosFiles(context.WithoutCancel(ctx), store)
 	return nil
@@ -360,7 +369,7 @@ func runImportPipeline(
 // changes are detected, so the run can finish the leftover work. With only an
 // analyze backlog, ImportCategoryBatch finds no pending files and runs the
 // ANALYZE step alone. force re-imports every in-scope file regardless of
-// change detection.
+// change detection. It reports whether the import step ran.
 func executeImportPipeline(
 	ctx context.Context,
 	catalogService catalogAPI,
@@ -370,7 +379,7 @@ func executeImportPipeline(
 	enabledCategory []model.FileCategory,
 	hasPendingWork bool,
 	force bool,
-) error {
+) (bool, error) {
 	totalStart := time.Now()
 	slog.Info("starting import", "event", "import")
 	printStatus("Starting import.")
@@ -378,26 +387,26 @@ func executeImportPipeline(
 	// 1. Scan and update catalog
 	updateResult, err := catalogService.ScanAndUpdate(ctx, s3Prefixes, force)
 	if err != nil {
-		return fmt.Errorf("scan and update catalog: %w", err)
+		return false, fmt.Errorf("scan and update catalog: %w", err)
 	}
 
 	// Early return if no changes and no pending work (force always re-imports)
 	if !force && updateResult.UpdatedCount == 0 && !hasPendingWork {
 		printStatus("No changes detected.")
-		return nil
+		return false, nil
 	}
 
 	// 2. Download pending files
 	downloadStart := time.Now()
 	if err := downloadService.DownloadPendingFiles(ctx); err != nil {
-		return fmt.Errorf("download pending files: %w", err)
+		return false, fmt.Errorf("download pending files: %w", err)
 	}
 	downloadSec := time.Since(downloadStart).Seconds()
 
 	// 3. Import downloaded data (single query for pending files, per-category timing)
 	categoryTimings, err := importService.ImportCategoryBatch(ctx, enabledCategory)
 	if err != nil {
-		return fmt.Errorf("import data: %w", err)
+		return false, fmt.Errorf("import data: %w", err)
 	}
 
 	totalSec := time.Since(totalStart).Seconds()
@@ -408,7 +417,7 @@ func executeImportPipeline(
 		"category_sec", categoryTimings,
 	)
 	printStatus("Import completed.")
-	return nil
+	return true, nil
 }
 
 func printDryRunSummary(ctx context.Context, store pendingSummaryStore, scanResult *catalog.ScanResult, verbose bool) error {

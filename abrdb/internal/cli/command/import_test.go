@@ -196,13 +196,59 @@ func TestExecuteImportPipeline_ScanError(t *testing.T) {
 	scanErr := errors.New("catalog unavailable")
 	fake := &fakeCatalog{updateErr: scanErr}
 
-	err := executeImportPipeline(context.Background(), fake, nil, nil, []string{"town/"}, []model.FileCategory{model.CategoryTown}, false, false)
+	_, err := executeImportPipeline(context.Background(), fake, nil, nil, []string{"town/"}, []model.FileCategory{model.CategoryTown}, false, false)
 
 	if !errors.Is(err, scanErr) {
 		t.Errorf("executeImportPipeline() = %v, want wrapped %v", err, scanErr)
 	}
 	if _, ok := errors.AsType[ChangesPendingError](err); ok {
 		t.Errorf("executeImportPipeline() = %v, must not be ChangesPendingError", err)
+	}
+}
+
+type fakeDownloader struct{}
+
+func (fakeDownloader) DownloadPendingFiles(context.Context) error { return nil }
+
+type fakeImporter struct{ called bool }
+
+func (f *fakeImporter) ImportCategoryBatch(context.Context, []model.FileCategory) (map[string]float64, error) {
+	f.called = true
+	return nil, nil
+}
+
+// TestExecuteImportPipeline_ReportsImport pins the imported flag that decides
+// whether abrdb_version is rewritten: a run that returns early without
+// touching the data must report false.
+func TestExecuteImportPipeline_ReportsImport(t *testing.T) {
+	tests := []struct {
+		name           string
+		updatedCount   int
+		hasPendingWork bool
+		force          bool
+		want           bool
+	}{
+		{name: "no changes", want: false},
+		{name: "updated files", updatedCount: 1, want: true},
+		{name: "pending work only", hasPendingWork: true, want: true},
+		{name: "force", force: true, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cat := &fakeCatalog{updateResult: &catalog.UpdateResult{UpdatedCount: tt.updatedCount}}
+			imp := &fakeImporter{}
+
+			got, err := executeImportPipeline(context.Background(), cat, fakeDownloader{}, imp, []string{"town/"}, []model.FileCategory{model.CategoryTown}, tt.hasPendingWork, tt.force)
+			if err != nil {
+				t.Fatalf("executeImportPipeline() error = %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("executeImportPipeline() imported = %v, want %v", got, tt.want)
+			}
+			if imp.called != tt.want {
+				t.Errorf("ImportCategoryBatch called = %v, want %v", imp.called, tt.want)
+			}
+		})
 	}
 }
 
