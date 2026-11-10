@@ -13,6 +13,7 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/common/logging"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cli/command"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/normalize"
 )
 
 func main() {
@@ -28,8 +29,9 @@ func main() {
 address normalization, geocoding, and reverse geocoding APIs
 for Japanese addresses using the Address Base Registry (ABR).`,
 		// Flags are parsed before this runs, so a mistyped flag still prints the usage.
-		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			cmd.SilenceUsage = true
+			return normalize.ConfigureMaxAddressLength()
 		},
 	}
 

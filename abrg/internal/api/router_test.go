@@ -793,7 +793,7 @@ func TestNormalizeHandler_Integration(t *testing.T) {
 		},
 		{
 			name:       "comment does not count toward the length",
-			query:      "?address=東京都千代田区紀尾井町1番3号%20%2F%2F%20" + makeAddressString(normalize.MaxAddressLength),
+			query:      "?address=東京都千代田区紀尾井町1番3号%20%2F%2F%20" + makeAddressString(normalize.DefaultMaxAddressLength),
 			wantStatus: http.StatusOK,
 			wantOutput: "東京都千代田区紀尾井町1-3",
 		},

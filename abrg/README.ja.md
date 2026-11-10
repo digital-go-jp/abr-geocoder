@@ -68,6 +68,7 @@ API 仕様: [openapi/openapi.yml](openapi/openapi.yml)
 | `ABRG_HTTP_PORT` | `3000` | サーバーポート |
 | `ABRG_CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDB キャッシュファイルのパス。`--cache` が優先される |
 | `ABRG_DUCKDB_THREADS` | `2` | DuckDB のクエリ内並列数の上限（`0` で DuckDB 既定＝コア数） |
+| `ABRG_MAX_ADDRESS_LENGTH` | `100` | 受け付ける住所の最大文字数。1〜1000 の整数。範囲外の値では起動しない |
 | `ABRG_CORS_ALLOW_ORIGIN` | `*` | CORS 許可オリジン。カンマ区切りで複数指定できる |
 | `LOG_LEVEL` | `INFO` | ログレベル（`DEBUG`, `INFO`, `WARN`, `ERROR`） |
 | `LOG_FORMAT` | `auto` | ログ形式（`json` または `text`、未指定時は TTY 自動判定） |
