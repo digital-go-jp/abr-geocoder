@@ -2,6 +2,7 @@ package normalize
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"testing"
 )
@@ -64,8 +65,10 @@ func TestConfigureMaxAddressLength(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(func() { maxAddressLength = DefaultMaxAddressLength })
-			if tt.set {
-				t.Setenv(EnvMaxAddressLength, tt.value)
+			// t.Setenv restores the variable afterwards, including when it is then unset.
+			t.Setenv(EnvMaxAddressLength, tt.value)
+			if !tt.set {
+				os.Unsetenv(EnvMaxAddressLength)
 			}
 
 			err := ConfigureMaxAddressLength()
