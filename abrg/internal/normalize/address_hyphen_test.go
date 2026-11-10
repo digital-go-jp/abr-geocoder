@@ -225,6 +225,18 @@ func TestAddressNumbersToHyphen(t *testing.T) {
 			changed:  true,
 		},
 		{
+			name:     "ban/N番M+号で終わる建物名",
+			input:    "東京都世田谷区奥沢五丁目7番14コーポ303号",
+			expected: "東京都世田谷区奥沢五丁目7-14 コーポ303号",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M+数字を含み号で終わる建物名",
+			input:    "東京都世田谷区奥沢五丁目7番14自由ヶ丘第2コーポ303号",
+			expected: "東京都世田谷区奥沢五丁目7-14 自由ヶ丘第2コーポ303号",
+			changed:  true,
+		},
+		{
 			name:     "ban/N番+建物名_同番号",
 			input:    "神戸市中央区江戸町104番江戸町104ビル4階",
 			expected: "神戸市中央区江戸町104 江戸町104ビル4階",

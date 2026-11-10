@@ -566,14 +566,22 @@ func hasBanGoPattern(s string) bool {
 		return false
 	}
 
-	// Check for digit after 番 (between 番 and 号)
-	// The part between 番 and 号 should be digit(s) optionally followed by -digit(s)
-	between := s[banIdx+len("番") : idx]
-	if len(between) == 0 {
+	// The part between 番 and 号 must be digit(s) optionally followed by -digit(s),
+	// so that a building name ending in 号 (7番14コーポ303号) is not taken for N番M号.
+	return isDigitGroups(s[banIdx+len("番") : idx])
+}
+
+// isDigitGroups reports whether s is ASCII digit runs joined by single hyphens, such as "14" or "2-3-4".
+func isDigitGroups(s string) bool {
+	if s == "" {
 		return false
 	}
-	// First char must be digit
-	return char.IsASCIIDigit(between[0])
+	for group := range strings.SplitSeq(s, "-") {
+		if group == "" || strings.TrimFunc(group, char.IsASCIIDigit) != "" {
+			return false
+		}
+	}
+	return true
 }
 
 // hasBanTouPattern checks for pattern "数字+番+数字+棟" without regex.
