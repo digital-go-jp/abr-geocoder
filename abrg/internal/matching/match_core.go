@@ -64,6 +64,14 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 		return nil, err
 	}
 
+	withoutMubanchi, err := n.tryWithoutMubanchi(ctx, query, normalizedAddr, addressType, results)
+	if err != nil {
+		return nil, err
+	}
+	if withoutMubanchi != nil {
+		results = withoutMubanchi
+	}
+
 	// A ward-only address (e.g. "中区本町") names no city, so retry it with each
 	// city that has such a ward before settling for the result above.
 	expanded, err := n.tryWardExpansion(ctx, query, normalizedAddr, addressType, results)
