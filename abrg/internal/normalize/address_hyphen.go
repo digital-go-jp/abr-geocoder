@@ -39,6 +39,8 @@ var (
 	banNoGo = regexp.MustCompile(`(\d+)番(\d+)[のノ](\d+)号`)
 	// banTou handles: N番M棟 -> N M棟
 	banTou = regexp.MustCompile(`(\d+)番(\d+)棟`)
+	// banWithHyphenBuilding handles: N番M-P[building] -> N-M-P [building]
+	banWithHyphenBuilding = regexp.MustCompile(`(\d+)番(\d+)((?:-\d+)+)([^\d\s-])`)
 	// banWithHyphenNumeric handles: N番M-[numeric] -> N-M-[numeric]
 	banWithHyphenNumeric = regexp.MustCompile(`(\d+)番(\d+)(-\d+)`)
 	// banWithHyphenAlphanumeric handles: N番M-[alphanumeric] -> N-M -[alphanumeric]
@@ -487,6 +489,7 @@ func processBan(s string, plainBan bool) string {
 
 	if plainBan {
 		if strings.Contains(s, "-") {
+			s = banWithHyphenBuilding.ReplaceAllString(s, "${1}-${2}${3} ${4}")
 			s = banWithHyphenNumeric.ReplaceAllString(s, "${1}-${2}${3}")
 			s = banWithHyphenAlphanumeric.ReplaceAllString(s, "${1}-${2} ${3}")
 		}
@@ -606,7 +609,13 @@ func hasBanTouPattern(s string) bool {
 
 	// Check for digit before 番
 	lastRuneBefore, _ := utf8.DecodeLastRuneInString(s[:banIdx])
-	return char.IsASCIIDigit(lastRuneBefore)
+	if !char.IsASCIIDigit(lastRuneBefore) {
+		return false
+	}
+
+	// Only digits may sit between 番 and 棟, so that a building name holding
+	// a numbered 棟 (7番14コーポ3棟303号) is not taken for N番M棟.
+	return isDigitGroups(s[banIdx+len("番") : idx])
 }
 
 // goAndPostfixRules run after the main conversion passes.
