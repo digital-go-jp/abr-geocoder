@@ -8,7 +8,7 @@ import (
 )
 
 // 無番地 states that the place has no lot number, but some machiaza carry it
-// in their name, so it is dropped only when the whole address finds nothing.
+// in their name, so it is dropped only when the whole address does not match exactly.
 func TestMatchMubanchiSuffix(t *testing.T) {
 	n := setupTestMatcher(t)
 
@@ -55,14 +55,7 @@ func TestMatchMubanchiSuffix(t *testing.T) {
 	for _, category := range []model.Category{model.CategoryBasic, model.CategoryAll} {
 		for _, tt := range tests {
 			t.Run(string(category)+"/"+tt.name, func(t *testing.T) {
-				resp, err := n.Match(t.Context(), model.MatchQuery{Address: tt.addr, Category: category, Pref: model.All, Limit: 1})
-				if err != nil {
-					t.Fatalf("Match(%q) error: %v", tt.addr, err)
-				}
-				if len(resp.Features) == 0 {
-					t.Fatalf("Match(%q) returned no results", tt.addr)
-				}
-				got := resp.Features[0]
+				got := matchFirst(t, n, tt.addr, category)
 				if got.MatchLevel != tt.wantLevel {
 					t.Errorf("match_level = %s, want %s", got.MatchLevel, tt.wantLevel)
 				}
@@ -75,4 +68,63 @@ func TestMatchMubanchiSuffix(t *testing.T) {
 			})
 		}
 	}
+}
+
+// An address with 無番地 matches as the address without it does, and reports
+// 無番地 as unmatched.
+func TestMatchMubanchiSameAsWithout(t *testing.T) {
+	n := setupTestMatcher(t)
+
+	tests := []struct {
+		name    string
+		addr    string
+		without string
+	}{
+		{name: "ward-only address", addr: "中区本町無番地", without: "中区本町"},
+		{name: "misspelled koaza", addr: "東京都大島町差木地字クダツチ無番地", without: "東京都大島町差木地字クダツチ"},
+		{name: "building after 無番地", addr: "東京都大島町差木地字クダッチ無番地 集会所", without: "東京都大島町差木地字クダッチ 集会所"},
+	}
+
+	for _, category := range []model.Category{model.CategoryBasic, model.CategoryAll} {
+		for _, tt := range tests {
+			t.Run(string(category)+"/"+tt.name, func(t *testing.T) {
+				got := matchFirst(t, n, tt.addr, category)
+				want := matchFirst(t, n, tt.without, category)
+				if got.MatchedAddress != want.MatchedAddress || got.MatchLevel != want.MatchLevel {
+					t.Errorf("Match(%q) = [%s] %s, want [%s] %s as for %q",
+						tt.addr, got.MatchLevel, got.MatchedAddress, want.MatchLevel, want.MatchedAddress, tt.without)
+				}
+				if !slices.Contains(got.UnmatchedAddress, mubanchi) {
+					t.Errorf("unmatched_address = %q, want it to hold %s", got.UnmatchedAddress, mubanchi)
+				}
+			})
+		}
+	}
+}
+
+// 無番地 at the end of a building name is part of that name.
+func TestMatchMubanchiInBuildingName(t *testing.T) {
+	n := setupTestMatcher(t)
+
+	const addr = "東京都千代田区丸の内1-1-1 コーポ無番地"
+	for _, category := range []model.Category{model.CategoryBasic, model.CategoryAll} {
+		t.Run(string(category), func(t *testing.T) {
+			got := matchFirst(t, n, addr, category)
+			if !slices.Contains(got.UnmatchedAddress, "コーポ無番地") {
+				t.Errorf("unmatched_address = %q, want it to hold コーポ無番地", got.UnmatchedAddress)
+			}
+		})
+	}
+}
+
+func matchFirst(t *testing.T, n *Impl, addr string, category model.Category) model.MatchedResult {
+	t.Helper()
+	resp, err := n.Match(t.Context(), model.MatchQuery{Address: addr, Category: category, Pref: model.All, Limit: 1})
+	if err != nil {
+		t.Fatalf("Match(%q) error: %v", addr, err)
+	}
+	if len(resp.Features) == 0 {
+		t.Fatalf("Match(%q) returned no results", addr)
+	}
+	return resp.Features[0]
 }
