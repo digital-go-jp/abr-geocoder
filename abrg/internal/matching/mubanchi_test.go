@@ -102,6 +102,37 @@ func TestMatchMubanchiSameAsWithout(t *testing.T) {
 	}
 }
 
+// A building name after 無番地 neither replaces a machiaza named 無番地 nor
+// moves ahead of 無番地 in unmatched_address.
+func TestMatchMubanchiBeforeBuildingName(t *testing.T) {
+	n := setupTestMatcher(t)
+
+	tests := []struct {
+		name          string
+		addr          string
+		wantLgCode    string
+		wantMachiaza  string
+		wantUnmatched []string
+	}{
+		{name: "machiaza named 無番地", addr: "千葉県松戸市岩瀬無番地 集会所", wantLgCode: "122076", wantMachiaza: "0129000", wantUnmatched: []string{"集会所"}},
+		{name: "koaza followed by 無番地", addr: "東京都大島町差木地字クダッチ無番地 集会所", wantLgCode: "133612", wantMachiaza: "0007114", wantUnmatched: []string{"無番地", "集会所"}},
+	}
+
+	for _, category := range []model.Category{model.CategoryBasic, model.CategoryAll} {
+		for _, tt := range tests {
+			t.Run(string(category)+"/"+tt.name, func(t *testing.T) {
+				got := matchFirst(t, n, tt.addr, category)
+				if lg, mz := derefString(got.IDs.LgCode), derefString(got.IDs.MachiazaID); lg != tt.wantLgCode || mz != tt.wantMachiaza {
+					t.Errorf("lg_code=%s machiaza_id=%s, want lg_code=%s machiaza_id=%s", lg, mz, tt.wantLgCode, tt.wantMachiaza)
+				}
+				if !slices.Equal(got.UnmatchedAddress, tt.wantUnmatched) {
+					t.Errorf("unmatched_address = %q, want %q", got.UnmatchedAddress, tt.wantUnmatched)
+				}
+			})
+		}
+	}
+}
+
 // 無番地 at the end of a building name is part of that name.
 func TestMatchMubanchiInBuildingName(t *testing.T) {
 	n := setupTestMatcher(t)
