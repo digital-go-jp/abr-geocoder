@@ -39,8 +39,10 @@ var (
 	banNoGo = regexp.MustCompile(`(\d+)番(\d+)[のノ](\d+)号`)
 	// banTou handles: N番M棟 -> N M棟
 	banTou = regexp.MustCompile(`(\d+)番(\d+)棟`)
-	// banWithHyphenBuilding handles: N番M-P[building] -> N-M-P [building]
-	banWithHyphenBuilding = regexp.MustCompile(`(\d+)番(\d+)((?:-\d+)+)([^\d\s-])`)
+	// banWithHyphenBuilding handles: N番M-P[building] -> N-M-P [building].
+	// A building name starts with a non-ASCII character other than a unit
+	// marker, so 9室, 9A室 and 9番館 stay with the number they belong to.
+	banWithHyphenBuilding = regexp.MustCompile(`(\d+)番(\d+)((?:-\d+)+)([^\x00-\x7F室号階棟番館])`)
 	// banWithHyphenNumeric handles: N番M-[numeric] -> N-M-[numeric]
 	banWithHyphenNumeric = regexp.MustCompile(`(\d+)番(\d+)(-\d+)`)
 	// banWithHyphenAlphanumeric handles: N番M-[alphanumeric] -> N-M -[alphanumeric]

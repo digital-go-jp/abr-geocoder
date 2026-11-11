@@ -249,6 +249,24 @@ func TestAddressNumbersToHyphen(t *testing.T) {
 			changed:  true,
 		},
 		{
+			name:     "ban/N番M-P室_部屋番号",
+			input:    "山形県鶴岡市新形町7番20-9室",
+			expected: "山形県鶴岡市新形町7-20-9室",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M-P英字室_部屋番号",
+			input:    "山形県鶴岡市新形町7番20-9A室",
+			expected: "山形県鶴岡市新形町7-20-9A室",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M-P番館",
+			input:    "山形県鶴岡市新形町7番20-9番館",
+			expected: "山形県鶴岡市新形町7-20-9番館",
+			changed:  true,
+		},
+		{
 			name:     "ban/N番M+数字と棟を含む建物名",
 			input:    "東京都世田谷区奥沢五丁目7番14コーポ3棟303号",
 			expected: "東京都世田谷区奥沢五丁目7-14 コーポ3棟303号",
