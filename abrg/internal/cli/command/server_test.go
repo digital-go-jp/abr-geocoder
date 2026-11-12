@@ -71,8 +71,7 @@ func TestRunHTTPServer_GracefulShutdownOnContextCancel(t *testing.T) {
 		}
 		if time.Now().After(deadline) {
 			cancel()
-			<-done
-			t.Fatalf("server did not start within deadline: %v", dialErr)
+			t.Fatalf("server did not start within deadline: %v (server: %v)", dialErr, <-done)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
@@ -156,8 +155,7 @@ func TestRunHTTPServer_LogsTheAddressItAcceptsOn(t *testing.T) {
 	for addr == "" {
 		if time.Now().After(deadline) {
 			cancel()
-			<-done
-			t.Fatalf("no server_start log within deadline: %s", logs.String())
+			t.Fatalf("no server_start log within deadline: %s (server: %v)", logs.String(), <-done)
 		}
 		time.Sleep(20 * time.Millisecond)
 		for line := range strings.SplitSeq(logs.String(), "\n") {
