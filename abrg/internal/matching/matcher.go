@@ -45,6 +45,7 @@ type Impl struct {
 	cityPrefixMap   cityPrefixMap
 	cityWardLgCodes map[string]string
 	wardCandidates  map[string][]cache.WardCandidate
+	cityWards       map[string][]string
 	cityBoundary    *util.CityBoundary
 	twoStageSearch  *twoStageSearch
 	hasResidential  bool
@@ -61,6 +62,7 @@ func NewMatcher(repo implQuerier, lookups cache.Lookups, hasResidential, hasParc
 		cityPrefixMap:   buildCityPrefixMap(lookups.CityPrefCodes),
 		cityWardLgCodes: lookups.CityWardLgCodes,
 		wardCandidates:  lookups.WardCandidates,
+		cityWards:       lookups.CityWards,
 		cityBoundary:    lookups.CityBoundary,
 		twoStageSearch:  newTwoStageSearch(repo),
 		hasResidential:  hasResidential,
