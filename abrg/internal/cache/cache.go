@@ -219,6 +219,7 @@ type Lookups struct {
 	CityPrefCodes   map[string]string          // Maps unique city names to prefecture codes (e.g., "京都市" -> "26")
 	CityWardLgCodes map[string]string          // Maps city+ward names to lg_code (e.g., "京都市中京区" -> "261041")
 	WardCandidates  map[string][]WardCandidate // Maps ward names to all candidate cities (e.g., "中区" -> [{横浜市中区, ...}, ...])
+	CityWards       map[string][]string        // Maps a prefecture and city to its wards joined to the city (e.g., "熊本県熊本市" -> [熊本市中央区, ...])
 	CityBoundary    *util.CityBoundary         // Longest-prefix city-boundary matcher over all city names
 }
 
@@ -364,12 +365,15 @@ func (c *DuckDBCache) buildCityWardLgCodes(ctx context.Context) error {
 // because equally strong matches are returned in candidate order. The key is
 // normalized so 保土ヶ谷区 finds 保土ケ谷区; the city names stay raw because
 // the caller prepends one to the address and transforms the result itself.
+// It also lists the wards of each city, for addresses that leave the ward out
+// (e.g. "熊本市上熊本" tries "熊本市中央区上熊本", "熊本市西区上熊本", ...).
 func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	query := `
-		SELECT ward, city || ward AS city_ward, printf('%02d', pref_code) AS pref_code
+		SELECT ward, city || ward AS city_ward, printf('%02d', pref_code) AS pref_code,
+			pref || city AS pref_city
 		FROM cache_city
 		WHERE ward IS NOT NULL AND ward != ''
-		GROUP BY ward, city_ward, pref_code
+		GROUP BY ward, city_ward, pref_code, pref_city
 		ORDER BY ward, pref_code, city_ward
 	`
 
@@ -380,11 +384,13 @@ func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	defer func() { _ = rows.Close() }()
 
 	c.lookups.WardCandidates = make(map[string][]WardCandidate)
+	c.lookups.CityWards = make(map[string][]string)
 	for rows.Next() {
-		var ward, cityWard, prefCode string
-		if err := rows.Scan(&ward, &cityWard, &prefCode); err != nil {
+		var ward, cityWard, prefCode, prefCity string
+		if err := rows.Scan(&ward, &cityWard, &prefCode, &prefCity); err != nil {
 			return fmt.Errorf("failed to scan ward candidate row: %w", err)
 		}
+		c.lookups.CityWards[prefCity] = append(c.lookups.CityWards[prefCity], cityWard)
 		key, _ := transform.TextForDB(ward)
 		c.lookups.WardCandidates[key] = append(c.lookups.WardCandidates[key], WardCandidate{
 			CityWard: cityWard,

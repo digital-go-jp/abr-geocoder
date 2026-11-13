@@ -73,6 +73,16 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 	if expanded != nil {
 		return expanded, nil
 	}
+
+	// A designated city named without its ward (e.g. "熊本市上熊本") stops at
+	// the city, so retry it with each of the city's wards.
+	inserted, err := n.tryWardInsertion(ctx, query, normalizedAddr, addressType, results)
+	if err != nil {
+		return nil, err
+	}
+	if inserted != nil {
+		return inserted, nil
+	}
 	return results, nil
 }
 
