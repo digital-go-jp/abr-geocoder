@@ -59,13 +59,30 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 	}
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
 
+	results, err := n.matchWithWardExpansion(ctx, query, normalizedAddr, addressType)
+	if err != nil {
+		return nil, err
+	}
+
+	withoutMubanchi, err := n.tryWithoutMubanchi(ctx, query, normalizedAddr, addressType, results)
+	if err != nil {
+		return nil, err
+	}
+	if withoutMubanchi != nil {
+		return withoutMubanchi, nil
+	}
+	return results, nil
+}
+
+// matchWithWardExpansion matches a normalized address, retrying a ward-only
+// address (e.g. "中区本町") with each city that has such a ward when that
+// matches more strongly.
+func (n *Impl) matchWithWardExpansion(ctx context.Context, query model.MatchQuery, normalizedAddr string, addressType model.NormalizeCategory) ([]model.MatchedResult, error) {
 	results, err := n.matchNormalized(ctx, query, normalizedAddr, addressType, false)
 	if err != nil {
 		return nil, err
 	}
 
-	// A ward-only address (e.g. "中区本町") names no city, so retry it with each
-	// city that has such a ward before settling for the result above.
 	expanded, err := n.tryWardExpansion(ctx, query, normalizedAddr, addressType, results)
 	if err != nil {
 		return nil, err
