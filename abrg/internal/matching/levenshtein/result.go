@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
@@ -48,11 +49,16 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 	results := make([]model.MatchedResult, 0, limit)
 	searchRunes := []rune(searchAddr)
 	addressLen := len(searchRunes)
+	town := townBeforeParcelPrefix(searchAddr, searchNumbers)
+	townIDs := map[string]bool{}
 
 	for i := range candidates {
 		brd := &candidates[i]
 		stdAddress := brd.NormalizedAddress
 		result := repository.BasicResultToPartialNormalized(brd)
+		if town != "" && stdAddress == town {
+			townIDs[brd.LgCode+brd.MachiazaID] = true
+		}
 
 		// Skip candidates with chome mismatch
 		if hasChomeMismatch(searchAddr, result.StructuredAddress.Chome) {
@@ -99,8 +105,15 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 		return cmp.Compare(b.Score, a.Score)
 	})
 
-	// Select best variant among results with the same top score
-	results = selectBestFromTiedResults(results, searchNumbers, normalizedAddr)
+	// A town written exactly, followed by a parcel number with a prefix
+	// (三島ヰ6697), outranks other towns that read the prefix as part of their
+	// name (三島ヰ is as near 三島細谷 as 三島).
+	if len(townIDs) > 0 {
+		results = preferTown(results, townIDs, normalizedAddr)
+	} else {
+		// Select best variant among results with the same top score
+		results = selectBestFromTiedResults(results, searchNumbers, normalizedAddr)
+	}
 
 	if len(results) > limit {
 		results = results[:limit]
@@ -267,4 +280,47 @@ func isFalseChomeMatch(searchAddr, stdAddress string) bool {
 		}
 	}
 	return false
+}
+
+// townBeforeParcelPrefix returns the town in searchAddr when the town is
+// followed by a parcel-number prefix and the number section, as 3島 is in
+// "3島ヰ:6697" and 柳田町ヒ in "柳田町ヒヱ145-1".
+// It returns "" when no prefix sits before the numbers.
+func townBeforeParcelPrefix(searchAddr, searchNumbers string) string {
+	if searchNumbers == "" {
+		return ""
+	}
+	base, _, hasColon := strings.Cut(searchAddr, ":")
+	if !hasColon {
+		var ok bool
+		if base, ok = strings.CutSuffix(searchAddr, searchNumbers); !ok {
+			return ""
+		}
+	}
+	last, size := utf8.DecodeLastRuneInString(base)
+	if size == 0 || size == len(base) || !util.IsParcelNumberPrefix(last) {
+		return ""
+	}
+	return base[:len(base)-size]
+}
+
+// preferTown returns results with the town named by townIDs, each an
+// lg_code and machiaza_id joined, in front with the top score.
+// Among several towns of that name, the one written closest to originalAddr
+// is taken.
+func preferTown(results []model.MatchedResult, townIDs map[string]bool, originalAddr string) []model.MatchedResult {
+	var towns, others []model.MatchedResult
+	for _, r := range results {
+		if lg, mid := r.IDs.LgCode, r.IDs.MachiazaID; lg != nil && mid != nil && townIDs[*lg+*mid] {
+			towns = append(towns, r)
+		} else {
+			others = append(others, r)
+		}
+	}
+	if len(towns) == 0 {
+		return results
+	}
+	best := SelectBestByJaccard(towns, originalAddr)[0]
+	best.Score = max(best.Score, results[0].Score)
+	return append([]model.MatchedResult{best}, others...)
 }
