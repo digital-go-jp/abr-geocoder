@@ -125,7 +125,7 @@ func (s *twoStageSearch) searchResidential(ctx context.Context, lgCode, machiaza
 // character is part of the name and the number stands alone.
 func parcelPrefixFor(parsed parsedAddress, basic *model.MatchedResult) string {
 	prefix := parsed.parcelNumberPrefix()
-	if prefix == "" || strings.HasSuffix(basic.MatchedAddress, prefix) {
+	if prefix == "" || strings.HasSuffix(matchedTownName(basic), prefix) {
 		return ""
 	}
 	return prefix
