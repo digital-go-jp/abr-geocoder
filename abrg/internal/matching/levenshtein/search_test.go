@@ -113,3 +113,33 @@ func TestTryFallbackCitySearchByScore_FullMatchYieldsNilUnmatched(t *testing.T) 
 		t.Errorf("UnmatchedAddress = %#v, want nil", results[0].UnmatchedAddress)
 	}
 }
+
+func TestIsOneTypoAway(t *testing.T) {
+	result := func(oazaCho, koaza string) *model.MatchedResult {
+		r := &model.MatchedResult{StructuredAddress: model.StructuredAddress{OazaCho: &oazaCho}}
+		if koaza != "" {
+			r.StructuredAddress.Koaza = &koaza
+		}
+		return r
+	}
+	tests := []struct {
+		name      string
+		inputTown string
+		result    *model.MatchedResult
+		want      bool
+	}{
+		{name: "one character off", inputTown: "日本橋小綱町", result: result("日本橋小網町", ""), want: true},
+		{name: "another town", inputTown: "日本橋小綱町", result: result("日本橋堀留町", ""), want: false},
+		{name: "same oaza, another koaza", inputTown: "南郷区島守赤羽", result: result("南郷区大字島守", "字五ッ役"), want: false},
+		{name: "大字 left out of the input", inputTown: "深井親田", result: result("大字深井新田", ""), want: true},
+		{name: "no input town", inputTown: "", result: result("日本橋小網町", ""), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isOneTypoAway(tt.inputTown, tt.result); got != tt.want {
+				t.Errorf("isOneTypoAway(%q) = %v, want %v", tt.inputTown, got, tt.want)
+			}
+		})
+	}
+}

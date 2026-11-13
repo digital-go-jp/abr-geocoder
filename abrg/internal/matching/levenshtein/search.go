@@ -5,12 +5,14 @@ package levenshtein
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
@@ -51,6 +53,17 @@ func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]mod
 			return prefixResults, nil
 		}
 
+		// The chome or number written after the name can make another town look
+		// closer (日本橋小綱町1丁目 is nearer 日本橋堀留町1丁目 than 日本橋小網町),
+		// so a candidate further down whose whole town name, koaza included, is
+		// within one character of the input is taken.
+		inputTown, _ := extractTownNameFromSearch(p.CityBoundary, p.SearchAddr)
+		if agreeing := slices.DeleteFunc(results[1:], func(r model.MatchedResult) bool {
+			return !isOneTypoAway(inputTown, &r)
+		}); len(agreeing) > 0 {
+			return limitResults(agreeing, p.Limit), nil
+		}
+
 		cityResults, cityErr := tryFallbackCitySearchByScore(ctx, repo, p)
 		if cityErr != nil {
 			return nil, cityErr
@@ -77,7 +90,26 @@ func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]mod
 		}
 	}
 
-	return results, nil
+	return limitResults(results, p.Limit), nil
+}
+
+// isOneTypoAway reports whether the town of r, oaza_cho and koaza together,
+// is within one character of inputTown as the search address holds it.
+func isOneTypoAway(inputTown string, r *model.MatchedResult) bool {
+	if inputTown == "" || r.StructuredAddress.OazaCho == nil {
+		return false
+	}
+	town := *r.StructuredAddress.OazaCho
+	if k := r.StructuredAddress.Koaza; k != nil {
+		town += *k
+	}
+	normalized, _ := transform.TextForDB(town)
+	return runeLevenshtein(inputTown, normalized) <= 1
+}
+
+// limitResults returns at most limit of results.
+func limitResults(results []model.MatchedResult, limit int) []model.MatchedResult {
+	return results[:min(len(results), limit)]
 }
 
 func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]model.MatchedResult, error) {
@@ -123,7 +155,9 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		return nil, fmt.Errorf("database query failed: %w", err)
 	}
 
-	return processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Category, p.Limit), nil
+	// Every candidate is kept, best first, so that Search can look past a top
+	// candidate whose town name disagrees with the input.
+	return processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Category, len(rows)), nil
 }
 
 // candidateLgCodes resolves the city name in the address to the codes of the
