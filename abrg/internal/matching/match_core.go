@@ -58,6 +58,7 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 		return nil, err
 	}
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
+	normalizedAddr = n.insertCounty(normalizedAddr)
 
 	results, err := n.matchNormalized(ctx, query, normalizedAddr, addressType, false)
 	if err != nil {

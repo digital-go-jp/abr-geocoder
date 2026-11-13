@@ -103,6 +103,10 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 		return nil, fmt.Errorf("failed to build ward candidates: %w", err)
 	}
 
+	if err := cache.buildCountyCities(ctx); err != nil {
+		return nil, fmt.Errorf("failed to build county cities: %w", err)
+	}
+
 	if err := cache.buildCityBoundary(ctx); err != nil {
 		return nil, fmt.Errorf("failed to build city boundary matcher: %w", err)
 	}
@@ -216,10 +220,11 @@ func (c *DuckDBCache) DB() *sql.DB {
 }
 
 type Lookups struct {
-	CityPrefCodes   map[string]string          // Maps unique city names to prefecture codes (e.g., "京都市" -> "26")
-	CityWardLgCodes map[string]string          // Maps city+ward names to lg_code (e.g., "京都市中京区" -> "261041")
-	WardCandidates  map[string][]WardCandidate // Maps ward names to all candidate cities (e.g., "中区" -> [{横浜市中区, ...}, ...])
-	CityBoundary    *util.CityBoundary         // Longest-prefix city-boundary matcher over all city names
+	CityPrefCodes   map[string]string            // Maps unique city names to prefecture codes (e.g., "京都市" -> "26")
+	CityWardLgCodes map[string]string            // Maps city+ward names to lg_code (e.g., "京都市中京区" -> "261041")
+	WardCandidates  map[string][]WardCandidate   // Maps ward names to all candidate cities (e.g., "中区" -> [{横浜市中区, ...}, ...])
+	CityBoundary    *util.CityBoundary           // Longest-prefix city-boundary matcher over all city names
+	CountyCities    map[string]map[string]string // Maps a prefecture and a town or village in a county to the county (e.g., "宮城県" -> "涌谷町" -> "遠田郡")
 }
 
 // Lookups returns the in-memory lookups.
@@ -390,6 +395,40 @@ func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 			CityWard: cityWard,
 			PrefCode: prefCode,
 		})
+	}
+
+	return rows.Err()
+}
+
+// buildCountyCities maps each town and village in a county to the county, per
+// prefecture, for addresses that leave the county out (e.g. "宮城県涌谷町").
+// A name found in more than one county of a prefecture is left out, since the
+// county it belongs to cannot be told.
+func (c *DuckDBCache) buildCountyCities(ctx context.Context) error {
+	query := `
+		SELECT pref, city, any_value(county)
+		FROM cache_city
+		WHERE county IS NOT NULL AND county != ''
+		GROUP BY pref, city
+		HAVING count(DISTINCT county) = 1
+	`
+
+	rows, err := c.db.QueryContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to query county cities: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	c.lookups.CountyCities = make(map[string]map[string]string)
+	for rows.Next() {
+		var pref, city, county string
+		if err := rows.Scan(&pref, &city, &county); err != nil {
+			return fmt.Errorf("failed to scan county city row: %w", err)
+		}
+		if c.lookups.CountyCities[pref] == nil {
+			c.lookups.CountyCities[pref] = make(map[string]string)
+		}
+		c.lookups.CountyCities[pref][city] = county
 	}
 
 	return rows.Err()
