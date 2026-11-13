@@ -59,6 +59,12 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 			continue
 		}
 
+		// Skip a chome made from a lot number when no chome is written
+		// (e.g., "鹿島田:1004" vs 鹿島田1丁目), which would leave the number unmatched.
+		if takesNumberAsChome(searchAddr, searchNumbers, result.StructuredAddress.Chome) {
+			continue
+		}
+
 		// For basic category: skip results with @ when search lacks @ and numbers
 		if shouldSkipBasicCategory(category, searchAddr, searchNumbers, stdAddress) {
 			continue
