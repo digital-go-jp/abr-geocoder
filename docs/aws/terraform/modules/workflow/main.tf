@@ -346,6 +346,14 @@ resource "aws_sfn_state_machine" "data_update" {
       # Step 3: Build cache
       # Every run rebuilds the whole cache, so there is no busy day to allow
       # for - only the spread between runs and the dataset growing.
+      #
+      # A failure from here on is not picked up by the next run: the import
+      # has finished, so CheckChanges reports no changes and the API keeps the
+      # old cache. Failed tasks are therefore retried here. A retry starts a
+      # new task, which reads the DB password again, so a password rotated
+      # while the cache was being built does not fail the retry as well.
+      # States.Timeout is not retried: it means the task outran a limit set
+      # for the worst case, and running it again would only take as long.
       BuildCache = {
         Type           = "Task"
         Resource       = "arn:aws:states:::ecs:runTask.sync"
@@ -360,9 +368,19 @@ resource "aws_sfn_state_machine" "data_update" {
             Memory = var.daily_cache_build_memory
           }
         }
+        Retry = [
+          {
+            ErrorEquals     = ["States.TaskFailed"]
+            IntervalSeconds = 60
+            MaxAttempts     = 2
+            BackoffRate     = 2
+          }
+        ]
         Next = "RestartService"
       }
       # Step 4: Restart service
+      # Retried for the same reason as BuildCache: the next run does not
+      # restart the service for a cache that is already built.
       RestartService = {
         Type           = "Task"
         Resource       = "arn:aws:states:::aws-sdk:ecs:updateService"
@@ -372,6 +390,14 @@ resource "aws_sfn_state_machine" "data_update" {
           Service            = var.ecs_service_name
           ForceNewDeployment = true
         }
+        Retry = [
+          {
+            ErrorEquals     = ["States.TaskFailed"]
+            IntervalSeconds = 30
+            MaxAttempts     = 3
+            BackoffRate     = 2
+          }
+        ]
         End = true
       }
     }
