@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // SelectBestByJaccard selects the result with highest jaccard similarity to originalAddr.
@@ -11,19 +12,23 @@ import (
 // (e.g., "大一本松" prefers oaza_cho "大一本松" over "大1本松",
 //
 //	"八の坪" prefers koaza "八の坪" over "8の坪")
+//
+// 大字 and 字 are left out of the comparison, so candidates that differ only
+// in them tie and keep their order, which puts the one with more parcels first.
 func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
 	if len(results) <= 1 {
 		return results
 	}
 
 	// originalAddr is the same for every candidate, so its bigrams are built once.
-	origBigrams := buildBigrams([]rune(originalAddr))
+	orig := withoutOazaAza(originalAddr)
+	origBigrams := buildBigrams([]rune(orig))
 
 	bestIdx := 0
-	bestSim := jaccardAgainst(originalAddr, origBigrams, buildMatchedAddress(&results[0]))
+	bestSim := jaccardAgainst(orig, origBigrams, withoutOazaAza(buildMatchedAddress(&results[0])))
 
 	for i := 1; i < len(results); i++ {
-		sim := jaccardAgainst(originalAddr, origBigrams, buildMatchedAddress(&results[i]))
+		sim := jaccardAgainst(orig, origBigrams, withoutOazaAza(buildMatchedAddress(&results[i])))
 		if sim > bestSim {
 			bestSim = sim
 			bestIdx = i
@@ -31,6 +36,12 @@ func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []m
 	}
 
 	return []model.MatchedResult{results[bestIdx]}
+}
+
+// withoutOazaAza returns s without 大字, 小字 and a standalone 字.
+func withoutOazaAza(s string) string {
+	s, _ = util.RemoveOazaAza(s)
+	return s
 }
 
 // buildMatchedAddress constructs the matched address string from structured address.
