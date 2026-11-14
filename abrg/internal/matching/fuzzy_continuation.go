@@ -40,11 +40,21 @@ func (n *Impl) fuzzyMatchAllowsTwoStage(nctx *normalizeContext) (allowed bool, p
 		strings.TrimSuffix(inputTown, prefix) == matchedTownName(best) {
 		return true, prefix
 	}
-	matchedTown := n.townPortion(best.MatchedAddress)
-	if matchedTown == "" {
+	// A chome the input does not write came from its number section
+	// (二本木137 → 二本木1丁目), so the number cannot be searched in it.
+	if best.StructuredAddress.Chome != nil && !nctx.Input.SearchAddr.HasChome {
 		return false, ""
 	}
-	return isPureSubstitution(inputTown, matchedTown), ""
+	// A number left between the chome and the number section belongs to
+	// something else (1光栄荘:8, 601番地:2), so what follows is not the lot.
+	if strings.ContainsAny(nctx.Input.SearchAddr.AfterChome, "0123456789") {
+		return false, ""
+	}
+	// The town is compared both as the search address holds it (大字深井新田 as
+	// 深井新田) and as registered, which keeps a mistyped 大字 (大宇向町 against
+	// 大字向町) within one substitution.
+	return isPureSubstitution(inputTown, matchedTownName(best)) ||
+		isPureSubstitution(inputTown, n.townPortion(best.MatchedAddress)), ""
 }
 
 // matchedTownName returns the town of a result in the form the search address
