@@ -137,7 +137,7 @@ func (n *Impl) normalizeByCategory(ctx context.Context, nctx *normalizeContext, 
 
 	switch category {
 	case model.CategoryBasic:
-		return n.handleFallback(ctx, nctx)
+		return n.normalizeBasic(ctx, nctx)
 	case model.CategoryResidential:
 		if !n.hasResidential {
 			return nil, fmt.Errorf("residential %w", ErrDataUnavailable)

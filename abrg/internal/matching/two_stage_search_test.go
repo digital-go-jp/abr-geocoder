@@ -221,3 +221,30 @@ func Test_normalizeWithBasic(t *testing.T) {
 		}
 	})
 }
+
+func TestParcelPrefixFor(t *testing.T) {
+	tests := []struct {
+		name       string
+		searchAddr string
+		oazaCho    string
+		koaza      string
+		want       string
+	}{
+		{name: "prefix before the number", searchAddr: "西牟婁郡白浜町甲:402", oazaCho: "白浜町", want: "甲"},
+		{name: "town ends with the character", searchAddr: "仙台市青葉区字5軒丁:15-1", oazaCho: "字五軒丁", want: ""},
+		{name: "town ends with the character in hiragana", searchAddr: "羽咋市大町ソ:42", oazaCho: "大町", koaza: "そ", want: ""},
+		{name: "no prefix", searchAddr: "流山市深井新田:1", oazaCho: "大字深井新田", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			basic := &model.MatchedResult{StructuredAddress: model.StructuredAddress{OazaCho: &tt.oazaCho}}
+			if tt.koaza != "" {
+				basic.StructuredAddress.Koaza = &tt.koaza
+			}
+			if got := parcelPrefixFor(parseSearchAddr(tt.searchAddr), basic); got != tt.want {
+				t.Errorf("parcelPrefixFor(%q) = %q, want %q", tt.searchAddr, got, tt.want)
+			}
+		})
+	}
+}
