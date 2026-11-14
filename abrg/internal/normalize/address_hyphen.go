@@ -78,8 +78,9 @@ var (
 	banchiHyphen = regexp.MustCompile(`(\d+)番地-(\d+)`)
 	// banchiWithHyphenNumeric handles: N番地M-P -> N-M-P
 	banchiWithHyphenNumeric = regexp.MustCompile(`(\d+)番地(\d+)(-\d+)`)
-	// banchiEnd handles: N番地M (at end) -> N-M
-	banchiEnd = regexp.MustCompile(`(\d+)番地(\d+)$`)
+	// banchiEnd handles: N番地M at the end, or before the space that sets
+	// off a floor or room (9番地15 -1F) -> N-M
+	banchiEnd = regexp.MustCompile(`(\d+)番地(\d+)( |$)`)
 	// banchiBuilding handles: N番地M+building -> N-M building
 	banchiBuilding = regexp.MustCompile(`(\d+)番地(\d+)([^\d\s-])`)
 	// banchiSakiNotEnd handles: N番地先+text -> N番地先 text
@@ -301,7 +302,7 @@ var banchiRules = []ReplaceRule{
 	{banchiHyphen, "${1}-${2}"},                // N番地-M → N-M (号なし)
 	{banchiWithHyphenNumeric, "${1}-${2}${3}"}, // N番地M-P → N-M-P
 	{banchiBuilding, "${1}-${2} ${3}"},         // N番地M+建物名 → N-M 建物名
-	{banchiEnd, "${1}-${2}"},                   // N番地M (末尾) → N-M
+	{banchiEnd, "${1}-${2}${3}"},               // N番地M (末尾・空白の前) → N-M
 	{banchiSakiNotEnd, "${1} ${2}"},            // N番地先+後続文字 → N番地先 後続文字 (add space for building separation)
 	{banchiSingleEnd, "${1}"},                  // N番地（末尾） → N
 	{banchiSingleNotEnd, "${1} ${2}"},          // N番地（末尾ではない） → N 後続文字
