@@ -52,6 +52,24 @@ func TestIssue355(t *testing.T) {
 			wantStructured:       map[string]any{FieldOazaCho: "西新宿", FieldChome: "2丁目", FieldBlkNum: "8"},
 		},
 		{
+			// A number left before the number section belongs to a building
+			// (光栄荘8), so the last number is not searched as a lot.
+			name:                 "issue355-5 [愛知県名古屋市港区東土古町１丁目１光栄荘８] number inside a building name",
+			query:                query("愛知県名古屋市港区東土古町１丁目１光栄荘８"),
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantUnmatchedAddress: []string{"1光栄荘8"},
+			wantStructured:       map[string]any{FieldPrcNum1: nil, FieldBlkNum: nil},
+		},
+		{
+			// 番地 left unconverted before a floor keeps the lot number out of
+			// the number section.
+			name:                 "issue355-6 [埼玉県さいたま市大宮区北袋町１丁目６０１番地２－Ｆ１０６９] 番地 left",
+			query:                query("埼玉県さいたま市大宮区北袋町１丁目６０１番地２－Ｆ１０６９"),
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantUnmatchedAddress: []string{"601番地2-F1069"},
+			wantStructured:       map[string]any{FieldPrcNum1: nil, FieldBlkNum: nil},
+		},
+		{
 			// No chome is written, so 1丁目 came from the lot number and the
 			// number is not searched in it.
 			name:                 "issue355-4 [熊本県熊本市西区二本木137番地] chome not written",
