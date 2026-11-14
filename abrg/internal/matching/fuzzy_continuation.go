@@ -45,6 +45,11 @@ func (n *Impl) fuzzyMatchAllowsTwoStage(nctx *normalizeContext) (allowed bool, p
 	if best.StructuredAddress.Chome != nil && !nctx.Input.SearchAddr.HasChome {
 		return false, ""
 	}
+	// A number left between the chome and the number section belongs to
+	// something else (1光栄荘:8, 601番地:2), so what follows is not the lot.
+	if strings.ContainsAny(nctx.Input.SearchAddr.AfterChome, "0123456789") {
+		return false, ""
+	}
 	// The town is compared both as the search address holds it (大字深井新田 as
 	// 深井新田) and as registered, which keeps a mistyped 大字 (大宇向町 against
 	// 大字向町) within one substitution.
