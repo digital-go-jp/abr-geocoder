@@ -137,6 +137,21 @@ func (r *DB) FindBasicByLevenshtein(ctx context.Context, p LevenshteinParams) ([
 	return results, nil
 }
 
+// FindChomesWithLot returns the chome rows of the oaza that machiazaID belongs to
+// holding a lot numbered prcNum1, whatever its sub-numbers, ordered by machiaza_id.
+func (r *DB) FindChomesWithLot(ctx context.Context, lgCode, machiazaID, prcNum1 string) ([]BasicResult, error) {
+	query := "SELECT " + basicColumns + " FROM cache_machiaza m" +
+		" WHERE lg_code = ? AND substr(machiaza_id, 1, 4) = substr(?, 1, 4) AND chome IS NOT NULL" +
+		" AND EXISTS (SELECT 1 FROM cache_parcel p" +
+		" WHERE p.lg_code = m.lg_code AND p.machiaza_id = m.machiaza_id AND p.prc_num1 = ?)" +
+		" ORDER BY machiaza_id"
+	results, err := queryRows(ctx, r.db, query, []any{lgCode, machiazaID, prcNum1}, 0, scanBasicResultRow)
+	if err != nil {
+		return nil, fmt.Errorf("find chomes with lot lgCode=%q machiazaID=%q prc=%q: %w", lgCode, machiazaID, prcNum1, err)
+	}
+	return results, nil
+}
+
 // extractChomeFilter returns a clause and its argument matching the chome given
 // by the digits before "@:", as in "久保田1@:23", or empty strings if there is none.
 func extractChomeFilter(searchAddr string) (string, string) {
