@@ -96,8 +96,9 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	// For has_chome addresses without existing chome notation:
 	// First try with chome adjustment (handles "南2条西1-5-2F" -> chome=1, parcel=5)
 	// Then fall back to no adjustment (handles "舞浜2-11" -> parcel=2-11)
+	// No chome follows a koaza (字四ッ屋80-9), so a koaza match is not adjusted.
 	parsedSearchAddr := parseSearchAddr(searchAddr)
-	if basic.Machiaza.HasChome && !parsedSearchAddr.HasChome {
+	if basic.Machiaza.HasChome && !parsedSearchAddr.HasChome && basic.StructuredAddress.Koaza == nil {
 		adjusted := convertColonToChome(parsedSearchAddr)
 		adjustedSearchAddr := adjusted.String()
 		if adjustedSearchAddr != searchAddr {
