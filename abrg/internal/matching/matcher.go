@@ -32,6 +32,7 @@ type implQuerier interface {
 	FindCityByAddress(ctx context.Context, params repository.CitySearchParams) (*repository.CityResult, error)
 	FindResidentialBestMatch(ctx context.Context, lgCode, machiazaID string, filter repository.ResidentialFilter) (*repository.ResidentialBestResult, error)
 	FindParcelExact(ctx context.Context, lgCode, machiazaID string, filter repository.ParcelFilter) (*repository.ParcelResult, error)
+	FindChomesWithLot(ctx context.Context, lgCode, machiazaID, prcNum1 string) ([]repository.BasicResult, error)
 }
 
 // Matcher is the interface for address matching against ABR data.

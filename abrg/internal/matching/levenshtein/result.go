@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
@@ -44,24 +45,29 @@ func ExtractSearchNumbers(searchAddr string) string {
 }
 
 // processResults processes query results and returns normalized results.
-func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, category model.Category, limit int) []model.MatchedResult {
-	results := make([]model.MatchedResult, 0, limit)
-	searchRunes := []rune(searchAddr)
-	addressLen := len(searchRunes)
-
+// It also returns the first candidate skipped for reading the lot number as
+// its chome, or nil if none was.
+func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, category model.Category, limit int) (results []model.MatchedResult, numberChome *repository.BasicResult) {
 	for i := range candidates {
 		brd := &candidates[i]
 		stdAddress := brd.NormalizedAddress
-		result := repository.BasicResultToPartialNormalized(brd)
 
 		// Skip candidates with chome mismatch
-		if hasChomeMismatch(searchAddr, result.StructuredAddress.Chome) {
+		if hasChomeMismatch(searchAddr, brd.Chome) {
 			continue
 		}
 
 		// Skip a chome made from a lot number when no chome is written
 		// (e.g., "鹿島田:1004" vs 鹿島田1丁目), which would leave the number unmatched.
-		if takesNumberAsChome(searchAddr, searchNumbers, result.StructuredAddress.Chome) {
+		// The town is then the one written, so a town ranked after it is another
+		// town that only looks alike.
+		if takesNumberAsChome(searchAddr, searchNumbers, brd.Chome) {
+			if numberChome == nil {
+				numberChome = brd
+			}
+			continue
+		}
+		if numberChome != nil && !sameOaza(brd, numberChome) {
 			continue
 		}
 
@@ -84,20 +90,7 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 			continue
 		}
 
-		// Compute rune-based Levenshtein distance for accurate scoring.
-		// DuckDB's editdist3 is byte-based and used only for DB-level filtering;
-		// the actual score uses rune distance for correct Unicode handling.
-		runeEditDist := runeLevenshteinFrom(searchRunes, stdAddress)
-		score := calculateEditDistanceScore(runeEditDist, addressLen)
-		ml := matchlevel.DetermineMatchLevel(&result.IDs)
-		result.MatchedAddress = model.FormatAddress(&result.StructuredAddress)
-		unmatchedParts := extractUnmatchedAddress(searchNumbers, &result.StructuredAddress, category, searchAddr, normalizedAddr, result.MatchedAddress)
-
-		result.UnmatchedAddress = unmatchedParts
-		result.MatchLevel = ml
-		result.Score = score
-
-		results = append(results, result)
+		results = append(results, toMatchedResult(brd, searchAddr, searchNumbers, normalizedAddr, category))
 	}
 
 	// Sort by score descending
@@ -112,7 +105,29 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 		results = results[:limit]
 	}
 
-	return results
+	return results, numberChome
+}
+
+// toMatchedResult scores a candidate against the search address and builds its
+// result.
+func toMatchedResult(brd *repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, category model.Category) model.MatchedResult {
+	result := repository.BasicResultToPartialNormalized(brd)
+
+	// Compute rune-based Levenshtein distance for accurate scoring.
+	// DuckDB's editdist3 is byte-based and used only for DB-level filtering;
+	// the actual score uses rune distance for correct Unicode handling.
+	runeEditDist := runeLevenshteinFrom([]rune(searchAddr), brd.NormalizedAddress)
+	result.Score = calculateEditDistanceScore(runeEditDist, utf8.RuneCountInString(searchAddr))
+	result.MatchLevel = matchlevel.DetermineMatchLevel(&result.IDs)
+	result.MatchedAddress = model.FormatAddress(&result.StructuredAddress)
+	result.UnmatchedAddress = extractUnmatchedAddress(searchNumbers, &result.StructuredAddress, category, searchAddr, normalizedAddr, result.MatchedAddress)
+	return result
+}
+
+// sameOaza reports whether a and b are in the same oaza of the same city,
+// told by the oaza part of the machiaza ID.
+func sameOaza(a, b *repository.BasicResult) bool {
+	return a.LgCode == b.LgCode && a.MachiazaID[:min(4, len(a.MachiazaID))] == b.MachiazaID[:min(4, len(b.MachiazaID))]
 }
 
 func shouldSkipBasicCategory(category model.Category, searchAddr, searchNumbers, stdAddress string) bool {
