@@ -23,6 +23,18 @@ func TestAddressNumbersToHyphen(t *testing.T) {
 			changed:  true,
 		},
 		{
+			name:     "banchi/N番地M-階",
+			input:    "9番地15-1F",
+			expected: "9-15 -1F",
+			changed:  true,
+		},
+		{
+			name:     "banchi/N番地M-階号室",
+			input:    "1番地8-2階8号室",
+			expected: "1-8 -2階8号室",
+			changed:  true,
+		},
+		{
 			name:     "banchi/N番地のN_ひらがな",
 			input:    "1番地の2",
 			expected: "1-2",
