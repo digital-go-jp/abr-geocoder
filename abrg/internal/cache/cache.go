@@ -210,9 +210,11 @@ func applyThreadLimit(ctx context.Context, conn *sql.DB, v string) error {
 }
 
 // applyMemoryLimit caps the memory DuckDB keeps for cached blocks; an empty
-// value keeps DuckDB's default of 80% of the machine's memory. DuckDB holds
-// every block it has read up to the limit, so a container smaller than that
-// default is killed once enough of the cache has been read.
+// value keeps DuckDB's default, 80% of the smaller of the machine's memory and
+// the container's cgroup limit. DuckDB holds every block it has read up to the
+// limit. A container whose cgroup carries no limit of its own, such as a
+// Fargate task without a container-level memory setting, gets a default above
+// what it may use and is killed once enough of the cache has been read.
 func applyMemoryLimit(ctx context.Context, conn *sql.DB, v string) error {
 	if v == "" {
 		return nil
@@ -224,6 +226,17 @@ func applyMemoryLimit(ctx context.Context, conn *sql.DB, v string) error {
 		return fmt.Errorf("failed to set duckdb memory limit: %w", err)
 	}
 	return nil
+}
+
+// MemoryLimit returns the memory limit DuckDB is running with, as DuckDB
+// formats it (for example "1.5 GiB"). Without ABRG_DUCKDB_MEMORY_LIMIT this is
+// the value DuckDB derived from the machine or the container.
+func (c *DuckDBCache) MemoryLimit(ctx context.Context) (string, error) {
+	var limit string
+	if err := c.db.QueryRowContext(ctx, "SELECT current_setting('memory_limit')").Scan(&limit); err != nil {
+		return "", fmt.Errorf("read duckdb memory limit: %w", err)
+	}
+	return limit, nil
 }
 
 func (c *DuckDBCache) Close() error {

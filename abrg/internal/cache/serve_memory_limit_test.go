@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/duckdb"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/infra/config"
 )
 
 func TestApplyMemoryLimit_InvalidValue(t *testing.T) {
@@ -24,23 +24,21 @@ func TestApplyMemoryLimit_EmptyKeepsDefault(t *testing.T) {
 	}
 }
 
-func TestApplyMemoryLimit_SetsLimit(t *testing.T) {
+// TestNewDuckDBCache_MemoryLimit pins that the configured limit reaches DuckDB
+// and that MemoryLimit reports the value serve logs at startup.
+func TestNewDuckDBCache_MemoryLimit(t *testing.T) {
 	ctx := context.Background()
-	conn, err := duckdb.OpenReadOnly(quickstartCachePath)
+	c, err := newDuckDBCache(ctx, quickstartCachePath, config.CacheConfig{DuckDBThreads: "2", DuckDBMemoryLimit: "512MiB"})
 	if err != nil {
-		t.Fatalf("open cache: %v", err)
+		t.Fatalf("newDuckDBCache() = %v", err)
 	}
-	defer func() { _ = conn.Close() }()
+	defer func() { _ = c.Close() }()
 
-	if err := applyMemoryLimit(ctx, conn, "512MiB"); err != nil {
-		t.Fatalf("applyMemoryLimit() = %v", err)
-	}
-
-	var got string
-	if err := conn.QueryRowContext(ctx, "SELECT current_setting('memory_limit')").Scan(&got); err != nil {
-		t.Fatalf("read memory_limit: %v", err)
+	got, err := c.MemoryLimit(ctx)
+	if err != nil {
+		t.Fatalf("MemoryLimit() = %v", err)
 	}
 	if got != "512.0 MiB" {
-		t.Errorf("memory_limit = %q, want %q", got, "512.0 MiB")
+		t.Errorf("MemoryLimit() = %q, want %q", got, "512.0 MiB")
 	}
 }

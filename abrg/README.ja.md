@@ -68,7 +68,7 @@ API 仕様: [openapi/openapi.yml](openapi/openapi.yml)
 | `ABRG_HTTP_PORT` | `3000` | サーバーポート |
 | `ABRG_CACHE_PATH` | `~/.abrg/cache/abrg.duckdb` | DuckDB キャッシュファイルのパス。`--cache` が優先される |
 | `ABRG_DUCKDB_THREADS` | `2` | DuckDB のクエリ内並列数の上限（`0` で DuckDB 既定＝コア数） |
-| `ABRG_DUCKDB_MEMORY_LIMIT` | DuckDB 既定（マシンのメモリの 80%） | DuckDB が読み込んだキャッシュを保持するメモリの上限（`1GB`、`512MiB` のような形式）。コンテナのメモリがマシンより小さいときは、コンテナのメモリより小さい値を指定する |
+| `ABRG_DUCKDB_MEMORY_LIMIT` | DuckDB 既定（検出したメモリの 80%） | DuckDB が読み込んだキャッシュを保持するメモリの上限（`1GB`、`512MiB` のような形式）。有効な値は起動時のログの `duckdb_memory_limit` に出る。プロセスはこの上限のほかに数百 MB を使うので、コンテナのメモリより小さい値にする |
 | `ABRG_CORS_ALLOW_ORIGIN` | `*` | CORS 許可オリジン。カンマ区切りで複数指定できる |
 | `LOG_LEVEL` | `INFO` | ログレベル（`DEBUG`, `INFO`, `WARN`, `ERROR`） |
 | `LOG_FORMAT` | `auto` | ログ形式（`json` または `text`、未指定時は TTY 自動判定） |
