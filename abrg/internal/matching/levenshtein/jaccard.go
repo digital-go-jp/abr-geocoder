@@ -14,7 +14,8 @@ import (
 //	"八の坪" prefers koaza "八の坪" over "8の坪")
 //
 // 大字 and 字 are left out of the comparison, so candidates that differ only
-// in them tie and keep their order, which puts the one with more parcels first.
+// in them tie and keep their order, which puts the one with more parcels and
+// residential addresses first.
 func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
 	if len(results) <= 1 {
 		return results
