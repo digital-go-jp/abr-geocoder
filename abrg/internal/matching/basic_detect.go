@@ -40,7 +40,7 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 
 	// Second try: if afterColon starts with a digit, try searching with chome included
 	if hasColon && len(afterColon) > 0 && char.IsASCIIDigit(afterColon[0]) {
-		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr, "")
+		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr, lot)
 		if err != nil {
 			return pref, searchAddrWithColon, nil, err
 		}

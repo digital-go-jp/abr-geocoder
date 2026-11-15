@@ -9,6 +9,9 @@ import (
 
 // SelectBestByJaccard returns the first of the results TopByJaccard returns.
 func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
+	if len(results) <= 1 {
+		return results
+	}
 	return TopByJaccard(results, originalAddr)[:1]
 }
 

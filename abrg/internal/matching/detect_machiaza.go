@@ -283,15 +283,15 @@ func selectHoldingLot(ctx context.Context, repo basicFinder, candidates []model.
 		return candidates[:1], nil
 	}
 	for i := range candidates {
-		ids := &candidates[i].IDs
-		if candidates[i].Machiaza.ParcelCount == 0 || ids.LgCode == nil || ids.MachiazaID == nil {
+		lgCode, machiazaID, ok := machiazaKey(&candidates[i])
+		if !ok || candidates[i].Machiaza.ParcelCount == 0 {
 			continue
 		}
-		ok, err := repo.HasParcelNum1(ctx, *ids.LgCode, *ids.MachiazaID, lot)
+		has, err := repo.HasParcelNum1(ctx, lgCode, machiazaID, lot)
 		if err != nil {
 			return nil, err
 		}
-		if ok {
+		if has {
 			return candidates[i : i+1], nil
 		}
 	}
