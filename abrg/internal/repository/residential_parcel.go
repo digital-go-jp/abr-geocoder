@@ -175,3 +175,16 @@ func scanParcelRow(row *sql.Row) (ParcelResult, error) {
 		Lat:        scanOpt(lat),
 	}, nil
 }
+
+// HasParcelNum1 reports whether the machiaza has a parcel whose prc_num1 is prcNum1.
+func (r *DB) HasParcelNum1(ctx context.Context, lgCode, machiazaID, prcNum1 string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM cache_parcel WHERE lg_code = ? AND machiaza_id = ? AND prc_num1 = ?)`,
+		lgCode, machiazaID, prcNum1,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("has parcel lgCode=%q machiazaID=%q prc=%q: %w", lgCode, machiazaID, prcNum1, err)
+	}
+	return exists, nil
+}

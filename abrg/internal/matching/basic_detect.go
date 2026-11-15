@@ -25,8 +25,14 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 
 	searchAddrBase, afterColon, hasColon := strings.Cut(searchAddrWithColon, ":")
 
+	// The leading number after the colon is the lot when the base is the machiaza.
+	lot := ""
+	if n.hasParcel {
+		lot = afterColon[:skipDigits(afterColon, 0)]
+	}
+
 	// First try: search with base address (before colon)
-	basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrBase, pref, normalizedAddr)
+	basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrBase, pref, normalizedAddr, lot)
 	if err != nil {
 		return pref, searchAddrWithColon, nil, err
 	}
@@ -37,7 +43,7 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 
 	// Second try: if afterColon starts with a digit, try searching with chome included
 	if hasColon && len(afterColon) > 0 && char.IsASCIIDigit(afterColon[0]) {
-		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr)
+		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr, "")
 		if err != nil {
 			return pref, searchAddrWithColon, nil, err
 		}

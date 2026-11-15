@@ -8,7 +8,7 @@ import (
 )
 
 // SelectBestByJaccard selects the result with highest jaccard similarity to originalAddr.
-// Used for selecting between variants with same normalized_address but different oaza_cho/koaza.
+// This is used to prefer the candidate whose oaza_cho/koaza matches the original input
 // (e.g., "大一本松" prefers oaza_cho "大一本松" over "大1本松",
 //
 //	"八の坪" prefers koaza "八の坪" over "8の坪")
@@ -17,6 +17,13 @@ import (
 // in them tie and keep their order, which puts the one with more parcels and
 // residential addresses first.
 func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
+	return TopByJaccard(results, originalAddr)[:1]
+}
+
+// TopByJaccard returns the results tied for the highest jaccard similarity to
+// originalAddr, in their original order.
+// It compares the same way as SelectBestByJaccard.
+func TopByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
 	if len(results) <= 1 {
 		return results
 	}
@@ -25,18 +32,19 @@ func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []m
 	orig := withoutOazaAza(originalAddr)
 	origBigrams := buildBigrams([]rune(orig))
 
-	bestIdx := 0
-	bestSim := jaccardAgainst(orig, origBigrams, withoutOazaAza(buildMatchedAddress(&results[0])))
-
-	for i := 1; i < len(results); i++ {
+	var top []model.MatchedResult
+	bestSim := -1.0
+	for i := range results {
 		sim := jaccardAgainst(orig, origBigrams, withoutOazaAza(buildMatchedAddress(&results[i])))
-		if sim > bestSim {
+		switch {
+		case sim > bestSim:
 			bestSim = sim
-			bestIdx = i
+			top = append(top[:0], results[i])
+		case sim == bestSim:
+			top = append(top, results[i])
 		}
 	}
-
-	return []model.MatchedResult{results[bestIdx]}
+	return top
 }
 
 // withoutOazaAza returns s without 大字, 小字 and a standalone 字.
