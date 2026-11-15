@@ -7,22 +7,20 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
-// SelectBestByJaccard selects the result with highest jaccard similarity to originalAddr.
-// This is used to prefer the candidate whose oaza_cho/koaza matches the original input
-// (e.g., "大一本松" prefers oaza_cho "大一本松" over "大1本松",
-//
-//	"八の坪" prefers koaza "八の坪" over "8の坪")
-//
-// 大字 and 字 are left out of the comparison, so candidates that differ only
-// in them tie and keep their order, which puts the one with more parcels and
-// residential addresses first.
+// SelectBestByJaccard returns the first of the results TopByJaccard returns.
 func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
 	return TopByJaccard(results, originalAddr)[:1]
 }
 
 // TopByJaccard returns the results tied for the highest jaccard similarity to
 // originalAddr, in their original order.
-// It compares the same way as SelectBestByJaccard.
+// It prefers the candidate whose oaza_cho/koaza matches the original input
+// (e.g., "大一本松" prefers oaza_cho "大一本松" over "大1本松",
+//
+//	"八の坪" prefers koaza "八の坪" over "8の坪").
+//
+// 大字 and 字 are left out of the comparison, so candidates that differ only
+// in them tie.
 func TopByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
 	if len(results) <= 1 {
 		return results
