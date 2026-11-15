@@ -10,8 +10,8 @@ import (
 // that both hold parcels while the input lot exists in only one of them.
 // lg_code=152226 has 富岡 (machiaza_id=0581000, 147 parcels, holds 3525) and
 // 大字富岡 (machiaza_id=0239000, 4252 parcels, no 3525).
-// lg_code=132241 has 貝取 (machiaza_id=0009000, holds 1459) and
-// 大字貝取 (machiaza_id=0030000, no 1459).
+// lg_code=132241 has 貝取 (machiaza_id=0009000, holds 1459 and 1493) and
+// 大字貝取 (machiaza_id=0030000, holds neither).
 // lg_code=042111 has 字梶橋 (machiaza_id=0028000, holds 47-4) and
 // 梶橋 (machiaza_id=0015000).
 // The candidate holding the input lot is chosen.
@@ -50,6 +50,14 @@ func TestIssue434(t *testing.T) {
 			wantMatchLevel:       model.MatchLevelMachiaza,
 			wantMatchedAddress:   "東京都多摩市貝取",
 			wantUnmatchedAddress: []string{"1459"},
+			wantStructured:       map[string]any{FieldOazaCho: "貝取"},
+		},
+		{
+			name:                 "issue434-5 [東京都多摩市貝取１４９３番地の１シャロンパーク多摩・永山５０７] basic",
+			query:                query("東京都多摩市貝取１４９３番地の１シャロンパーク多摩・永山５０７", model.CategoryBasic),
+			wantMatchLevel:       model.MatchLevelMachiaza,
+			wantMatchedAddress:   "東京都多摩市貝取",
+			wantUnmatchedAddress: []string{"1493-1シャロンパーク多摩・永山507"},
 			wantStructured:       map[string]any{FieldOazaCho: "貝取"},
 		},
 		{

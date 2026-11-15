@@ -9,6 +9,7 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
 // basicFinder is a consumer-defined interface for basic address lookup.
@@ -110,9 +111,7 @@ func buildFallbackAddress(baseAddress, afterColon string) (string, string) {
 // Chome adjustment is handled in impl.go based on category type (residential vs parcel).
 // originalAddr is the original user input (before normalization), used for jaccard-based selection
 // when multiple candidates have the same normalized_address but different koaza.
-// lot is the input's lot number, used to choose among candidates tied by that
-// selection; it is empty when unknown or when the cache has no parcels.
-func detectMachiaza(ctx context.Context, repo basicFinder, address, prefCode, originalAddr, lot string) ([]model.MatchedResult, string, error) {
+func detectMachiaza(ctx context.Context, repo basicFinder, address string, prefCode string, originalAddr string) ([]model.MatchedResult, string, error) {
 	// Split address by colon (format: "町字名:数字部分")
 	baseAddress, afterColon, found := strings.Cut(address, ":")
 
@@ -153,7 +152,7 @@ func detectMachiaza(ctx context.Context, repo basicFinder, address, prefCode, or
 		searchKey = baseAddress + afterColon + "@"
 	}
 
-	results, err := queryAddressResults(ctx, repo, searchKey, prefCode, originalAddr, lot)
+	results, err := queryAddressResults(ctx, repo, searchKey, prefCode, originalAddr)
 	if err != nil {
 		return nil, address, err
 	}
@@ -175,7 +174,7 @@ func detectMachiaza(ctx context.Context, repo basicFinder, address, prefCode, or
 
 	// Try to match N線M号 pattern (Hokkaido colonial division addresses)
 	if senBase, senSuffix, hasSenGo := transform.ExtractSenGoSuffix(address); hasSenGo {
-		senResults, err := queryAddressResults(ctx, repo, senBase, prefCode, originalAddr, "")
+		senResults, err := queryAddressResults(ctx, repo, senBase, prefCode, originalAddr)
 		if err != nil {
 			return nil, address, err
 		}
@@ -210,7 +209,7 @@ func tryMachiazaFallbackSearch(ctx context.Context, repo basicFinder, baseAddres
 		return nil, "", nil
 	}
 
-	results, err := queryAddressResults(ctx, repo, fallbackBase, prefCode, originalAddr, "")
+	results, err := queryAddressResults(ctx, repo, fallbackBase, prefCode, originalAddr)
 	if err != nil {
 		return nil, "", err
 	}
@@ -223,8 +222,8 @@ func tryMachiazaFallbackSearch(ctx context.Context, repo basicFinder, baseAddres
 // queryAddressResults executes the database query and returns full MatchedResult.
 // When multiple candidates have the same normalized_address but different koaza,
 // selects the one most similar to originalAddr using jaccard similarity.
-// Among candidates equally similar, the first holding lot as a parcel is chosen.
-func queryAddressResults(ctx context.Context, repo basicFinder, address, prefCode, originalAddr, lot string) ([]model.MatchedResult, error) {
+// Among candidates equally similar, the first holding the input lot is chosen.
+func queryAddressResults(ctx context.Context, repo basicFinder, address string, prefCode string, originalAddr string) ([]model.MatchedResult, error) {
 	basicResults, err := repo.FindBasicByAddress(ctx, repository.BasicSearchParams{
 		Address:  address,
 		PrefCode: prefCode,
@@ -246,7 +245,7 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address, prefCod
 			// Use jaccard similarity to select the variant closest to original input
 			// (e.g., "大一本松" prefers oaza_cho "大一本松" over "大1本松",
 			//        "八の坪" prefers koaza "八の坪" over "8の坪")
-			results, err = selectHoldingLot(ctx, repo, levenshtein.TopByJaccard(results, originalAddr), lot)
+			results, err = selectHoldingLot(ctx, repo, levenshtein.TopByJaccard(results, originalAddr), originalAddr)
 			if err != nil {
 				return nil, err
 			}
@@ -269,17 +268,25 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address, prefCod
 	return results, nil
 }
 
-// selectHoldingLot returns the first of candidates that has lot as a parcel,
-// or the first candidate when none has it or lot is empty.
+// selectHoldingLot returns the first of candidates with a parcel whose
+// prc_num1 is the lot written after a candidate's machiaza name in originalAddr,
+// or the first candidate when none has it.
 // Same-named machiaza that differ only in 大字 or 字 can both hold parcels,
 // and only the input lot tells which of them the address is in.
-func selectHoldingLot(ctx context.Context, repo basicFinder, candidates []model.MatchedResult, lot string) ([]model.MatchedResult, error) {
-	if lot == "" || !spansMachiaza(candidates) {
+func selectHoldingLot(ctx context.Context, repo basicFinder, candidates []model.MatchedResult, originalAddr string) ([]model.MatchedResult, error) {
+	if !spansMachiaza(candidates) {
+		return candidates[:1], nil
+	}
+	var lot string
+	for i := 0; i < len(candidates) && lot == ""; i++ {
+		lot = lotAfterName(originalAddr, &candidates[i])
+	}
+	if lot == "" {
 		return candidates[:1], nil
 	}
 	for i := range candidates {
 		ids := &candidates[i].IDs
-		if ids.LgCode == nil || ids.MachiazaID == nil {
+		if candidates[i].Machiaza.ParcelCount == 0 || ids.LgCode == nil || ids.MachiazaID == nil {
 			continue
 		}
 		ok, err := repo.HasParcelNum1(ctx, *ids.LgCode, *ids.MachiazaID, lot)
@@ -291,6 +298,30 @@ func selectHoldingLot(ctx context.Context, repo basicFinder, candidates []model.
 		}
 	}
 	return candidates[:1], nil
+}
+
+// lotAfterName returns the number written right after the candidate's
+// machiaza name in addr, or "" when the name is not found or no number follows.
+// The name is its koaza, or its oaza_cho when it has no koaza, without 大字 and 字.
+// A candidate with a chome has no lot right after its name, so it gets "".
+func lotAfterName(addr string, r *model.MatchedResult) string {
+	sa := &r.StructuredAddress
+	if sa.Chome != nil {
+		return ""
+	}
+	name := derefString(sa.Koaza)
+	if name == "" {
+		name = derefString(sa.OazaCho)
+	}
+	name, _ = util.RemoveOazaAza(name)
+	if name == "" {
+		return ""
+	}
+	_, rest, found := strings.Cut(addr, name)
+	if !found {
+		return ""
+	}
+	return rest[:skipDigits(rest, 0)]
 }
 
 // spansMachiaza reports whether results come from more than one machiaza.
