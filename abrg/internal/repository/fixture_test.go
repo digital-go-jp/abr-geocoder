@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/common/duck"
@@ -365,4 +366,62 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 			t.Errorf("FindNearestParcel() returned %d results, want 0", len(results))
 		}
 	})
+}
+
+func TestFindChomesWithLot_Fixture(t *testing.T) {
+	repo := newFixtureRepo(t)
+	ctx := context.Background()
+
+	// 富岡町 has 1丁目 to 3丁目. Lot 215 is in 3丁目 alone and lot 7 in both
+	// 1丁目 and 2丁目. 富浦町 is another oaza holding lot 215 too.
+	stmts := []string{
+		`INSERT INTO cache_machiaza
+			(pref_code, lg_code, machiaza_id, rsdt_addr_flg, pref, city, oaza_cho, chome, koaza,
+			 wake_num_flg, normalized_address, has_chome, parcel_count, rsdtdsp_count)
+		 VALUES
+			(1, '012025', '0102001', 0, '北海道', '函館市', '富岡町', '1丁目', NULL, 0, '函館市富岡町1@', TRUE, 1, 0),
+			(1, '012025', '0102002', 0, '北海道', '函館市', '富岡町', '2丁目', NULL, 0, '函館市富岡町2@', TRUE, 1, 0),
+			(1, '012025', '0102003', 0, '北海道', '函館市', '富岡町', '3丁目', NULL, 0, '函館市富岡町3@', TRUE, 1, 0),
+			(1, '012025', '0102101', 0, '北海道', '函館市', '富岡町', NULL, '字上', 0, '函館市富岡町上', FALSE, 1, 0),
+			(1, '012025', '0101000', 0, '北海道', '函館市', '富浦町', NULL, NULL, 0, '函館市富浦町', FALSE, 1, 0)`,
+		`INSERT INTO cache_parcel (pref_code, lg_code, machiaza_id, prc_id, prc_num1, prc_num2, prc_num3)
+		 VALUES
+			(1, '012025', '0102003', '000215000001', '215', '1', NULL),
+			(1, '012025', '0102003', '000215000003', '215', '3', NULL),
+			(1, '012025', '0102001', '000007', '7', NULL, NULL),
+			(1, '012025', '0102002', '000007', '7', NULL, NULL),
+			(1, '012025', '0102101', '000215', '215', NULL, NULL),
+			(1, '012025', '0101000', '000215', '215', NULL, NULL)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := repo.db.ExecContext(ctx, stmt); err != nil {
+			t.Fatalf("insert fixture: %v", err)
+		}
+	}
+
+	tests := []struct {
+		name       string
+		machiazaID string
+		prcNum1    string
+		want       []string
+	}{
+		{"lot in one chome, sub-numbers ignored", "0102001", "215", []string{"0102003"}},
+		{"lot in two chomes", "0102003", "7", []string{"0102001", "0102002"}},
+		{"lot in no chome", "0102001", "999", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := repo.FindChomesWithLot(ctx, "012025", tt.machiazaID, tt.prcNum1)
+			if err != nil {
+				t.Fatalf("FindChomesWithLot() error = %v", err)
+			}
+			var ids []string
+			for _, r := range got {
+				ids = append(ids, r.MachiazaID)
+			}
+			if !slices.Equal(ids, tt.want) {
+				t.Errorf("FindChomesWithLot() = %v, want %v", ids, tt.want)
+			}
+		})
+	}
 }

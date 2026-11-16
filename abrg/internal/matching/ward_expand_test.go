@@ -56,6 +56,10 @@ func (failingQuerier) FindParcelExact(context.Context, string, string, repositor
 	return nil, errQueryFailed
 }
 
+func (failingQuerier) FindChomesWithLot(context.Context, string, string, string) ([]repository.BasicResult, error) {
+	return nil, errQueryFailed
+}
+
 // A repository failure during ward expansion must surface as an error,
 // not as "no match".
 func TestTryWardExpansion_PropagatesQueryError(t *testing.T) {
