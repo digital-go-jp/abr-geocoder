@@ -59,6 +59,7 @@ type CitySearchParams struct {
 type CityRecordParams struct {
 	CityPart string // City part for starts_with matching
 	PrefCode string // Optional prefecture code filter
+	Address  string // Address as written, which prefers the city spelled the same way
 }
 
 // CityFuzzyParams holds parameters for fuzzy city record lookup.

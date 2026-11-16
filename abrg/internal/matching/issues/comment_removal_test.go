@@ -58,14 +58,16 @@ func TestCommentRemoval(t *testing.T) {
 				Pref:     "03", // 岩手県
 				Limit:    1,
 			},
-			wantMatchLevel:     model.MatchLevelCity,
-			wantMatchedAddress: "岩手県九戸郡軽米町",
+			// 晴山23 matches the koaza 第23地割 fuzzily, as in category=all.
+			wantMatchLevel:     model.MatchLevelMachiazaDetail,
+			wantMatchedAddress: "岩手県九戸郡軽米町大字晴山第23地割",
 			// コメント部分（/*, B103250100039, 141.379464, 40.322527, */）が含まれないこと
-			wantUnmatchedAddress: []string{"大字晴山23-35", "晴山小学校"},
+			wantUnmatchedAddress: []string{"23-35", "晴山小学校"},
 			wantStructured: map[string]any{
 				FieldPref:   "岩手県",
 				FieldCounty: "九戸郡",
 				FieldCity:   "軽米町",
+				FieldKoaza:  "第23地割",
 			},
 		},
 	})

@@ -58,20 +58,48 @@ func (n *Impl) normalizeAddress(ctx context.Context, query model.MatchQuery) ([]
 		return nil, err
 	}
 	normalizedAddr, addressType := normalize.NormalizeBasicNormalized(normalizedAddr)
+	normalizedAddr = n.insertCounty(normalizedAddr)
 
+	results, err := n.matchWithWardExpansion(ctx, query, normalizedAddr, addressType)
+	if err != nil {
+		return nil, err
+	}
+
+	withoutMubanchi, err := n.tryWithoutMubanchi(ctx, query, normalizedAddr, addressType, results)
+	if err != nil {
+		return nil, err
+	}
+	if withoutMubanchi != nil {
+		return withoutMubanchi, nil
+	}
+	return results, nil
+}
+
+// matchWithWardExpansion matches a normalized address, retrying a ward-only
+// address (e.g. "中区本町") with each city that has such a ward when that
+// matches more strongly.
+func (n *Impl) matchWithWardExpansion(ctx context.Context, query model.MatchQuery, normalizedAddr string, addressType model.NormalizeCategory) ([]model.MatchedResult, error) {
 	results, err := n.matchNormalized(ctx, query, normalizedAddr, addressType, false)
 	if err != nil {
 		return nil, err
 	}
 
-	// A ward-only address (e.g. "中区本町") names no city, so retry it with each
-	// city that has such a ward before settling for the result above.
 	expanded, err := n.tryWardExpansion(ctx, query, normalizedAddr, addressType, results)
 	if err != nil {
 		return nil, err
 	}
 	if expanded != nil {
 		return expanded, nil
+	}
+
+	// A designated city named without its ward (e.g. "熊本市上熊本") stops at
+	// the city, so retry it with each of the city's wards.
+	inserted, err := n.tryWardInsertion(ctx, query, normalizedAddr, addressType, results)
+	if err != nil {
+		return nil, err
+	}
+	if inserted != nil {
+		return inserted, nil
 	}
 	return results, nil
 }
@@ -137,7 +165,7 @@ func (n *Impl) normalizeByCategory(ctx context.Context, nctx *normalizeContext, 
 
 	switch category {
 	case model.CategoryBasic:
-		return n.handleFallback(ctx, nctx)
+		return n.normalizeBasic(ctx, nctx)
 	case model.CategoryResidential:
 		if !n.hasResidential {
 			return nil, fmt.Errorf("residential %w", ErrDataUnavailable)
