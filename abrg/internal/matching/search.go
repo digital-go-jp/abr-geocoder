@@ -75,6 +75,19 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 	return sortAndLimitResults(results, nctx.Input.Limit), nil
 }
 
+// normalizeBasic resolves an address down to its machiaza. A town that
+// matches no machiaza exactly goes to the same fuzzy search as category=all
+// (神田美士代町 → 神田美土代町), so a misspelled town does not stop at the city.
+// The number section is not searched.
+func (n *Impl) normalizeBasic(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
+	newState, _, err := n.tryLevenshteinFallback(ctx, nctx)
+	if err != nil {
+		return nil, err
+	}
+	nctx.State = newState
+	return n.handleFallback(ctx, nctx)
+}
+
 // tryDetailedSearch runs the two-stage residential/parcel searches for the
 // detected address category. Undetermined and unknown inputs try residential
 // first and add parcel results unless residential already produced a complete
