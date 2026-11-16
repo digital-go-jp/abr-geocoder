@@ -36,6 +36,10 @@ func (failingQuerier) FindBasicByAddress(context.Context, repository.BasicSearch
 	return nil, errQueryFailed
 }
 
+func (failingQuerier) HasParcelNum1(context.Context, string, string, string) (bool, error) {
+	return false, errQueryFailed
+}
+
 func (failingQuerier) FindBasicByLevenshtein(context.Context, repository.LevenshteinParams) ([]repository.BasicResult, error) {
 	return nil, errQueryFailed
 }

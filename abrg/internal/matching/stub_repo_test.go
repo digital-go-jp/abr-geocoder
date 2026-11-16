@@ -76,6 +76,11 @@ func (s *stubRepo) FindBasicByAddress(_ context.Context, params repository.Basic
 	return rows, nil
 }
 
+func (s *stubRepo) HasParcelNum1(_ context.Context, lgCode, machiazaID, prcNum1 string) (bool, error) {
+	s.record("HasParcelNum1(%q, %q, %q)", lgCode, machiazaID, prcNum1)
+	return false, s.injected("HasParcelNum1")
+}
+
 func (s *stubRepo) FindBasicByLevenshtein(_ context.Context, params repository.LevenshteinParams) ([]repository.BasicResult, error) {
 	s.record("FindBasicByLevenshtein(%q, pref=%q, lg=%q, machiaza=%q, limit=%d)",
 		params.SearchAddr, params.PrefCode, params.LgCode, params.MachiazaID, params.Limit)

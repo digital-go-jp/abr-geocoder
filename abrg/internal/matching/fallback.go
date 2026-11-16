@@ -102,7 +102,7 @@ func (n *Impl) searchTownUnderCity(ctx context.Context, nctx *normalizeContext, 
 	cityName, _ := transform.TextForDB(derefString(sa.County) + derefString(sa.City) + derefString(sa.Ward))
 	corrected := cityName + searchAddr[cityEnd:]
 
-	results, _, err := detectMachiaza(ctx, n.repo, corrected, nctx.Input.Pref, nctx.Input.NormalizedAddr)
+	results, _, err := detectMachiaza(ctx, n.repo, corrected, nctx.Input.Pref, nctx.Input.NormalizedAddr, "")
 	if err != nil {
 		return nil, fmt.Errorf("town search under corrected city: %w", err)
 	}
@@ -219,7 +219,7 @@ func (n *Impl) tryChomeSearch(ctx context.Context, nctx *normalizeContext) ([]mo
 		return nil, nil
 	}
 
-	results, _, err := detectMachiaza(ctx, n.repo, chomeSearchAddr.String(), nctx.Input.Pref, nctx.Input.NormalizedAddr)
+	results, _, err := detectMachiaza(ctx, n.repo, chomeSearchAddr.String(), nctx.Input.Pref, nctx.Input.NormalizedAddr, "")
 	if err != nil {
 		return nil, fmt.Errorf("chome search: %w", err)
 	}
@@ -243,7 +243,7 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 		return nil, nil
 	}
 
-	results, err := queryAddressResults(ctx, n.repo, sa.Base+sa.Numbers[0], nctx.Input.Pref, nctx.Input.NormalizedAddr)
+	results, err := queryAddressResults(ctx, n.repo, sa.Base+sa.Numbers[0], nctx.Input.Pref, nctx.Input.NormalizedAddr, "")
 	if err != nil {
 		return nil, fmt.Errorf("numeric koaza search: %w", err)
 	}
@@ -295,7 +295,7 @@ func (n *Impl) tryOazaChoSearch(ctx context.Context, nctx *normalizeContext) ([]
 	}
 
 	cityBasedSearchAddr := buildCityBasedSearchAddr(nctx.State.BasicResults[0].StructuredAddress, chomeSearchAddr.String())
-	results, _, err := detectMachiaza(ctx, n.repo, cityBasedSearchAddr, nctx.Input.Pref, nctx.Input.NormalizedAddr)
+	results, _, err := detectMachiaza(ctx, n.repo, cityBasedSearchAddr, nctx.Input.Pref, nctx.Input.NormalizedAddr, "")
 	if err != nil {
 		return nil, fmt.Errorf("oaza_cho search: %w", err)
 	}

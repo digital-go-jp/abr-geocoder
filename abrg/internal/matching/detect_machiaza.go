@@ -14,6 +14,7 @@ import (
 // basicFinder is a consumer-defined interface for basic address lookup.
 type basicFinder interface {
 	FindBasicByAddress(ctx context.Context, params repository.BasicSearchParams) ([]repository.BasicResult, error)
+	HasParcelNum1(ctx context.Context, lgCode, machiazaID, prcNum1 string) (bool, error)
 }
 
 // maxJaccardCandidates is the maximum number of candidates to retrieve for jaccard-based selection.
@@ -109,7 +110,10 @@ func buildFallbackAddress(baseAddress, afterColon string) (string, string) {
 // Chome adjustment is handled in impl.go based on category type (residential vs parcel).
 // originalAddr is the original user input (before normalization), used for jaccard-based selection
 // when multiple candidates have the same normalized_address but different koaza.
-func detectMachiaza(ctx context.Context, repo basicFinder, address string, prefCode string, originalAddr string) ([]model.MatchedResult, string, error) {
+// lot is the number following address in the input, used to choose among
+// candidates tied by that selection.
+// A number split off address itself takes its place.
+func detectMachiaza(ctx context.Context, repo basicFinder, address, prefCode, originalAddr, lot string) ([]model.MatchedResult, string, error) {
 	// Split address by colon (format: "町字名:数字部分")
 	baseAddress, afterColon, found := strings.Cut(address, ":")
 
@@ -143,6 +147,10 @@ func detectMachiaza(ctx context.Context, repo basicFinder, address string, prefC
 		}
 	}
 
+	if found {
+		lot = afterColon[:skipDigits(afterColon, 0)]
+	}
+
 	// Try base address first
 	// For trailing hyphen case (e.g., "大塚1-"), search for "大塚1@" instead of "大塚"
 	searchKey := baseAddress
@@ -150,7 +158,7 @@ func detectMachiaza(ctx context.Context, repo basicFinder, address string, prefC
 		searchKey = baseAddress + afterColon + "@"
 	}
 
-	results, err := queryAddressResults(ctx, repo, searchKey, prefCode, originalAddr)
+	results, err := queryAddressResults(ctx, repo, searchKey, prefCode, originalAddr, lot)
 	if err != nil {
 		return nil, address, err
 	}
@@ -172,7 +180,7 @@ func detectMachiaza(ctx context.Context, repo basicFinder, address string, prefC
 
 	// Try to match N線M号 pattern (Hokkaido colonial division addresses)
 	if senBase, senSuffix, hasSenGo := transform.ExtractSenGoSuffix(address); hasSenGo {
-		senResults, err := queryAddressResults(ctx, repo, senBase, prefCode, originalAddr)
+		senResults, err := queryAddressResults(ctx, repo, senBase, prefCode, originalAddr, "")
 		if err != nil {
 			return nil, address, err
 		}
@@ -207,7 +215,7 @@ func tryMachiazaFallbackSearch(ctx context.Context, repo basicFinder, baseAddres
 		return nil, "", nil
 	}
 
-	results, err := queryAddressResults(ctx, repo, fallbackBase, prefCode, originalAddr)
+	results, err := queryAddressResults(ctx, repo, fallbackBase, prefCode, originalAddr, "")
 	if err != nil {
 		return nil, "", err
 	}
@@ -220,7 +228,8 @@ func tryMachiazaFallbackSearch(ctx context.Context, repo basicFinder, baseAddres
 // queryAddressResults executes the database query and returns full MatchedResult.
 // When multiple candidates have the same normalized_address but different koaza,
 // selects the one most similar to originalAddr using jaccard similarity.
-func queryAddressResults(ctx context.Context, repo basicFinder, address string, prefCode string, originalAddr string) ([]model.MatchedResult, error) {
+// Among candidates equally similar, the first holding lot as a parcel is chosen.
+func queryAddressResults(ctx context.Context, repo basicFinder, address, prefCode, originalAddr, lot string) ([]model.MatchedResult, error) {
 	basicResults, err := repo.FindBasicByAddress(ctx, repository.BasicSearchParams{
 		Address:  address,
 		PrefCode: prefCode,
@@ -242,7 +251,10 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address string, 
 			// Use jaccard similarity to select the variant closest to original input
 			// (e.g., "大一本松" prefers oaza_cho "大一本松" over "大1本松",
 			//        "八の坪" prefers koaza "八の坪" over "8の坪")
-			results = levenshtein.SelectBestByJaccard(results, originalAddr)
+			results, err = selectHoldingLot(ctx, repo, levenshtein.TopByJaccard(results, originalAddr), lot)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			// No originalAddr provided, just take the first (highest priority by ORDER BY)
 			results = results[:1]
@@ -260,6 +272,43 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address string, 
 	}
 
 	return results, nil
+}
+
+// selectHoldingLot returns the first of candidates that has lot as a parcel,
+// or the first candidate when none has it or lot is empty.
+// Same-named machiaza that differ only in 大字 or 字 can both hold parcels,
+// and only the input lot tells which of them the address is in.
+func selectHoldingLot(ctx context.Context, repo basicFinder, candidates []model.MatchedResult, lot string) ([]model.MatchedResult, error) {
+	if lot == "" || !spansMachiaza(candidates) {
+		return candidates[:1], nil
+	}
+	for i := range candidates {
+		lgCode, machiazaID, ok := machiazaKey(&candidates[i])
+		if !ok || candidates[i].Machiaza.ParcelCount == 0 {
+			continue
+		}
+		has, err := repo.HasParcelNum1(ctx, lgCode, machiazaID, lot)
+		if err != nil {
+			return nil, err
+		}
+		if has {
+			return candidates[i : i+1], nil
+		}
+	}
+	return candidates[:1], nil
+}
+
+// spansMachiaza reports whether results come from more than one machiaza.
+// One machiaza can appear twice, once per rsdt_addr_flg.
+func spansMachiaza(results []model.MatchedResult) bool {
+	first := &results[0].IDs
+	for i := 1; i < len(results); i++ {
+		ids := &results[i].IDs
+		if derefString(ids.LgCode) != derefString(first.LgCode) || derefString(ids.MachiazaID) != derefString(first.MachiazaID) {
+			return true
+		}
+	}
+	return false
 }
 
 // hasAmbiguousRsdtAddrFlg reports, per lg_code+machiaza_id, whether the candidates
