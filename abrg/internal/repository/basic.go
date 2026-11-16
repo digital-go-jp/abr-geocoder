@@ -19,11 +19,15 @@ const basicColumns = `normalized_address, lg_code, machiaza_id, rsdt_addr_flg,
 
 // FindBasicByAddress searches cache_machiaza by normalized_address.
 func (r *DB) FindBasicByAddress(ctx context.Context, params BasicSearchParams) ([]BasicResult, error) {
-	query := "SELECT " + basicColumns + " FROM cache_machiaza WHERE normalized_address = ?"
+	// The address is looked up alone in a materialized CTE.
+	// DuckDB reads idx_machiaza_normalized only for an equality filter on its
+	// own: with another filter or with ORDER BY and LIMIT in the same query,
+	// it scans the whole table.
+	query := "WITH c AS MATERIALIZED (SELECT * FROM cache_machiaza WHERE normalized_address = ?) SELECT " + basicColumns + " FROM c"
 
 	args := []any{params.Address}
 	if params.PrefCode != "" && params.PrefCode != model.All {
-		query += " AND pref_code = ?"
+		query += " WHERE pref_code = ?"
 		args = append(args, params.PrefCode)
 	}
 
