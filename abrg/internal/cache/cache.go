@@ -35,7 +35,7 @@ type DuckDBCache struct {
 func NewDuckDBCache(ctx context.Context, flagPath string) (*DuckDBCache, error) {
 	cfg := config.Load()
 	cachePath := duckdb.ResolvePath(flagPath, cfg.Cache.Path)
-	return newDuckDBCache(ctx, cachePath, cfg.Cache.DuckDBThreads)
+	return newDuckDBCache(ctx, cachePath, cfg.Cache)
 }
 
 // NewDuckDBCacheFromPath opens the cache at cachePath and, unlike NewDuckDBCache,
@@ -44,7 +44,7 @@ func NewDuckDBCache(ctx context.Context, flagPath string) (*DuckDBCache, error) 
 // returns lower match levels, while the CLI can still run a changed
 // normalization against an existing cache.
 func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache, error) {
-	cache, err := newDuckDBCache(ctx, cachePath, config.Load().Cache.DuckDBThreads)
+	cache, err := newDuckDBCache(ctx, cachePath, config.Load().Cache)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 	return cache, nil
 }
 
-func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*DuckDBCache, error) {
+func newDuckDBCache(ctx context.Context, cachePath string, cfg config.CacheConfig) (*DuckDBCache, error) {
 	if cachePath == "" {
 		return nil, fmt.Errorf("cache file required: use 'abrg cache build' to create one")
 	}
@@ -78,7 +78,10 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 		db: conn,
 	}
 
-	if err := applyThreadLimit(ctx, conn, duckdbThreads); err != nil {
+	if err := applyThreadLimit(ctx, conn, cfg.DuckDBThreads); err != nil {
+		return nil, err
+	}
+	if err := applyMemoryLimit(ctx, conn, cfg.DuckDBMemoryLimit); err != nil {
 		return nil, err
 	}
 
@@ -208,6 +211,36 @@ func applyThreadLimit(ctx context.Context, conn *sql.DB, v string) error {
 		return fmt.Errorf("failed to set duckdb threads: %w", err)
 	}
 	return nil
+}
+
+// applyMemoryLimit caps the memory DuckDB keeps for cached blocks; an empty
+// value keeps DuckDB's default, 80% of the smaller of the machine's memory and
+// the container's cgroup limit. DuckDB holds every block it has read up to the
+// limit. A container whose cgroup carries no limit of its own, such as a
+// Fargate task without a container-level memory setting, gets a default above
+// what it may use and is killed once enough of the cache has been read.
+func applyMemoryLimit(ctx context.Context, conn *sql.DB, v string) error {
+	if v == "" {
+		return nil
+	}
+	if !memoryLimitFormat.MatchString(v) {
+		return fmt.Errorf("invalid ABRG_DUCKDB_MEMORY_LIMIT %q: use a size such as 1GB or 512MiB", v)
+	}
+	if _, err := conn.ExecContext(ctx, "SET memory_limit='"+v+"'"); err != nil {
+		return fmt.Errorf("failed to set duckdb memory limit: %w", err)
+	}
+	return nil
+}
+
+// MemoryLimit returns the memory limit DuckDB is running with, as DuckDB
+// formats it (for example "1.5 GiB"). Without ABRG_DUCKDB_MEMORY_LIMIT this is
+// the value DuckDB derived from the machine or the container.
+func (c *DuckDBCache) MemoryLimit(ctx context.Context) (string, error) {
+	var limit string
+	if err := c.db.QueryRowContext(ctx, "SELECT current_setting('memory_limit')").Scan(&limit); err != nil {
+		return "", fmt.Errorf("read duckdb memory limit: %w", err)
+	}
+	return limit, nil
 }
 
 func (c *DuckDBCache) Close() error {

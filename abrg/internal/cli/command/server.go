@@ -58,13 +58,20 @@ func runServer(ctx context.Context, cacheFlag string) error {
 		return err
 	}
 
+	memoryLimit, err := dbCache.MemoryLimit(ctx)
+	if err != nil {
+		_ = dbCache.Close()
+		return err
+	}
+
 	slog.Info("server configuration",
 		"event", "server_config",
 		"api_version", version.Version,
 		"db_version", cacheCfg.DBVersion,
 		"category", cacheCfg.EnabledCategory,
 		"pref", cacheCfg.EnabledPref,
-		"pos", cacheCfg.PosEnabled())
+		"pos", cacheCfg.PosEnabled(),
+		"duckdb_memory_limit", memoryLimit)
 
 	// Gin's default debug mode prints plain-text lines among the JSON logs.
 	if os.Getenv(gin.EnvGinMode) == "" {

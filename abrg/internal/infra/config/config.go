@@ -53,7 +53,7 @@ func defaultCachePath() string {
 
 type Config struct {
 	Server ServerConfig
-	Cache  cacheConfig
+	Cache  CacheConfig
 }
 
 type ServerConfig struct {
@@ -73,11 +73,15 @@ func (c ServerConfig) Addr() string {
 	return net.JoinHostPort(c.Host, c.Port)
 }
 
-type cacheConfig struct {
+type CacheConfig struct {
 	Path string
 	// DuckDBThreads caps DuckDB's intra-query parallelism ("0" keeps the
 	// DuckDB default of one thread per core).
 	DuckDBThreads string
+	// DuckDBMemoryLimit caps the memory DuckDB keeps for cached blocks, as a
+	// size such as "1GB" ("" keeps the DuckDB default of 80% of the machine's
+	// memory).
+	DuckDBMemoryLimit string
 }
 
 func Load() *Config {
@@ -90,9 +94,10 @@ func Load() *Config {
 			WriteTimeout:     writeTimeout,
 			IdleTimeout:      idleTimeout,
 		},
-		Cache: cacheConfig{
-			Path:          env.GetEnv(duckdb.EnvCachePath, defaultCachePath()),
-			DuckDBThreads: env.GetEnv("ABRG_DUCKDB_THREADS", "2"),
+		Cache: CacheConfig{
+			Path:              env.GetEnv(duckdb.EnvCachePath, defaultCachePath()),
+			DuckDBThreads:     env.GetEnv("ABRG_DUCKDB_THREADS", "2"),
+			DuckDBMemoryLimit: env.GetEnv("ABRG_DUCKDB_MEMORY_LIMIT", ""),
 		},
 	}
 }
