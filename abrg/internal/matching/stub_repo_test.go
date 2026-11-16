@@ -142,6 +142,11 @@ func (s *stubRepo) FindResidentialBestMatch(_ context.Context, lgCode, machiazaI
 	return s.rsdtByKey[key], nil
 }
 
+func (s *stubRepo) FindChomesWithLot(_ context.Context, lgCode, machiazaID, prcNum1 string) ([]repository.BasicResult, error) {
+	s.record("FindChomesWithLot(%s|%s|%s)", lgCode, machiazaID, prcNum1)
+	return nil, nil
+}
+
 func (s *stubRepo) FindParcelExact(_ context.Context, lgCode, machiazaID string, f repository.ParcelFilter) (*repository.ParcelResult, error) {
 	key := strings.Join([]string{lgCode, machiazaID, f.PrcNum1, f.PrcNum2, f.PrcNum3}, "|")
 	s.record("FindParcelExact(%s)", key)

@@ -54,6 +54,35 @@ func TestHasChomeMismatch(t *testing.T) {
 	}
 }
 
+func TestTakesNumberAsChome(t *testing.T) {
+	tests := []struct {
+		name        string
+		searchAddr  string
+		resultChome *string
+		want        bool
+	}{
+		{name: "lot number as chome", searchAddr: "幸区鹿島田:1004", resultChome: new("1丁目"), want: true},
+		{name: "leading number names the chome", searchAddr: "新宿区西親宿:2-8-1", resultChome: new("2丁目"), want: false},
+		{name: "leading number names another chome", searchAddr: "新宿区西親宿:2-8-1", resultChome: new("1丁目"), want: true},
+		{name: "kanji chome in result", searchAddr: "新宿区西親宿:2", resultChome: new("二丁目"), want: false},
+		{name: "trailing number without colon", searchAddr: "千代田区永田町10023", resultChome: new("一丁目"), want: true},
+		{name: "chome written", searchAddr: "新宿区西親宿2@:8-1", resultChome: new("2丁目"), want: false},
+		{name: "no chome in result", searchAddr: "幸区鹿島田:1004", resultChome: nil, want: false},
+		{name: "no number", searchAddr: "新宿区西親宿", resultChome: new("1丁目"), want: false},
+		{name: "town name after a misspelled city", searchAddr: "横浜巿西区:ミナトミライ", resultChome: new("1丁目"), want: false},
+		{name: "chome glued to the town name", searchAddr: "葵区与14:-1", resultChome: new("4丁目"), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := takesNumberAsChome(tt.searchAddr, ExtractSearchNumbers(tt.searchAddr), tt.resultChome)
+			if got != tt.want {
+				t.Errorf("takesNumberAsChome(%q, %v) = %v, want %v", tt.searchAddr, tt.resultChome, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestHasTownNameMismatch(t *testing.T) {
 	tests := []struct {
 		name       string

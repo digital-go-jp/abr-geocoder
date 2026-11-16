@@ -77,6 +77,60 @@ func (n *Impl) tryWardExpansion(
 	return sortAndLimitResults(results, query.Limit), nil
 }
 
+// tryWardInsertion retries an address that names a designated city but not
+// its ward with each of the city's wards put after the city name, so that
+// "熊本市上熊本1丁目" is matched as "熊本市西区上熊本1丁目".
+// Only a ward whose machiaza matches exactly counts.
+//
+// It returns nil unless baseResults stop at such a city and exactly one ward
+// resolves a machiaza.
+func (n *Impl) tryWardInsertion(
+	ctx context.Context,
+	query model.MatchQuery,
+	normalizedAddr string,
+	addressType model.NormalizeCategory,
+	baseResults []model.MatchedResult,
+) ([]model.MatchedResult, error) {
+	base, ok := strongestResult(baseResults)
+	if !ok || base.MatchLevel != model.MatchLevelCity || base.StructuredAddress.Ward != nil {
+		return nil, nil
+	}
+	sa := base.StructuredAddress
+	city := derefString(sa.City)
+	cityWards := n.cityWards[derefString(sa.Pref)+city]
+	head, rest, found := strings.Cut(normalizedAddr, city)
+	if len(cityWards) == 0 || !found || rest == "" {
+		return nil, nil
+	}
+
+	var results []model.MatchedResult
+	for _, cityWard := range cityWards {
+		r, err := n.matchNormalized(ctx, query, head+cityWard+rest, addressType, true)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, slices.DeleteFunc(r, func(r model.MatchedResult) bool {
+			return !reachedMachiaza(r)
+		})...)
+	}
+
+	best, ok := strongestResult(results)
+	if !ok {
+		return nil, nil
+	}
+	results = slices.DeleteFunc(results, func(r model.MatchedResult) bool {
+		return compareResultStrength(r, best) > 0
+	})
+	// A town found in more than one ward (新栄3丁目 in 千種区, 中区 and 東区)
+	// leaves the ward undecided, so the address stays at the city.
+	if slices.ContainsFunc(results, func(r model.MatchedResult) bool {
+		return derefString(r.IDs.LgCode) != derefString(best.IDs.LgCode)
+	}) {
+		return nil, nil
+	}
+	return sortAndLimitResults(results, query.Limit), nil
+}
+
 // runWardCandidates matches the address once per candidate city and returns
 // every result. skipLevenshtein leaves out the Levenshtein search.
 func (n *Impl) runWardCandidates(

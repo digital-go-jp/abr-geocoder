@@ -32,6 +32,7 @@ type implQuerier interface {
 	FindCityByAddress(ctx context.Context, params repository.CitySearchParams) (*repository.CityResult, error)
 	FindResidentialBestMatch(ctx context.Context, lgCode, machiazaID string, filter repository.ResidentialFilter) (*repository.ResidentialBestResult, error)
 	FindParcelExact(ctx context.Context, lgCode, machiazaID string, filter repository.ParcelFilter) (*repository.ParcelResult, error)
+	FindChomesWithLot(ctx context.Context, lgCode, machiazaID, prcNum1 string) ([]repository.BasicResult, error)
 }
 
 // Matcher is the interface for address matching against ABR data.
@@ -46,6 +47,7 @@ type Impl struct {
 	cityWardLgCodes map[string]string
 	wardCandidates  map[string][]cache.WardCandidate
 	countyCities    map[string]map[string]string
+	cityWards       map[string][]string
 	cityBoundary    *util.CityBoundary
 	twoStageSearch  *twoStageSearch
 	hasResidential  bool
@@ -63,6 +65,7 @@ func NewMatcher(repo implQuerier, lookups cache.Lookups, hasResidential, hasParc
 		cityWardLgCodes: lookups.CityWardLgCodes,
 		wardCandidates:  lookups.WardCandidates,
 		countyCities:    lookups.CountyCities,
+		cityWards:       lookups.CityWards,
 		cityBoundary:    lookups.CityBoundary,
 		twoStageSearch:  newTwoStageSearch(repo),
 		hasResidential:  hasResidential,

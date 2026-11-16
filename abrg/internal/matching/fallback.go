@@ -9,6 +9,7 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/levenshtein"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matching/unmatched"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
 )
 
 // debugMatchPath records which non-exact resolution path produced the result,
@@ -75,9 +76,47 @@ func (n *Impl) tryCityRecordSearch(ctx context.Context, nctx *normalizeContext) 
 	if cityResult == nil {
 		return nil, nil
 	}
+	if fuzzy {
+		results, err := n.searchTownUnderCity(ctx, nctx, cityResult)
+		if err != nil || results != nil {
+			return results, err
+		}
+	}
 
 	debugMatchPath(ctx, "city_fallback", nctx.Input.NormalizedAddr, "fuzzy", fuzzy)
 	return []model.MatchedResult{*cityResult}, nil
+}
+
+// searchTownUnderCity looks the town up again under the city the address's
+// misspelled city name was corrected to (鷹栖村10線3号 under 鷹栖町).
+// The town must match exactly, and the results are scored by how far the
+// corrected address is from the input.
+// It returns nil when no town matches.
+func (n *Impl) searchTownUnderCity(ctx context.Context, nctx *normalizeContext, city *model.MatchedResult) ([]model.MatchedResult, error) {
+	searchAddr := nctx.Input.SearchAddr.String()
+	cityEnd := n.cityBoundary.Find(searchAddr)
+	if cityEnd <= 0 || cityEnd == len(searchAddr) {
+		return nil, nil
+	}
+	sa := city.StructuredAddress
+	cityName, _ := transform.TextForDB(derefString(sa.County) + derefString(sa.City) + derefString(sa.Ward))
+	corrected := cityName + searchAddr[cityEnd:]
+
+	results, _, err := detectMachiaza(ctx, n.repo, corrected, nctx.Input.Pref, nctx.Input.NormalizedAddr)
+	if err != nil {
+		return nil, fmt.Errorf("town search under corrected city: %w", err)
+	}
+	if len(results) == 0 || results[0].StructuredAddress.OazaCho == nil {
+		return nil, nil
+	}
+
+	score := levenshtein.Score(searchAddr, corrected)
+	for i := range results {
+		results[i].Score = min(results[i].Score, score)
+	}
+	setUnmatchedAddress(&results[0], nctx.Input.NormalizedAddr, corrected)
+	debugMatchPath(ctx, "town_under_corrected_city", nctx.Input.NormalizedAddr, "score", score)
+	return results, nil
 }
 
 // tryLevenshteinCitySearch finds a city-level match for cases like
