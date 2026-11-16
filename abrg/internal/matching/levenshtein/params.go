@@ -27,6 +27,7 @@ type SearchParams struct {
 	MachiazaID     string         // Machiaza ID for filtering
 	NormalizedAddr string         // Basic-normalized address, used for computing unmatched parts
 	Limit          int            // Maximum number of results
+	HasParcel      bool           // Whether cache_parcel exists, so a chome can be told by the lots it holds
 
 	CityBoundary *util.CityBoundary // City-boundary matcher for longest-prefix city resolution
 }
