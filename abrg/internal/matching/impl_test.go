@@ -347,7 +347,7 @@ func TestMatchRejectsInvalidAddress(t *testing.T) {
 		wantErr error
 	}{
 		{name: "comment only", address: "// memo", wantErr: normalize.ErrEmptyAddress},
-		{name: "too long", address: strings.Repeat("あ", normalize.MaxAddressLength+1), wantErr: normalize.ErrAddressTooLong},
+		{name: "too long", address: strings.Repeat("あ", normalize.DefaultMaxAddressLength+1), wantErr: normalize.ErrAddressTooLong},
 	}
 
 	for _, tt := range tests {
