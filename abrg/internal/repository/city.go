@@ -47,7 +47,11 @@ func (r *DB) FindCityRecord(ctx context.Context, p CityRecordParams) (*CityResul
 		query += " AND pref_code = ?"
 		args = append(args, p.PrefCode)
 	}
-	query += " ORDER BY length(normalized_address) DESC LIMIT 1"
+	// Cities whose names normalize alike (鹿嶋市 and 鹿島市) are told apart by
+	// the spelling the address uses.
+	query += ` ORDER BY length(normalized_address) DESC,
+		contains(?, coalesce(county, '') || city || coalesce(ward, '')) DESC LIMIT 1`
+	args = append(args, p.Address)
 
 	result, err := queryOne(ctx, r.db, query, args, scanCityBasic)
 	if err != nil {

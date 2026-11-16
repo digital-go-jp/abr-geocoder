@@ -1713,6 +1713,8 @@ func TestNJA173(t *testing.T) {
 		{
 			// Note: This tests that no crash occurs with invalid kanji numeral
 			// 百二三 (百+二+三) is invalid position-structure, processed as individual digits: 100+2+3 = "10023"
+			// 永田町 has only 一丁目 and 二丁目, and 10023 names neither,
+			// so the match stops at the city (issue #365).
 			name: "nja173-1 [東京都千代田区永田町百二三]",
 			query: model.MatchQuery{
 				Address:  "東京都千代田区永田町百二三",
@@ -1720,9 +1722,9 @@ func TestNJA173(t *testing.T) {
 				Pref:     "all",
 				Limit:    1,
 			},
-			wantMatchLevel:       model.MatchLevelMachiazaDetail,
-			wantMatchedAddress:   "東京都千代田区永田町一丁目",
-			wantUnmatchedAddress: []string{"10023"},
+			wantMatchLevel:       model.MatchLevelCity,
+			wantMatchedAddress:   "東京都千代田区",
+			wantUnmatchedAddress: []string{"永田町百二三"},
 			wantStructured: map[string]any{
 				"pref":          "東京都",
 				"county":        nil,
@@ -1730,8 +1732,8 @@ func TestNJA173(t *testing.T) {
 				"ward":          nil,
 				"machiaza_dist": nil,
 				"kyoto_st":      nil,
-				"oaza_cho":      "永田町",
-				"chome":         "一丁目",
+				"oaza_cho":      nil,
+				"chome":         nil,
 				"koaza":         nil,
 				"blk_num":       nil,
 				"rsdt_num":      nil,

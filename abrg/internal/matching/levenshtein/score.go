@@ -31,3 +31,10 @@ func calculateEditDistanceScore(editDist, addressLen int) float64 {
 	}
 	return score
 }
+
+// Score returns how close candidate is to searchAddr, from 1.0 for the same
+// string down to 0, on the scale fuzzy matches are scored on.
+func Score(searchAddr, candidate string) float64 {
+	runes := []rune(searchAddr)
+	return calculateEditDistanceScore(runeLevenshteinFrom(runes, candidate), len(runes))
+}
