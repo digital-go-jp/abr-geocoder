@@ -8,60 +8,26 @@ import (
 	"sync"
 )
 
-// sqlStrings holds pre-generated SQL strings for cache operations.
-type sqlStrings struct {
-	createIndexes string
-	clearCache    string
-}
-
-var loadSQLStrings = sync.OnceValues(func() (*sqlStrings, error) {
-	schema, err := loadSchema()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load schema: %w", err)
-	}
-
-	var indexSB, clearSB strings.Builder
-	// Iterate in sorted order so the generated SQL is deterministic.
-	for _, tableName := range slices.Sorted(maps.Keys(schema.Tables)) {
-		table := schema.Tables[tableName]
-		indexSB.WriteString(table.generateIndexSQL(tableName))
-		fmt.Fprintf(&clearSB, "DELETE FROM %s;\n", tableName)
-	}
-
-	return &sqlStrings{
-		createIndexes: indexSB.String(),
-		clearCache:    clearSB.String(),
-	}, nil
-})
-
 // GetCreateIndexesSQL returns the CREATE INDEX statements, generated once.
-func GetCreateIndexesSQL() (string, error) {
-	s, err := loadSQLStrings()
-	if err != nil {
-		return "", err
-	}
-	return s.createIndexes, nil
-}
-
-// getClearCacheSQL returns a DELETE for every schema table, generated once.
-func getClearCacheSQL() (string, error) {
-	s, err := loadSQLStrings()
-	if err != nil {
-		return "", err
-	}
-	return s.clearCache, nil
-}
-
-// InitSchemaSQL returns SQL that creates every schema table and empties it.
-func InitSchemaSQL() (string, error) {
+var GetCreateIndexesSQL = sync.OnceValues(func() (string, error) {
 	schema, err := loadSchema()
 	if err != nil {
 		return "", fmt.Errorf("failed to load schema: %w", err)
 	}
 
-	clearSQL, err := getClearCacheSQL()
+	var sb strings.Builder
+	// Iterate in sorted order so the generated SQL is deterministic.
+	for _, tableName := range slices.Sorted(maps.Keys(schema.Tables)) {
+		sb.WriteString(schema.Tables[tableName].generateIndexSQL(tableName))
+	}
+	return sb.String(), nil
+})
+
+// InitSchemaSQL returns SQL that creates every schema table.
+func InitSchemaSQL() (string, error) {
+	schema, err := loadSchema()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to load schema: %w", err)
 	}
 
 	var sb strings.Builder
@@ -71,8 +37,6 @@ func InitSchemaSQL() (string, error) {
 		sb.WriteString(schema.Tables[tableName].generateCreateTableSQL(tableName))
 		sb.WriteString(";\n")
 	}
-
-	sb.WriteString(clearSQL)
 
 	return sb.String(), nil
 }

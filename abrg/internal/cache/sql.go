@@ -19,13 +19,6 @@ import (
 //
 // Coordinates are FLOAT, the type abrdb imports them as by default.
 
-// dropCategoryTablesSQL removes category tables from a previous build, so a
-// category table exists only if the current build created it.
-const dropCategoryTablesSQL = `
-DROP TABLE IF EXISTS cache_rsdtdsp;
-DROP TABLE IF EXISTS cache_parcel;
-`
-
 // insertMachiazaSQLTemplate inserts cache_machiaza rows and must run after the
 // category tables are built. Counts come from CTEs with LEFT JOIN, which is
 // faster than correlated subqueries. The count CTE bodies are placeholders,
