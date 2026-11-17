@@ -20,14 +20,13 @@ const (
 
 // SearchParams holds parameters for Levenshtein search.
 type SearchParams struct {
-	Category       model.Category // Search category (basic, residential, parcel)
-	SearchAddr     string         // Address to search for in DB
-	Pref           string         // Prefecture code to filter by
-	LgCode         string         // Local government code
-	MachiazaID     string         // Machiaza ID for filtering
-	NormalizedAddr string         // Basic-normalized address, used for computing unmatched parts
-	Limit          int            // Maximum number of results
-	HasParcel      bool           // Whether cache_parcel exists, so a chome can be told by the lots it holds
+	SearchAddr     string // Address to search for in DB
+	Pref           string // Prefecture code to filter by
+	LgCode         string // Local government code
+	MachiazaID     string // Machiaza ID for filtering
+	NormalizedAddr string // Basic-normalized address, used for computing unmatched parts
+	Limit          int    // Maximum number of results
+	HasParcel      bool   // Whether cache_parcel exists, so a chome can be told by the lots it holds
 
 	CityBoundary *util.CityBoundary // City-boundary matcher for longest-prefix city resolution
 }

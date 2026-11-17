@@ -87,11 +87,6 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		return nil, err
 	}
 
-	// Only basic category is supported for Levenshtein search
-	if p.Category != model.CategoryBasic {
-		return nil, fmt.Errorf("unsupported category for Levenshtein search: %s", p.Category)
-	}
-
 	// Every machiaza query needs a region filter: without one editdist3 runs
 	// over every machiaza in the country, seconds of CPU for a guess spanning
 	// all of Japan. An address carrying no code is scoped by the cities its
@@ -124,7 +119,7 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		return nil, fmt.Errorf("database query failed: %w", err)
 	}
 
-	results, numberChome := processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Category, p.Limit)
+	results, numberChome := processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Limit)
 	if len(results) > 0 || numberChome == nil || !p.HasParcel {
 		return results, nil
 	}
@@ -147,7 +142,7 @@ func chomeByLot(ctx context.Context, repo levenshteinQuerier, p SearchParams, se
 	if len(chomes) != 1 {
 		return nil, nil
 	}
-	result := toMatchedResult(&chomes[0], p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Category)
+	result := toMatchedResult(&chomes[0], p.SearchAddr, []rune(p.SearchAddr), searchNumbers, p.NormalizedAddr)
 	// The lot number named no chome, so everything written after the town is
 	// left unmatched.
 	town := result.StructuredAddress

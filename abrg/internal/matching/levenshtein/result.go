@@ -47,9 +47,10 @@ func ExtractSearchNumbers(searchAddr string) string {
 // processResults processes query results and returns normalized results.
 // It also returns the first candidate skipped for reading the lot number as
 // its chome, or nil if none was.
-func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, category model.Category, limit int) (results []model.MatchedResult, numberChome *repository.BasicResult) {
+func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, limit int) (results []model.MatchedResult, numberChome *repository.BasicResult) {
 	town := townBeforeParcelPrefix(searchAddr, searchNumbers)
 	townIDs := map[string]bool{}
+	searchRunes := []rune(searchAddr)
 
 	for i := range candidates {
 		brd := &candidates[i]
@@ -77,8 +78,7 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 			continue
 		}
 
-		// For basic category: skip results with @ when search lacks @ and numbers
-		if shouldSkipBasicCategory(category, searchAddr, searchNumbers, stdAddress) {
+		if shouldSkipChomeResult(searchAddr, searchNumbers, stdAddress) {
 			continue
 		}
 
@@ -96,7 +96,7 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 			continue
 		}
 
-		results = append(results, toMatchedResult(brd, searchAddr, searchNumbers, normalizedAddr, category))
+		results = append(results, toMatchedResult(brd, searchAddr, searchRunes, searchNumbers, normalizedAddr))
 	}
 
 	// Sort by score descending
@@ -122,17 +122,17 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 }
 
 // toMatchedResult scores a candidate against the search address and builds its
-// result.
-func toMatchedResult(brd *repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, category model.Category) model.MatchedResult {
+// result. searchRunes is searchAddr decoded into runes.
+func toMatchedResult(brd *repository.BasicResult, searchAddr string, searchRunes []rune, searchNumbers, normalizedAddr string) model.MatchedResult {
 	result := repository.BasicResultToPartialNormalized(brd)
 
 	// Compute rune-based Levenshtein distance for accurate scoring.
 	// DuckDB's editdist3 is byte-based and used only for DB-level filtering;
 	// the actual score uses rune distance for correct Unicode handling.
-	result.Score = Score(searchAddr, brd.NormalizedAddress)
+	result.Score = scoreRunes(searchRunes, brd.NormalizedAddress)
 	result.MatchLevel = matchlevel.DetermineMatchLevel(&result.IDs)
 	result.MatchedAddress = model.FormatAddress(&result.StructuredAddress)
-	result.UnmatchedAddress = extractUnmatchedAddress(searchNumbers, &result.StructuredAddress, category, searchAddr, normalizedAddr, result.MatchedAddress)
+	result.UnmatchedAddress = extractUnmatchedAddress(searchNumbers, &result.StructuredAddress, searchAddr, normalizedAddr, result.MatchedAddress)
 	return result
 }
 
@@ -142,10 +142,9 @@ func sameOaza(a, b *repository.BasicResult) bool {
 	return a.LgCode == b.LgCode && a.MachiazaID[:min(4, len(a.MachiazaID))] == b.MachiazaID[:min(4, len(b.MachiazaID))]
 }
 
-func shouldSkipBasicCategory(category model.Category, searchAddr, searchNumbers, stdAddress string) bool {
-	if category != model.CategoryBasic {
-		return false
-	}
+// shouldSkipChomeResult reports whether a chome result (one with @) answers a
+// search that names neither a chome nor a number.
+func shouldSkipChomeResult(searchAddr, searchNumbers, stdAddress string) bool {
 	hasSearchAtSign := strings.Contains(searchAddr, "@")
 	hasSearchNumbers := searchNumbers != ""
 	hasResultAtSign := strings.Contains(stdAddress, "@")

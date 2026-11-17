@@ -55,10 +55,6 @@ func (n *Impl) handleFallback(ctx context.Context, nctx *normalizeContext) ([]mo
 // tryCityRecordSearch looks for a city-level match in cache_city before
 // Levenshtein. This handles city-only addresses (e.g., "鎌ガ谷市", "柴田郡大河原町").
 func (n *Impl) tryCityRecordSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	if n.repo == nil {
-		return nil, nil
-	}
-
 	searchAddrStr := nctx.Input.SearchAddr.String()
 	fuzzy := false
 	cityResult, err := n.queryCityRecord(ctx, searchAddrStr, nctx.Input.Pref, nctx.Input.NormalizedAddr)
@@ -123,7 +119,7 @@ func (n *Impl) searchTownUnderCity(ctx context.Context, nctx *normalizeContext, 
 // "神田鍛冶町二丁目" where the specific chome does not exist. Skipped when
 // tryLevenshteinFallback already searched (avoids a duplicate search in CategoryAll).
 func (n *Impl) tryLevenshteinCitySearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	if n.repo == nil || nctx.State.SkipLevenshtein {
+	if nctx.State.SkipLevenshtein {
 		return nil, nil
 	}
 
@@ -146,7 +142,7 @@ func (n *Impl) tryLevenshteinCitySearch(ctx context.Context, nctx *normalizeCont
 // tryPrefectureRecordSearch falls back to the prefecture record when the
 // prefecture is known but nothing more specific matched.
 func (n *Impl) tryPrefectureRecordSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	if nctx.Input.Pref == "" || nctx.Input.Pref == model.All || n.repo == nil {
+	if nctx.Input.Pref == "" || nctx.Input.Pref == model.All {
 		return nil, nil
 	}
 
@@ -214,8 +210,8 @@ func (n *Impl) handleBasicFallback(ctx context.Context, nctx *normalizeContext) 
 
 // tryChomeSearch tries to find a chome-specific record when has_chome=true but no chome in result.
 func (n *Impl) tryChomeSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	chomeSearchAddr := convertColonToChome(nctx.Input.SearchAddr)
-	if chomeSearchAddr.HasChome == nctx.Input.SearchAddr.HasChome {
+	chomeSearchAddr, ok := convertedToChome(nctx.Input.SearchAddr)
+	if !ok {
 		return nil, nil
 	}
 
@@ -263,7 +259,7 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 	parcelAllowed := nctx.Input.Category == model.CategoryParcel ||
 		nctx.Input.Category == model.CategoryAll || nctx.Input.Category == ""
 
-	if parcelAllowed && len(rest) > 0 && n.twoStageSearch != nil {
+	if parcelAllowed && len(rest) > 0 {
 		parcelAddr := parsedAddress{Base: base, Numbers: rest}
 		parcelResults, err := n.twoStageSearch.normalizeWithBasic(ctx, model.CategoryParcel, results, parcelAddr)
 		if err != nil {
@@ -289,8 +285,8 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 
 // tryOazaChoSearch tries to find an oaza_cho record for city-level matches.
 func (n *Impl) tryOazaChoSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	chomeSearchAddr := convertColonToChome(nctx.Input.SearchAddr)
-	if chomeSearchAddr.HasChome == nctx.Input.SearchAddr.HasChome {
+	chomeSearchAddr, ok := convertedToChome(nctx.Input.SearchAddr)
+	if !ok {
 		return nil, nil
 	}
 

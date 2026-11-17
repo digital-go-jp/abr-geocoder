@@ -61,87 +61,35 @@ func queryOne[T any](ctx context.Context, db *sql.DB, query string, args []any, 
 // prefecture level, with that level.
 func (r *DB) Coordinates(ctx context.Context, lgCode, machiazaID string) ([]float64, model.MatchLevel) {
 	if machiazaID != "" {
-		coords, level := r.queryBasicCoordinates(ctx, lgCode, machiazaID)
-		if coords != nil {
-			return coords, level
+		if coords, ok := r.queryCoordinates(ctx, "cache_machiaza", "lg_code = ? AND machiaza_id = ?", lgCode, machiazaID); ok {
+			return coords, matchlevel.DetermineMatchLevel(&model.IDs{
+				LgCode:     &lgCode,
+				MachiazaID: &machiazaID,
+			})
 		}
 	}
 
-	if coords, level := r.queryCityCoordinates(ctx, lgCode); coords != nil {
-		return coords, level
-	}
-
-	if coords, level := r.queryPrefectureByLgCode(ctx, lgCode); coords != nil {
-		return coords, level
+	if coords, ok := r.queryCoordinates(ctx, "cache_city", "lg_code = ?", lgCode); ok {
+		return coords, model.MatchLevelCity
 	}
 
 	if len(lgCode) >= model.LgCodePrefLength {
 		prefCode := lgCode[:model.LgCodePrefLength]
-		if coords, level := r.queryPrefectureCoordinates(ctx, prefCode); coords != nil {
-			return coords, level
+		if coords, ok := r.queryCoordinates(ctx, "cache_pref", "pref_code = ?", prefCode); ok {
+			return coords, model.MatchLevelPrefecture
 		}
 	}
 
 	return nil, ""
 }
 
-func (r *DB) queryBasicCoordinates(ctx context.Context, lgCode, machiazaID string) ([]float64, model.MatchLevel) {
-	query := `
-		SELECT ` + coordColumns + `
-		FROM cache_machiaza
-		WHERE lg_code = ?
-		AND machiaza_id = ?
-		AND lon IS NOT NULL AND lat IS NOT NULL
-		LIMIT 1
-	`
-
-	if coords, ok := scanCoordinates(r.db.QueryRowContext(ctx, query, lgCode, machiazaID)); ok {
-		level := matchlevel.DetermineMatchLevel(&model.IDs{
-			LgCode:     &lgCode,
-			MachiazaID: &machiazaID,
-		})
-		return coords, level
-	}
-	return nil, ""
-}
-
-func (r *DB) queryCityCoordinates(ctx context.Context, lgCode string) ([]float64, model.MatchLevel) {
-	query := `
-		SELECT ` + coordColumns + `
-		FROM cache_city
-		WHERE lg_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
-		LIMIT 1
-	`
-	if coords, ok := scanCoordinates(r.db.QueryRowContext(ctx, query, lgCode)); ok {
-		return coords, model.MatchLevelCity
-	}
-	return nil, ""
-}
-
-func (r *DB) queryPrefectureByLgCode(ctx context.Context, lgCode string) ([]float64, model.MatchLevel) {
-	query := `
-		SELECT ` + coordColumns + `
-		FROM cache_pref
-		WHERE lg_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
-		LIMIT 1
-	`
-	if coords, ok := scanCoordinates(r.db.QueryRowContext(ctx, query, lgCode)); ok {
-		return coords, model.MatchLevelPrefecture
-	}
-	return nil, ""
-}
-
-func (r *DB) queryPrefectureCoordinates(ctx context.Context, prefCode string) ([]float64, model.MatchLevel) {
-	query := `
-		SELECT ` + coordColumns + `
-		FROM cache_pref
-		WHERE pref_code = ? AND lon IS NOT NULL AND lat IS NOT NULL
-		LIMIT 1
-	`
-	if coords, ok := scanCoordinates(r.db.QueryRowContext(ctx, query, prefCode)); ok {
-		return coords, model.MatchLevelPrefecture
-	}
-	return nil, ""
+// queryCoordinates returns the coordinates of the first row of table matching
+// cond whose lon and lat are both set.
+func (r *DB) queryCoordinates(ctx context.Context, table, cond string, args ...any) ([]float64, bool) {
+	query := `SELECT ` + coordColumns + ` FROM ` + table + `
+		WHERE ` + cond + ` AND lon IS NOT NULL AND lat IS NOT NULL
+		LIMIT 1`
+	return scanCoordinates(r.db.QueryRowContext(ctx, query, args...))
 }
 
 // scanCoordinates returns [lon, lat] from row, or false if there is no row or

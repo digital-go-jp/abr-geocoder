@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
 )
 
@@ -63,7 +62,6 @@ func (failingPrefixQuerier) FindCityByAddress(context.Context, repository.CitySe
 // A prefix-fallback query failure must surface as an error, not as "no match".
 func TestSearch_PrefixFallbackErrorPropagates(t *testing.T) {
 	_, err := Search(t.Context(), failingPrefixQuerier{}, SearchParams{
-		Category:   model.CategoryBasic,
 		SearchAddr: "宇佐市安心院町古川長坂",
 		Limit:      1,
 	})
@@ -83,7 +81,6 @@ func TestTryFallbackCitySearchByScore_ForwardsPrefCode(t *testing.T) {
 	}}
 
 	_, err := tryFallbackCitySearchByScore(t.Context(), repo, SearchParams{
-		Category:       model.CategoryAll,
 		NormalizedAddr: "府中市上下町甲148番地",
 		SearchAddr:     "府中市上下町甲148番地",
 		Pref:           "34",
@@ -107,7 +104,6 @@ func TestTryFallbackCitySearchByScore_FullMatchYieldsNilUnmatched(t *testing.T) 
 	}}
 
 	results, err := tryFallbackCitySearchByScore(t.Context(), repo, SearchParams{
-		Category:       model.CategoryAll,
 		NormalizedAddr: "福山市",
 		SearchAddr:     "福山市",
 		Limit:          1,
@@ -171,7 +167,6 @@ func TestSearch_NumberAsChomeResolvedByLot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			q := &lotQuerier{candidates: []repository.BasicResult{tomioka1, tomiura}, chomes: tt.chomes}
 			got, err := Search(context.Background(), q, SearchParams{
-				Category:       model.CategoryBasic,
 				SearchAddr:     "函館市富岡町:215",
 				LgCode:         "012025",
 				NormalizedAddr: "北海道函館市富岡町215番地",

@@ -130,7 +130,7 @@ func (n *Impl) tryDetailedSearch(ctx context.Context, nctx *normalizeContext) ([
 func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContext) (normalizeState, bool, error) {
 	state := nctx.State
 
-	if len(state.BasicResults) > 0 || n.repo == nil || state.SkipLevenshtein {
+	if len(state.BasicResults) > 0 || state.SkipLevenshtein {
 		return state, false, nil
 	}
 
@@ -207,7 +207,6 @@ func strongestResult(results []model.MatchedResult) (model.MatchedResult, bool) 
 // buildLevenshteinParams constructs SearchParams from the normalize context.
 func (n *Impl) buildLevenshteinParams(nctx *normalizeContext, lgCode, machiazaID string) levenshtein.SearchParams {
 	return levenshtein.SearchParams{
-		Category:       model.CategoryBasic,
 		SearchAddr:     nctx.Input.SearchAddr.String(),
 		Pref:           nctx.Input.Pref,
 		LgCode:         lgCode,

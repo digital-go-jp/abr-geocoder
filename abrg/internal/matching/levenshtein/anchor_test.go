@@ -43,7 +43,6 @@ func (r *recordingQuerier) FindCityByAddress(_ context.Context, _ repository.Cit
 
 func anchorlessParams(searchAddr string) SearchParams {
 	return SearchParams{
-		Category:     model.CategoryBasic,
 		SearchAddr:   searchAddr,
 		Pref:         model.All,
 		Limit:        1,
