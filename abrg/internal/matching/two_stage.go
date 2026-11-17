@@ -84,12 +84,11 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 		}
 	}
 
-	// finalize sets unmatched address and applies parcel-specific post-processing.
+	// finalize sets the unmatched address on each result.
 	finalize := func(results []model.MatchedResult, usedSearchAddr parsedAddress) []model.MatchedResult {
 		for i := range results {
 			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, usedSearchAddr)
 		}
-		mergeKyotoStToResults(results, nctx.State.BasicResults)
 		return results
 	}
 
