@@ -207,7 +207,6 @@ func strongestResult(results []model.MatchedResult) (model.MatchedResult, bool) 
 // buildLevenshteinParams constructs SearchParams from the normalize context.
 func (n *Impl) buildLevenshteinParams(nctx *normalizeContext, lgCode, machiazaID string) levenshtein.SearchParams {
 	return levenshtein.SearchParams{
-		Category:       model.CategoryBasic,
 		SearchAddr:     nctx.Input.SearchAddr.String(),
 		Pref:           nctx.Input.Pref,
 		LgCode:         lgCode,

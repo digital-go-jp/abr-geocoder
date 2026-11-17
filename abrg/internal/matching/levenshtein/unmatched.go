@@ -78,7 +78,6 @@ func adjustSearchAddrForChome(addr *model.StructuredAddress, searchNumbers, sear
 func extractUnmatchedAddress(
 	searchNumbers string,
 	addr *model.StructuredAddress,
-	category model.Category,
 	searchAddr string,
 	normalizedAddr string,
 	matchedAddr string,
@@ -111,7 +110,7 @@ func extractUnmatchedAddress(
 	}
 
 	// No number to match
-	if category == model.CategoryBasic && strings.Contains(searchAddr, "@") {
+	if strings.Contains(searchAddr, "@") {
 		return unmatched.ExtractUnmatchedParts(unmatched.Addresses{Normalized: normalizedAddr, Matched: matchedAddr, Search: searchAddr})
 	}
 
