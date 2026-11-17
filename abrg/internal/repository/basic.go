@@ -19,6 +19,16 @@ const basicColumns = `normalized_address, lg_code, machiaza_id, rsdt_addr_flg,
 
 // FindBasicByAddress searches cache_machiaza by normalized_address.
 func (r *DB) FindBasicByAddress(ctx context.Context, params BasicSearchParams) ([]BasicResult, error) {
+	query, args := basicByAddressQuery(params)
+	results, err := queryRows(ctx, r.db, query, args, params.Limit, scanBasicResultRow)
+	if err != nil {
+		return nil, fmt.Errorf("find basic by address %q: %w", params.Address, err)
+	}
+	return results, nil
+}
+
+// basicByAddressQuery returns the query of FindBasicByAddress and its arguments.
+func basicByAddressQuery(params BasicSearchParams) (string, []any) {
 	// The address is looked up alone in a materialized CTE.
 	// DuckDB reads idx_machiaza_normalized only for an equality filter on its
 	// own: with another filter or with ORDER BY and LIMIT in the same query,
@@ -32,13 +42,7 @@ func (r *DB) FindBasicByAddress(ctx context.Context, params BasicSearchParams) (
 	}
 
 	query += " ORDER BY (parcel_count + rsdtdsp_count) DESC, machiaza_id DESC, lg_code, rsdt_addr_flg LIMIT ?"
-	args = append(args, params.Limit)
-
-	results, err := queryRows(ctx, r.db, query, args, params.Limit, scanBasicResultRow)
-	if err != nil {
-		return nil, fmt.Errorf("find basic by address %q: %w", params.Address, err)
-	}
-	return results, nil
+	return query, append(args, params.Limit)
 }
 
 // scanBasicResultRow scans a row matching basicColumns into a BasicResult.
