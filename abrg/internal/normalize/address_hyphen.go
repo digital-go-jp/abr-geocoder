@@ -356,7 +356,7 @@ func AddressNumbersToHyphen(s string) (string, bool) {
 	// N番M with a 号 or 棟 suffix is handled by the dedicated rules below, so
 	// the plain N番M rules must not fire. Decided on the untouched input,
 	// before any phase can rewrite the suffix away.
-	plainBan := !hasBanGoPattern(s) && !hasBanTouPattern(s)
+	plainBan := !hasBanNumberSuffix(s, "号") && !hasBanNumberSuffix(s, "棟")
 
 	// Phase 1: Preprocess room/floor patterns
 	if strings.Contains(s, "室") || strings.Contains(s, "F") || strings.Contains(s, "階") {
@@ -545,28 +545,26 @@ var noAfterDigitRules = []ReplaceRule{
 	{digitNoDigitEnd, "${1}-${3}${4}"},   // Nの/ノM at end → N-M
 }
 
-// hasBanGoPattern checks for pattern "数字+番+数字(ハイフン数字)*+号" without regex.
-func hasBanGoPattern(s string) bool {
-	// Quick check: must contain 号
-	idx := strings.Index(s, "号")
+// hasBanNumberSuffix reports whether s holds "digit + 番 + digit groups + suffix",
+// such as 7番14号 or 7番14棟. Only digit groups may sit between 番 and the
+// suffix, so that a building name ending in the suffix (7番14コーポ303号,
+// 7番14コーポ3棟) is not taken for the pattern.
+func hasBanNumberSuffix(s, suffix string) bool {
+	idx := strings.Index(s, suffix)
 	if idx < 1 {
 		return false
 	}
 
-	// Find 番 before 号
 	banIdx := strings.LastIndex(s[:idx], "番")
 	if banIdx < 1 {
 		return false
 	}
 
-	// Check for digit before 番
 	lastRune, _ := utf8.DecodeLastRuneInString(s[:banIdx])
 	if !char.IsASCIIDigit(lastRune) {
 		return false
 	}
 
-	// The part between 番 and 号 must be digit(s) optionally followed by -digit(s),
-	// so that a building name ending in 号 (7番14コーポ303号) is not taken for N番M号.
 	return isDigitGroups(s[banIdx+len("番") : idx])
 }
 
@@ -581,37 +579,6 @@ func isDigitGroups(s string) bool {
 		}
 	}
 	return true
-}
-
-// hasBanTouPattern checks for pattern "数字+番+数字+棟" without regex.
-func hasBanTouPattern(s string) bool {
-	// Quick check: must contain 棟
-	idx := strings.Index(s, "棟")
-	if idx < 1 {
-		return false
-	}
-
-	// Check for digit before 棟
-	lastRune, _ := utf8.DecodeLastRuneInString(s[:idx])
-	if !char.IsASCIIDigit(lastRune) {
-		return false
-	}
-
-	// Find 番 before 棟
-	banIdx := strings.LastIndex(s[:idx], "番")
-	if banIdx < 1 {
-		return false
-	}
-
-	// Check for digit before 番
-	lastRuneBefore, _ := utf8.DecodeLastRuneInString(s[:banIdx])
-	if !char.IsASCIIDigit(lastRuneBefore) {
-		return false
-	}
-
-	// Only digits may sit between 番 and 棟, so that a building name holding
-	// a numbered 棟 (7番14コーポ3棟303号) is not taken for N番M棟.
-	return isDigitGroups(s[banIdx+len("番") : idx])
 }
 
 // goAndPostfixRules run after the main conversion passes.
