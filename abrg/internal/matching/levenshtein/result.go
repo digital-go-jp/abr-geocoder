@@ -50,6 +50,7 @@ func ExtractSearchNumbers(searchAddr string) string {
 func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, limit int) (results []model.MatchedResult, numberChome *repository.BasicResult) {
 	town := townBeforeParcelPrefix(searchAddr, searchNumbers)
 	townIDs := map[string]bool{}
+	searchRunes := []rune(searchAddr)
 
 	for i := range candidates {
 		brd := &candidates[i]
@@ -96,7 +97,7 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 			continue
 		}
 
-		results = append(results, toMatchedResult(brd, searchAddr, searchNumbers, normalizedAddr))
+		results = append(results, toMatchedResult(brd, searchAddr, searchRunes, searchNumbers, normalizedAddr))
 	}
 
 	// Sort by score descending
@@ -122,14 +123,14 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 }
 
 // toMatchedResult scores a candidate against the search address and builds its
-// result.
-func toMatchedResult(brd *repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string) model.MatchedResult {
+// result. searchRunes is searchAddr decoded into runes.
+func toMatchedResult(brd *repository.BasicResult, searchAddr string, searchRunes []rune, searchNumbers, normalizedAddr string) model.MatchedResult {
 	result := repository.BasicResultToPartialNormalized(brd)
 
 	// Compute rune-based Levenshtein distance for accurate scoring.
 	// DuckDB's editdist3 is byte-based and used only for DB-level filtering;
 	// the actual score uses rune distance for correct Unicode handling.
-	result.Score = Score(searchAddr, brd.NormalizedAddress)
+	result.Score = scoreRunes(searchRunes, brd.NormalizedAddress)
 	result.MatchLevel = matchlevel.DetermineMatchLevel(&result.IDs)
 	result.MatchedAddress = model.FormatAddress(&result.StructuredAddress)
 	result.UnmatchedAddress = extractUnmatchedAddress(searchNumbers, &result.StructuredAddress, searchAddr, normalizedAddr, result.MatchedAddress)

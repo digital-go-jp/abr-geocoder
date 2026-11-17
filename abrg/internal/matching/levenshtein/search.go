@@ -142,7 +142,7 @@ func chomeByLot(ctx context.Context, repo levenshteinQuerier, p SearchParams, se
 	if len(chomes) != 1 {
 		return nil, nil
 	}
-	result := toMatchedResult(&chomes[0], p.SearchAddr, searchNumbers, p.NormalizedAddr)
+	result := toMatchedResult(&chomes[0], p.SearchAddr, []rune(p.SearchAddr), searchNumbers, p.NormalizedAddr)
 	// The lot number named no chome, so everything written after the town is
 	// left unmatched.
 	town := result.StructuredAddress
