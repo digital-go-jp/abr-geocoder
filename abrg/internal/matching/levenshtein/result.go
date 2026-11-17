@@ -78,7 +78,6 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 			continue
 		}
 
-		// Skip results with @ when search lacks @ and numbers
 		if shouldSkipChomeResult(searchAddr, searchNumbers, stdAddress) {
 			continue
 		}

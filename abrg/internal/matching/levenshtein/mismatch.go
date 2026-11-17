@@ -13,12 +13,8 @@ import (
 
 // hasChomeMismatch checks if the search address chome doesn't match the result chome.
 func hasChomeMismatch(searchAddr string, resultChome *string) bool {
-	if resultChome == nil || !strings.Contains(searchAddr, "@") {
-		return false
-	}
-
 	atPos := strings.Index(searchAddr, "@")
-	if atPos <= 0 {
+	if resultChome == nil || atPos <= 0 {
 		return false
 	}
 

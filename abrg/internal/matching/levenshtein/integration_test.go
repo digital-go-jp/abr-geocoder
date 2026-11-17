@@ -55,7 +55,7 @@ func TestProcessResults(t *testing.T) {
 		}
 	})
 
-	t.Run("drops basic-category @ noise when search has no number", func(t *testing.T) {
+	t.Run("drops chome (@) results when search has no number", func(t *testing.T) {
 		// A chome (@) record must not surface for a plain place-name search.
 		noise := basicCandidate("東京都", "千代田区", "丸の内", "東京都千代田区丸の内1@")
 		got := call([]repository.BasicResult{exact, noise}, 10)

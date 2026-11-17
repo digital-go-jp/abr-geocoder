@@ -15,9 +15,6 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 	}
 
 	basic := &nctx.State.BasicResults[0]
-	if basic.IDs.MachiazaID == nil {
-		return nil, nil
-	}
 
 	// Prepare search address: use HasChome to determine if chome adjustment is needed
 	searchAddr := nctx.Input.SearchAddr
@@ -43,14 +40,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 	if err != nil {
 		return nil, err
 	}
-	if results != nil {
-		for i := range results {
-			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, searchAddr)
-		}
-		return results, nil
-	}
-
-	return nil, nil
+	return withTwoStageUnmatched(results, nctx.Input.NormalizedAddr, searchAddr), nil
 }
 
 // tryTwoStageParcel attempts parcel normalization using TwoStageSearch.
@@ -61,22 +51,11 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 	}
 
 	basic := &nctx.State.BasicResults[0]
-	if basic.IDs.MachiazaID == nil {
-		return nil, nil
-	}
 
 	searchAddr := nctx.Input.SearchAddr.String()
 	if basic.StructuredAddress.KyotoSt != nil {
 		afterColon := strings.Join(nctx.Input.SearchAddr.Numbers, "-")
 		searchAddr = buildSearchAddrWithoutKyotoSt(&basic.StructuredAddress, afterColon)
-	}
-
-	// finalize sets the unmatched address on each result.
-	finalize := func(results []model.MatchedResult, usedSearchAddr parsedAddress) []model.MatchedResult {
-		for i := range results {
-			setTwoStageUnmatchedAddress(&results[i], nctx.Input.NormalizedAddr, usedSearchAddr)
-		}
-		return results
 	}
 
 	// For has_chome addresses without existing chome notation:
@@ -95,7 +74,7 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 				return nil, err
 			}
 			if results != nil {
-				return finalize(results, adjusted), nil
+				return withTwoStageUnmatched(results, nctx.Input.NormalizedAddr, adjusted), nil
 			}
 		}
 	}
@@ -107,8 +86,17 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 		return nil, err
 	}
 	if results != nil {
-		return finalize(results, parsedSearchAddr), nil
+		return withTwoStageUnmatched(results, nctx.Input.NormalizedAddr, parsedSearchAddr), nil
 	}
 
 	return nil, nil
+}
+
+// withTwoStageUnmatched sets the unmatched address of each two-stage result
+// from the search address it was found with, and returns the results.
+func withTwoStageUnmatched(results []model.MatchedResult, normalizedAddr string, used parsedAddress) []model.MatchedResult {
+	for i := range results {
+		setTwoStageUnmatchedAddress(&results[i], normalizedAddr, used)
+	}
+	return results
 }
