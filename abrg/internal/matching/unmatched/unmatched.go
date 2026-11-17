@@ -160,9 +160,6 @@ func extractUnmatchedWithColonAt(originalAddr, standardizedAddrPart, matchedAddr
 	}
 
 	parts := strings.Split(beforeColon, "@")
-	if len(parts) < 2 {
-		return afterColon
-	}
 
 	// Find the chome number at the end of the part before @
 	beforeAt := parts[0]
@@ -199,8 +196,8 @@ func extractUnmatchedWithColonAt(originalAddr, standardizedAddrPart, matchedAddr
 			// Found the pattern in standardizedAddrPart
 			afterChome := standardizedAddrPart[idx+len(pattern):]
 
-			// Check if user explicitly specified "X丁目"
-			hasChomeInOriginal := strings.Contains(originalAddr, pattern) || strings.Contains(originalAddr, "丁目")
+			// Check if the user wrote a chome ("X丁目") in the address
+			hasChomeInOriginal := strings.Contains(originalAddr, "丁目")
 			if hasChomeInOriginal && afterChome == afterColon && !strings.Contains(afterColon, "-") {
 				// Chome was NOT matched, include it in unmatched
 				return standardizedAddrPart[idx:]
