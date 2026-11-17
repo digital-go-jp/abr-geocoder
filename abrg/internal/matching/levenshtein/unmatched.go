@@ -62,9 +62,7 @@ func adjustSearchAddrForChome(addr *model.StructuredAddress, searchNumbers, sear
 	if addr.Chome == nil {
 		return searchAddr
 	}
-	chome := *addr.Chome
-	chomeNum := util.StripChomeSuffix(chome)
-	chomeNum, _ = transform.KanjiToArabic(chomeNum)
+	chomeNum := chomeNumber(*addr.Chome)
 
 	if remaining, found := strings.CutPrefix(searchNumbers, chomeNum+"-"); found {
 		return remaining

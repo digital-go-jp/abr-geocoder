@@ -28,11 +28,15 @@ func hasChomeMismatch(searchAddr string, resultChome *string) bool {
 		return false
 	}
 
-	// Extract number from result chome
-	resultChomeNum := util.StripChomeSuffix(*resultChome)
-	resultChomeNum, _ = transform.KanjiToArabic(resultChomeNum)
+	return searchChome != chomeNumber(*resultChome)
+}
 
-	return searchChome != resultChomeNum
+// chomeNumber returns the number of a chome name in arabic digits.
+//
+//	e.g., "三丁目" -> "3"
+func chomeNumber(chome string) string {
+	n, _ := transform.KanjiToArabic(util.StripChomeSuffix(chome))
+	return n
 }
 
 // takesNumberAsChome reports whether a chome result would take a lot number
@@ -51,8 +55,7 @@ func takesNumberAsChome(searchAddr, searchNumbers string, resultChome *string) b
 	if leading == "" || util.ExtractChomeDigits(leading) != leading {
 		return false
 	}
-	chome, _ := transform.KanjiToArabic(util.StripChomeSuffix(*resultChome))
-	return leading != chome
+	return leading != chomeNumber(*resultChome)
 }
 
 // hasTownNameMismatch checks if the input town name doesn't match the result's oaza_cho.
