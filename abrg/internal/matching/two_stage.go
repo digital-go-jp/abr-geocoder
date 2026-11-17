@@ -23,8 +23,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 	searchAddr := nctx.Input.SearchAddr
 	chomeConverted := false
 	if basic.Machiaza.HasChome {
-		converted := convertColonToChome(nctx.Input.SearchAddr)
-		if converted.HasChome != nctx.Input.SearchAddr.HasChome {
+		if converted, ok := convertedToChome(nctx.Input.SearchAddr); ok {
 			searchAddr = converted
 			chomeConverted = true
 		}

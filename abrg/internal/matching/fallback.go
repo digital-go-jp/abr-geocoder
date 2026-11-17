@@ -210,8 +210,8 @@ func (n *Impl) handleBasicFallback(ctx context.Context, nctx *normalizeContext) 
 
 // tryChomeSearch tries to find a chome-specific record when has_chome=true but no chome in result.
 func (n *Impl) tryChomeSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	chomeSearchAddr := convertColonToChome(nctx.Input.SearchAddr)
-	if chomeSearchAddr.HasChome == nctx.Input.SearchAddr.HasChome {
+	chomeSearchAddr, ok := convertedToChome(nctx.Input.SearchAddr)
+	if !ok {
 		return nil, nil
 	}
 
@@ -285,8 +285,8 @@ func (n *Impl) tryNumericKoazaSearch(ctx context.Context, nctx *normalizeContext
 
 // tryOazaChoSearch tries to find an oaza_cho record for city-level matches.
 func (n *Impl) tryOazaChoSearch(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	chomeSearchAddr := convertColonToChome(nctx.Input.SearchAddr)
-	if chomeSearchAddr.HasChome == nctx.Input.SearchAddr.HasChome {
+	chomeSearchAddr, ok := convertedToChome(nctx.Input.SearchAddr)
+	if !ok {
 		return nil, nil
 	}
 

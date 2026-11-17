@@ -91,6 +91,13 @@ func convertColonToChome(parsed parsedAddress) parsedAddress {
 	return result
 }
 
+// convertedToChome returns convertColonToChome(parsed) and whether it read the
+// first number as a chome.
+func convertedToChome(parsed parsedAddress) (parsedAddress, bool) {
+	converted := convertColonToChome(parsed)
+	return converted, converted.HasChome != parsed.HasChome
+}
+
 // startsWithAlphaOrKatakana checks if the string starts with A-Z or katakana.
 func startsWithAlphaOrKatakana(s string) bool {
 	if s == "" {
