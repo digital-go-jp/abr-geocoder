@@ -72,18 +72,6 @@ func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([
 		searchAddr = buildSearchAddrWithoutKyotoSt(&basic.StructuredAddress, afterColon)
 	}
 
-	// Skip parcel search if this machiaza has no parcel data and machiaza_id ends with "000"
-	// (no base record to fallback to)
-	parcelCount := basic.Machiaza.ParcelCount
-	machiazaID := *basic.IDs.MachiazaID
-	if parcelCount == 0 && model.IsBaseMachiazaID(machiazaID) {
-		// For has_chome=true, parcel data may exist under the chome-specific machiaza_id
-		// so we continue to search with chome adjustment
-		if !basic.Machiaza.HasChome {
-			return nil, nil
-		}
-	}
-
 	// finalize sets the unmatched address on each result.
 	finalize := func(results []model.MatchedResult, usedSearchAddr parsedAddress) []model.MatchedResult {
 		for i := range results {
