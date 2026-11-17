@@ -420,12 +420,6 @@ func replaceBanGoEnd(s string) string {
 		return s
 	}
 
-	// Find start of first number (before 番)
-	numStart := banIdx - 1
-	for numStart > 0 && char.IsASCIIDigit(s[numStart-1]) {
-		numStart--
-	}
-
 	// Get the part between 番 and 号
 	goIdx := len(s) - len("号")
 	between := s[banIdx+len("番") : goIdx]
@@ -440,8 +434,7 @@ func replaceBanGoEnd(s string) string {
 		}
 	}
 
-	// Build result: prefix + firstNum + "-" + between
-	return s[:numStart] + s[numStart:banIdx] + "-" + between
+	return s[:banIdx] + "-" + between
 }
 
 // processBanGai splits a N番街 sequence from a following building name, or
