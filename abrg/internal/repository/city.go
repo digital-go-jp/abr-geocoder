@@ -130,37 +130,30 @@ func (r *DB) FindPrefecture(ctx context.Context, prefCode string) (*PrefectureRe
 
 // scanCityWithAddr scans a cache_city row with coordinates into CityResult.
 func scanCityWithAddr(row *sql.Row) (CityResult, error) {
-	var (
-		lgCode, prefName   sql.Null[string]
-		county, city, ward sql.Null[string]
-		lon, lat           sql.Null[float64]
-	)
-	if err := row.Scan(
-		&lgCode, &prefName, &county, &city, &ward,
-		&lon, &lat,
-	); err != nil {
+	var lon, lat sql.Null[float64]
+	cr, err := scanCityColumns(row, &lon, &lat)
+	if err != nil {
 		return CityResult{}, err
 	}
-	return CityResult{
-		LgCode: scanStr(lgCode),
-		Pref:   scanStr(prefName),
-		County: scanOpt(county),
-		City:   scanStr(city),
-		Ward:   scanOpt(ward),
-		Lon:    scanOpt(lon),
-		Lat:    scanOpt(lat),
-	}, nil
+	cr.Lon = scanOpt(lon)
+	cr.Lat = scanOpt(lat)
+	return cr, nil
 }
 
 // scanCityBasic scans a cache_city row without coordinates into CityResult.
 func scanCityBasic(row *sql.Row) (CityResult, error) {
+	return scanCityColumns(row)
+}
+
+// scanCityColumns scans lg_code, pref, county, city and ward into CityResult,
+// and any further selected columns into extra.
+func scanCityColumns(row *sql.Row, extra ...any) (CityResult, error) {
 	var (
 		lgCode, prefName   sql.Null[string]
 		county, city, ward sql.Null[string]
 	)
-	if err := row.Scan(
-		&lgCode, &prefName, &county, &city, &ward,
-	); err != nil {
+	dest := append([]any{&lgCode, &prefName, &county, &city, &ward}, extra...)
+	if err := row.Scan(dest...); err != nil {
 		return CityResult{}, err
 	}
 	return CityResult{
