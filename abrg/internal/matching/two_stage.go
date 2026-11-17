@@ -10,7 +10,7 @@ import (
 // tryTwoStageResidential attempts residential normalization using TwoStageSearch.
 // Returns results with unmatched_address set, or nil if not found.
 func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	if len(nctx.State.BasicResults) == 0 || n.twoStageSearch == nil {
+	if len(nctx.State.BasicResults) == 0 {
 		return nil, nil
 	}
 
@@ -56,7 +56,7 @@ func (n *Impl) tryTwoStageResidential(ctx context.Context, nctx *normalizeContex
 // tryTwoStageParcel attempts parcel normalization using TwoStageSearch.
 // Returns results with unmatched_address set, or nil if not found.
 func (n *Impl) tryTwoStageParcel(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
-	if len(nctx.State.BasicResults) == 0 || n.twoStageSearch == nil {
+	if len(nctx.State.BasicResults) == 0 {
 		return nil, nil
 	}
 
