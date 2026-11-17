@@ -126,6 +126,7 @@ func (n *Impl) matchNormalized(ctx context.Context, query model.MatchQuery, norm
 			NormalizedAddr: normalizedAddr,
 			SearchAddr:     parseSearchAddr(searchAddr),
 			Pref:           pref,
+			QueryPref:      query.Pref,
 			Limit:          query.Limit,
 			Category:       query.Category,
 			AddressType:    addressType,

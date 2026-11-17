@@ -145,7 +145,7 @@ func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContex
 
 	// Try to detect lg_code before search for better filtering (reduces scan from ~35k to ~2k records)
 	if state.LgCode == "" {
-		state.LgCode = n.detectLgCode(searchAddrStr)
+		state.LgCode = n.detectLgCode(searchAddrStr, nctx.Input.QueryPref)
 	}
 
 	levenResults, err := levenshtein.Search(ctx, n.repo, n.buildLevenshteinParams(nctx, state.LgCode, state.MachiazaID))
