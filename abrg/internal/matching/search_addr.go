@@ -4,6 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
@@ -104,5 +105,5 @@ func startsWithAlphaOrKatakana(s string) bool {
 		return false
 	}
 	r, _ := utf8.DecodeRuneInString(s)
-	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= 'ア' && r <= 'ン')
+	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || char.IsKatakanaNumberChar(r)
 }
