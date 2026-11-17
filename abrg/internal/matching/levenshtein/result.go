@@ -129,8 +129,7 @@ func toMatchedResult(brd *repository.BasicResult, searchAddr, searchNumbers, nor
 	// Compute rune-based Levenshtein distance for accurate scoring.
 	// DuckDB's editdist3 is byte-based and used only for DB-level filtering;
 	// the actual score uses rune distance for correct Unicode handling.
-	runeEditDist := runeLevenshteinFrom([]rune(searchAddr), brd.NormalizedAddress)
-	result.Score = calculateEditDistanceScore(runeEditDist, utf8.RuneCountInString(searchAddr))
+	result.Score = Score(searchAddr, brd.NormalizedAddress)
 	result.MatchLevel = matchlevel.DetermineMatchLevel(&result.IDs)
 	result.MatchedAddress = model.FormatAddress(&result.StructuredAddress)
 	result.UnmatchedAddress = extractUnmatchedAddress(searchNumbers, &result.StructuredAddress, category, searchAddr, normalizedAddr, result.MatchedAddress)

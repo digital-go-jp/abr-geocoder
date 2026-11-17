@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/matchlevel"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/transform"
@@ -48,17 +47,20 @@ func (n *Impl) tryWardExpansion(
 		return nil, nil
 	}
 
-	remainder := normalizedAddr[len(ward):]
+	addrs := make([]string, len(candidates))
+	for i, c := range candidates {
+		addrs[i] = c.CityWard + normalizedAddr[len(ward):]
+	}
 
 	// Only a candidate whose machiaza is absent reaches the Levenshtein search,
 	// which costs several times an exact lookup. Run every candidate without it
 	// first; when one resolves a machiaza, the others cannot do better.
-	results, err := n.runWardCandidates(ctx, query, candidates, remainder, addressType, true)
+	results, err := n.matchEach(ctx, query, addrs, addressType, true)
 	if err != nil {
 		return nil, err
 	}
 	if !slices.ContainsFunc(results, reachedMachiaza) {
-		results, err = n.runWardCandidates(ctx, query, candidates, remainder, addressType, false)
+		results, err = n.matchEach(ctx, query, addrs, addressType, false)
 		if err != nil {
 			return nil, err
 		}
@@ -71,10 +73,7 @@ func (n *Impl) tryWardExpansion(
 
 	// Weaker candidates are other cities that happen to share the ward name,
 	// not alternative readings of the input, so they are dropped.
-	results = slices.DeleteFunc(results, func(r model.MatchedResult) bool {
-		return compareResultStrength(r, best) > 0
-	})
-	return sortAndLimitResults(results, query.Limit), nil
+	return sortAndLimitResults(dropWeaker(results, best), query.Limit), nil
 }
 
 // tryWardInsertion retries an address that names a designated city but not
@@ -103,24 +102,23 @@ func (n *Impl) tryWardInsertion(
 		return nil, nil
 	}
 
-	var results []model.MatchedResult
-	for _, cityWard := range cityWards {
-		r, err := n.matchNormalized(ctx, query, head+cityWard+rest, addressType, true)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, slices.DeleteFunc(r, func(r model.MatchedResult) bool {
-			return !reachedMachiaza(r)
-		})...)
+	addrs := make([]string, len(cityWards))
+	for i, cityWard := range cityWards {
+		addrs[i] = head + cityWard + rest
 	}
+	results, err := n.matchEach(ctx, query, addrs, addressType, true)
+	if err != nil {
+		return nil, err
+	}
+	results = slices.DeleteFunc(results, func(r model.MatchedResult) bool {
+		return !reachedMachiaza(r)
+	})
 
 	best, ok := strongestResult(results)
 	if !ok {
 		return nil, nil
 	}
-	results = slices.DeleteFunc(results, func(r model.MatchedResult) bool {
-		return compareResultStrength(r, best) > 0
-	})
+	results = dropWeaker(results, best)
 	// A town found in more than one ward (新栄3丁目 in 千種区, 中区 and 東区)
 	// leaves the ward undecided, so the address stays at the city.
 	if slices.ContainsFunc(results, func(r model.MatchedResult) bool {
@@ -131,25 +129,31 @@ func (n *Impl) tryWardInsertion(
 	return sortAndLimitResults(results, query.Limit), nil
 }
 
-// runWardCandidates matches the address once per candidate city and returns
-// every result. skipLevenshtein leaves out the Levenshtein search.
-func (n *Impl) runWardCandidates(
+// matchEach matches each of addrs and returns every result.
+// skipLevenshtein leaves out the Levenshtein search.
+func (n *Impl) matchEach(
 	ctx context.Context,
 	query model.MatchQuery,
-	candidates []cache.WardCandidate,
-	remainder string,
+	addrs []string,
 	addressType model.NormalizeCategory,
 	skipLevenshtein bool,
 ) ([]model.MatchedResult, error) {
 	var results []model.MatchedResult
-	for _, c := range candidates {
-		r, err := n.matchNormalized(ctx, query, c.CityWard+remainder, addressType, skipLevenshtein)
+	for _, addr := range addrs {
+		r, err := n.matchNormalized(ctx, query, addr, addressType, skipLevenshtein)
 		if err != nil {
 			return nil, err
 		}
 		results = append(results, r...)
 	}
 	return results, nil
+}
+
+// dropWeaker removes the results weaker than best.
+func dropWeaker(results []model.MatchedResult, best model.MatchedResult) []model.MatchedResult {
+	return slices.DeleteFunc(results, func(r model.MatchedResult) bool {
+		return compareResultStrength(r, best) > 0
+	})
 }
 
 // reachedMachiaza reports whether a result resolved a machiaza or deeper.
