@@ -188,6 +188,36 @@ func TestValidatePref(t *testing.T) {
 			wantPref:    "47",
 		},
 		{
+			name:        "padded pref is trimmed",
+			prefStr:     " 13 ",
+			enabledPref: "all",
+			wantPref:    "13",
+		},
+		{
+			name:        "padded pref matches enabledPref",
+			prefStr:     "13 ",
+			enabledPref: "13",
+			wantPref:    "13",
+		},
+		{
+			name:        "zero-padded pref matches unpadded enabledPref",
+			prefStr:     "01",
+			enabledPref: "1",
+			wantPref:    "01",
+		},
+		{
+			name:        "unpadded pref matches zero-padded enabledPref",
+			prefStr:     "1",
+			enabledPref: "01",
+			wantPref:    "1",
+		},
+		{
+			name:        "all pref with specific enabledPref - error",
+			prefStr:     "all",
+			enabledPref: "13",
+			wantErr:     true,
+		},
+		{
 			name:        "non-numeric pref - error",
 			prefStr:     "abc",
 			enabledPref: "all",

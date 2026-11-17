@@ -43,26 +43,37 @@ func validateCategory(categoryStr, enabledCategory string) (model.Category, erro
 	return category, nil
 }
 
-// validatePref validates pref parameter and returns default if empty.
+// validatePref validates the pref parameter against enabledPref.
+// It returns the pref with surrounding spaces removed, or enabledPref when pref is empty.
 func validatePref(prefStr, enabledPref string) (string, error) {
+	prefStr = strings.TrimSpace(prefStr)
 	if prefStr == "" {
 		prefStr = enabledPref
 	}
 
-	// Normalize "all" variants (case, surrounding whitespace) so downstream
-	// comparisons against model.All work regardless of how the caller wrote it.
-	if strings.ToLower(strings.TrimSpace(prefStr)) == model.All {
+	// Normalize the case of "all" so downstream comparisons against model.All work.
+	if strings.ToLower(prefStr) == model.All {
 		prefStr = model.All
 	} else if _, err := validate.ParsePrefectureCode(prefStr); err != nil {
 		return "", fmt.Errorf("invalid pref: %w", err)
 	}
 
-	// Validate against enabled_pref
-	if prefStr != enabledPref && enabledPref != model.All {
+	if enabledPref != model.All && !samePref(prefStr, enabledPref) {
 		return "", fmt.Errorf("invalid pref: must match enabled_pref '%s'", enabledPref)
 	}
 
 	return prefStr, nil
+}
+
+// samePref reports whether two pref values name the same prefecture.
+// Codes are compared as numbers, so "01" and "1" are the same.
+func samePref(a, b string) bool {
+	codeA, errA := validate.ParsePrefectureCode(a)
+	codeB, errB := validate.ParsePrefectureCode(b)
+	if errA != nil || errB != nil {
+		return a == b
+	}
+	return codeA == codeB
 }
 
 // ValidateOptions validates the category, pref and limit of a query against the cache configuration.
