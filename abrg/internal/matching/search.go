@@ -130,7 +130,7 @@ func (n *Impl) tryDetailedSearch(ctx context.Context, nctx *normalizeContext) ([
 func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContext) (normalizeState, bool, error) {
 	state := nctx.State
 
-	if len(state.BasicResults) > 0 || n.repo == nil || state.SkipLevenshtein {
+	if len(state.BasicResults) > 0 || state.SkipLevenshtein {
 		return state, false, nil
 	}
 
