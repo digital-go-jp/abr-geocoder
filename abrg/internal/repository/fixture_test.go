@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
@@ -421,6 +423,40 @@ func TestFindChomesWithLot_Fixture(t *testing.T) {
 			}
 			if !slices.Equal(ids, tt.want) {
 				t.Errorf("FindChomesWithLot() = %v, want %v", ids, tt.want)
+			}
+		})
+	}
+}
+
+// TestBasicByAddressQueryUsesIndex guards the lookup against falling back to a
+// scan of the whole cache_machiaza, which leaves the results unchanged.
+// The rows span every prefecture: when all rows share one pref_code, DuckDB
+// drops the pref_code filter by its statistics and reads the index anyway.
+func TestBasicByAddressQueryUsesIndex(t *testing.T) {
+	ctx := context.Background()
+	repo := newFixtureRepo(t)
+	if _, err := repo.db.ExecContext(ctx, `INSERT INTO cache_machiaza
+		(pref_code, lg_code, machiaza_id, rsdt_addr_flg, normalized_address, parcel_count, rsdtdsp_count)
+		SELECT i % 47 + 1, '131016', lpad(i::VARCHAR, 7, '0'), 0, '町' || i, 0, 0 FROM range(10000) t(i)`); err != nil {
+		t.Fatalf("insert rows: %v", err)
+	}
+	indexSQL, err := schema.GetCreateIndexesSQL()
+	if err != nil {
+		t.Fatalf("generate index SQL: %v", err)
+	}
+	if _, err := repo.db.ExecContext(ctx, indexSQL); err != nil {
+		t.Fatalf("create indexes: %v", err)
+	}
+
+	for _, prefCode := range []string{"13", model.All} {
+		t.Run("pref "+prefCode, func(t *testing.T) {
+			query, args := basicByAddressQuery(BasicSearchParams{Address: "町12", PrefCode: prefCode, Limit: 5})
+			var key, plan string
+			if err := repo.db.QueryRowContext(ctx, "EXPLAIN ANALYZE "+query, args...).Scan(&key, &plan); err != nil {
+				t.Fatalf("explain %s: %v", query, err)
+			}
+			if !strings.Contains(plan, "Index Scan") {
+				t.Errorf("plan has no index scan:\n%s", plan)
 			}
 		})
 	}
