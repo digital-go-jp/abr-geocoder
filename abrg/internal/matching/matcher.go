@@ -32,7 +32,8 @@ type implQuerier interface {
 	FindCityByAddress(ctx context.Context, params repository.CitySearchParams) (*repository.CityResult, error)
 	FindResidentialBestMatch(ctx context.Context, lgCode, machiazaID string, filter repository.ResidentialFilter) (*repository.ResidentialBestResult, error)
 	FindParcelExact(ctx context.Context, lgCode, machiazaID string, filter repository.ParcelFilter) (*repository.ParcelResult, error)
-	HasParcelNum1(ctx context.Context, lgCode, machiazaID, prcNum1 string) (bool, error)
+	ParcelLotMatch(ctx context.Context, lgCode, machiazaID, prcNum1, prcNum2 string) (repository.LotMatch, error)
+	ResidentialLotMatch(ctx context.Context, lgCode, machiazaID, blkNum, rsdtNum string) (repository.LotMatch, error)
 	FindChomesWithLot(ctx context.Context, lgCode, machiazaID, prcNum1 string) ([]repository.BasicResult, error)
 }
 

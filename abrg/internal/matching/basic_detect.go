@@ -14,7 +14,7 @@ import (
 
 // detectBasicResultsWithBasic detects basic-level results using NormalizeBasicNormalized output.
 // The normalizedAddr should be from normalize.NormalizeBasicNormalized().
-func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, pref string) (string, string, []model.MatchedResult, error) {
+func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, pref string, category model.Category) (string, string, []model.MatchedResult, error) {
 	searchAddr, _, _ := strings.Cut(normalizedAddr, " ")
 
 	// Apply variant kanji normalization (e.g., "沖繩" -> "沖縄", "ヶ/ケ" -> "ガ")
@@ -28,11 +28,8 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 
 	searchAddrBase, afterColon, hasColon := strings.Cut(searchAddrWithColon, ":")
 
-	// The leading number after the colon is the lot when the base is the machiaza.
-	lot := afterColon[:skipDigits(afterColon, 0)]
-
 	// First try: search with base address (before colon)
-	basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrBase, pref, normalizedAddr, lot)
+	basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrBase, pref, normalizedAddr, lotQuery{afterColon, category})
 	if err != nil {
 		return pref, searchAddrWithColon, nil, err
 	}
@@ -43,7 +40,7 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 
 	// Second try: if afterColon starts with a digit, try searching with chome included
 	if hasColon && len(afterColon) > 0 && char.IsASCIIDigit(afterColon[0]) {
-		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr, "")
+		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr, lotQuery{category: category})
 		if err != nil {
 			return pref, searchAddrWithColon, nil, err
 		}
