@@ -107,7 +107,7 @@ func (n *Impl) matchWithWardExpansion(ctx context.Context, query model.MatchQuer
 // matchNormalized runs the matching pipeline over an address already processed
 // by normalize.NormalizeBasicNormalized.
 func (n *Impl) matchNormalized(ctx context.Context, query model.MatchQuery, normalizedAddr string, addressType model.NormalizeCategory, skipLevenshtein bool) ([]model.MatchedResult, error) {
-	pref, searchAddr, basicResults, err := n.detectBasicResultsWithBasic(ctx, normalizedAddr, query.Pref)
+	pref, searchAddr, basicResults, err := n.detectBasicResultsWithBasic(ctx, normalizedAddr, query.Pref, query.Category)
 	if err != nil {
 		return nil, fmt.Errorf("detect basic results: %w", err)
 	}

@@ -76,9 +76,14 @@ func (s *stubRepo) FindBasicByAddress(_ context.Context, params repository.Basic
 	return rows, nil
 }
 
-func (s *stubRepo) HasParcelNum1(_ context.Context, lgCode, machiazaID, prcNum1 string) (bool, error) {
-	s.record("HasParcelNum1(%q, %q, %q)", lgCode, machiazaID, prcNum1)
-	return false, s.injected("HasParcelNum1")
+func (s *stubRepo) ParcelLotMatch(_ context.Context, lgCode, machiazaID, prcNum1, prcNum2 string) (repository.LotMatch, error) {
+	s.record("ParcelLotMatch(%q, %q, %q, %q)", lgCode, machiazaID, prcNum1, prcNum2)
+	return 0, s.injected("ParcelLotMatch")
+}
+
+func (s *stubRepo) ResidentialLotMatch(_ context.Context, lgCode, machiazaID, blkNum, rsdtNum string) (repository.LotMatch, error) {
+	s.record("ResidentialLotMatch(%q, %q, %q, %q)", lgCode, machiazaID, blkNum, rsdtNum)
+	return 0, s.injected("ResidentialLotMatch")
 }
 
 func (s *stubRepo) FindBasicByLevenshtein(_ context.Context, params repository.LevenshteinParams) ([]repository.BasicResult, error) {
