@@ -1,6 +1,7 @@
 package matching_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/cache"
@@ -84,6 +85,12 @@ func runGeocodeTests(t *testing.T, tests []geocodeTestCase) {
 			if tt.wantHasCoordinates {
 				if feature.Geometry == nil || len(feature.Geometry.Coordinates) != 2 {
 					t.Errorf("Geocode() expected 2 coordinates, got geometry=%v", feature.Geometry)
+				} else {
+					for _, c := range feature.Geometry.Coordinates {
+						if scaled := c * 1e6; math.Abs(scaled-math.Round(scaled)) > 1e-3 {
+							t.Errorf("coordinate %v has more than 6 decimal places", c)
+						}
+					}
 				}
 			}
 
