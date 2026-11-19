@@ -112,6 +112,7 @@ func TestSelectHoldingLot(t *testing.T) {
 		{"residential category ignores parcels", nil, []model.MatchedResult{plain, blocks}, "1450-1", model.CategoryResidential, "0002000"},
 		{"lot without prc_num2 prefers the parcel without one", nil, []model.MatchedResult{plain, oaza}, "1450", "", "0030000"},
 		{"top holding parcels is kept over another spelling", []model.MatchedResult{oaza, plain}, []model.MatchedResult{oaza}, "1450-1", "", "0030000"},
+		{"consecutive rows of one machiaza do not end the lookup", nil, []model.MatchedResult{oaza, oaza, plain}, "1450-1", "", "0009000"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -119,7 +120,7 @@ func TestSelectHoldingLot(t *testing.T) {
 			if all == nil {
 				all = tt.top
 			}
-			got, err := selectHoldingLot(context.Background(), repo, all, tt.top, lotQuery{tt.lot, tt.category})
+			got, err := selectHoldingLot(context.Background(), repo, all, tt.top, "", lotQuery{numbers: tt.lot, category: tt.category})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -182,5 +183,57 @@ func TestDetectMachiazaTrailingHyphenHasNoLot(t *testing.T) {
 	}
 	if len(got) != 1 || *got[0].IDs.MachiazaID != "0001000" {
 		t.Fatalf("detectMachiaza() = %+v, want machiaza_id 0001000", got)
+	}
+}
+
+func TestSelectHoldingLotAmongWholeHolders(t *testing.T) {
+	candidate := func(machiazaID, oazaCho string, parcels, residential int) model.MatchedResult {
+		lgCode := "032158"
+		return model.MatchedResult{
+			IDs:               model.IDs{LgCode: &lgCode, MachiazaID: &machiazaID},
+			StructuredAddress: model.StructuredAddress{City: new("奥州市"), OazaCho: &oazaCho},
+			Machiaza:          model.MachiazaData{ParcelCount: parcels, RsdtdspCount: residential},
+		}
+	}
+	oazaParcel := candidate("0001000", "大字袋町", 9, 0) // holds parcel 1-1
+	plainBlock := candidate("0002000", "袋町", 0, 7)   // holds block 1 with no residential numbers recorded
+	plainParcel := candidate("0003000", "袋町", 9, 0)  // holds parcel 1-1
+	empty := candidate("0004000", "袋町", 0, 0)        // holds no numbers
+	repo := lotRepo{
+		parcels:     map[string][]string{"0001000": {"1-1"}, "0003000": {"1-1"}},
+		residential: map[string][]string{"0002000": {"1"}},
+	}
+	tests := []struct {
+		name       string
+		candidates []model.MatchedResult
+		all        []model.MatchedResult
+		input      string
+		lot        string
+		want       string
+	}{
+		{"spelling with 大字 decides between a block and a parcel", []model.MatchedResult{plainBlock, oazaParcel}, nil, "奥州市大字袋町1-1", "1-1", "0001000"},
+		{"spelling without 大字 decides between a parcel and a block", []model.MatchedResult{oazaParcel, plainBlock}, nil, "奥州市袋町1-1", "1-1", "0002000"},
+		{"spelling without 大字 decides between parcels", []model.MatchedResult{oazaParcel, plainParcel}, nil, "奥州市袋町1-1", "1-1", "0003000"},
+		{"spelling with 大字 decides between parcels", []model.MatchedResult{plainParcel, oazaParcel}, nil, "奥州市大字袋町1-1", "1-1", "0001000"},
+		{"spelling decides among other spellings holding the lot", []model.MatchedResult{empty}, []model.MatchedResult{empty, oazaParcel, plainParcel}, "奥州市袋町1-1", "1-1", "0003000"},
+		{"top is kept over spelling when no candidate holds the lot", []model.MatchedResult{plainParcel, oazaParcel}, nil, "奥州市大字袋町9-9", "9-9", "0003000"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			all := tt.all
+			if all == nil {
+				all = tt.candidates
+			}
+			got, err := selectHoldingLot(context.Background(), repo, all, tt.candidates, tt.input, lotQuery{numbers: tt.lot})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != 1 {
+				t.Fatalf("selectHoldingLot() returned %d results, want 1", len(got))
+			}
+			if *got[0].IDs.MachiazaID != tt.want {
+				t.Errorf("selectHoldingLot() = %s, want %s", *got[0].IDs.MachiazaID, tt.want)
+			}
+		})
 	}
 }

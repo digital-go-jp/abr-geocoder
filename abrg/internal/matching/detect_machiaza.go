@@ -252,7 +252,7 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address, prefCod
 			// Use jaccard similarity to select the variant closest to original input
 			// (e.g., "大一本松" prefers oaza_cho "大一本松" over "大1本松",
 			//        "八の坪" prefers koaza "八の坪" over "8の坪")
-			results, err = selectHoldingLot(ctx, repo, results, levenshtein.TopByJaccard(results, originalAddr), lot)
+			results, err = selectHoldingLot(ctx, repo, results, levenshtein.TopByJaccard(results, originalAddr), originalAddr, lot)
 			if err != nil {
 				return nil, err
 			}
@@ -283,32 +283,31 @@ func queryAddressResults(ctx context.Context, repo basicFinder, address, prefCod
 // the candidates spelled differently are looked up the same way,
 // because a same-named machiaza spelled differently (萬願寺 for 万願寺) may hold the numbers of the area.
 // Two spellings that both hold numbers are separate areas, so the spelling decides there.
+// Among candidates holding the lot equally, the spelling of originalAddr with 大字 and 字 decides.
 // top[0] is returned when no candidate holds the lot.
-func selectHoldingLot(ctx context.Context, repo basicFinder, all, top []model.MatchedResult, lot lotQuery) ([]model.MatchedResult, error) {
+func selectHoldingLot(ctx context.Context, repo basicFinder, all, top []model.MatchedResult, originalAddr string, lot lotQuery) ([]model.MatchedResult, error) {
 	num1, num2 := splitLot(lot.numbers)
 	if num1 == "" {
 		return top[:1], nil
 	}
+	var holders []model.MatchedResult
+	var err error
 	if spansMachiaza(top) {
-		i, err := bestLotHolder(ctx, repo, top, lot.category, num1, num2)
+		holders, err = bestLotHolders(ctx, repo, top, lot.category, num1, num2)
 		if err != nil {
 			return nil, err
 		}
-		if i >= 0 {
-			return top[i : i+1], nil
+	}
+	if len(holders) == 0 && top[0].Machiaza.ParcelCount == 0 && top[0].Machiaza.RsdtdspCount == 0 {
+		holders, err = bestLotHolders(ctx, repo, all, lot.category, num1, num2)
+		if err != nil {
+			return nil, err
 		}
 	}
-	if top[0].Machiaza.ParcelCount > 0 || top[0].Machiaza.RsdtdspCount > 0 {
+	if len(holders) == 0 {
 		return top[:1], nil
 	}
-	i, err := bestLotHolder(ctx, repo, all, lot.category, num1, num2)
-	if err != nil {
-		return nil, err
-	}
-	if i < 0 {
-		return top[:1], nil
-	}
-	return all[i : i+1], nil
+	return levenshtein.TopByJaccardAsWritten(holders, originalAddr)[:1], nil
 }
 
 // How much of the input lot a candidate holds, from least to most.
@@ -318,10 +317,11 @@ const (
 	lotHeldWhole              // a parcel or residential number matching the whole lot
 )
 
-// bestLotHolder returns the index of the first candidate holding the most of the lot,
-// or -1 when none holds any of it.
-func bestLotHolder(ctx context.Context, repo basicFinder, candidates []model.MatchedResult, category model.Category, num1, num2 string) (int, error) {
-	best, bestHeld := -1, 0
+// bestLotHolders returns the candidates holding the most of the lot, in their order,
+// or none when no candidate holds any of it.
+func bestLotHolders(ctx context.Context, repo basicFinder, candidates []model.MatchedResult, category model.Category, num1, num2 string) ([]model.MatchedResult, error) {
+	var holders []model.MatchedResult
+	bestHeld := 0
 	for i := range candidates {
 		// One machiaza appears as consecutive rows, one per rsdt_addr_flg.
 		if i > 0 && !spansMachiaza(candidates[i-1:i+1]) {
@@ -329,16 +329,18 @@ func bestLotHolder(ctx context.Context, repo basicFinder, candidates []model.Mat
 		}
 		held, err := lotHeld(ctx, repo, &candidates[i], category, num1, num2)
 		if err != nil {
-			return -1, err
+			return nil, err
 		}
-		if held > bestHeld {
-			best, bestHeld = i, held
-		}
-		if held == lotHeldWhole {
-			break
+		switch {
+		case held == 0 || held < bestHeld:
+		case held > bestHeld:
+			bestHeld = held
+			holders = append(holders[:0], candidates[i])
+		default:
+			holders = append(holders, candidates[i])
 		}
 	}
-	return best, nil
+	return holders, nil
 }
 
 // lotHeld returns how much of the lot num1-num2 the candidate holds, or 0 for none.

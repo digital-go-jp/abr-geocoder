@@ -239,3 +239,24 @@ func TestBuildMatchedAddress(t *testing.T) {
 		})
 	}
 }
+
+func TestTopByJaccardAsWritten(t *testing.T) {
+	oaza := model.MatchedResult{StructuredAddress: model.StructuredAddress{City: new("桑名市"), OazaCho: new("大字萱町")}}
+	plain := model.MatchedResult{StructuredAddress: model.StructuredAddress{City: new("桑名市"), OazaCho: new("萱町")}}
+	tests := []struct {
+		originalAddr string
+		want         string
+	}{
+		{"桑名市萱町35", "萱町"},
+		{"桑名市大字萱町35", "大字萱町"},
+	}
+	for _, tt := range tests {
+		got := TopByJaccardAsWritten([]model.MatchedResult{oaza, plain}, tt.originalAddr)
+		if len(got) != 1 {
+			t.Fatalf("TopByJaccardAsWritten(%q) returned %d results, want 1", tt.originalAddr, len(got))
+		}
+		if *got[0].StructuredAddress.OazaCho != tt.want {
+			t.Errorf("TopByJaccardAsWritten(%q) = %q, want %q", tt.originalAddr, *got[0].StructuredAddress.OazaCho, tt.want)
+		}
+	}
+}
