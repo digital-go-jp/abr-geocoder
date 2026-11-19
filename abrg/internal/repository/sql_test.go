@@ -256,6 +256,16 @@ func TestFindCityByAddress(t *testing.T) {
 		}
 	})
 
+	t.Run("prefecture filter excludes a city in another prefecture", func(t *testing.T) {
+		result, err := repo.FindCityByAddress(ctx, CitySearchParams{CityAddr: "1000代田区", PrefCode: "27"})
+		if err != nil {
+			t.Fatalf("FindCityByAddress() error = %v", err)
+		}
+		if result != nil {
+			t.Errorf("FindCityByAddress() = %+v, want nil", result)
+		}
+	})
+
 	t.Run("no match returns nil without error", func(t *testing.T) {
 		result, err := repo.FindCityByAddress(ctx, CitySearchParams{LgCode: "999999"})
 		if err != nil {
