@@ -328,3 +328,32 @@ func TestDownloadFile_LeavesOnlyFinalFile(t *testing.T) {
 		t.Errorf("downloaded file mode = %v, want %v (0666 &^ umask)", gotInfo.Mode().Perm(), refInfo.Mode().Perm())
 	}
 }
+
+// TestFetchFeed_Non200WithFeedBody pins that a non-200 response is an error
+// even when its body would decode as a valid feed, so an error page shaped
+// like an empty feed cannot pass for "no datasets".
+func TestFetchFeed_Non200WithFeedBody(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+	}{
+		{"not found", http.StatusNotFound},
+		{"server error", http.StatusInternalServerError},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte(`{"dataset":[]}`))
+			}))
+			defer server.Close()
+
+			client, _ := newFastRetryClient(server.URL)
+			if feed, err := client.FetchFeed(t.Context()); err == nil {
+				t.Errorf("FetchFeed on %d = %+v, want error", tt.status, feed)
+			}
+		})
+	}
+}

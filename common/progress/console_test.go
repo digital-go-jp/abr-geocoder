@@ -2,6 +2,7 @@ package progress
 
 import (
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -112,4 +113,32 @@ func TestConsole_UpdateProgressIgnoresNonPositive(t *testing.T) {
 		t.Errorf("current = %d, want 5 (zero and negative deltas ignored)", got)
 	}
 	c.CompleteTask()
+}
+
+// TestConsole_SecondTaskAfterComplete runs a task to completion, starts a second
+// one and cancels it mid-run. The second task must start from zero, and the
+// cancel must take its line off the screen.
+func TestConsole_SecondTaskAfterComplete(t *testing.T) {
+	silenceStderr(t)
+
+	c := NewConsole()
+	c.StartTask("first", 3)
+	c.UpdateProgress(1)
+	c.CompleteTask()
+
+	c.StartTask("second", 3)
+	termMu.Lock()
+	content := c.line.content
+	termMu.Unlock()
+	if !strings.Contains(content, "] 0/3 ") {
+		t.Errorf("second task line = %q, want it to start at 0/3", content)
+	}
+
+	c.Cancel()
+	termMu.Lock()
+	onScreen := active
+	termMu.Unlock()
+	if onScreen != nil {
+		t.Error("a line is still on screen after Cancel")
+	}
 }
