@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/config"
@@ -343,6 +344,47 @@ func TestBuildS3Prefixes(t *testing.T) {
 			}
 			if !tt.wantErr && !slices.Equal(got, tt.want) {
 				t.Errorf("buildS3Prefixes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateImportConfig(t *testing.T) {
+	valid := func() *config.ImportConfig {
+		return &config.ImportConfig{
+			Profile:         "basic",
+			EnabledPref:     []int{13},
+			EnabledCategory: []model.FileCategory{model.FileCategory("mt_town_all")},
+		}
+	}
+	tests := []struct {
+		name    string
+		mutate  func(c *config.ImportConfig)
+		wantErr string
+	}{
+		{"valid", func(*config.ImportConfig) {}, ""},
+		{"empty profile", func(c *config.ImportConfig) { c.Profile = "" }, "profile"},
+		{"empty enabled_pref", func(c *config.ImportConfig) { c.EnabledPref = nil }, "enabled_pref"},
+		{"empty enabled_category", func(c *config.ImportConfig) { c.EnabledCategory = nil }, "enabled_category"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := valid()
+			tt.mutate(c)
+			err := validateImportConfig(c)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			for _, want := range []string{tt.wantErr, "run 'abrdb init' first"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("error %q does not contain %q", err, want)
+				}
 			}
 		})
 	}
