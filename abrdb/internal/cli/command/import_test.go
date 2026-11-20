@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/abrdb/internal/config"
@@ -350,41 +349,29 @@ func TestBuildS3Prefixes(t *testing.T) {
 }
 
 func TestValidateImportConfig(t *testing.T) {
-	valid := func() *config.ImportConfig {
-		return &config.ImportConfig{
-			Profile:         "basic",
-			EnabledPref:     []int{13},
-			EnabledCategory: []model.FileCategory{model.FileCategory("mt_town_all")},
-		}
-	}
+	pref := []int{13}
+	category := []model.FileCategory{model.FileCategory("mt_town_all")}
 	tests := []struct {
 		name    string
-		mutate  func(c *config.ImportConfig)
+		config  config.ImportConfig
 		wantErr string
 	}{
-		{"valid", func(*config.ImportConfig) {}, ""},
-		{"empty profile", func(c *config.ImportConfig) { c.Profile = "" }, "profile"},
-		{"empty enabled_pref", func(c *config.ImportConfig) { c.EnabledPref = nil }, "enabled_pref"},
-		{"empty enabled_category", func(c *config.ImportConfig) { c.EnabledCategory = nil }, "enabled_category"},
+		{"valid", config.ImportConfig{Profile: "basic", EnabledPref: pref, EnabledCategory: category}, ""},
+		{"empty profile", config.ImportConfig{EnabledPref: pref, EnabledCategory: category},
+			"import config profile not found in database: run 'abrdb init' first"},
+		{"empty enabled_pref", config.ImportConfig{Profile: "basic", EnabledCategory: category},
+			"enabled_pref not configured: run 'abrdb init' first"},
+		{"empty enabled_category", config.ImportConfig{Profile: "basic", EnabledPref: pref},
+			"enabled_category not configured: run 'abrdb init' first"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := valid()
-			tt.mutate(c)
-			err := validateImportConfig(c)
-			if tt.wantErr == "" {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-				return
+			var got string
+			if err := validateImportConfig(&tt.config); err != nil {
+				got = err.Error()
 			}
-			if err == nil {
-				t.Fatal("expected error, got nil")
-			}
-			for _, want := range []string{tt.wantErr, "run 'abrdb init' first"} {
-				if !strings.Contains(err.Error(), want) {
-					t.Errorf("error %q does not contain %q", err, want)
-				}
+			if got != tt.wantErr {
+				t.Errorf("validateImportConfig() error = %q, want %q", got, tt.wantErr)
 			}
 		})
 	}
