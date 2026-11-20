@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+
+	"github.com/digital-go-jp/abr-geocoder/common/env"
 )
 
 func TestParseLevel(t *testing.T) {
@@ -145,5 +147,29 @@ func TestNewHandler_Level(t *testing.T) {
 				t.Errorf("handler should be enabled for level %v", level)
 			}
 		})
+	}
+}
+
+func TestDefaultFormat(t *testing.T) {
+	for isTTY, want := range map[bool]string{true: "text", false: "json"} {
+		if got := defaultFormat(isTTY); got != want {
+			t.Errorf("defaultFormat(%v) = %q, want %q", isTTY, got, want)
+		}
+	}
+}
+
+// TestNewFromEnv_AutoFormat checks that an unset LOG_FORMAT picks the format
+// from whether stderr is a terminal.
+func TestNewFromEnv_AutoFormat(t *testing.T) {
+	// t.Setenv registers the restore of LOG_FORMAT after the test.
+	// Unsetenv then removes the variable for the test itself.
+	t.Setenv("LOG_FORMAT", "")
+	if err := os.Unsetenv("LOG_FORMAT"); err != nil {
+		t.Fatalf("unset LOG_FORMAT: %v", err)
+	}
+
+	tty := env.IsStderrTTY()
+	if _, isText := NewFromEnv().Handler().(*slog.TextHandler); isText != tty {
+		t.Errorf("stderr TTY = %v: TextHandler = %v, want %v", tty, isText, tty)
 	}
 }
