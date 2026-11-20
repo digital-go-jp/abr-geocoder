@@ -19,12 +19,9 @@ func TestBuildFeatureCarriesNumbers(t *testing.T) {
 			BlkNum: new("20"), RsdtNum: new("30"), RsdtNum2: new("36"),
 		}).Properties
 		sa, ids := got.StructuredAddress, got.IDs
-		assertStringFields(t, map[string]*string{
-			"blk_num": sa.BlkNum, "rsdt_num": sa.RsdtNum, "rsdt_num2": sa.RsdtNum2,
-			"blk_id": ids.BlkID, "rsdt_id": ids.RsdtID, "rsdt2_id": ids.Rsdt2ID,
-		}, map[string]string{
-			"blk_num": "20", "rsdt_num": "30", "rsdt_num2": "36",
-			"blk_id": "020", "rsdt_id": "030", "rsdt2_id": "0036",
+		assertStringFields(t, []stringField{
+			{"blk_num", sa.BlkNum, "20"}, {"rsdt_num", sa.RsdtNum, "30"}, {"rsdt_num2", sa.RsdtNum2, "36"},
+			{"blk_id", ids.BlkID, "020"}, {"rsdt_id", ids.RsdtID, "030"}, {"rsdt2_id", ids.Rsdt2ID, "0036"},
 		})
 	})
 
@@ -35,10 +32,9 @@ func TestBuildFeatureCarriesNumbers(t *testing.T) {
 			PrcNum1:           new("12"), PrcNum2: new("3"), PrcNum3: new("4"),
 		}).Properties
 		sa, ids := got.StructuredAddress, got.IDs
-		assertStringFields(t, map[string]*string{
-			"prc_num1": sa.PrcNum1, "prc_num2": sa.PrcNum2, "prc_num3": sa.PrcNum3, "prc_id": ids.PrcID,
-		}, map[string]string{
-			"prc_num1": "12", "prc_num2": "3", "prc_num3": "4", "prc_id": "000120000300004",
+		assertStringFields(t, []stringField{
+			{"prc_num1", sa.PrcNum1, "12"}, {"prc_num2", sa.PrcNum2, "3"}, {"prc_num3", sa.PrcNum3, "4"},
+			{"prc_id", ids.PrcID, "000120000300004"},
 		})
 		if got.MatchLevel != model.MatchLevelParcel {
 			t.Errorf("match_level = %v, want %v", got.MatchLevel, model.MatchLevelParcel)
@@ -46,11 +42,17 @@ func TestBuildFeatureCarriesNumbers(t *testing.T) {
 	})
 }
 
-func assertStringFields(t *testing.T, got map[string]*string, want map[string]string) {
+type stringField struct {
+	name string
+	got  *string
+	want string
+}
+
+func assertStringFields(t *testing.T, fields []stringField) {
 	t.Helper()
-	for k, w := range want {
-		if g := got[k]; g == nil || *g != w {
-			t.Errorf("%s = %v, want %q", k, g, w)
+	for _, f := range fields {
+		if f.got == nil || *f.got != f.want {
+			t.Errorf("%s = %v, want %q", f.name, f.got, f.want)
 		}
 	}
 }
