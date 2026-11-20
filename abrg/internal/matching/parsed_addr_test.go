@@ -263,3 +263,25 @@ func TestParsedAddressExtractChome(t *testing.T) {
 		})
 	}
 }
+
+func TestNumberComponent(t *testing.T) {
+	tests := []struct {
+		part        string
+		allowBranch bool
+		want        string
+	}{
+		{"14", false, "14"},
+		{"2F", true, "2"},
+		{"ロ", true, "ロ"},
+		{"ニ2", true, "ニ2"},
+		{"ロ", false, ""},
+		{"ロ棟", true, ""},
+		{"F", true, ""},
+		{"B", true, ""},
+	}
+	for _, tt := range tests {
+		if got := numberComponent(tt.part, tt.allowBranch); got != tt.want {
+			t.Errorf("numberComponent(%q, %v) = %q, want %q", tt.part, tt.allowBranch, got, tt.want)
+		}
+	}
+}

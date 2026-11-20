@@ -4,6 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
@@ -91,11 +92,18 @@ func convertColonToChome(parsed parsedAddress) parsedAddress {
 	return result
 }
 
+// convertedToChome returns convertColonToChome(parsed) and whether it read the
+// first number as a chome.
+func convertedToChome(parsed parsedAddress) (parsedAddress, bool) {
+	converted := convertColonToChome(parsed)
+	return converted, converted.HasChome != parsed.HasChome
+}
+
 // startsWithAlphaOrKatakana checks if the string starts with A-Z or katakana.
 func startsWithAlphaOrKatakana(s string) bool {
 	if s == "" {
 		return false
 	}
 	r, _ := utf8.DecodeRuneInString(s)
-	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= 'ア' && r <= 'ン')
+	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || char.IsKatakanaNumberChar(r)
 }

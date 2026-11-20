@@ -36,6 +36,14 @@ func (failingQuerier) FindBasicByAddress(context.Context, repository.BasicSearch
 	return nil, errQueryFailed
 }
 
+func (failingQuerier) ParcelLotMatch(context.Context, string, string, string, string) (repository.LotMatch, error) {
+	return 0, errQueryFailed
+}
+
+func (failingQuerier) ResidentialLotMatch(context.Context, string, string, string, string) (repository.LotMatch, error) {
+	return 0, errQueryFailed
+}
+
 func (failingQuerier) FindBasicByLevenshtein(context.Context, repository.LevenshteinParams) ([]repository.BasicResult, error) {
 	return nil, errQueryFailed
 }
@@ -53,6 +61,10 @@ func (failingQuerier) FindResidentialBestMatch(context.Context, string, string, 
 }
 
 func (failingQuerier) FindParcelExact(context.Context, string, string, repository.ParcelFilter) (*repository.ParcelResult, error) {
+	return nil, errQueryFailed
+}
+
+func (failingQuerier) FindChomesWithLot(context.Context, string, string, string) ([]repository.BasicResult, error) {
 	return nil, errQueryFailed
 }
 

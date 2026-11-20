@@ -39,6 +39,10 @@ var (
 	banNoGo = regexp.MustCompile(`(\d+)番(\d+)[のノ](\d+)号`)
 	// banTou handles: N番M棟 -> N M棟
 	banTou = regexp.MustCompile(`(\d+)番(\d+)棟`)
+	// banWithHyphenBuilding handles: N番M-P[building] -> N-M-P [building].
+	// A building name starts with a non-ASCII character other than a unit
+	// marker, so 9室, 9A室 and 9番館 stay with the number they belong to.
+	banWithHyphenBuilding = regexp.MustCompile(`(\d+)番(\d+)((?:-\d+)+)([^\x00-\x7F室号階棟番館])`)
 	// banWithHyphenNumeric handles: N番M-[numeric] -> N-M-[numeric]
 	banWithHyphenNumeric = regexp.MustCompile(`(\d+)番(\d+)(-\d+)`)
 	// banWithHyphenAlphanumeric handles: N番M-[alphanumeric] -> N-M -[alphanumeric]
@@ -78,8 +82,9 @@ var (
 	banchiHyphen = regexp.MustCompile(`(\d+)番地-(\d+)`)
 	// banchiWithHyphenNumeric handles: N番地M-P -> N-M-P
 	banchiWithHyphenNumeric = regexp.MustCompile(`(\d+)番地(\d+)(-\d+)`)
-	// banchiEnd handles: N番地M (at end) -> N-M
-	banchiEnd = regexp.MustCompile(`(\d+)番地(\d+)$`)
+	// banchiEnd handles: N番地M at the end, or before the space that sets
+	// off a floor or room (9番地15 -1F) -> N-M
+	banchiEnd = regexp.MustCompile(`(\d+)番地(\d+)( |$)`)
 	// banchiBuilding handles: N番地M+building -> N-M building
 	banchiBuilding = regexp.MustCompile(`(\d+)番地(\d+)([^\d\s-])`)
 	// banchiSakiNotEnd handles: N番地先+text -> N番地先 text
@@ -301,7 +306,7 @@ var banchiRules = []ReplaceRule{
 	{banchiHyphen, "${1}-${2}"},                // N番地-M → N-M (号なし)
 	{banchiWithHyphenNumeric, "${1}-${2}${3}"}, // N番地M-P → N-M-P
 	{banchiBuilding, "${1}-${2} ${3}"},         // N番地M+建物名 → N-M 建物名
-	{banchiEnd, "${1}-${2}"},                   // N番地M (末尾) → N-M
+	{banchiEnd, "${1}-${2}${3}"},               // N番地M (末尾・空白の前) → N-M
 	{banchiSakiNotEnd, "${1} ${2}"},            // N番地先+後続文字 → N番地先 後続文字 (add space for building separation)
 	{banchiSingleEnd, "${1}"},                  // N番地（末尾） → N
 	{banchiSingleNotEnd, "${1} ${2}"},          // N番地（末尾ではない） → N 後続文字
@@ -351,7 +356,7 @@ func AddressNumbersToHyphen(s string) (string, bool) {
 	// N番M with a 号 or 棟 suffix is handled by the dedicated rules below, so
 	// the plain N番M rules must not fire. Decided on the untouched input,
 	// before any phase can rewrite the suffix away.
-	plainBan := !hasBanGoPattern(s) && !hasBanTouPattern(s)
+	plainBan := !hasBanNumberSuffix(s, "号") && !hasBanNumberSuffix(s, "棟")
 
 	// Phase 1: Preprocess room/floor patterns
 	if strings.Contains(s, "室") || strings.Contains(s, "F") || strings.Contains(s, "階") {
@@ -415,12 +420,6 @@ func replaceBanGoEnd(s string) string {
 		return s
 	}
 
-	// Find start of first number (before 番)
-	numStart := banIdx - 1
-	for numStart > 0 && char.IsASCIIDigit(s[numStart-1]) {
-		numStart--
-	}
-
 	// Get the part between 番 and 号
 	goIdx := len(s) - len("号")
 	between := s[banIdx+len("番") : goIdx]
@@ -435,8 +434,7 @@ func replaceBanGoEnd(s string) string {
 		}
 	}
 
-	// Build result: prefix + firstNum + "-" + between
-	return s[:numStart] + s[numStart:banIdx] + "-" + between
+	return s[:banIdx] + "-" + between
 }
 
 // processBanGai splits a N番街 sequence from a following building name, or
@@ -487,6 +485,7 @@ func processBan(s string, plainBan bool) string {
 
 	if plainBan {
 		if strings.Contains(s, "-") {
+			s = banWithHyphenBuilding.ReplaceAllString(s, "${1}-${2}${3} ${4}")
 			s = banWithHyphenNumeric.ReplaceAllString(s, "${1}-${2}${3}")
 			s = banWithHyphenAlphanumeric.ReplaceAllString(s, "${1}-${2} ${3}")
 		}
@@ -546,59 +545,40 @@ var noAfterDigitRules = []ReplaceRule{
 	{digitNoDigitEnd, "${1}-${3}${4}"},   // Nの/ノM at end → N-M
 }
 
-// hasBanGoPattern checks for pattern "数字+番+数字(ハイフン数字)*+号" without regex.
-func hasBanGoPattern(s string) bool {
-	// Quick check: must contain 号
-	idx := strings.Index(s, "号")
+// hasBanNumberSuffix reports whether s holds "digit + 番 + digit groups + suffix",
+// such as 7番14号 or 7番14棟. Only digit groups may sit between 番 and the
+// suffix, so that a building name ending in the suffix (7番14コーポ303号,
+// 7番14コーポ3棟) is not taken for the pattern.
+func hasBanNumberSuffix(s, suffix string) bool {
+	idx := strings.Index(s, suffix)
 	if idx < 1 {
 		return false
 	}
 
-	// Find 番 before 号
 	banIdx := strings.LastIndex(s[:idx], "番")
 	if banIdx < 1 {
 		return false
 	}
 
-	// Check for digit before 番
 	lastRune, _ := utf8.DecodeLastRuneInString(s[:banIdx])
 	if !char.IsASCIIDigit(lastRune) {
 		return false
 	}
 
-	// Check for digit after 番 (between 番 and 号)
-	// The part between 番 and 号 should be digit(s) optionally followed by -digit(s)
-	between := s[banIdx+len("番") : idx]
-	if len(between) == 0 {
-		return false
-	}
-	// First char must be digit
-	return char.IsASCIIDigit(between[0])
+	return isDigitGroups(s[banIdx+len("番") : idx])
 }
 
-// hasBanTouPattern checks for pattern "数字+番+数字+棟" without regex.
-func hasBanTouPattern(s string) bool {
-	// Quick check: must contain 棟
-	idx := strings.Index(s, "棟")
-	if idx < 1 {
+// isDigitGroups reports whether s is ASCII digit runs joined by single hyphens, such as "14" or "2-3-4".
+func isDigitGroups(s string) bool {
+	if s == "" {
 		return false
 	}
-
-	// Check for digit before 棟
-	lastRune, _ := utf8.DecodeLastRuneInString(s[:idx])
-	if !char.IsASCIIDigit(lastRune) {
-		return false
+	for group := range strings.SplitSeq(s, "-") {
+		if group == "" || strings.TrimFunc(group, char.IsASCIIDigit) != "" {
+			return false
+		}
 	}
-
-	// Find 番 before 棟
-	banIdx := strings.LastIndex(s[:idx], "番")
-	if banIdx < 1 {
-		return false
-	}
-
-	// Check for digit before 番
-	lastRuneBefore, _ := utf8.DecodeLastRuneInString(s[:banIdx])
-	return char.IsASCIIDigit(lastRuneBefore)
+	return true
 }
 
 // goAndPostfixRules run after the main conversion passes.

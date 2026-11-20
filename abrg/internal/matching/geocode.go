@@ -71,10 +71,6 @@ func Geocode(ctx context.Context, matcher Matcher, repo CoordinatesGetter, query
 
 // getCoordinatesFromParent tries to get coordinates from parent level (basic) if current level has no coordinates.
 func getCoordinatesFromParent(ctx context.Context, repo CoordinatesGetter, ids model.IDs) ([]float64, model.MatchLevel) {
-	if repo == nil {
-		return nil, ""
-	}
-
 	lgCode := derefString(ids.LgCode)
 	if lgCode == "" {
 		return nil, ""

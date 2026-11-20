@@ -2,7 +2,10 @@ package matching
 
 import (
 	"context"
+	"strconv"
 	"strings"
+
+	"github.com/digital-go-jp/abr-geocoder/common/validate"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/char"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
@@ -11,7 +14,7 @@ import (
 
 // detectBasicResultsWithBasic detects basic-level results using NormalizeBasicNormalized output.
 // The normalizedAddr should be from normalize.NormalizeBasicNormalized().
-func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, pref string) (string, string, []model.MatchedResult, error) {
+func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, pref string, category model.Category) (string, string, []model.MatchedResult, error) {
 	searchAddr, _, _ := strings.Cut(normalizedAddr, " ")
 
 	// Apply variant kanji normalization (e.g., "沖繩" -> "沖縄", "ヶ/ケ" -> "ガ")
@@ -26,7 +29,7 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 	searchAddrBase, afterColon, hasColon := strings.Cut(searchAddrWithColon, ":")
 
 	// First try: search with base address (before colon)
-	basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrBase, pref, normalizedAddr)
+	basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrBase, pref, normalizedAddr, lotQuery{afterColon, category})
 	if err != nil {
 		return pref, searchAddrWithColon, nil, err
 	}
@@ -37,7 +40,7 @@ func (n *Impl) detectBasicResultsWithBasic(ctx context.Context, normalizedAddr, 
 
 	// Second try: if afterColon starts with a digit, try searching with chome included
 	if hasColon && len(afterColon) > 0 && char.IsASCIIDigit(afterColon[0]) {
-		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr)
+		basicResults, modifiedSearchAddr, err := detectMachiaza(ctx, n.repo, searchAddrWithColon, pref, normalizedAddr, lotQuery{category: category})
 		if err != nil {
 			return pref, searchAddrWithColon, nil, err
 		}
@@ -86,8 +89,8 @@ func (n *Impl) detectAndRemovePrefecture(searchAddr, pref string) (string, strin
 }
 
 // detectLgCode detects lg_code from city+ward in the search address.
-// Returns the lg_code if found, empty string otherwise.
-func (n *Impl) detectLgCode(searchAddr string) string {
+// Returns the lg_code if found in queryPref, empty string otherwise.
+func (n *Impl) detectLgCode(searchAddr, queryPref string) string {
 	if n.cityWardLgCodes == nil {
 		return ""
 	}
@@ -98,9 +101,24 @@ func (n *Impl) detectLgCode(searchAddr string) string {
 	}
 
 	cityWard := searchAddr[:cityEndIdx]
-	if lgCode, ok := n.cityWardLgCodes[cityWard]; ok {
+	if lgCode, ok := n.cityWardLgCodes[cityWard]; ok && inPref(lgCode, queryPref) {
 		return lgCode
 	}
 
 	return ""
+}
+
+// inPref reports whether lgCode belongs to the prefecture pref.
+// Any lgCode belongs to pref "all" or "".
+// The codes are compared as numbers, so pref "1" matches lg_code "011002".
+func inPref(lgCode, pref string) bool {
+	if pref == "" || pref == model.All {
+		return true
+	}
+	want, err := validate.ParsePrefectureCode(pref)
+	if err != nil || len(lgCode) < 2 {
+		return false
+	}
+	got, err := strconv.Atoi(lgCode[:2])
+	return err == nil && got == want
 }

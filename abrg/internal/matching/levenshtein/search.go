@@ -20,6 +20,7 @@ type levenshteinQuerier interface {
 	FindBasicByPrefix(ctx context.Context, params repository.PrefixParams) ([]repository.BasicResult, error)
 	FindCityByAddress(ctx context.Context, params repository.CitySearchParams) (*repository.CityResult, error)
 	FindCandidateLgCodes(ctx context.Context, params repository.CityFuzzyParams) ([]string, error)
+	FindChomesWithLot(ctx context.Context, lgCode, machiazaID, prcNum1 string) ([]repository.BasicResult, error)
 }
 
 // Search performs fuzzy address matching using Levenshtein distance.
@@ -86,11 +87,6 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		return nil, err
 	}
 
-	// Only basic category is supported for Levenshtein search
-	if p.Category != model.CategoryBasic {
-		return nil, fmt.Errorf("unsupported category for Levenshtein search: %s", p.Category)
-	}
-
 	// Every machiaza query needs a region filter: without one editdist3 runs
 	// over every machiaza in the country, seconds of CPU for a guess spanning
 	// all of Japan. An address carrying no code is scoped by the cities its
@@ -123,7 +119,36 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 		return nil, fmt.Errorf("database query failed: %w", err)
 	}
 
-	return processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Category, p.Limit), nil
+	results, numberChome := processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Limit)
+	if len(results) > 0 || numberChome == nil || !p.HasParcel {
+		return results, nil
+	}
+	return chomeByLot(ctx, repo, p, searchNumbers, numberChome)
+}
+
+// chomeByLot returns the chome of the town holding the lot the address names,
+// when exactly one chome of the town holds it.
+// The town is that of numberChome, a chome the lot number was read as.
+func chomeByLot(ctx context.Context, repo levenshteinQuerier, p SearchParams, searchNumbers string, numberChome *repository.BasicResult) ([]model.MatchedResult, error) {
+	lot, _, _ := strings.Cut(searchNumbers, "-")
+
+	queryCtx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	chomes, err := repo.FindChomesWithLot(queryCtx, numberChome.LgCode, numberChome.MachiazaID, lot)
+	if err != nil {
+		return nil, err
+	}
+	if len(chomes) != 1 {
+		return nil, nil
+	}
+	result := toMatchedResult(&chomes[0], p.SearchAddr, []rune(p.SearchAddr), searchNumbers, p.NormalizedAddr)
+	// The lot number named no chome, so everything written after the town is
+	// left unmatched.
+	town := result.StructuredAddress
+	town.Chome = nil
+	result.UnmatchedAddress = extractUnmatchedSegments(p.NormalizedAddr, model.FormatAddress(&town))
+	return []model.MatchedResult{result}, nil
 }
 
 // candidateLgCodes resolves the city name in the address to the codes of the

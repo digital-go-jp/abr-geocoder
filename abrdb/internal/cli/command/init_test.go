@@ -177,3 +177,29 @@ func TestRunInit_MigrationErrorAfterValidation(t *testing.T) {
 		t.Error("RunMigrations was not called for valid inputs")
 	}
 }
+
+// TestNewInitCmd_Shorthands pins the one-letter flags documented for init,
+// which scripts rely on as much as the long names.
+func TestNewInitCmd_Shorthands(t *testing.T) {
+	tests := []struct {
+		shorthand string
+		wantName  string
+	}{
+		{"p", "pref"},
+		{"c", "category"},
+		{"y", "yes"},
+	}
+
+	flags := NewInitCmd().Flags()
+	for _, tt := range tests {
+		t.Run(tt.shorthand, func(t *testing.T) {
+			f := flags.ShorthandLookup(tt.shorthand)
+			if f == nil {
+				t.Fatalf("ShorthandLookup(%q) = nil, want --%s", tt.shorthand, tt.wantName)
+			}
+			if f.Name != tt.wantName {
+				t.Errorf("ShorthandLookup(%q) = --%s, want --%s", tt.shorthand, f.Name, tt.wantName)
+			}
+		})
+	}
+}

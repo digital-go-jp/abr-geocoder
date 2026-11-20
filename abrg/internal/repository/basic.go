@@ -19,22 +19,30 @@ const basicColumns = `normalized_address, lg_code, machiaza_id, rsdt_addr_flg,
 
 // FindBasicByAddress searches cache_machiaza by normalized_address.
 func (r *DB) FindBasicByAddress(ctx context.Context, params BasicSearchParams) ([]BasicResult, error) {
-	query := "SELECT " + basicColumns + " FROM cache_machiaza WHERE normalized_address = ?"
-
-	args := []any{params.Address}
-	if params.PrefCode != "" && params.PrefCode != model.All {
-		query += " AND pref_code = ?"
-		args = append(args, params.PrefCode)
-	}
-
-	query += " ORDER BY (parcel_count + rsdtdsp_count) DESC, machiaza_id DESC, lg_code, rsdt_addr_flg LIMIT ?"
-	args = append(args, params.Limit)
-
+	query, args := basicByAddressQuery(params)
 	results, err := queryRows(ctx, r.db, query, args, params.Limit, scanBasicResultRow)
 	if err != nil {
 		return nil, fmt.Errorf("find basic by address %q: %w", params.Address, err)
 	}
 	return results, nil
+}
+
+// basicByAddressQuery returns the query of FindBasicByAddress and its arguments.
+func basicByAddressQuery(params BasicSearchParams) (string, []any) {
+	// The address is looked up alone in a materialized CTE.
+	// DuckDB reads idx_machiaza_normalized only for an equality filter on its
+	// own: with another filter or with ORDER BY and LIMIT in the same query,
+	// it scans the whole table.
+	query := "WITH c AS MATERIALIZED (SELECT * FROM cache_machiaza WHERE normalized_address = ?) SELECT " + basicColumns + " FROM c"
+
+	args := []any{params.Address}
+	if params.PrefCode != "" && params.PrefCode != model.All {
+		query += " WHERE pref_code = ?"
+		args = append(args, params.PrefCode)
+	}
+
+	query += " ORDER BY (parcel_count + rsdtdsp_count) DESC, machiaza_id DESC, lg_code, rsdt_addr_flg LIMIT ?"
+	return query, append(args, params.Limit)
 }
 
 // scanBasicResultRow scans a row matching basicColumns into a BasicResult.
@@ -133,6 +141,21 @@ func (r *DB) FindBasicByLevenshtein(ctx context.Context, p LevenshteinParams) ([
 	results, err := queryRows(ctx, r.db, query, args, sqlLimit, scanBasicResultRow)
 	if err != nil {
 		return nil, fmt.Errorf("find basic by levenshtein %q: %w", p.SearchAddr, err)
+	}
+	return results, nil
+}
+
+// FindChomesWithLot returns the chome rows of the oaza that machiazaID belongs to
+// holding a lot numbered prcNum1, whatever its sub-numbers, ordered by machiaza_id.
+func (r *DB) FindChomesWithLot(ctx context.Context, lgCode, machiazaID, prcNum1 string) ([]BasicResult, error) {
+	query := "SELECT " + basicColumns + " FROM cache_machiaza m" +
+		" WHERE lg_code = ? AND substr(machiaza_id, 1, 4) = substr(?, 1, 4) AND chome IS NOT NULL" +
+		" AND EXISTS (SELECT 1 FROM cache_parcel p" +
+		" WHERE p.lg_code = m.lg_code AND p.machiaza_id = m.machiaza_id AND p.prc_num1 = ?)" +
+		" ORDER BY machiaza_id"
+	results, err := queryRows(ctx, r.db, query, []any{lgCode, machiazaID, prcNum1}, 0, scanBasicResultRow)
+	if err != nil {
+		return nil, fmt.Errorf("find chomes with lot lgCode=%q machiazaID=%q prc=%q: %w", lgCode, machiazaID, prcNum1, err)
 	}
 	return results, nil
 }

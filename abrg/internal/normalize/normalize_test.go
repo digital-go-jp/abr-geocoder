@@ -372,6 +372,26 @@ func TestNormalizeAddressText(t *testing.T) {
 			expectedAddr: "東京都千代田区一番町4-4 THECROSS一番町7階",
 			expectedType: model.NormalizeCategoryUndetermined,
 		},
+
+		// Inputs whose scan reaches the end of the string
+		{
+			name:         "number ending in 号 after a later 番",
+			input:        "福岡県福岡市博多区美野島２丁目２番１９号セイワコーポ住吉１０５号室－４番",
+			expectedAddr: "福岡県福岡市博多区美野島2丁目2-19 セイワコーポ住吉105号室-4",
+			expectedType: model.NormalizeCategoryResidential,
+		},
+		{
+			name:         "truncated UTF-8 lead byte at end",
+			input:        "東京都1\xe3",
+			expectedAddr: "東京都1\xe3",
+			expectedType: model.NormalizeCategoryUnknown,
+		},
+		{
+			name:         "truncated UTF-8 sequence at end",
+			input:        "東京都1\xe3\x83",
+			expectedAddr: "東京都1\xe3\x83",
+			expectedType: model.NormalizeCategoryUnknown,
+		},
 	}
 
 	for _, tt := range tests {

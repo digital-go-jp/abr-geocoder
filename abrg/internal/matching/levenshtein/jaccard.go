@@ -4,33 +4,65 @@ import (
 	"strings"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/util"
 )
 
-// SelectBestByJaccard selects the result with highest jaccard similarity to originalAddr.
-// Used for selecting between variants with same normalized_address but different oaza_cho/koaza.
+// SelectBestByJaccard returns the first of the results TopByJaccard returns.
+func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
+	if len(results) <= 1 {
+		return results
+	}
+	return TopByJaccard(results, originalAddr)[:1]
+}
+
+// TopByJaccard returns the results tied for the highest jaccard similarity to
+// originalAddr, in their original order.
+// It prefers the candidate whose oaza_cho/koaza matches the original input
 // (e.g., "大一本松" prefers oaza_cho "大一本松" over "大1本松",
 //
-//	"八の坪" prefers koaza "八の坪" over "8の坪")
-func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
+//	"八の坪" prefers koaza "八の坪" over "8の坪").
+//
+// 大字 and 字 are left out of the comparison, so candidates that differ only
+// in them tie.
+func TopByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
+	return topByJaccard(results, originalAddr, withoutOazaAza)
+}
+
+// TopByJaccardAsWritten is TopByJaccard with 大字 and 字 kept in the comparison.
+func TopByJaccardAsWritten(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
+	return topByJaccard(results, originalAddr, func(s string) string { return s })
+}
+
+// topByJaccard returns the results tied for the highest jaccard similarity to originalAddr,
+// both sides passed through prepare first.
+func topByJaccard(results []model.MatchedResult, originalAddr string, prepare func(string) string) []model.MatchedResult {
 	if len(results) <= 1 {
 		return results
 	}
 
 	// originalAddr is the same for every candidate, so its bigrams are built once.
-	origBigrams := buildBigrams([]rune(originalAddr))
+	orig := prepare(originalAddr)
+	origBigrams := buildBigrams([]rune(orig))
 
-	bestIdx := 0
-	bestSim := jaccardAgainst(originalAddr, origBigrams, buildMatchedAddress(&results[0]))
-
-	for i := 1; i < len(results); i++ {
-		sim := jaccardAgainst(originalAddr, origBigrams, buildMatchedAddress(&results[i]))
-		if sim > bestSim {
+	var top []model.MatchedResult
+	bestSim := -1.0
+	for i := range results {
+		sim := jaccardAgainst(orig, origBigrams, prepare(buildMatchedAddress(&results[i])))
+		switch {
+		case sim > bestSim:
 			bestSim = sim
-			bestIdx = i
+			top = append(top[:0], results[i])
+		case sim == bestSim:
+			top = append(top, results[i])
 		}
 	}
+	return top
+}
 
-	return []model.MatchedResult{results[bestIdx]}
+// withoutOazaAza returns s without 大字, 小字 and a standalone 字.
+func withoutOazaAza(s string) string {
+	s, _ = util.RemoveOazaAza(s)
+	return s
 }
 
 // buildMatchedAddress constructs the matched address string from structured address.

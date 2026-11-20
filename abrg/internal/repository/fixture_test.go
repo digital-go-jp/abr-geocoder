@@ -2,10 +2,13 @@ package repository
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
@@ -248,6 +251,22 @@ func TestFindParcelExact_Fixture(t *testing.T) {
 			t.Errorf("FindParcelExact() = %+v, want nil", result)
 		}
 	})
+
+	// A lot that exists only with a third part does not answer a two-part lookup.
+	t.Run("two-part filter does not match three-part row", func(t *testing.T) {
+		if _, err := repo.db.ExecContext(ctx, `INSERT INTO cache_parcel
+			(pref_code, lg_code, machiaza_id, prc_id, prc_num1, prc_num2, prc_num3, lon, lat)
+			VALUES (13, '131016', '0001000', '000000020000001000005', '20', '1', '5', 139.7354, 35.6814)`); err != nil {
+			t.Fatalf("insert fixture: %v", err)
+		}
+		result, err := repo.FindParcelExact(ctx, fixtureLgCode, fixtureMachiazaID, ParcelFilter{PrcNum1: "20", PrcNum2: "1"})
+		if err != nil {
+			t.Fatalf("FindParcelExact() error = %v", err)
+		}
+		if result != nil {
+			t.Errorf("FindParcelExact() = %+v, want nil", result)
+		}
+	})
 }
 
 func TestFindNearestResidential_Fixture(t *testing.T) {
@@ -365,4 +384,96 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 			t.Errorf("FindNearestParcel() returned %d results, want 0", len(results))
 		}
 	})
+}
+
+func TestFindChomesWithLot_Fixture(t *testing.T) {
+	repo := newFixtureRepo(t)
+	ctx := context.Background()
+
+	// 富岡町 has 1丁目 to 3丁目. Lot 215 is in 3丁目 alone and lot 7 in both
+	// 1丁目 and 2丁目. 富浦町 is another oaza holding lot 215 too.
+	stmts := []string{
+		`INSERT INTO cache_machiaza
+			(pref_code, lg_code, machiaza_id, rsdt_addr_flg, pref, city, oaza_cho, chome, koaza,
+			 wake_num_flg, normalized_address, has_chome, parcel_count, rsdtdsp_count)
+		 VALUES
+			(1, '012025', '0102001', 0, '北海道', '函館市', '富岡町', '1丁目', NULL, 0, '函館市富岡町1@', TRUE, 1, 0),
+			(1, '012025', '0102002', 0, '北海道', '函館市', '富岡町', '2丁目', NULL, 0, '函館市富岡町2@', TRUE, 1, 0),
+			(1, '012025', '0102003', 0, '北海道', '函館市', '富岡町', '3丁目', NULL, 0, '函館市富岡町3@', TRUE, 1, 0),
+			(1, '012025', '0102101', 0, '北海道', '函館市', '富岡町', NULL, '字上', 0, '函館市富岡町上', FALSE, 1, 0),
+			(1, '012025', '0101000', 0, '北海道', '函館市', '富浦町', NULL, NULL, 0, '函館市富浦町', FALSE, 1, 0)`,
+		`INSERT INTO cache_parcel (pref_code, lg_code, machiaza_id, prc_id, prc_num1, prc_num2, prc_num3)
+		 VALUES
+			(1, '012025', '0102003', '000215000001', '215', '1', NULL),
+			(1, '012025', '0102003', '000215000003', '215', '3', NULL),
+			(1, '012025', '0102001', '000007', '7', NULL, NULL),
+			(1, '012025', '0102002', '000007', '7', NULL, NULL),
+			(1, '012025', '0102101', '000215', '215', NULL, NULL),
+			(1, '012025', '0101000', '000215', '215', NULL, NULL)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := repo.db.ExecContext(ctx, stmt); err != nil {
+			t.Fatalf("insert fixture: %v", err)
+		}
+	}
+
+	tests := []struct {
+		name       string
+		machiazaID string
+		prcNum1    string
+		want       []string
+	}{
+		{"lot in one chome, sub-numbers ignored", "0102001", "215", []string{"0102003"}},
+		{"lot in two chomes", "0102003", "7", []string{"0102001", "0102002"}},
+		{"lot in no chome", "0102001", "999", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := repo.FindChomesWithLot(ctx, "012025", tt.machiazaID, tt.prcNum1)
+			if err != nil {
+				t.Fatalf("FindChomesWithLot() error = %v", err)
+			}
+			var ids []string
+			for _, r := range got {
+				ids = append(ids, r.MachiazaID)
+			}
+			if !slices.Equal(ids, tt.want) {
+				t.Errorf("FindChomesWithLot() = %v, want %v", ids, tt.want)
+			}
+		})
+	}
+}
+
+// TestBasicByAddressQueryUsesIndex guards the lookup against falling back to a
+// scan of the whole cache_machiaza, which leaves the results unchanged.
+// The rows span every prefecture: when all rows share one pref_code, DuckDB
+// drops the pref_code filter by its statistics and reads the index anyway.
+func TestBasicByAddressQueryUsesIndex(t *testing.T) {
+	ctx := context.Background()
+	repo := newFixtureRepo(t)
+	if _, err := repo.db.ExecContext(ctx, `INSERT INTO cache_machiaza
+		(pref_code, lg_code, machiaza_id, rsdt_addr_flg, normalized_address, parcel_count, rsdtdsp_count)
+		SELECT i % 47 + 1, '131016', lpad(i::VARCHAR, 7, '0'), 0, '町' || i, 0, 0 FROM range(10000) t(i)`); err != nil {
+		t.Fatalf("insert rows: %v", err)
+	}
+	indexSQL, err := schema.GetCreateIndexesSQL()
+	if err != nil {
+		t.Fatalf("generate index SQL: %v", err)
+	}
+	if _, err := repo.db.ExecContext(ctx, indexSQL); err != nil {
+		t.Fatalf("create indexes: %v", err)
+	}
+
+	for _, prefCode := range []string{"13", model.All} {
+		t.Run("pref "+prefCode, func(t *testing.T) {
+			query, args := basicByAddressQuery(BasicSearchParams{Address: "町12", PrefCode: prefCode, Limit: 5})
+			var key, plan string
+			if err := repo.db.QueryRowContext(ctx, "EXPLAIN ANALYZE "+query, args...).Scan(&key, &plan); err != nil {
+				t.Fatalf("explain %s: %v", query, err)
+			}
+			if !strings.Contains(plan, "Index Scan") {
+				t.Errorf("plan has no index scan:\n%s", plan)
+			}
+		})
+	}
 }

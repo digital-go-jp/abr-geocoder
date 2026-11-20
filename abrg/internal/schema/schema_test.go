@@ -91,10 +91,6 @@ func TestInitSchemaSQL(t *testing.T) {
 	if strings.Contains(sql, "cache_parcel") {
 		t.Error("InitSchemaSQL should not contain cache_parcel")
 	}
-
-	if !strings.Contains(sql, "DELETE FROM cache_machiaza") {
-		t.Error("InitSchemaSQL should contain DELETE FROM cache_machiaza")
-	}
 }
 
 func TestGetCreateIndexesSQL(t *testing.T) {

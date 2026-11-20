@@ -122,6 +122,7 @@ func (n *Impl) queryCityRecord(ctx context.Context, searchAddr, prefCode, normal
 	cr, err := n.repo.FindCityRecord(ctx, repository.CityRecordParams{
 		CityPart: searchAddr[:cityEnd],
 		PrefCode: prefCode,
+		Address:  normalizedAddr,
 	})
 	return cityResult(cr, err, searchAddr, normalizedAddr, cityEnd)
 }

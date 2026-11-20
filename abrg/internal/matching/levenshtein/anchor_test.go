@@ -33,13 +33,16 @@ func (r *recordingQuerier) FindBasicByPrefix(_ context.Context, _ repository.Pre
 	return nil, nil
 }
 
+func (r *recordingQuerier) FindChomesWithLot(context.Context, string, string, string) ([]repository.BasicResult, error) {
+	return nil, nil
+}
+
 func (r *recordingQuerier) FindCityByAddress(_ context.Context, _ repository.CitySearchParams) (*repository.CityResult, error) {
 	return nil, nil
 }
 
 func anchorlessParams(searchAddr string) SearchParams {
 	return SearchParams{
-		Category:     model.CategoryBasic,
 		SearchAddr:   searchAddr,
 		Pref:         model.All,
 		Limit:        1,

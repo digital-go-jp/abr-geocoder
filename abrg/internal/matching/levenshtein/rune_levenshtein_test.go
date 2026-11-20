@@ -19,6 +19,8 @@ func TestRuneLevenshtein(t *testing.T) {
 		{"completely different kanji", "東京都", "大阪府", 3},
 		{"mixed kanji/kana", "港区", "湊区", 1},
 		{"length difference", "福山市", "福山市旭町", 2},
+		{"leading deletion", "ab", "b", 1},
+		{"leading insertion", "旭町", "福旭町", 1},
 	}
 
 	for _, tt := range tests {
