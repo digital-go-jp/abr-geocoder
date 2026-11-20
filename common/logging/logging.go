@@ -22,13 +22,18 @@ func NewFromEnv() *slog.Logger {
 	level := parseLevel(env.GetEnv("LOG_LEVEL", "INFO"))
 	format := env.GetEnv("LOG_FORMAT", "")
 	if format == "" {
-		if env.IsStderrTTY() {
-			format = "text"
-		} else {
-			format = "json"
-		}
+		format = defaultFormat(env.IsStderrTTY())
 	}
 	return slog.New(newHandler(level, format))
+}
+
+// defaultFormat returns the log format used when LOG_FORMAT is unset:
+// text for a person at a terminal, JSON for pipes and log collectors.
+func defaultFormat(isTTY bool) string {
+	if isTTY {
+		return "text"
+	}
+	return "json"
 }
 
 func parseLevel(s string) slog.Level {
