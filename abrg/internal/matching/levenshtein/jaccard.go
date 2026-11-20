@@ -25,18 +25,29 @@ func SelectBestByJaccard(results []model.MatchedResult, originalAddr string) []m
 // 大字 and 字 are left out of the comparison, so candidates that differ only
 // in them tie.
 func TopByJaccard(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
+	return topByJaccard(results, originalAddr, withoutOazaAza)
+}
+
+// TopByJaccardAsWritten is TopByJaccard with 大字 and 字 kept in the comparison.
+func TopByJaccardAsWritten(results []model.MatchedResult, originalAddr string) []model.MatchedResult {
+	return topByJaccard(results, originalAddr, func(s string) string { return s })
+}
+
+// topByJaccard returns the results tied for the highest jaccard similarity to originalAddr,
+// both sides passed through prepare first.
+func topByJaccard(results []model.MatchedResult, originalAddr string, prepare func(string) string) []model.MatchedResult {
 	if len(results) <= 1 {
 		return results
 	}
 
 	// originalAddr is the same for every candidate, so its bigrams are built once.
-	orig := withoutOazaAza(originalAddr)
+	orig := prepare(originalAddr)
 	origBigrams := buildBigrams([]rune(orig))
 
 	var top []model.MatchedResult
 	bestSim := -1.0
 	for i := range results {
-		sim := jaccardAgainst(orig, origBigrams, withoutOazaAza(buildMatchedAddress(&results[i])))
+		sim := jaccardAgainst(orig, origBigrams, prepare(buildMatchedAddress(&results[i])))
 		switch {
 		case sim > bestSim:
 			bestSim = sim
