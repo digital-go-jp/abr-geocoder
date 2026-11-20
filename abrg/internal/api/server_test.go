@@ -95,7 +95,8 @@ func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 
 	server := NewGinServer(ServerConfig{
 		Cache:       c,
-		CacheConfig: cache.Config{EnabledPos: "true", EnabledCategory: "basic", EnabledPref: "13"},
+		APIVersion:  "v-test",
+		CacheConfig: cache.Config{EnabledPos: "true", EnabledCategory: "basic", EnabledPref: "13", DBVersion: "db-test"},
 	})
 
 	want := []string{"/", "/geocode", "/health", "/match", "/normalize", "/reverse"}
@@ -111,6 +112,7 @@ func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 		if body["type"] != "MatchResult" {
 			t.Errorf("type = %v, want MatchResult", body["type"])
 		}
+		assertResultInfo(t, body)
 		feature := firstFeature(t, body)
 		if addr, _ := feature["matched_address"].(string); addr == "" {
 			t.Errorf("features[0].matched_address = %v, want non-empty", feature["matched_address"])
@@ -126,6 +128,7 @@ func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 		if body["type"] != "FeatureCollection" {
 			t.Errorf("type = %v, want FeatureCollection", body["type"])
 		}
+		assertResultInfo(t, body)
 		feature := firstFeature(t, body)
 		if feature["type"] != "Feature" {
 			t.Errorf("features[0].type = %v, want Feature", feature["type"])
@@ -145,6 +148,7 @@ func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 		if body["type"] != "FeatureCollection" {
 			t.Errorf("type = %v, want FeatureCollection", body["type"])
 		}
+		assertResultInfo(t, body)
 		feature := firstFeature(t, body)
 		properties, _ := feature["properties"].(map[string]any)
 		if properties == nil {
@@ -152,6 +156,30 @@ func TestNewGinServer_WithCachePosEnabled(t *testing.T) {
 		}
 		if _, ok := properties["distance"]; !ok {
 			t.Error("features[0].properties.distance missing, reverse features must carry it")
+		}
+	})
+
+	// A town without its own coordinates is geocoded from its block or
+	// parcel representative points, which needs the repository.
+	t.Run("geocode of town without coordinates returns point geometry", func(t *testing.T) {
+		w := serveRequest(t, server, "/geocode?address=東京都千代田区神田駿河台一丁目")
+		body := decodeOKResponse(t, w, "application/geo+json")
+		geometry, _ := firstFeature(t, body)["geometry"].(map[string]any)
+		if coords, _ := geometry["coordinates"].([]any); len(coords) != 2 {
+			t.Errorf("features[0].geometry = %v, want [lon lat] coordinates", geometry)
+		}
+	})
+
+	t.Run("cross-origin request gets CORS header", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "/health", nil)
+		if err != nil {
+			t.Fatalf("NewRequestWithContext error = %v", err)
+		}
+		req.Header.Set("Origin", "https://caller.test")
+		server.Handler().ServeHTTP(w, req)
+		if got := w.Header().Get("Access-Control-Allow-Origin"); got == "" {
+			t.Error("Access-Control-Allow-Origin missing, want the default allow-all policy")
 		}
 	})
 
@@ -198,6 +226,19 @@ func decodeOKResponse(t *testing.T, w *httptest.ResponseRecorder, contentType st
 		t.Fatalf("unmarshal response: %v", err)
 	}
 	return body
+}
+
+// assertResultInfo asserts that result_info carries the server and data
+// metadata given to NewGinServer.
+func assertResultInfo(t *testing.T, body map[string]any) {
+	t.Helper()
+	info, _ := body["result_info"].(map[string]any)
+	want := map[string]string{"api_version": "v-test", "db_version": "db-test", "enabled_category": "basic", "enabled_pref": "13"}
+	for k, v := range want {
+		if info[k] != v {
+			t.Errorf("result_info.%s = %v, want %q", k, info[k], v)
+		}
+	}
 }
 
 // firstFeature returns features[0] of a decoded response body.

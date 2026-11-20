@@ -251,6 +251,22 @@ func TestFindParcelExact_Fixture(t *testing.T) {
 			t.Errorf("FindParcelExact() = %+v, want nil", result)
 		}
 	})
+
+	// A lot that exists only with a third part does not answer a two-part lookup.
+	t.Run("two-part filter does not match three-part row", func(t *testing.T) {
+		if _, err := repo.db.ExecContext(ctx, `INSERT INTO cache_parcel
+			(pref_code, lg_code, machiaza_id, prc_id, prc_num1, prc_num2, prc_num3, lon, lat)
+			VALUES (13, '131016', '0001000', '000000020000001000005', '20', '1', '5', 139.7354, 35.6814)`); err != nil {
+			t.Fatalf("insert fixture: %v", err)
+		}
+		result, err := repo.FindParcelExact(ctx, fixtureLgCode, fixtureMachiazaID, ParcelFilter{PrcNum1: "20", PrcNum2: "1"})
+		if err != nil {
+			t.Fatalf("FindParcelExact() error = %v", err)
+		}
+		if result != nil {
+			t.Errorf("FindParcelExact() = %+v, want nil", result)
+		}
+	})
 }
 
 func TestFindNearestResidential_Fixture(t *testing.T) {
