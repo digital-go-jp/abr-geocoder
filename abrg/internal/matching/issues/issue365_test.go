@@ -63,6 +63,23 @@ func TestIssue365(t *testing.T) {
 		cityOnly("東京都練馬区大泉学園７４０番地", "大泉学園740"),
 		cityOnly("東京都練馬区大泉学園７４０－１", "大泉学園740-1"),
 		cityOnly("大阪府吹田市大字垂水７２４番地", "大字垂水724"),
+		// The town is registered only with chomes, so a town whose name is a
+		// prefix of it (木町 for 木町通, 野里 for 野里上野町) is not taken either.
+		cityOnly("宮城県仙台市青葉区木町通１３番地", "木町通13"),
+		cityOnly("兵庫県姫路市野里上野町７４６番地の１", "野里上野町746-1"),
+		// The municipality's own machiaza row (machiaza_id=0000000) has no
+		// town name and is not a town-level answer.
+		cityOnly("埼玉県本庄市朝日町３３４３番地１２", "朝日町3343-12"),
+		cityOnly("徳島県徳島市矢三町１２５８番地", "矢三町1258"),
+		{
+			// 深作 has chomes and also a chome-less row, lg_code=111040
+			// machiaza_id=0020000 (大字深作), which the town written stops at.
+			name:                 "issue365 [埼玉県さいたま市見沼区大字深作字溜井原３０７] chome-less row of the town",
+			query:                query("埼玉県さいたま市見沼区大字深作字溜井原３０７"),
+			wantMatchLevel:       model.MatchLevelMachiaza,
+			wantMatchedAddress:   "埼玉県さいたま市見沼区大字深作",
+			wantUnmatchedAddress: []string{"溜井原307"},
+		},
 		noChome("熊本県熊本市西区二本木126番地"),
 		noChome("熊本県熊本市西区二本木6番地"),
 		noChome("東京都新宿区西新宿826番地"),

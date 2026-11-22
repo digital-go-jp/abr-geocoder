@@ -25,7 +25,7 @@ type levenshteinQuerier interface {
 // Search performs fuzzy address matching using Levenshtein distance.
 // It includes fallback strategies for low-score matches and prefix matching.
 func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]model.MatchedResult, error) {
-	results, err := searchCore(ctx, repo, p)
+	results, numberChome, err := searchCore(ctx, repo, p)
 	if err != nil {
 		return nil, err
 	}
@@ -40,13 +40,11 @@ func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]mod
 		// extra part (a chome the town does not have, an unregistered koaza)
 		// pushing the edit distance past the closest wrong town. Prefix matching
 		// finds it, and a town it agrees with beats falling back to the city.
-		prefixResults, prefixErr := searchWithPrefixMatch(ctx, repo, p)
+		prefixResults, prefixErr := searchWithPrefixMatch(ctx, repo, p, "")
 		if prefixErr != nil {
 			return nil, prefixErr
 		}
-		// A row without an oaza_cho is the municipality's own machiaza row, a
-		// city-level answer wearing a machiaza label, so it is no improvement.
-		if len(prefixResults) > 0 && prefixResults[0].StructuredAddress.OazaCho != nil &&
+		if len(prefixResults) > 0 &&
 			!hasTownNameMismatch(p.CityBoundary, p.SearchAddr, &prefixResults[0]) {
 			return prefixResults, nil
 		}
@@ -68,7 +66,7 @@ func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]mod
 	// This handles cases like "宇佐市安心院町古川長坂" where DB has "宇佐市安心院町古川"
 	// and the extra "長坂" (koaza not in DB) exceeds the Levenshtein threshold
 	if len(results) == 0 {
-		prefixResults, prefixErr := searchWithPrefixMatch(ctx, repo, p)
+		prefixResults, prefixErr := searchWithPrefixMatch(ctx, repo, p, writtenChomeTown(p.SearchAddr, numberChome))
 		if prefixErr != nil {
 			return nil, prefixErr
 		}
@@ -80,10 +78,12 @@ func Search(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]mod
 	return results, nil
 }
 
-func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]model.MatchedResult, error) {
+// searchCore returns the Levenshtein matches of the address, and the first
+// candidate skipped for reading the lot number as its chome, or nil.
+func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) (results []model.MatchedResult, numberChome *repository.BasicResult, err error) {
 	// Early check for context cancellation
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Every machiaza query needs a region filter: without one editdist3 runs
@@ -92,9 +92,8 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 	// city name is closest to, and one naming no city at all is not searched.
 	var lgCodes []string
 	if !p.hasRegionAnchor() {
-		var err error
 		if lgCodes, err = candidateLgCodes(ctx, repo, p); err != nil || len(lgCodes) == 0 {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -113,12 +112,29 @@ func searchCore(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([
 	})
 	if err != nil {
 		if queryCtx.Err() == context.DeadlineExceeded {
-			return nil, fmt.Errorf("query timeout exceeded (%v): %w", queryTimeout, err)
+			return nil, nil, fmt.Errorf("query timeout exceeded (%v): %w", queryTimeout, err)
 		}
-		return nil, fmt.Errorf("database query failed: %w", err)
+		return nil, nil, fmt.Errorf("database query failed: %w", err)
 	}
 
-	return processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Limit), nil
+	results, numberChome = processResults(rows, p.SearchAddr, searchNumbers, p.NormalizedAddr, p.Limit)
+	return results, numberChome, nil
+}
+
+// writtenChomeTown returns the town of numberChome, a chome row the lot number
+// was read as, when searchAddr writes that town in full, or "" otherwise.
+// The town is the chome row's normalized_address without the chome
+// (木町通1@ → 木町通).
+func writtenChomeTown(searchAddr string, numberChome *repository.BasicResult) string {
+	if numberChome == nil {
+		return ""
+	}
+	town, _, _ := strings.Cut(numberChome.NormalizedAddress, "@")
+	town = strings.TrimRight(town, "0123456789")
+	if !strings.HasPrefix(searchAddr, town) {
+		return ""
+	}
+	return town
 }
 
 // candidateLgCodes resolves the city name in the address to the codes of the
@@ -141,9 +157,11 @@ func candidateLgCodes(ctx context.Context, repo levenshteinQuerier, p SearchPara
 }
 
 // searchWithPrefixMatch searches for addresses where the DB's normalized_address is a prefix of searchAddr.
+// A town whose name is shorter than writtenTown and starts it is not returned:
+// the address names writtenTown, so such a town only shares its first characters.
 //
 //	e.g., searchAddr="宇佐市安心院町古川長坂" matches DB record "宇佐市安心院町古川"
-func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p SearchParams) ([]model.MatchedResult, error) {
+func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p SearchParams, writtenTown string) ([]model.MatchedResult, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -178,6 +196,14 @@ func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p Searc
 	results := make([]model.MatchedResult, 0, p.Limit)
 	for i := range candidates {
 		brd := &candidates[i]
+		// A row without an oaza_cho is the municipality's own machiaza row,
+		// a city-level answer wearing a machiaza label.
+		if brd.OazaCho == nil {
+			continue
+		}
+		if len(brd.NormalizedAddress) < len(writtenTown) && strings.HasPrefix(writtenTown, brd.NormalizedAddress) {
+			continue
+		}
 		result := repository.BasicResultToPartialNormalized(brd)
 
 		matchedAddr := model.FormatAddress(&result.StructuredAddress)

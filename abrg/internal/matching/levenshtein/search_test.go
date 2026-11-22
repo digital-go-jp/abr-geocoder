@@ -149,3 +149,27 @@ func TestSearch_NumberAsChomeTakesNoTown(t *testing.T) {
 		t.Fatalf("Search() = %q, want no result", got[0].MatchedAddress)
 	}
 }
+
+func TestWrittenChomeTown(t *testing.T) {
+	chome := func(normalized string) *repository.BasicResult {
+		return &repository.BasicResult{NormalizedAddress: normalized}
+	}
+	tests := []struct {
+		name        string
+		searchAddr  string
+		numberChome *repository.BasicResult
+		want        string
+	}{
+		{"town written in full", "仙台市青葉区木町通:13", chome("仙台市青葉区木町通1@"), "仙台市青葉区木町通"},
+		{"multi-digit chome", "仙台市青葉区木町通:13", chome("仙台市青葉区木町通12@"), "仙台市青葉区木町通"},
+		{"another town", "姫路市白浜町甲:402-106", chome("姫路市白浜町寺家1@"), ""},
+		{"no chome skipped", "仙台市青葉区木町通:13", nil, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := writtenChomeTown(tt.searchAddr, tt.numberChome); got != tt.want {
+				t.Errorf("writtenChomeTown() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
