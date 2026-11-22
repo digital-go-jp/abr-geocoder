@@ -34,7 +34,6 @@ type implQuerier interface {
 	FindParcelExact(ctx context.Context, lgCode, machiazaID string, filter repository.ParcelFilter) (*repository.ParcelResult, error)
 	ParcelLotMatch(ctx context.Context, lgCode, machiazaID, prcNum1, prcNum2 string) (repository.LotMatch, error)
 	ResidentialLotMatch(ctx context.Context, lgCode, machiazaID, blkNum, rsdtNum string) (repository.LotMatch, error)
-	FindChomesWithLot(ctx context.Context, lgCode, machiazaID, prcNum1 string) ([]repository.BasicResult, error)
 }
 
 // Matcher is the interface for address matching against ABR data.

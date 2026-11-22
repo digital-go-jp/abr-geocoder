@@ -213,7 +213,6 @@ func (n *Impl) buildLevenshteinParams(nctx *normalizeContext, lgCode, machiazaID
 		MachiazaID:     machiazaID,
 		NormalizedAddr: nctx.Input.NormalizedAddr,
 		Limit:          nctx.Input.Limit,
-		HasParcel:      n.hasParcel,
 		CityBoundary:   n.cityBoundary,
 	}
 }

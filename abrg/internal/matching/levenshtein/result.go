@@ -45,9 +45,9 @@ func ExtractSearchNumbers(searchAddr string) string {
 }
 
 // processResults processes query results and returns normalized results.
-// It also returns the first candidate skipped for reading the lot number as
-// its chome, or nil if none was.
-func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, limit int) (results []model.MatchedResult, numberChome *repository.BasicResult) {
+func processResults(candidates []repository.BasicResult, searchAddr, searchNumbers, normalizedAddr string, limit int) []model.MatchedResult {
+	var results []model.MatchedResult
+	var numberChome *repository.BasicResult
 	town := townBeforeParcelPrefix(searchAddr, searchNumbers)
 	townIDs := map[string]bool{}
 	searchRunes := []rune(searchAddr)
@@ -118,7 +118,7 @@ func processResults(candidates []repository.BasicResult, searchAddr, searchNumbe
 		results = results[:limit]
 	}
 
-	return results, numberChome
+	return results
 }
 
 // toMatchedResult scores a candidate against the search address and builds its

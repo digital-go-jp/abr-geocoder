@@ -48,13 +48,13 @@ func TestIssue406(t *testing.T) {
 			wantUnmatchedAddress: []string{"ヰ6697"},
 		},
 		{
-			// The lot number is not taken as a chome, so the chome is the one
-			// holding the lot, lg_code=141321 machiaza_id=0001002 (issue #365).
-			name:                 "issue406-3 [神奈川県川崎市幸区鹿島田1004番地] chome told by the lot",
+			// The lot number is not taken as a chome, and no chome is written
+			// (issue #365).
+			name:                 "issue406-3 [神奈川県川崎市幸区鹿島田1004番地] no chome written",
 			query:                query("神奈川県川崎市幸区鹿島田1004番地"),
-			wantMatchLevel:       model.MatchLevelMachiazaDetail,
-			wantMatchedAddress:   "神奈川県川崎市幸区鹿島田2丁目",
-			wantUnmatchedAddress: []string{"1004"},
+			wantMatchLevel:       model.MatchLevelCity,
+			wantMatchedAddress:   "神奈川県川崎市幸区",
+			wantUnmatchedAddress: []string{"鹿島田1004"},
 		},
 	})
 }
