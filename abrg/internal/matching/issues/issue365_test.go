@@ -72,6 +72,14 @@ func TestIssue365(t *testing.T) {
 		cityOnly("埼玉県本庄市朝日町３３４３番地１２", "朝日町3343-12"),
 		cityOnly("徳島県徳島市矢三町１２５８番地", "矢三町1258"),
 		{
+			// lg_code=382043 machiaza_id=0000273 (八代) has a koaza and no oaza_cho,
+			// unlike the municipality's own row.
+			name:               "issue365 [愛媛県八幡浜市八代乙３９２番地２２] town with only a koaza",
+			query:              query("愛媛県八幡浜市八代乙３９２番地２２"),
+			wantMatchLevel:     model.MatchLevelParcel,
+			wantMatchedAddress: "愛媛県八幡浜市八代乙392-22",
+		},
+		{
 			// 深作 has chomes and also a chome-less row, lg_code=111040
 			// machiaza_id=0020000 (大字深作), which the town written stops at.
 			name:                 "issue365 [埼玉県さいたま市見沼区大字深作字溜井原３０７] chome-less row of the town",

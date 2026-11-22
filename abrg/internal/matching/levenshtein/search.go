@@ -196,9 +196,9 @@ func searchWithPrefixMatch(ctx context.Context, repo levenshteinQuerier, p Searc
 	results := make([]model.MatchedResult, 0, p.Limit)
 	for i := range candidates {
 		brd := &candidates[i]
-		// A row without an oaza_cho is the municipality's own machiaza row,
-		// a city-level answer wearing a machiaza label.
-		if brd.OazaCho == nil {
+		// A row with neither an oaza_cho nor a koaza is the municipality's own
+		// machiaza row, a city-level answer wearing a machiaza label.
+		if brd.OazaCho == nil && brd.Koaza == nil {
 			continue
 		}
 		if len(brd.NormalizedAddress) < len(writtenTown) && strings.HasPrefix(writtenTown, brd.NormalizedAddress) {
