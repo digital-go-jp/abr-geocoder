@@ -33,10 +33,6 @@ func (r *recordingQuerier) FindBasicByPrefix(_ context.Context, _ repository.Pre
 	return nil, nil
 }
 
-func (r *recordingQuerier) FindChomesWithLot(context.Context, string, string, string) ([]repository.BasicResult, error) {
-	return nil, nil
-}
-
 func (r *recordingQuerier) FindCityByAddress(_ context.Context, _ repository.CitySearchParams) (*repository.CityResult, error) {
 	return nil, nil
 }
@@ -74,7 +70,7 @@ func TestSearchCore_AnchorlessAddressSkipsMachiazaQuery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &recordingQuerier{candidates: tt.candidates}
 
-			if _, err := searchCore(t.Context(), repo, anchorlessParams(tt.searchAddr)); err != nil {
+			if _, _, err := searchCore(t.Context(), repo, anchorlessParams(tt.searchAddr)); err != nil {
 				t.Fatalf("searchCore() error = %v", err)
 			}
 			if repo.searched {
@@ -89,7 +85,7 @@ func TestSearchCore_AnchorlessAddressSkipsMachiazaQuery(t *testing.T) {
 func TestSearchCore_CandidateCitiesScopeQuery(t *testing.T) {
 	repo := &recordingQuerier{candidates: []string{"141305", "141313"}}
 
-	if _, err := searchCore(t.Context(), repo, anchorlessParams("横浜巿西区ミナトミライ")); err != nil {
+	if _, _, err := searchCore(t.Context(), repo, anchorlessParams("横浜巿西区ミナトミライ")); err != nil {
 		t.Fatalf("searchCore() error = %v", err)
 	}
 

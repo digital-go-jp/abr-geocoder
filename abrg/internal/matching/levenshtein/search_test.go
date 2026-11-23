@@ -3,7 +3,6 @@ package levenshtein
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/repository"
@@ -27,10 +26,6 @@ func (s *stubCityQuerier) FindCandidateLgCodes(_ context.Context, _ repository.C
 	return nil, nil
 }
 
-func (s *stubCityQuerier) FindChomesWithLot(context.Context, string, string, string) ([]repository.BasicResult, error) {
-	return nil, nil
-}
-
 func (s *stubCityQuerier) FindCityByAddress(_ context.Context, params repository.CitySearchParams) (*repository.CityResult, error) {
 	s.gotParams = params
 	return s.city, nil
@@ -48,10 +43,6 @@ func (failingPrefixQuerier) FindBasicByPrefix(context.Context, repository.Prefix
 }
 
 func (failingPrefixQuerier) FindCandidateLgCodes(context.Context, repository.CityFuzzyParams) ([]string, error) {
-	return nil, nil
-}
-
-func (failingPrefixQuerier) FindChomesWithLot(context.Context, string, string, string) ([]repository.BasicResult, error) {
 	return nil, nil
 }
 
@@ -119,21 +110,14 @@ func TestTryFallbackCitySearchByScore_FullMatchYieldsNilUnmatched(t *testing.T) 
 	}
 }
 
-// lotQuerier returns fixed machiaza candidates and the chomes holding the lot.
+// lotQuerier returns fixed machiaza candidates.
 type lotQuerier struct {
 	stubCityQuerier
 	candidates []repository.BasicResult
-	chomes     []repository.BasicResult
-	gotLot     string
 }
 
 func (q *lotQuerier) FindBasicByLevenshtein(context.Context, repository.LevenshteinParams) ([]repository.BasicResult, error) {
 	return q.candidates, nil
-}
-
-func (q *lotQuerier) FindChomesWithLot(_ context.Context, _, _, prcNum1 string) ([]repository.BasicResult, error) {
-	q.gotLot = prcNum1
-	return q.chomes, nil
 }
 
 func chomeCandidate(machiazaID, oaza, chome, normalized string) repository.BasicResult {
@@ -145,51 +129,46 @@ func chomeCandidate(machiazaID, oaza, chome, normalized string) repository.Basic
 	return r
 }
 
-// A lot number read as a chome leaves the town to the chomes holding the lot,
-// never to another town ranked after it.
-func TestSearch_NumberAsChomeResolvedByLot(t *testing.T) {
+// A lot number read as a chome takes neither that chome nor another town
+// ranked after it.
+func TestSearch_NumberAsChomeTakesNoTown(t *testing.T) {
 	tomioka1 := chomeCandidate("0102001", "富岡町", "1丁目", "函館市富岡町1@")
-	tomioka2 := chomeCandidate("0102002", "富岡町", "2丁目", "函館市富岡町2@")
-	tomioka3 := chomeCandidate("0102003", "富岡町", "3丁目", "函館市富岡町3@")
 	tomiura := chomeCandidate("0101000", "富浦町", "", "函館市富浦町")
 
+	q := &lotQuerier{candidates: []repository.BasicResult{tomioka1, tomiura}}
+	got, err := Search(context.Background(), q, SearchParams{
+		SearchAddr:     "函館市富岡町:215",
+		LgCode:         "012025",
+		NormalizedAddr: "北海道函館市富岡町215番地",
+		Limit:          1,
+	})
+	if err != nil {
+		t.Fatalf("Search() error = %v", err)
+	}
+	if len(got) > 0 {
+		t.Fatalf("Search() = %q, want no result", got[0].MatchedAddress)
+	}
+}
+
+func TestWrittenChomeTown(t *testing.T) {
+	chome := func(normalized string) *repository.BasicResult {
+		return &repository.BasicResult{NormalizedAddress: normalized}
+	}
 	tests := []struct {
-		name      string
-		hasParcel bool
-		chomes    []repository.BasicResult
-		want      string
+		name        string
+		searchAddr  string
+		numberChome *repository.BasicResult
+		want        string
 	}{
-		{"lot in one chome", true, []repository.BasicResult{tomioka3}, "北海道函館市富岡町3丁目"},
-		{"lot in two chomes", true, []repository.BasicResult{tomioka1, tomioka2}, ""},
-		{"no parcel data", false, []repository.BasicResult{tomioka3}, ""},
+		{"town written in full", "仙台市青葉区木町通:13", chome("仙台市青葉区木町通1@"), "仙台市青葉区木町通"},
+		{"multi-digit chome", "仙台市青葉区木町通:13", chome("仙台市青葉区木町通12@"), "仙台市青葉区木町通"},
+		{"another town", "姫路市白浜町甲:402-106", chome("姫路市白浜町寺家1@"), ""},
+		{"no chome skipped", "仙台市青葉区木町通:13", nil, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q := &lotQuerier{candidates: []repository.BasicResult{tomioka1, tomiura}, chomes: tt.chomes}
-			got, err := Search(context.Background(), q, SearchParams{
-				SearchAddr:     "函館市富岡町:215",
-				LgCode:         "012025",
-				NormalizedAddr: "北海道函館市富岡町215番地",
-				Limit:          1,
-				HasParcel:      tt.hasParcel,
-			})
-			if err != nil {
-				t.Fatalf("Search() error = %v", err)
-			}
-			var addr string
-			if len(got) > 0 {
-				addr = got[0].MatchedAddress
-			}
-			if addr != tt.want {
-				t.Fatalf("Search() = %q, want %q", addr, tt.want)
-			}
-			if tt.want != "" {
-				if q.gotLot != "215" {
-					t.Errorf("lot searched = %q, want 215", q.gotLot)
-				}
-				if !reflect.DeepEqual(got[0].UnmatchedAddress, []string{"215"}) {
-					t.Errorf("unmatched = %q, want [215]", got[0].UnmatchedAddress)
-				}
+			if got := writtenChomeTown(tt.searchAddr, tt.numberChome); got != tt.want {
+				t.Errorf("writtenChomeTown() = %q, want %q", got, tt.want)
 			}
 		})
 	}
