@@ -62,9 +62,7 @@ func adjustSearchAddrForChome(addr *model.StructuredAddress, searchNumbers, sear
 	if addr.Chome == nil {
 		return searchAddr
 	}
-	chome := *addr.Chome
-	chomeNum := util.StripChomeSuffix(chome)
-	chomeNum, _ = transform.KanjiToArabic(chomeNum)
+	chomeNum := chomeNumber(*addr.Chome)
 
 	if remaining, found := strings.CutPrefix(searchNumbers, chomeNum+"-"); found {
 		return remaining
@@ -78,7 +76,6 @@ func adjustSearchAddrForChome(addr *model.StructuredAddress, searchNumbers, sear
 func extractUnmatchedAddress(
 	searchNumbers string,
 	addr *model.StructuredAddress,
-	category model.Category,
 	searchAddr string,
 	normalizedAddr string,
 	matchedAddr string,
@@ -111,7 +108,7 @@ func extractUnmatchedAddress(
 	}
 
 	// No number to match
-	if category == model.CategoryBasic && strings.Contains(searchAddr, "@") {
+	if strings.Contains(searchAddr, "@") {
 		return unmatched.ExtractUnmatchedParts(unmatched.Addresses{Normalized: normalizedAddr, Matched: matchedAddr, Search: searchAddr})
 	}
 

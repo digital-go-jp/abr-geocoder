@@ -129,7 +129,8 @@ func TestIssue353(t *testing.T) {
 			},
 		},
 		{
-			// A kana run after 番地 opens a building name, not a branch number.
+			// 伊達市 registers イ as a branch of parcel 19 under the koaza,
+			// so the kana after 番地 is the branch number.
 			name:               "issue353-6 [福島県伊達市霊山町石田字中後坂19番地イ] branch registered under the koaza",
 			query:              query("福島県伊達市霊山町石田字中後坂19番地イ"),
 			wantMatchLevel:     model.MatchLevelParcel,

@@ -23,6 +23,18 @@ func TestAddressNumbersToHyphen(t *testing.T) {
 			changed:  true,
 		},
 		{
+			name:     "banchi/N番地M-階",
+			input:    "9番地15-1F",
+			expected: "9-15 -1F",
+			changed:  true,
+		},
+		{
+			name:     "banchi/N番地M-階号室",
+			input:    "1番地8-2階8号室",
+			expected: "1-8 -2階8号室",
+			changed:  true,
+		},
+		{
 			name:     "banchi/N番地のN_ひらがな",
 			input:    "1番地の2",
 			expected: "1-2",
@@ -222,6 +234,54 @@ func TestAddressNumbersToHyphen(t *testing.T) {
 			name:     "ban/N番+建物名_カタカナ",
 			input:    "神戸市中央区京町80番クリエイト神戸9階",
 			expected: "神戸市中央区京町80 クリエイト神戸9階",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M+号で終わる建物名",
+			input:    "東京都世田谷区奥沢五丁目7番14コーポ303号",
+			expected: "東京都世田谷区奥沢五丁目7-14 コーポ303号",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M+数字を含み号で終わる建物名",
+			input:    "東京都世田谷区奥沢五丁目7番14自由ヶ丘第2コーポ303号",
+			expected: "東京都世田谷区奥沢五丁目7-14 自由ヶ丘第2コーポ303号",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M-P+号で終わる建物名",
+			input:    "東京都世田谷区奥沢五丁目7番14-1コーポ303号",
+			expected: "東京都世田谷区奥沢五丁目7-14-1 コーポ303号",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M-P-Q+号で終わる建物名",
+			input:    "東京都世田谷区奥沢五丁目7番14-1-2コーポ303号",
+			expected: "東京都世田谷区奥沢五丁目7-14-1-2 コーポ303号",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M-P室_部屋番号",
+			input:    "山形県鶴岡市新形町7番20-9室",
+			expected: "山形県鶴岡市新形町7-20-9室",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M-P英字室_部屋番号",
+			input:    "山形県鶴岡市新形町7番20-9A室",
+			expected: "山形県鶴岡市新形町7-20-9A室",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M-P番館",
+			input:    "山形県鶴岡市新形町7番20-9番館",
+			expected: "山形県鶴岡市新形町7-20-9番館",
+			changed:  true,
+		},
+		{
+			name:     "ban/N番M+数字と棟を含む建物名",
+			input:    "東京都世田谷区奥沢五丁目7番14コーポ3棟303号",
+			expected: "東京都世田谷区奥沢五丁目7-14 コーポ3棟303号",
 			changed:  true,
 		},
 		{

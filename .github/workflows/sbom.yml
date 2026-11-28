@@ -1,0 +1,72 @@
+name: sbom
+
+# Attaches the repository's dependency SBOM (SPDX 2.3, from the GitHub
+# dependency graph) to each published release. It lists the source
+# dependencies declared in go.mod, including development tools and every
+# platform's DuckDB bindings, plus the GitHub Actions the workflows use, so it
+# is not the SBOM of a particular binary.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache: false
+
+      # generate-report returns a URL that answers 202 while the report is
+      # being computed and 302 to a temporary download once it is ready. The
+      # download host rejects the API token, so it is fetched without one.
+      - name: Export the dependency graph
+        run: |
+          url=$(gh api "repos/$GITHUB_REPOSITORY/dependency-graph/sbom/generate-report" --jq .sbom_url)
+          for _ in $(seq 30); do
+            read -r code location < <(curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' \
+              -H "Authorization: Bearer $GH_TOKEN" "$url")
+            case $code in
+              302) curl -sf "$location" -o sbom.json; exit 0 ;;
+              202) sleep 10 ;;
+              *) echo "::error::fetch-report returned $code"; exit 1 ;;
+            esac
+          done
+          echo "::error::SBOM report was not ready after 5 minutes"
+          exit 1
+
+      # The export carries no commit and reflects the default branch, which the
+      # graph refreshes some time after a push. The Go packages must equal the
+      # tag's go.mod requirements, otherwise the graph describes another commit:
+      # either it has not caught up yet (re-run later) or the default branch has
+      # moved past the tag (the SBOM for this tag can no longer be exported).
+      # The graph lowercases module paths and may drop the leading "v" of a
+      # version, so both sides are normalised. A module named in a replace
+      # directive is left out of the graph, which this check reports as missing.
+      - name: Check the export matches the tag's go.mod
+        run: |
+          norm() { awk '{ v = $2; sub(/^v/, "", v); print tolower($1), v }' | sort -u; }
+          go mod edit -json | jq -r '.Require[] | "\(.Path) \(.Version)"' | norm > want
+          jq -r '.packages[] | select(any(.externalRefs[]?; .referenceLocator | startswith("pkg:golang/"))) | "\(.name) \(.versionInfo)"' sbom.json | norm > have
+          diff want have || { echo "::error::dependency graph does not match go.mod at $TAG"; exit 1; }
+
+      # The graph names the repository's own package version "main".
+      - name: Attach to the release
+        run: |
+          jq --arg tag "$TAG" --arg self "pkg:github/$GITHUB_REPOSITORY@main" '
+            def self: any(.externalRefs[]?; .referenceLocator == $self);
+            if ([.packages[] | select(self)] | length) != 1 then error("own package not found once") else . end
+            | .packages |= map(if self then
+                .versionInfo = $tag
+                | .externalRefs |= map(if .referenceLocator == $self then .referenceLocator = "pkg:github/\(env.GITHUB_REPOSITORY)@\($tag)" else . end)
+              else . end)
+          ' sbom.json > abr-geocoder.spdx.json
+          gh release upload "$TAG" abr-geocoder.spdx.json --clobber

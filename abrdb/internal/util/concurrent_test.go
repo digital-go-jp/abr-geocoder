@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestExecuteConcurrently_EmptyItems(t *testing.T) {
@@ -212,5 +213,34 @@ func TestExecuteConcurrently_WithMonitor_Error(t *testing.T) {
 	}
 	if !monitor.cancelCalled {
 		t.Error("Monitor.Cancel should be called on error")
+	}
+}
+
+// TestExecuteConcurrently_RespectsLimit pins that no more than limit workers
+// run at once, since the limit is what keeps the database pool from running out.
+func TestExecuteConcurrently_RespectsLimit(t *testing.T) {
+	const limit = 2
+	items := make([]int, 20)
+	var inFlight, peak atomic.Int32
+
+	worker := func(ctx context.Context, item int) error {
+		n := inFlight.Add(1)
+		for {
+			p := peak.Load()
+			if n <= p || peak.CompareAndSwap(p, n) {
+				break
+			}
+		}
+		// Hold the slot long enough for unbounded workers to overlap.
+		time.Sleep(5 * time.Millisecond)
+		inFlight.Add(-1)
+		return nil
+	}
+
+	if err := ExecuteConcurrently(t.Context(), items, worker, nil, "test", limit); err != nil {
+		t.Fatalf("ExecuteConcurrently() unexpected error: %v", err)
+	}
+	if got := peak.Load(); got > limit {
+		t.Errorf("peak concurrent workers = %d, want <= %d", got, limit)
 	}
 }

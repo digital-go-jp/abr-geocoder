@@ -76,6 +76,16 @@ func (s *stubRepo) FindBasicByAddress(_ context.Context, params repository.Basic
 	return rows, nil
 }
 
+func (s *stubRepo) ParcelLotMatch(_ context.Context, lgCode, machiazaID, prcNum1, prcNum2 string) (repository.LotMatch, error) {
+	s.record("ParcelLotMatch(%q, %q, %q, %q)", lgCode, machiazaID, prcNum1, prcNum2)
+	return 0, s.injected("ParcelLotMatch")
+}
+
+func (s *stubRepo) ResidentialLotMatch(_ context.Context, lgCode, machiazaID, blkNum, rsdtNum string) (repository.LotMatch, error) {
+	s.record("ResidentialLotMatch(%q, %q, %q, %q)", lgCode, machiazaID, blkNum, rsdtNum)
+	return 0, s.injected("ResidentialLotMatch")
+}
+
 func (s *stubRepo) FindBasicByLevenshtein(_ context.Context, params repository.LevenshteinParams) ([]repository.BasicResult, error) {
 	s.record("FindBasicByLevenshtein(%q, pref=%q, lg=%q, machiaza=%q, limit=%d)",
 		params.SearchAddr, params.PrefCode, params.LgCode, params.MachiazaID, params.Limit)
@@ -492,9 +502,10 @@ func TestMatch_StubRepo(t *testing.T) {
 			wantJSON: `[{"matched_address":"東京都千代田区紀尾井町1-3","unmatched_address":null,"match_level":"rsdtdsp_rsdt","score":0.67,"ids":{"lg_code":"131016","machiaza_id":"0056000","rsdt_addr_flg":"1","blk_id":"001","rsdt_id":"003","rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"東京都","county":null,"city":"千代田区","ward":null,"kyoto_st":null,"oaza_cho":"紀尾井町","chome":null,"koaza":null,"machiaza_dist":null,"blk_num":"1","rsdt_num":"3","rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 		{
-			// category=basic with a masked machiaza: the city record wins before Levenshtein.
-			name: "basic masked machiaza falls back to city", address: "東京都千代田区紀●井町1-3", category: model.CategoryBasic,
-			wantJSON: `[{"matched_address":"東京都千代田区","unmatched_address":["紀●井町1-3"],"match_level":"city","score":0.3,"ids":{"lg_code":"131016","machiaza_id":null,"rsdt_addr_flg":null,"blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"東京都","county":null,"city":"千代田区","ward":null,"kyoto_st":null,"oaza_cho":null,"chome":null,"koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
+			// category=basic with a masked machiaza: Levenshtein finds the town,
+			// as in category=all, and the number section is not searched.
+			name: "basic masked machiaza is matched fuzzily", address: "東京都千代田区紀●井町1-3", category: model.CategoryBasic,
+			wantJSON: `[{"matched_address":"東京都千代田区紀尾井町","unmatched_address":["1-3"],"match_level":"machiaza","score":0.67,"ids":{"lg_code":"131016","machiaza_id":"0056000","rsdt_addr_flg":"1","blk_id":null,"rsdt_id":null,"rsdt2_id":null,"prc_id":null},"structured_address":{"pref":"東京都","county":null,"city":"千代田区","ward":null,"kyoto_st":null,"oaza_cho":"紀尾井町","chome":null,"koaza":null,"machiaza_dist":null,"blk_num":null,"rsdt_num":null,"rsdt_num2":null,"prc_num1":null,"prc_num2":null,"prc_num3":null}}]`,
 		},
 	}
 

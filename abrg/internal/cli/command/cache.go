@@ -63,49 +63,36 @@ func NewCacheCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		newCacheBuildCmd(),
-		newCacheInfoCmd(),
+		newCachePathCmd("build",
+			"Build DuckDB cache from PostgreSQL",
+			`Build a DuckDB cache file from PostgreSQL data.
+The data category is automatically determined from the PostgreSQL database configuration.`,
+			runCacheBuild),
+		newCachePathCmd("info",
+			"Show cache file information",
+			`Display information about a DuckDB cache file including table counts and metadata.
+This command does not require PostgreSQL connection.`,
+			runCacheInfo),
 	)
 
 	return cmd
 }
 
-func newCacheBuildCmd() *cobra.Command {
+// newCachePathCmd creates a cache subcommand that takes only --cache and runs
+// run with the resolved cache path.
+func newCachePathCmd(use, short, long string, run func(context.Context, string) error) *cobra.Command {
 	var cachePath string
 
 	cmd := &cobra.Command{
-		Use:   "build",
-		Short: "Build DuckDB cache from PostgreSQL",
-		Long: `Build a DuckDB cache file from PostgreSQL data.
-The data category is automatically determined from the PostgreSQL database configuration.`,
+		Use:   use,
+		Short: short,
+		Long:  long,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, err := resolveCachePath(cachePath)
 			if err != nil {
 				return err
 			}
-			return runCacheBuild(cmd.Context(), path)
-		},
-	}
-
-	registerCacheFlag(cmd, &cachePath)
-
-	return cmd
-}
-
-func newCacheInfoCmd() *cobra.Command {
-	var cachePath string
-
-	cmd := &cobra.Command{
-		Use:   "info",
-		Short: "Show cache file information",
-		Long: `Display information about a DuckDB cache file including table counts and metadata.
-This command does not require PostgreSQL connection.`,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			path, err := resolveCachePath(cachePath)
-			if err != nil {
-				return err
-			}
-			return runCacheInfo(cmd.Context(), path)
+			return run(cmd.Context(), path)
 		},
 	}
 
@@ -130,13 +117,7 @@ func runCacheBuild(ctx context.Context, cachePath string) error {
 		return fmt.Errorf("failed to replace cache file: %w", err)
 	}
 
-	info, err := cache.LoadInfo(ctx, cachePath)
-	if err != nil {
-		return fmt.Errorf("load cache info: %w", err)
-	}
-	printCacheInfo(info)
-
-	return nil
+	return runCacheInfo(ctx, cachePath)
 }
 
 func runCacheInfo(ctx context.Context, cachePath string) error {

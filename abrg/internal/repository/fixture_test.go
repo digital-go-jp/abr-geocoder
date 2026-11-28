@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/digital-go-jp/abr-geocoder/common/duck"
 
+	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/schema"
 )
 
@@ -248,6 +250,22 @@ func TestFindParcelExact_Fixture(t *testing.T) {
 			t.Errorf("FindParcelExact() = %+v, want nil", result)
 		}
 	})
+
+	// A lot that exists only with a third part does not answer a two-part lookup.
+	t.Run("two-part filter does not match three-part row", func(t *testing.T) {
+		if _, err := repo.db.ExecContext(ctx, `INSERT INTO cache_parcel
+			(pref_code, lg_code, machiaza_id, prc_id, prc_num1, prc_num2, prc_num3, lon, lat)
+			VALUES (13, '131016', '0001000', '000000020000001000005', '20', '1', '5', 139.7354, 35.6814)`); err != nil {
+			t.Fatalf("insert fixture: %v", err)
+		}
+		result, err := repo.FindParcelExact(ctx, fixtureLgCode, fixtureMachiazaID, ParcelFilter{PrcNum1: "20", PrcNum2: "1"})
+		if err != nil {
+			t.Fatalf("FindParcelExact() error = %v", err)
+		}
+		if result != nil {
+			t.Errorf("FindParcelExact() = %+v, want nil", result)
+		}
+	})
 }
 
 func TestFindNearestResidential_Fixture(t *testing.T) {
@@ -365,4 +383,38 @@ func TestFindNearestParcel_Fixture(t *testing.T) {
 			t.Errorf("FindNearestParcel() returned %d results, want 0", len(results))
 		}
 	})
+}
+
+// TestBasicByAddressQueryUsesIndex guards the lookup against falling back to a
+// scan of the whole cache_machiaza, which leaves the results unchanged.
+// The rows span every prefecture: when all rows share one pref_code, DuckDB
+// drops the pref_code filter by its statistics and reads the index anyway.
+func TestBasicByAddressQueryUsesIndex(t *testing.T) {
+	ctx := context.Background()
+	repo := newFixtureRepo(t)
+	if _, err := repo.db.ExecContext(ctx, `INSERT INTO cache_machiaza
+		(pref_code, lg_code, machiaza_id, rsdt_addr_flg, normalized_address, parcel_count, rsdtdsp_count)
+		SELECT i % 47 + 1, '131016', lpad(i::VARCHAR, 7, '0'), 0, '町' || i, 0, 0 FROM range(10000) t(i)`); err != nil {
+		t.Fatalf("insert rows: %v", err)
+	}
+	indexSQL, err := schema.GetCreateIndexesSQL()
+	if err != nil {
+		t.Fatalf("generate index SQL: %v", err)
+	}
+	if _, err := repo.db.ExecContext(ctx, indexSQL); err != nil {
+		t.Fatalf("create indexes: %v", err)
+	}
+
+	for _, prefCode := range []string{"13", model.All} {
+		t.Run("pref "+prefCode, func(t *testing.T) {
+			query, args := basicByAddressQuery(BasicSearchParams{Address: "町12", PrefCode: prefCode, Limit: 5})
+			var key, plan string
+			if err := repo.db.QueryRowContext(ctx, "EXPLAIN ANALYZE "+query, args...).Scan(&key, &plan); err != nil {
+				t.Fatalf("explain %s: %v", query, err)
+			}
+			if !strings.Contains(plan, "Index Scan") {
+				t.Errorf("plan has no index scan:\n%s", plan)
+			}
+		})
+	}
 }

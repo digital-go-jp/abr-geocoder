@@ -63,26 +63,16 @@ func TestExtractSearchNumbers(t *testing.T) {
 	}
 }
 
-func TestShouldSkipBasicCategory(t *testing.T) {
+func TestShouldSkipChomeResult(t *testing.T) {
 	tests := []struct {
 		name          string
-		category      model.Category
 		searchAddr    string
 		searchNumbers string
 		stdAddress    string
 		want          bool
 	}{
 		{
-			name:          "not basic category",
-			category:      model.CategoryParcel,
-			searchAddr:    "港区虎ノ門",
-			searchNumbers: "",
-			stdAddress:    "港区虎ノ門1@",
-			want:          false,
-		},
-		{
 			name:          "search has @",
-			category:      model.CategoryBasic,
 			searchAddr:    "港区虎ノ門1@",
 			searchNumbers: "",
 			stdAddress:    "港区虎ノ門1@",
@@ -90,7 +80,6 @@ func TestShouldSkipBasicCategory(t *testing.T) {
 		},
 		{
 			name:          "search has numbers",
-			category:      model.CategoryBasic,
 			searchAddr:    "港区虎ノ門",
 			searchNumbers: "1-2-3",
 			stdAddress:    "港区虎ノ門1@",
@@ -98,7 +87,6 @@ func TestShouldSkipBasicCategory(t *testing.T) {
 		},
 		{
 			name:          "result has no @",
-			category:      model.CategoryBasic,
 			searchAddr:    "港区虎ノ門",
 			searchNumbers: "",
 			stdAddress:    "港区虎ノ門",
@@ -106,7 +94,6 @@ func TestShouldSkipBasicCategory(t *testing.T) {
 		},
 		{
 			name:          "should skip - no search @ or numbers, result has @",
-			category:      model.CategoryBasic,
 			searchAddr:    "港区虎ノ門",
 			searchNumbers: "",
 			stdAddress:    "港区虎ノ門1@",
@@ -116,8 +103,8 @@ func TestShouldSkipBasicCategory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldSkipBasicCategory(tt.category, tt.searchAddr, tt.searchNumbers, tt.stdAddress); got != tt.want {
-				t.Errorf("shouldSkipBasicCategory() = %v, want %v", got, tt.want)
+			if got := shouldSkipChomeResult(tt.searchAddr, tt.searchNumbers, tt.stdAddress); got != tt.want {
+				t.Errorf("shouldSkipChomeResult() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -429,6 +416,30 @@ func TestIsFalseChomeMatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := isFalseChomeMatch(tt.searchAddr, tt.stdAddress); got != tt.want {
 				t.Errorf("isFalseChomeMatch(%q, %q) = %v, want %v", tt.searchAddr, tt.stdAddress, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTownBeforeParcelPrefix(t *testing.T) {
+	tests := []struct {
+		name       string
+		searchAddr string
+		want       string
+	}{
+		{name: "katakana prefix before colon", searchAddr: "吾妻郡東吾妻町3島ヰ:6697", want: "吾妻郡東吾妻町3島"},
+		{name: "kanji prefix before colon", searchAddr: "西牟婁郡白浜町甲:402", want: "西牟婁郡白浜町"},
+		{name: "prefix before trailing numbers", searchAddr: "羽咋市柳田町ヒヱ145-1", want: "羽咋市柳田町ヒ"},
+		{name: "no prefix", searchAddr: "吾妻郡東吾妻町3島:6697", want: ""},
+		{name: "no numbers", searchAddr: "吾妻郡東吾妻町3島ヰ", want: ""},
+		{name: "prefix alone", searchAddr: "ヰ:6697", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := townBeforeParcelPrefix(tt.searchAddr, ExtractSearchNumbers(tt.searchAddr))
+			if got != tt.want {
+				t.Errorf("townBeforeParcelPrefix(%q) = %q, want %q", tt.searchAddr, got, tt.want)
 			}
 		})
 	}

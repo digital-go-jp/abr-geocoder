@@ -17,7 +17,9 @@ import (
 // 北海道の殖民地割の「線」表記が正しく保持されるべき
 func TestIssue191(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
-		// status_flg=0 のためコメントアウト (lg_code=012203, koaza=北一線)
+		// Disabled: 士別市 has no 北1線 directly under the city.
+		// It exists only as a koaza of 温根別町 (lg_code=012203, machiaza_id=0010122),
+		// which issue191-1a covers.
 		// {
 		// 	name: "issue191-1 [士別市北一線]",
 		// 	query: model.MatchQuery{

@@ -69,13 +69,8 @@ Use --force to skip change detection and import immediately.`,
 			if err != nil {
 				return fmt.Errorf("load config from database: %w", err)
 			}
-			switch {
-			case importConfig.Profile == "":
-				return errors.New("import config profile not found in database: run 'abrdb init' first")
-			case len(importConfig.EnabledPref) == 0:
-				return errors.New("enabled_pref not configured: run 'abrdb init' first")
-			case len(importConfig.EnabledCategory) == 0:
-				return errors.New("enabled_category not configured: run 'abrdb init' first")
+			if err := validateImportConfig(importConfig); err != nil {
+				return err
 			}
 
 			// The database names the profile; the config itself is embedded in
@@ -171,6 +166,20 @@ type pendingSummaryStore interface {
 	GetPendingSummary(ctx context.Context) ([]postgres.PendingSummary, error)
 	PendingAnalyzeTables(ctx context.Context) ([]string, error)
 	CountOrphanPosFiles(ctx context.Context) (int, error)
+}
+
+// validateImportConfig reports an error when the config stored by 'abrdb init'
+// lacks a field that import requires.
+func validateImportConfig(c *config.ImportConfig) error {
+	switch {
+	case c.Profile == "":
+		return errors.New("import config profile not found in database: run 'abrdb init' first")
+	case len(c.EnabledPref) == 0:
+		return errors.New("enabled_pref not configured: run 'abrdb init' first")
+	case len(c.EnabledCategory) == 0:
+		return errors.New("enabled_category not configured: run 'abrdb init' first")
+	}
+	return nil
 }
 
 // warnOrphanPosFiles surfaces pos files whose text counterpart the feed never

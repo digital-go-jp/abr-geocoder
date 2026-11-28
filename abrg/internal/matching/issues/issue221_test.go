@@ -10,8 +10,8 @@ import (
 // Issue #221: 「麻生」検索時に川崎市麻生区ではなく山口県萩市麻生が返される
 // https://github.com/digital-go-jp/abr-geocoder/issues/221
 //
-// 萩市麻生は status_flg=0（廃止）でインポートされないため、町字名だけの
-// 曖昧な入力はマッチしないことを確認する。
+// The current ABR mt_town has no 麻生 in 萩市.
+// A machiaza name alone names no municipality, so it matches nothing.
 func TestIssue221(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{

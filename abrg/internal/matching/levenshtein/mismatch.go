@@ -13,12 +13,8 @@ import (
 
 // hasChomeMismatch checks if the search address chome doesn't match the result chome.
 func hasChomeMismatch(searchAddr string, resultChome *string) bool {
-	if resultChome == nil || !strings.Contains(searchAddr, "@") {
-		return false
-	}
-
 	atPos := strings.Index(searchAddr, "@")
-	if atPos <= 0 {
+	if resultChome == nil || atPos <= 0 {
 		return false
 	}
 
@@ -28,11 +24,34 @@ func hasChomeMismatch(searchAddr string, resultChome *string) bool {
 		return false
 	}
 
-	// Extract number from result chome
-	resultChomeNum := util.StripChomeSuffix(*resultChome)
-	resultChomeNum, _ = transform.KanjiToArabic(resultChomeNum)
+	return searchChome != chomeNumber(*resultChome)
+}
 
-	return searchChome != resultChomeNum
+// chomeNumber returns the number of a chome name in arabic digits.
+//
+//	e.g., "三丁目" -> "3"
+func chomeNumber(chome string) string {
+	n, _ := transform.KanjiToArabic(util.StripChomeSuffix(chome))
+	return n
+}
+
+// takesNumberAsChome reports whether a chome result would take a lot number
+// in searchAddr as its chome.
+// With no chome written ("鹿島田:1004"), the chome can only come from
+// searchNumbers, and its leading number names the chome only when the two are
+// equal, as 2 does in "西新宿:2-8-1".
+// Text that does not start with a number, such as a town name after a
+// misspelled city or the "-1" left after a chome glued to the town name, is
+// not a lot number.
+func takesNumberAsChome(searchAddr, searchNumbers string, resultChome *string) bool {
+	if resultChome == nil || strings.Contains(searchAddr, "@") {
+		return false
+	}
+	leading, _, _ := strings.Cut(searchNumbers, "-")
+	if leading == "" || util.ExtractChomeDigits(leading) != leading {
+		return false
+	}
+	return leading != chomeNumber(*resultChome)
 }
 
 // hasTownNameMismatch checks if the input town name doesn't match the result's oaza_cho.

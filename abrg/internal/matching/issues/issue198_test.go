@@ -17,7 +17,7 @@ import (
 // 「番」は地名の一部として正しく保持されるべき
 func TestIssue198(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
-		// status_flg=0 のためコメントアウト (lg_code=331031, machiaza_id=0000168)
+		// Disabled: the current ABR mt_town has no such machiaza (lg_code=331031, machiaza_id=0000168).
 		// {
 		// 	name: "issue198-1a [岡山市東区四番屋]",
 		// 	query: model.MatchQuery{
@@ -36,7 +36,7 @@ func TestIssue198(t *testing.T) {
 		// 		FieldKoaza: "四番屋",
 		// 	},
 		// },
-		// status_flg=0 のためコメントアウト (lg_code=331040, machiaza_id=0000103)
+		// Disabled: the current ABR mt_town has no such machiaza (lg_code=331040, machiaza_id=0000103).
 		// {
 		// 	name: "issue198-1b [岡山市南区一番開墾]",
 		// 	query: model.MatchQuery{

@@ -28,7 +28,8 @@ func TestProcessResults(t *testing.T) {
 	fuzzy := basicCandidate("東京都", "千代田区", "丸の内二丁目", "東京都千代田区丸の内二丁目")
 
 	call := func(cands []repository.BasicResult, limit int) []model.MatchedResult {
-		return processResults(cands, searchAddr, "", searchAddr, model.CategoryBasic, limit)
+		results, _ := processResults(cands, searchAddr, "", searchAddr, limit)
+		return results
 	}
 
 	t.Run("sorts by score descending regardless of input order", func(t *testing.T) {
@@ -54,7 +55,7 @@ func TestProcessResults(t *testing.T) {
 		}
 	})
 
-	t.Run("drops basic-category @ noise when search has no number", func(t *testing.T) {
+	t.Run("drops chome (@) results when search has no number", func(t *testing.T) {
 		// A chome (@) record must not surface for a plain place-name search.
 		noise := basicCandidate("東京都", "千代田区", "丸の内", "東京都千代田区丸の内1@")
 		got := call([]repository.BasicResult{exact, noise}, 10)
@@ -76,7 +77,7 @@ func TestExtractUnmatchedAddress(t *testing.T) {
 		// Without the place-name check the trailing "3510" in searchAddr would leak
 		// out as an unmatched part, so this pins the place-name branch specifically.
 		addr := &model.StructuredAddress{Koaza: new("三五十")}
-		got := extractUnmatchedAddress("3510", addr, model.CategoryBasic, "A市3510", "A市三五十", "A市三五十")
+		got := extractUnmatchedAddress("3510", addr, "A市3510", "A市三五十", "A市三五十")
 		if got != nil {
 			t.Errorf("got %v, want nil (searchNumbers is the koaza place name)", got)
 		}
@@ -85,7 +86,7 @@ func TestExtractUnmatchedAddress(t *testing.T) {
 	t.Run("non-numeric suffix belonging to koaza is fully matched (nil)", func(t *testing.T) {
 		addr := &model.StructuredAddress{Koaza: new("壱弐号ヤドミ")}
 		const full = "X市壱弐号ヤドミ"
-		got := extractUnmatchedAddress("ヤドミ", addr, model.CategoryBasic, full, full, full)
+		got := extractUnmatchedAddress("ヤドミ", addr, full, full, full)
 		if got != nil {
 			t.Errorf("got %v, want nil (ヤドミ is the koaza suffix)", got)
 		}
@@ -95,7 +96,7 @@ func TestExtractUnmatchedAddress(t *testing.T) {
 		const norm = "香川県丸亀市原田町字東三分一1926-1"
 		const matched = "香川県丸亀市原田町"
 		addr := &model.StructuredAddress{} // no koaza
-		got := extractUnmatchedAddress("", addr, model.CategoryBasic, norm, norm, matched)
+		got := extractUnmatchedAddress("", addr, norm, norm, matched)
 		want := []string{"東三分一1926-1"}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
@@ -105,7 +106,7 @@ func TestExtractUnmatchedAddress(t *testing.T) {
 	t.Run("no search number and koaza fully matched leaves nothing (nil)", func(t *testing.T) {
 		const full = "X市Y町字Z"
 		addr := &model.StructuredAddress{Koaza: new("字Z")}
-		got := extractUnmatchedAddress("", addr, model.CategoryBasic, full, full, full)
+		got := extractUnmatchedAddress("", addr, full, full, full)
 		if got != nil {
 			t.Errorf("got %v, want nil (address fully matched)", got)
 		}

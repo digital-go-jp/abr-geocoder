@@ -7,7 +7,8 @@ import "github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 type normalizeInput struct {
 	NormalizedAddr string                  // Basic-normalized input (comments removed, NFKC applied); also the user-facing form for unmatched extraction
 	SearchAddr     parsedAddress           // Parsed search address (eliminates redundant parseSearchAddr calls)
-	Pref           string                  // Prefecture code filter
+	Pref           string                  // Prefecture code filter, detected from the address when the query gives none
+	QueryPref      string                  // Prefecture code given in the query; results stay within it
 	Limit          int                     // Max results
 	Category       model.Category          // Requested category filter (all/basic/rsdtdsp/parcel)
 	AddressType    model.NormalizeCategory // Category type (residential/parcel/undetermined/unknown)

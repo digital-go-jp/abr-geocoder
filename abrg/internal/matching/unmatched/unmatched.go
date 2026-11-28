@@ -155,21 +155,19 @@ func extractUnmatchedWithColonAt(originalAddr, standardizedAddrPart, matchedAddr
 	// Extract chome number that comes after @ but before :
 	// e.g., "千代田区紀尾井町1@" -> we need to extract "1"
 	// A leading "@" leaves no room for a chome, so there is nothing to recover.
-	if atIndex := strings.LastIndex(beforeColon, "@"); atIndex <= 0 {
+	if strings.LastIndex(beforeColon, "@") <= 0 {
 		return afterColon
 	}
 
 	parts := strings.Split(beforeColon, "@")
-	if len(parts) < 2 {
-		return afterColon
-	}
 
 	// Find the chome number at the end of the part before @
 	beforeAt := parts[0]
 	// Extract trailing digits from beforeAt (e.g., "千代田区紀尾井町1" -> "1")
 	chomeNum := util.ExtractChomeDigits(beforeAt)
 
-	// Get the part after @ (e.g., "大阪市中央区久太郎町4@渡辺" -> "渡辺")
+	// Get the part after @ (e.g., "大阪市中央区久太郎町4@渡辺" -> "渡辺").
+	// Only the text up to a second @ is kept.
 	afterAt := parts[1]
 
 	if chomeNum != "" {
@@ -199,8 +197,8 @@ func extractUnmatchedWithColonAt(originalAddr, standardizedAddrPart, matchedAddr
 			// Found the pattern in standardizedAddrPart
 			afterChome := standardizedAddrPart[idx+len(pattern):]
 
-			// Check if user explicitly specified "X丁目"
-			hasChomeInOriginal := strings.Contains(originalAddr, pattern) || strings.Contains(originalAddr, "丁目")
+			// Check if the user wrote a chome ("X丁目") in the address
+			hasChomeInOriginal := strings.Contains(originalAddr, "丁目")
 			if hasChomeInOriginal && afterChome == afterColon && !strings.Contains(afterColon, "-") {
 				// Chome was NOT matched, include it in unmatched
 				return standardizedAddrPart[idx:]

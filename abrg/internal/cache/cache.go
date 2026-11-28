@@ -35,7 +35,7 @@ type DuckDBCache struct {
 func NewDuckDBCache(ctx context.Context, flagPath string) (*DuckDBCache, error) {
 	cfg := config.Load()
 	cachePath := duckdb.ResolvePath(flagPath, cfg.Cache.Path)
-	return newDuckDBCache(ctx, cachePath, cfg.Cache.DuckDBThreads)
+	return newDuckDBCache(ctx, cachePath, cfg.Cache)
 }
 
 // NewDuckDBCacheFromPath opens the cache at cachePath and, unlike NewDuckDBCache,
@@ -44,7 +44,7 @@ func NewDuckDBCache(ctx context.Context, flagPath string) (*DuckDBCache, error) 
 // returns lower match levels, while the CLI can still run a changed
 // normalization against an existing cache.
 func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache, error) {
-	cache, err := newDuckDBCache(ctx, cachePath, config.Load().Cache.DuckDBThreads)
+	cache, err := newDuckDBCache(ctx, cachePath, config.Load().Cache)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func NewDuckDBCacheFromPath(ctx context.Context, cachePath string) (*DuckDBCache
 	return cache, nil
 }
 
-func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*DuckDBCache, error) {
+func newDuckDBCache(ctx context.Context, cachePath string, cfg config.CacheConfig) (*DuckDBCache, error) {
 	if cachePath == "" {
 		return nil, fmt.Errorf("cache file required: use 'abrg cache build' to create one")
 	}
@@ -78,7 +78,10 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 		db: conn,
 	}
 
-	if err := applyThreadLimit(ctx, conn, duckdbThreads); err != nil {
+	if err := applyThreadLimit(ctx, conn, cfg.DuckDBThreads); err != nil {
+		return nil, err
+	}
+	if err := applyMemoryLimit(ctx, conn, cfg.DuckDBMemoryLimit); err != nil {
 		return nil, err
 	}
 
@@ -101,6 +104,10 @@ func newDuckDBCache(ctx context.Context, cachePath, duckdbThreads string) (*Duck
 
 	if err := cache.buildWardCandidates(ctx); err != nil {
 		return nil, fmt.Errorf("failed to build ward candidates: %w", err)
+	}
+
+	if err := cache.buildCountyCities(ctx); err != nil {
+		return nil, fmt.Errorf("failed to build county cities: %w", err)
 	}
 
 	if err := cache.buildCityBoundary(ctx); err != nil {
@@ -206,6 +213,36 @@ func applyThreadLimit(ctx context.Context, conn *sql.DB, v string) error {
 	return nil
 }
 
+// applyMemoryLimit caps the memory DuckDB keeps for cached blocks; an empty
+// value keeps DuckDB's default, 80% of the smaller of the machine's memory and
+// the container's cgroup limit. DuckDB holds every block it has read up to the
+// limit. A container whose cgroup carries no limit of its own, such as a
+// Fargate task without a container-level memory setting, gets a default above
+// what it may use and is killed once enough of the cache has been read.
+func applyMemoryLimit(ctx context.Context, conn *sql.DB, v string) error {
+	if v == "" {
+		return nil
+	}
+	if !memoryLimitFormat.MatchString(v) {
+		return fmt.Errorf("invalid ABRG_DUCKDB_MEMORY_LIMIT %q: use a size such as 1GB or 512MiB", v)
+	}
+	if _, err := conn.ExecContext(ctx, "SET memory_limit='"+v+"'"); err != nil {
+		return fmt.Errorf("failed to set duckdb memory limit: %w", err)
+	}
+	return nil
+}
+
+// MemoryLimit returns the memory limit DuckDB is running with, as DuckDB
+// formats it (for example "1.5 GiB"). Without ABRG_DUCKDB_MEMORY_LIMIT this is
+// the value DuckDB derived from the machine or the container.
+func (c *DuckDBCache) MemoryLimit(ctx context.Context) (string, error) {
+	var limit string
+	if err := c.db.QueryRowContext(ctx, "SELECT current_setting('memory_limit')").Scan(&limit); err != nil {
+		return "", fmt.Errorf("read duckdb memory limit: %w", err)
+	}
+	return limit, nil
+}
+
 func (c *DuckDBCache) Close() error {
 	return c.db.Close()
 }
@@ -216,10 +253,12 @@ func (c *DuckDBCache) DB() *sql.DB {
 }
 
 type Lookups struct {
-	CityPrefCodes   map[string]string          // Maps unique city names to prefecture codes (e.g., "京都市" -> "26")
-	CityWardLgCodes map[string]string          // Maps city+ward names to lg_code (e.g., "京都市中京区" -> "261041")
-	WardCandidates  map[string][]WardCandidate // Maps ward names to all candidate cities (e.g., "中区" -> [{横浜市中区, ...}, ...])
-	CityBoundary    *util.CityBoundary         // Longest-prefix city-boundary matcher over all city names
+	CityPrefCodes   map[string]string            // Maps unique city names to prefecture codes (e.g., "京都市" -> "26")
+	CityWardLgCodes map[string]string            // Maps city+ward names to lg_code (e.g., "京都市中京区" -> "261041")
+	WardCandidates  map[string][]WardCandidate   // Maps ward names to all candidate cities (e.g., "中区" -> [{横浜市中区, ...}, ...])
+	CityWards       map[string][]string          // Maps a prefecture and city to its wards joined to the city (e.g., "熊本県熊本市" -> [熊本市中央区, ...])
+	CityBoundary    *util.CityBoundary           // Longest-prefix city-boundary matcher over all city names
+	CountyCities    map[string]map[string]string // Maps a prefecture and a town or village in a county to the county (e.g., "宮城県" -> "涌谷町" -> "遠田郡")
 }
 
 // Lookups returns the in-memory lookups.
@@ -364,12 +403,15 @@ func (c *DuckDBCache) buildCityWardLgCodes(ctx context.Context) error {
 // because equally strong matches are returned in candidate order. The key is
 // normalized so 保土ヶ谷区 finds 保土ケ谷区; the city names stay raw because
 // the caller prepends one to the address and transforms the result itself.
+// It also lists the wards of each city, for addresses that leave the ward out
+// (e.g. "熊本市上熊本" tries "熊本市中央区上熊本", "熊本市西区上熊本", ...).
 func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	query := `
-		SELECT ward, city || ward AS city_ward, printf('%02d', pref_code) AS pref_code
+		SELECT ward, city || ward AS city_ward, printf('%02d', pref_code) AS pref_code,
+			pref || city AS pref_city
 		FROM cache_city
 		WHERE ward IS NOT NULL AND ward != ''
-		GROUP BY ward, city_ward, pref_code
+		GROUP BY ward, city_ward, pref_code, pref_city
 		ORDER BY ward, pref_code, city_ward
 	`
 
@@ -380,16 +422,52 @@ func (c *DuckDBCache) buildWardCandidates(ctx context.Context) error {
 	defer func() { _ = rows.Close() }()
 
 	c.lookups.WardCandidates = make(map[string][]WardCandidate)
+	c.lookups.CityWards = make(map[string][]string)
 	for rows.Next() {
-		var ward, cityWard, prefCode string
-		if err := rows.Scan(&ward, &cityWard, &prefCode); err != nil {
+		var ward, cityWard, prefCode, prefCity string
+		if err := rows.Scan(&ward, &cityWard, &prefCode, &prefCity); err != nil {
 			return fmt.Errorf("failed to scan ward candidate row: %w", err)
 		}
+		c.lookups.CityWards[prefCity] = append(c.lookups.CityWards[prefCity], cityWard)
 		key, _ := transform.TextForDB(ward)
 		c.lookups.WardCandidates[key] = append(c.lookups.WardCandidates[key], WardCandidate{
 			CityWard: cityWard,
 			PrefCode: prefCode,
 		})
+	}
+
+	return rows.Err()
+}
+
+// buildCountyCities maps each town and village in a county to the county, per
+// prefecture, for addresses that leave the county out (e.g. "宮城県涌谷町").
+// A name found in more than one county of a prefecture is left out, since the
+// county it belongs to cannot be told.
+func (c *DuckDBCache) buildCountyCities(ctx context.Context) error {
+	query := `
+		SELECT pref, city, any_value(county)
+		FROM cache_city
+		WHERE county IS NOT NULL AND county != ''
+		GROUP BY pref, city
+		HAVING count(DISTINCT county) = 1
+	`
+
+	rows, err := c.db.QueryContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to query county cities: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	c.lookups.CountyCities = make(map[string]map[string]string)
+	for rows.Next() {
+		var pref, city, county string
+		if err := rows.Scan(&pref, &city, &county); err != nil {
+			return fmt.Errorf("failed to scan county city row: %w", err)
+		}
+		if c.lookups.CountyCities[pref] == nil {
+			c.lookups.CountyCities[pref] = make(map[string]string)
+		}
+		c.lookups.CountyCities[pref][city] = county
 	}
 
 	return rows.Err()

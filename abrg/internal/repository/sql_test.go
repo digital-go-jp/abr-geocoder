@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"testing"
 
@@ -109,6 +110,30 @@ func TestFindBasicByAddress(t *testing.T) {
 		}
 		if len(results) != 1 {
 			t.Errorf("FindBasicByAddress() returned %d results, want 1", len(results))
+		}
+	})
+
+	// 多摩市貝取 is both 大字貝取 (0030000, more parcels and residential
+	// addresses) and 貝取 (0009000) of lg_code=132241.
+	t.Run("limit keeps the first rows in order", func(t *testing.T) {
+		for _, tt := range []struct {
+			limit int
+			want  []string
+		}{
+			{limit: 5, want: []string{"0030000", "0009000"}},
+			{limit: 1, want: []string{"0030000"}},
+		} {
+			results, err := repo.FindBasicByAddress(ctx, BasicSearchParams{Address: "多摩市貝取", PrefCode: "13", Limit: tt.limit})
+			if err != nil {
+				t.Fatalf("FindBasicByAddress() error = %v", err)
+			}
+			var got []string
+			for _, r := range results {
+				got = append(got, r.MachiazaID)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("limit %d: machiaza_id = %v, want %v", tt.limit, got, tt.want)
+			}
 		}
 	})
 
@@ -228,6 +253,16 @@ func TestFindCityByAddress(t *testing.T) {
 		}
 		if result == nil || result.LgCode != chiyodaLgCode {
 			t.Errorf("FindCityByAddress() = %+v, want LgCode %q", result, chiyodaLgCode)
+		}
+	})
+
+	t.Run("prefecture filter excludes a city in another prefecture", func(t *testing.T) {
+		result, err := repo.FindCityByAddress(ctx, CitySearchParams{CityAddr: "1000代田区", PrefCode: "27"})
+		if err != nil {
+			t.Fatalf("FindCityByAddress() error = %v", err)
+		}
+		if result != nil {
+			t.Errorf("FindCityByAddress() = %+v, want nil", result)
 		}
 	})
 

@@ -175,3 +175,45 @@ func scanParcelRow(row *sql.Row) (ParcelResult, error) {
 		Lat:        scanOpt(lat),
 	}, nil
 }
+
+// LotMatch is how much of an address number a machiaza holds.
+type LotMatch int
+
+const (
+	LotMatchNone  LotMatch = iota // no part of the number
+	LotMatchFirst                 // the first part alone
+	LotMatchWhole                 // the whole number
+)
+
+// ParcelLotMatch reports how much of the lot prcNum1-prcNum2 the machiaza holds as a parcel.
+// An empty prcNum2 is the whole lot only for a parcel without prc_num2.
+func (r *DB) ParcelLotMatch(ctx context.Context, lgCode, machiazaID, prcNum1, prcNum2 string) (LotMatch, error) {
+	var match LotMatch
+	err := r.db.QueryRowContext(ctx,
+		`SELECT coalesce(max(CASE WHEN prc_num2 IS NOT DISTINCT FROM nullif(?, '') THEN 2 ELSE 1 END), 0)
+		FROM cache_parcel WHERE lg_code = ? AND machiaza_id = ? AND prc_num1 = ?`,
+		prcNum2, lgCode, machiazaID, prcNum1,
+	).Scan(&match)
+	if err != nil {
+		return LotMatchNone, fmt.Errorf("parcel lot match lgCode=%q machiazaID=%q prc=%q-%q: %w", lgCode, machiazaID, prcNum1, prcNum2, err)
+	}
+	return match, nil
+}
+
+// ResidentialLotMatch reports how much of the residential number blkNum-rsdtNum the machiaza holds.
+// An empty rsdtNum, or a block with no residential numbers recorded, makes the block the whole number.
+func (r *DB) ResidentialLotMatch(ctx context.Context, lgCode, machiazaID, blkNum, rsdtNum string) (LotMatch, error) {
+	var match LotMatch
+	err := r.db.QueryRowContext(ctx,
+		`SELECT CASE
+			WHEN count(*) = 0 THEN 0
+			WHEN ? = '' OR bool_or(rsdt_num = ?) OR NOT bool_or(rsdt_num IS NOT NULL) THEN 2
+			ELSE 1 END
+		FROM cache_rsdtdsp WHERE lg_code = ? AND machiaza_id = ? AND blk_num = ?`,
+		rsdtNum, rsdtNum, lgCode, machiazaID, blkNum,
+	).Scan(&match)
+	if err != nil {
+		return LotMatchNone, fmt.Errorf("residential lot match lgCode=%q machiazaID=%q blk=%q rsdt=%q: %w", lgCode, machiazaID, blkNum, rsdtNum, err)
+	}
+	return match, nil
+}

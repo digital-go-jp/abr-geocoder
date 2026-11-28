@@ -6,13 +6,15 @@ import (
 	"github.com/digital-go-jp/abr-geocoder/abrg/internal/model"
 )
 
-// TestIssue348Kana covers the iroha that stands between a town name and the
-// digits, in every kana an address writes it in. ABR registers such an iroha in
-// half-width katakana when it belongs to a parcel number and in either kana when
-// it names a koaza, so the same address arrives in three spellings and all three
-// have to reach the one record ABR holds. A kana that no parcel is registered
-// under stays unmatched instead of being answered with the digits alone, which
-// name a different parcel.
+// TestIssue348Kana covers the iroha that stands between a machiaza name and the digits.
+// An address writes it in hiragana, full-width katakana or half-width katakana.
+// ABR holds one record for it:
+// in half-width katakana or hiragana when it belongs to a parcel number
+// (ヰ and ヱ, which have no half-width form, stay full-width),
+// and in full-width katakana or hiragana when it names a koaza.
+// All three spellings have to reach that one record.
+// A kana that no parcel is registered under stays unmatched
+// instead of being answered with the digits alone, which name a different parcel.
 // https://github.com/digital-go-jp/abr-geocoder/issues/348
 func TestIssue348Kana(t *testing.T) {
 	query := func(address string) model.MatchQuery {

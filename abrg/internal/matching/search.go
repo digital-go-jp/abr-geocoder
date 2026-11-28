@@ -75,6 +75,19 @@ func (n *Impl) normalizeAll(ctx context.Context, nctx *normalizeContext) ([]mode
 	return sortAndLimitResults(results, nctx.Input.Limit), nil
 }
 
+// normalizeBasic resolves an address down to its machiaza. A town that
+// matches no machiaza exactly goes to the same fuzzy search as category=all
+// (神田美士代町 → 神田美土代町), so a misspelled town does not stop at the city.
+// The number section is not searched.
+func (n *Impl) normalizeBasic(ctx context.Context, nctx *normalizeContext) ([]model.MatchedResult, error) {
+	newState, _, err := n.tryLevenshteinFallback(ctx, nctx)
+	if err != nil {
+		return nil, err
+	}
+	nctx.State = newState
+	return n.handleFallback(ctx, nctx)
+}
+
 // tryDetailedSearch runs the two-stage residential/parcel searches for the
 // detected address category. Undetermined and unknown inputs try residential
 // first and add parcel results unless residential already produced a complete
@@ -117,7 +130,7 @@ func (n *Impl) tryDetailedSearch(ctx context.Context, nctx *normalizeContext) ([
 func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContext) (normalizeState, bool, error) {
 	state := nctx.State
 
-	if len(state.BasicResults) > 0 || n.repo == nil || state.SkipLevenshtein {
+	if len(state.BasicResults) > 0 || state.SkipLevenshtein {
 		return state, false, nil
 	}
 
@@ -132,7 +145,7 @@ func (n *Impl) tryLevenshteinFallback(ctx context.Context, nctx *normalizeContex
 
 	// Try to detect lg_code before search for better filtering (reduces scan from ~35k to ~2k records)
 	if state.LgCode == "" {
-		state.LgCode = n.detectLgCode(searchAddrStr)
+		state.LgCode = n.detectLgCode(searchAddrStr, nctx.Input.QueryPref)
 	}
 
 	levenResults, err := levenshtein.Search(ctx, n.repo, n.buildLevenshteinParams(nctx, state.LgCode, state.MachiazaID))
@@ -194,7 +207,6 @@ func strongestResult(results []model.MatchedResult) (model.MatchedResult, bool) 
 // buildLevenshteinParams constructs SearchParams from the normalize context.
 func (n *Impl) buildLevenshteinParams(nctx *normalizeContext, lgCode, machiazaID string) levenshtein.SearchParams {
 	return levenshtein.SearchParams{
-		Category:       model.CategoryBasic,
 		SearchAddr:     nctx.Input.SearchAddr.String(),
 		Pref:           nctx.Input.Pref,
 		LgCode:         lgCode,

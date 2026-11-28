@@ -97,11 +97,6 @@ func initSchema(ctx context.Context, conn *sql.DB) error {
 	if _, err := conn.ExecContext(ctx, sqlText); err != nil {
 		return fmt.Errorf("failed to execute init schema: %w", err)
 	}
-	// Category tables are not in the YAML schema. Drop any left by a previous
-	// build; buildCacheTables recreates those the configured category needs.
-	if _, err := conn.ExecContext(ctx, dropCategoryTablesSQL); err != nil {
-		return fmt.Errorf("failed to drop stale category tables: %w", err)
-	}
 	return nil
 }
 

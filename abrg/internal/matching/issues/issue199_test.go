@@ -18,6 +18,8 @@ import (
 // - 「壱〇壱部」→「10 壱部」または「壱〇 壱部」（スペースが誤挿入される）
 //
 // 町字・小字に含まれる漢数字は地名の一部として扱い、算用数字に変換すべきでない
+// A koaza that ABR registers in Arabic digits (門前町暮坂 107) is the exception:
+// the kanji input is converted to reach it.
 func TestIssue199(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		// === 珠洲市: 〇を含む小字で末尾に「部」がつくケース ===

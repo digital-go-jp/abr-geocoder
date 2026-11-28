@@ -183,6 +183,15 @@ func TestExtractUnmatchedWithColonAt(t *testing.T) {
 			want:             "渡辺3",
 		},
 		{
+			name:             "only the name up to a second at is prepended",
+			originalAddr:     "大阪府大阪市中央区久太郎町4丁目渡辺別館3",
+			standardizedPart: "大阪府大阪市中央区久太郎町4丁目渡辺別館3",
+			matchedAddr:      "大阪府大阪市中央区久太郎町4丁目",
+			beforeColon:      "大阪市中央区久太郎町4@渡辺@別館",
+			afterColon:       "3",
+			want:             "渡辺3",
+		},
+		{
 			name:             "name after at already in matched is dropped",
 			originalAddr:     "大分県佐伯市京町8丁目横町63",
 			standardizedPart: "大分県佐伯市京町8丁目横町63",
