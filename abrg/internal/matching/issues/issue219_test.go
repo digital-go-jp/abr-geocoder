@@ -71,7 +71,7 @@ func TestIssue219(t *testing.T) {
 		{
 			// 「朝日五条」は oaza_cho="朝日" + koaza="五条" に分解される（Issue#219 の検証目的）。
 			// 朝日/五条には地番データが存在するため、末尾の "1" は prc_num1 として解釈される。
-			name: "issue219-2 [愛知県清須市朝日五条]",
+			name: "issue219-2 [愛知県清須市朝日五条1]",
 			query: model.MatchQuery{
 				Address:  "愛知県清須市朝日五条1",
 				Category: model.CategoryAll,
@@ -100,7 +100,7 @@ func TestIssue219(t *testing.T) {
 			},
 		},
 		{
-			name: "issue219-3 [愛知県春日井市八事町二丁目]",
+			name: "issue219-3 [愛知県春日井市八事町二丁目1]",
 			query: model.MatchQuery{
 				Address:  "愛知県春日井市八事町二丁目1",
 				Category: model.CategoryAll,

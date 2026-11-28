@@ -11,7 +11,8 @@ import (
 // https://github.com/digital-go-jp/abr-geocoder/issues/201
 //
 // 漢数字の小字で末尾を重複させないことを確認する。
-// 該当する小字が存在しない場合は町字レベルでマッチし、元の表記が未マッチに残る。
+// When the city has no such machiaza directly under it, the match stops at the city
+// and the numeral stays unmatched as written.
 func TestIssue201(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
 		{

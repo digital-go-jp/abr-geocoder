@@ -10,7 +10,7 @@ import (
 // Issue #122: 大字・町なし小字ありのパターン
 func TestIssue122(t *testing.T) {
 	runNormalizeTests(t, []normalizeTestCase{
-		// status_flg=0 のためコメントアウト (lg_code=014257, machiaza_id=0000109)
+		// Disabled: the current ABR mt_town has no such machiaza (lg_code=014257, machiaza_id=0000109).
 		// {
 		// 	name: "issue122-1 [北海道空知郡上砂川町緑ケ丘]",
 		// 	query: model.MatchQuery{
