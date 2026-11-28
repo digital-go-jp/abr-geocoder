@@ -7,7 +7,7 @@ import (
 )
 
 // TestIssue239 tests Levenshtein fuzzy match city fallback for Unicode addresses
-// Issue #373: Levenshtein fuzzy match city fallback broken
+// Issue #239: リクエストパラメータと異なる住所が正規化される
 //
 // 問題:
 // - 広島県福山市港町 が「旭町」(score 0.6) を返す

@@ -244,25 +244,38 @@ func TestIssue202(t *testing.T) {
 				FieldPrcNum3:      nil,
 			},
 		},
-		// status_flg=0 のためコメントアウト (lg_code=232335, machiaza_id=0259105)
-		// {
-		// 	name: "issue202-3 [清須市春日渕田]",
-		// 	query: model.MatchQuery{
-		// 		Address: "愛知県清須市春日渕田",
-		// 		Category:  model.CategoryAll,
-		// 		Pref: "all",
-		// 		Limit:   1,
-		// 	},
-		// 	wantMatchLevel:       model.MatchLevelMachiazaDetail,
-		// 	wantMatchedAddress:   "愛知県清須市春日渕田",
-		// 	wantUnmatchedAddress: nil,
-		// 	wantStructured: map[string]any{
-		// 		FieldPref:     "愛知県",
-		// 		FieldCity:     "清須市",
-		// 		FieldOazaCho: "春日",
-		// 		FieldKoaza:    "渕田",
-		// 	},
-		// },
+		{
+			// The koaza 春日 渕田 (lg_code=232335, machiaza_id=0259105)
+			// and the oaza 春日淵田 (lg_code=232335, machiaza_id=0233000) share a normalized address,
+			// and the one closest to the input as written is returned.
+			name: "issue202-3 [清須市春日渕田]",
+			query: model.MatchQuery{
+				Address:  "愛知県清須市春日渕田",
+				Category: model.CategoryAll,
+				Pref:     "all",
+				Limit:    1,
+			},
+			wantMatchLevel:       model.MatchLevelMachiazaDetail,
+			wantMatchedAddress:   "愛知県清須市春日渕田",
+			wantUnmatchedAddress: nil,
+			wantStructured: map[string]any{
+				FieldPref:         "愛知県",
+				FieldCounty:       nil,
+				FieldCity:         "清須市",
+				FieldWard:         nil,
+				FieldMachiazaDist: nil,
+				FieldKyotoSt:      nil,
+				FieldOazaCho:      "春日",
+				FieldChome:        nil,
+				FieldKoaza:        "渕田",
+				FieldBlkNum:       nil,
+				FieldRsdtNum:      nil,
+				FieldRsdtNum2:     nil,
+				FieldPrcNum1:      nil,
+				FieldPrcNum2:      nil,
+				FieldPrcNum3:      nil,
+			},
+		},
 		{
 			name: "issue202-4 [愛知県西尾市志篭谷町乾地]",
 			query: model.MatchQuery{

@@ -1553,9 +1553,10 @@ func TestIssue0(t *testing.T) {
 
 		// N本松 (tree-counting koaza - Saga)
 		// Note: DB has two entries with same normalized_address but different koaza:
-		//   - machiaza_id=0019117: koaza="大1本松" (Arabic numeral from "大１本松" full-width)
-		//   - machiaza_id=0019125: koaza="大一本松" (Kanji numeral)
-		// Both have normalized_address="神埼市千代田町姉大1本松", result depends on DB order
+		//   - lg_code=412104, machiaza_id=0019117: koaza="大1本松" (Arabic numeral from "大１本松" full-width)
+		//   - lg_code=412104, machiaza_id=0019125: koaza="大一本松" (Kanji numeral)
+		// Both have the same normalized_address,
+		// and the one whose koaza is closest to the input as written is returned.
 		{
 			name: "[佐賀県神埼市千代田町姉大1本松] (N本松 should not get space inserted)",
 			query: model.MatchQuery{
@@ -1617,10 +1618,10 @@ func TestIssue0(t *testing.T) {
 
 		// Nの坪/Nノ坪 (field measurement koaza - Saga)
 		// Note: DB has two entries with same normalized_address but different koaza:
-		//   - machiaza_id=0032136: koaza="8の坪" (Arabic numeral)
-		//   - machiaza_id=0032126: koaza="八の坪" (Kanji numeral)
-		// Both have normalized_address="神埼市千代田町渡瀬8ノ坪", result depends on DB order
-		// Actual result returns "8の坪" (machiaza_id=0032136)
+		//   - lg_code=412104, machiaza_id=0032136: koaza="8の坪" (Arabic numeral)
+		//   - lg_code=412104, machiaza_id=0032126: koaza="八の坪" (Kanji numeral)
+		// Both have the same normalized_address,
+		// and the one whose koaza is closest to the input as written is returned.
 		{
 			name: "[佐賀県神埼市千代田町渡瀬8の坪] (Nの坪 should not get space inserted)",
 			query: model.MatchQuery{
@@ -1652,8 +1653,8 @@ func TestIssue0(t *testing.T) {
 		},
 		// Kanji numeral input is normalized to Arabic numeral during search
 		// DB has two records with same normalized_address but different koaza:
-		//   - machiaza_id=0032136: koaza="8の坪" (Arabic numeral)
-		//   - machiaza_id=0032126: koaza="八の坪" (Kanji numeral)
+		//   - lg_code=412104, machiaza_id=0032136: koaza="8の坪" (Arabic numeral)
+		//   - lg_code=412104, machiaza_id=0032126: koaza="八の坪" (Kanji numeral)
 		// Input "八の坪" should return "八の坪" (kanji version) because jaccard similarity
 		// prefers the DB record that matches original input more closely
 		{
@@ -1688,8 +1689,8 @@ func TestIssue0(t *testing.T) {
 
 		// Katakana/Hiragana variants (Ishikawa)
 		// DB has two entries with same normalized_address but different koaza:
-		//   - machiaza_id=0132140: koaza="ろ" (Hiragana)
-		//   - machiaza_id=0132141: koaza="ロ" (Katakana)
+		//   - lg_code=172065, machiaza_id=0132140: koaza="ろ" (Hiragana)
+		//   - lg_code=172065, machiaza_id=0132141: koaza="ロ" (Katakana)
 		// Input should match the variant that matches original input
 		{
 			name: "[石川県加賀市深田町ロ] (カタカナ入力はカタカナでマッチ)",
@@ -1752,8 +1753,8 @@ func TestIssue0(t *testing.T) {
 
 		// Kanji/Arabic numeral + の variants (Ishikawa)
 		// DB has two entries:
-		//   - machiaza_id=0025187: koaza="6の" (Arabic numeral)
-		//   - machiaza_id=0025196: koaza="六の" (Kanji numeral)
+		//   - lg_code=172065, machiaza_id=0025187: koaza="6の" (Arabic numeral)
+		//   - lg_code=172065, machiaza_id=0025196: koaza="六の" (Kanji numeral)
 		{
 			name: "[石川県加賀市熊坂町6の] (アラビア数字入力はアラビア数字でマッチ)",
 			query: model.MatchQuery{

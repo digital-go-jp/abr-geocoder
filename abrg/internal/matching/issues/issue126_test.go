@@ -167,7 +167,7 @@ func TestIssue126(t *testing.T) {
 			},
 		},
 		{
-			name: "issue126-2c [京都市中京区突抜町132] category=rsdtdsp - residential only (no match at detail level)",
+			name: "issue126-2c [京都市中京区突抜町132] category=rsdtdsp - residential only (stops at machiaza_detail)",
 			query: model.MatchQuery{
 				Address:  "京都市中京区衣棚通姉小路下る突抜町132番地",
 				Category: model.CategoryResidential,
